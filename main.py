@@ -1,5 +1,3 @@
-## inspired by oneLoneCoder https://www.youtube.com/channel/UC-yuWVUplUJZvieEligKBkA
-
 from math import pi, cos, sin, atan2, sqrt, exp, degrees
 from random import uniform, randint, choice, shuffle
 from vector import *
@@ -13,6 +11,14 @@ pygame.font.init()
 myfont = pygame.font.Font("fonts\pixelFont.ttf", 5)
 myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
 
+### TO DO LIST
+# https://worms2d.info/Weapons_(Worms_Unlimited)
+# balloon/jetpack
+# something electrical
+# hamburger ?
+# termites
+#
+# problem with worm switch, cant switch weapons in menu sometimes work
 
 scalingFactor = 3
 winWidth = int(1280 / scalingFactor)
@@ -63,6 +69,10 @@ turnTime = 40
 shockRadius = 1.5
 globalGravity = 0.2
 mapScrollSpeed = 8
+deployPacks = True
+diggingMatch = False
+randomPlace = True
+drawHealthBar = True
 
 # Multipliers
 damageMult = 0.8
@@ -71,10 +81,10 @@ windMult = 1.5
 radiusMult = 1
 
 ################################################################################ Map
-mapWidth = 1024
+mapWidth = int(1024*1.5)
 mapHeight = 512
 map = pygame.Surface((mapWidth, mapHeight))
-ground = pygame.Surface((mapWidth, mapHeight))
+ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 
 camPos = Vector(0,0)
 camTarget = Vector(0,0)
@@ -96,6 +106,7 @@ actionMove = False
 aimAid = False
 switchingWorms = False
 
+
 def createMapImage(heightNorm = None):
 	global mapImage
 	if heightNorm:
@@ -115,7 +126,10 @@ def createMapImage(heightNorm = None):
 		for y in range(mapHeight):
 			if not mapImage.get_at((x, y)) == (0,0,0):
 				map.set_at((x, y), GRD)
-
+def createMapDigging():
+	global map
+	map.fill((255,255,255))
+	
 def makeBoundary():
 	for i in range(mapHeight):
 		map[i * mapWidth + 0] = GRD
@@ -140,7 +154,7 @@ def renderLand():
 		for x in range(0,mapWidth):
 			for y in range(0,mapHeight):
 				if map.get_at((x,y)) == GRD:
-					ground.fill((62,201,83), ((x,y), (1, 1)))
+					ground.fill((randint(80, 120), randint(30, 70), 0), ((x,y), (1, 1)))
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
 	radius *= radiusMult
@@ -184,46 +198,58 @@ def drawWindIndicator():
 def giveGoodPlace():
 	goodPlace = False
 	counter = 0###
-	while not goodPlace:
-		counter += 1
-		goodPlace = True
-		place = Vector(randint(6, mapWidth - 6), randint(6, mapHeight - 6))
-		# check circle around
-		if isGroundAround(place):
-			goodPlace = False
-		if  not goodPlace:
-			continue
-		# put place down
-		y = place.y
-		for i in range(mapHeight):
-			if y + i >= mapHeight:
+	if not diggingMatch:
+		while not goodPlace:
+			counter += 1
+			goodPlace = True
+			place = Vector(randint(6, mapWidth - 6), randint(6, mapHeight - 6))
+			# check circle around
+			if isGroundAround(place):
 				goodPlace = False
-				break
-			if map.get_at((place.x, y + i)) == GRD:
-				y = y + i - 7
-				break
-		if  not goodPlace:
-			continue
-		place.y = y
-		# check for nearby worms in radius 50
-		for worm in PhysObj._worms:
-			if dist(worm.pos, place) < 50:
-				goodPlace = False
-				break
-				# print("F2")
-		if  not goodPlace:
-			continue
-		for mine in PhysObj._mines:
-			if dist(mine.pos, place) < 40:
-				goodPlace = False
-				break
-		if  not goodPlace:
-			continue
-		if isGroundAround(place):
-			pygame.draw.circle(map, SKY, place.vec2tup(), 5)
-			pygame.draw.circle(ground, SKY, place.vec2tup(), 5)
-	if counter >= 7090:
-		print("above 7090:", counter)
+			if  not goodPlace:
+				continue
+			# put place down
+			y = place.y
+			for i in range(mapHeight):
+				if y + i >= mapHeight:
+					goodPlace = False
+					break
+				if map.get_at((place.x, y + i)) == GRD:
+					y = y + i - 7
+					break
+			if  not goodPlace:
+				continue
+			place.y = y
+			# check for nearby worms in radius 50
+			for worm in PhysObj._worms:
+				if dist(worm.pos, place) < 50:
+					goodPlace = False
+					break
+					# print("F2")
+			if  not goodPlace:
+				continue
+			for mine in PhysObj._mines:
+				if dist(mine.pos, place) < 40:
+					goodPlace = False
+					break
+			if  not goodPlace:
+				continue
+			if isGroundAround(place):
+				pygame.draw.circle(map, SKY, place.vec2tup(), 5)
+				pygame.draw.circle(ground, SKY, place.vec2tup(), 5)
+	else:
+		while not goodPlace:
+			place = Vector(randint(6, mapWidth - 6), randint(6, mapHeight - 50))
+			goodPlace = True
+			for worm in PhysObj._worms:
+				if dist(worm.pos, place) < 75:
+					goodPlace = False
+					break
+				if  not goodPlace:
+					continue
+		
+	# if counter >= 7090:
+		# print("above 7090:", counter)
 	return place
 
 def placePetrolCan(quantity = 1):
@@ -318,7 +344,6 @@ def timeRemaining(amount):
 	time = amount
 
 nonPhys = []
-
 class FloatingText: #pos, text, color
 	def __init__(self, pos, text, color = (255,0,0)):
 		nonPhys.append(self)
@@ -370,7 +395,6 @@ class PhysObj:
 		
 		# velocity
 		self.vel += self.acc
-		
 		# position
 		ppos = self.pos + self.vel
 		
@@ -386,8 +410,6 @@ class PhysObj:
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			
-			
 			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
 				if mapClosed:
 					response += ppos - testPos
@@ -400,7 +422,6 @@ class PhysObj:
 			if testPos.y < 0:
 				r += pi /8
 				continue
-				
 			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 				collision = True
@@ -671,7 +692,7 @@ class Worm (PhysObj):
 	def draw(self):
 		pygame.draw.circle(win, self.color, (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), int(self.radius)+1)
 		win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
-		if self.health > 0:
+		if self.health > 0 and drawHealthBar:
 			self.drawHealth()
 	def __str__(self):
 		return self.nameStr
@@ -1080,7 +1101,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
 	def effect(self, worm):
-		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive"])
+		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike"])
 		FloatingText(self.pos, effect, (0,200,200))
 		worm.team.weaponCounter[weaponDict[effect]] += 1
 
@@ -1167,6 +1188,16 @@ def fireNapalmStrike(pos):
 		if i == 2:
 			camTrack = f
 
+def fireBusterStrike(pos):
+	global camTrack
+	x = pos[0]
+	y = 5
+	BunkerBuster.mode = True
+	for i in range(3):
+		b = BunkerBuster((x - 40 + 40*i, y - i), (0,0), 0)
+		if i == 1:
+			camTrack = b
+
 class GravityMissile(Missile):
 	def deathResponse(self):
 		global camTrack
@@ -1183,8 +1214,9 @@ class GravityMissile(Missile):
 
 def fireGammaGun(start, direction):
 	hitted = []
+	normal = Vector(-direction.y, direction.x).normalize()
 	for t in range(5,500):
-		testPos = start + direction * t
+		testPos = start + direction * t + normal * 1.5 * sin(t * 0.6)
 		extra.append((testPos.x, testPos.y, (0,255,255), 10))
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
@@ -1214,7 +1246,7 @@ class HolyGrenade(Grenade):
 			self.dead = True
 		
 class Banana(Grenade):
-	def __init__(self, pos, direction, energy):
+	def __init__(self, pos, direction, energy, used = False):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
@@ -1222,28 +1254,33 @@ class Banana(Grenade):
 		self.color = (255, 204, 0)
 		self.damp = 0.7
 		self.timer = 0
-		self.surf = myfontbigger.render("c", False, self.color)
+		self.surf = myfontbigger.render("(", False, self.color)
 		self.angle = 0
+		self.used = used
+	def collisionRespone(self, ppos):
+		if self.used:
+			self.dead = True
 	def deathResponse(self):
+		if self.used:
+			boom(self.pos, 40)
+			return
+		global camTrack
 		boom(self.pos, 40)
 		for i in range(5):
 			angle = (i * pi) / 6 + pi / 6
 			direction = (cos(angle)*uniform(0.2,0.6), -sin(angle))
-			m = Missile(self.pos, direction, uniform(0.3,0.8))
-			# m.vel.x += self.vel.x * 0.5
-			# m.vel.y += self.vel.y * 0.5
-			m.windAffected = False
+			m = Banana(self.pos, direction, uniform(0.3,0.8), True)
 			m.boomAffected = False
-			m.boomRadius = 40
-			m.color = (255, 204, 0)
-			m.radius = 2
 			if i == 2:
 				camTrack = m
 	def secondaryStep(self):
 		self.timer += 1
 		if self.timer == fuseTime:
 			self.dead = True
-		self.angle += 1.5
+		if self.vel.x > 0:
+			self.angle -= self.vel.getMag()*2
+		else:
+			self.angle += self.vel.getMag()*2
 	def draw(self):
 		win.blit(pygame.transform.rotate(self.surf, self.angle) , (int(self.pos.x - camPos.x - self.surf.get_size()[0]/2), int(self.pos.y - camPos.y - self.surf.get_size()[1]/2)))
 
@@ -1403,7 +1440,7 @@ class SentryGun(PhysObj):
 		self.shots = 10
 		self.firing = False
 		self.timer = 20
-		self.timesFired = randint(3,5)
+		self.timesFired = randint(5,7)
 	def fire(self):
 		self.firing = True
 	def engage(self):
@@ -1550,6 +1587,7 @@ class BeeHive(PhysObj):
 			self.beeCount -= 1
 	
 class BunkerBuster(PhysObj):
+	mode = False #True = drill
 	def __init__(self, pos, direction, energy):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
@@ -1561,15 +1599,22 @@ class BunkerBuster(PhysObj):
 		self.boomRadius = 30
 		self.boomAffected = False
 		
+		self.drillVel = None
 		self.inGround = False
 		self.timer = 0
 	def step(self):
 		self.applyForce()
 		
 		# velocity
-		self.vel += self.acc
 		if self.inGround:
-			self.vel.limit(5)
+			if self.mode:
+				self.vel = self.drillVel
+				self.vel.setMag(2)
+			else:
+				self.vel += self.acc
+				self.vel.limit(5)
+		else:
+			self.vel += self.acc
 		
 		# position
 		ppos = self.pos + self.vel
@@ -1586,7 +1631,10 @@ class BunkerBuster(PhysObj):
 		if not(checkPos[0] >= mapWidth or checkPos[0] < 0 or checkPos[1] >= mapHeight or checkPos[1] < 0):
 			if map.get_at(checkPos) == GRD:
 				self.inGround = True
-				self.timer += 1
+				self.drillVel = vectorCopy(self.vel)
+				# self.drillVel.setMag(5)
+		if self.inGround:
+			self.timer += 1
 					
 		checkPos = (self.pos + direction*(self.radius + 2)).vec2tupint()
 		if not(checkPos[0] >= mapWidth or checkPos[0] < 0 or checkPos[1] >= mapHeight or checkPos[1] < 0):
@@ -1607,6 +1655,8 @@ class BunkerBuster(PhysObj):
 		if self.pos.y > mapHeight:
 			self._reg.remove(self)
 			return
+		if self.inGround and self.pos.y <= 0:
+			self.dead = True
 
 		if self.vel.getMag() < 0.1:
 			self.stable = True
@@ -1729,10 +1779,79 @@ class HomingMissile(PhysObj):
 			self.activated = True
 		if self.timer == 20 + 30*5:
 			self.activated = False
-	# def deathResponse(self):
-		# global showTarget
-		# showTarget = False
-		# boom(self.pos, self.boomRadius)
+	def step(self):
+		self.applyForce()
+		
+		# velocity
+		self.vel += self.acc
+		self.vel.limit(15)
+		# position
+		ppos = self.pos + self.vel
+		
+		# reset forces
+		self.acc *= 0
+		self.stable = False
+		
+		angle = atan2(self.vel.y, self.vel.x)
+		response = Vector(0,0)
+		collision = False
+		
+		# colission with world:
+		r = angle - pi#- pi/2
+		while r < angle + pi:#+ pi/2:
+			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
+			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+				if mapClosed:
+					response += ppos - testPos
+					collision = True
+					r += pi /8
+					continue
+				else:
+					r += pi /8
+					continue
+			if testPos.y < 0:
+				r += pi /8
+				continue
+			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+				response += ppos - testPos
+				collision = True
+			
+			r += pi /8
+		
+		magVel = self.vel.getMag()
+		
+		if collision:
+			self.collisionRespone(ppos)
+			if self.vel.getMag() > 5 and self.fallAffected:
+				self.damage(self.vel.getMag() * 1.5 * fallDamageMult)
+			self.stable = True
+			
+			response.normalize()
+			
+			fdot = self.vel.dot(response)
+			if not self.bounceBeforeDeath == 1:
+				self.vel = ((response * -2 * fdot) + self.vel) * self.damp
+			
+			if self.bounceBeforeDeath > 0:
+				self.bounceBeforeDeath -= 1
+				self.dead = self.bounceBeforeDeath == 0
+		else:
+			self.pos = ppos
+			# flew out map but not worms !
+			if self.pos.y > mapHeight and not self in self._worms:
+				self.outOfMapResponse()
+				self._reg.remove(self)
+				return
+		
+		if magVel < 0.1:
+			self.stable = True
+		
+		self.secondaryStep()
+		
+		if self.dead:
+			self._reg.remove(self)
+			self.deathResponse()
+			del self
 	def outOfMapResponse(self):
 		global showTarget
 		showTarget = False
@@ -1750,6 +1869,78 @@ class HomingMissile(PhysObj):
 		a,b = self.pos.x,self.pos.y
 		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
 
+class Vortex():
+	def __init__(self, pos):
+		PhysObj._reg.append(self)
+		self.pos = Vector(pos[0], pos[1])
+		self.rot = 0
+		self.inhale = True
+		self.boomAffected = False
+		self.stable = False
+	def step(self):
+		if self.inhale:
+			self.rot += 0.001
+			if self.rot > 0.1:
+				self.rot = 0.1
+				self.inhale = False
+		else:
+			self.rot -= 0.001
+		
+		if self.inhale:
+			for worm in PhysObj._reg:
+				if worm == self:
+					continue
+				if dist(self.pos, worm.pos) < 130:
+					worm.acc += (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
+					if randint(0,20) == 1:
+						worm.vel.y -= 2
+				if worm in PhysObj._worms and dist(self.pos, worm.pos) < 50:
+					if randint(0,20) == 1:
+						worm.damage(randint(1,8))
+		else:
+			for worm in PhysObj._reg:
+				if worm == self:
+					continue
+				if dist(self.pos, worm.pos) < 130:
+					worm.acc -= (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
+			
+		if not self.inhale and self.rot < 0:
+			PhysObj._reg.remove(self)
+			del self
+	def draw(self):
+		width = 50
+		arr = []
+		for x in range(int(self.pos.x) - width//2, int(self.pos.x) + width//2):
+			for y in range(int(self.pos.y) - width//2, int(self.pos.y) + width//2):
+				if dist(Vector(x,y), self.pos) > width//2:
+					continue
+				rot = (dist(Vector(x,y), self.pos) - width//2) * self.rot
+				direction = Vector(x,y) - self.pos
+				direction.rotate(rot)
+				getAt = point2world(self.pos + direction)
+				if getAt[0] < 0 or getAt[0] >= winWidth or getAt[1] < 0 or getAt[1] >= winHeight:
+					arr.append((0,0,0))
+				else:
+					pixelColor = win.get_at(getAt)
+					arr.append(pixelColor)
+		for x in range(int(self.pos.x) - width//2, int(self.pos.x) + width//2):
+			for y in range(int(self.pos.y) - width//2, int(self.pos.y) + width//2):
+				if dist(Vector(x,y), self.pos) > width//2:
+					continue
+				
+				win.set_at(point2world((x,y)), arr.pop(0))
+
+class VortexGrenade(Grenade):
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 3
+		self.color = (25, 102, 102)
+		self.damp = 0.5
+		self.timer = 0
+	def deathResponse(self):
+		Vortex(self.pos)
 
 ################################################################################ Create World
 
@@ -1761,26 +1952,27 @@ maps.append(("wormsMaps/wMapbig1.png", 1000))
 maps.append(("wormsMaps/wMapbig2.png", 800))
 
 def createWorld():
+	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[23 - 1]
-	imageFile = imageChoice[0]
-	heightNorm = imageChoice[1]
+	# imageChoice = maps[42 - 1]
+	imageFile, heightNorm = imageChoice
 	
 	global mapImage
 	mapImage = pygame.image.load(imageFile)
 	
-	createMapImage(heightNorm)
-	
-	# makeBoundary()
-	# makeLowBoundary()
-	
+	if not diggingMatch: createMapImage(heightNorm)
+	else: mapImage = None; createMapDigging()
+		
 	placePetrolCan(randint(2,3))
 	placeMines(randint(2,3))
-	randomLegendary(2)
+	randomLegendary(1)
+	if diggingMatch: moreDigging()
 	renderLand()
 
-randomPlace = True
+# drawHealthBar = False
+# randomPlace = False
 # mapClosed = True
+# diggingMatch = True
 wormsPerTeam = 8
 
 ################################################################################ Weapons setup
@@ -1794,10 +1986,10 @@ if True:
 	weapons.append(("homing missile", CHARGABLE, 2, MISSILES))
 	weapons.append(("grenade", CHARGABLE, 10, GRENADES))
 	weapons.append(("mortar", CHARGABLE, 3, GRENADES))
-	weapons.append(("sticky bomb", CHARGABLE, 5, GRENADES))
+	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES))
 	weapons.append(("gas grenade", CHARGABLE, 5, GRENADES))
 	weapons.append(("electric grenade", CHARGABLE, 3, GRENADES))
-	weapons.append(("shotgun", GUN, 30, GUNS))
+	weapons.append(("shotgun", GUN, 15, GUNS))
 	weapons.append(("minigun", GUN, 6, GUNS))
 	weapons.append(("gamma gun", GUN, 6, GUNS))
 	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY))
@@ -1816,6 +2008,8 @@ if True:
 	weapons.append(("earthquake", PUTABLE, 0, LEGENDARY))
 	weapons.append(("gemino mine", CHARGABLE, 0, LEGENDARY))
 	weapons.append(("bee hive", CHARGABLE, 0, LEGENDARY))
+	weapons.append(("vortex grenade", CHARGABLE, 0, LEGENDARY))
+	weapons.append(("buster strike", CLICKABLE, 0, LEGENDARY))
 
 weaponDict = {}
 weaponDictI = {}
@@ -1912,6 +2106,8 @@ def calculateTeamHealth():
 		teamsInfo.append(health)
 
 def teamHealthDraw():
+	if diggingMatch:
+		return
 	maxHealth = nWormsPerTeam * initialHealth
 	for i in range(totalTeams):
 		pygame.draw.rect(win, (220,220,220), (int(winWidth-50),int(10+i*3) , 40,2))
@@ -1924,7 +2120,7 @@ def teamHealthDraw():
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn, currentWeapon
-	global deploying, sentring
+	global deploying, sentring, deployPacks
 
 	# reset special effects:
 	global globalGravity
@@ -1953,11 +2149,13 @@ def cycleWorms():
 		if len(team.worms) == 0:
 			count += 1
 	if count == totalTeams:
+		pygame.image.save(ground, "lastWormsGround.png")
 		# all dead
 		print("everyone dead")
 		run = False
 		return
 	elif count == totalTeams - 1:
+		pygame.image.save(ground, "lastWormsGround.png")
 		# someone won
 		for team in teams:
 			if not len(team.worms) == 0:
@@ -1969,16 +2167,17 @@ def cycleWorms():
 				run = False
 				return
 	
-	# deploy pack:
 	roundCounter += 1
-	if roundCounter % totalTeams == 0 and not deploying:
-		deploying = True
-		roundCounter -= 1
-		nextState = WAIT_STABLE
-		w = deployPack(choice([HEALTH_PACK,UTILITY_PACK, WEAPON_PACK]))
-		# print("deploy")
-		camTrack = w
-		return
+	# deploy pack:
+	if deployPacks:
+		if roundCounter % totalTeams == 0 and not deploying:
+			deploying = True
+			roundCounter -= 1
+			nextState = WAIT_STABLE
+			w = deployPack(choice([HEALTH_PACK,UTILITY_PACK, WEAPON_PACK]))
+			# print("deploy")
+			camTrack = w
+			return
 	
 	# shoot sentries:
 	isThereTargets = False
@@ -2002,7 +2201,7 @@ def cycleWorms():
 	deploying = False
 	sentring = False
 	
-	
+	showTarget = False
 	# change wind:
 	global wind
 	wind = uniform(-1,1)
@@ -2057,14 +2256,12 @@ def isGroundAround(place, radius = 5):
 	return False
 
 def randomPlacing(wormsPerTeam):
-	# teams[teamChoser].addWorm((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
-	# teamChoser = (teamChoser + 1) % totalTeams
 	counter = 0
 	for i in range(wormsPerTeam * len(teams)):
 		place = giveGoodPlace()
-		# print("Found")
-		# extra.append((place.x, place.y, (255,0,0), 1000000))
-		# found a good place
+		if diggingMatch:
+			pygame.draw.circle(map, SKY, place, 35)
+			pygame.draw.circle(ground, SKY, place, 35)
 		global teamChoser
 		teams[teamChoser].addWorm(place.vec2tup())
 		teamChoser = (teamChoser + 1) % totalTeams
@@ -2211,14 +2408,20 @@ def loadGame():
 def randomLegendary(amount):
 	for i in range(amount):
 		for team in teams:
-			effect = choice(["banana", "holy grenade", "gemino mine", "bee hive"])
+			effect = choice(["holy grenade", "gemino mine", "bee hive"])
 			team.weaponCounter[weaponDict[effect]] += 1
+			# team.weaponCounter[weaponDict["banana"]] += 16
 
 def suddenDeath():
 	for worm in PhysObj._worms:
 		worm.sicken()
 		if not worm.health == 1:
 			worm.health = worm.health // 2
+
+def moreDigging():
+	for team in teams:
+		team.weaponCounter[weaponDict["minigun"]] += 5
+		team.weaponCounter[weaponDict["bunker buster"]] += 3
 ################################################################################ State machine
 
 # states:
@@ -2408,6 +2611,12 @@ while run:
 					renderWeaponCount()
 					timeRemaining(5)
 					state = nextState
+				if currentWeapon == "buster strike" and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
+					fireBusterStrike((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+					currentTeam.weaponCounter[weaponDict[currentWeapon]] -= 1
+					renderWeaponCount()
+					timeRemaining(5)
+					state = nextState
 				if currentWeapon == "teleport":
 					currentTeam.specialCounter[TELEPORT] -= 1
 					currentWeapon = "missile"
@@ -2469,6 +2678,7 @@ while run:
 				# SentryGun((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), currentTeam.color)
 				# UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# w = deployPack(WEAPON_PACK)
+				# v = Vortex((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# camTrack = w
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
@@ -2486,8 +2696,8 @@ while run:
 				menuOffset = 0
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll down
 			menuOffset += 50
-			if menuOffset > 50:
-				menuOffset = 50
+			if menuOffset > 70:
+				menuOffset = 70
 		# key press
 		if event.type == pygame.KEYDOWN:
 			# controll worm
@@ -2568,7 +2778,7 @@ while run:
 			if event.key == pygame.K_p:
 				pause = not pause
 			if event.key == pygame.K_TAB:
-				if state == PLAYER_CONTROL_1 and weaponStyle == CHARGABLE:
+				if state == PLAYER_CONTROL_1 and weaponStyle == CHARGABLE and not currentWeapon == "bunker buster":
 					fuseTime += 30
 					if fuseTime > 120:
 						fuseTime = 30
@@ -2581,6 +2791,12 @@ while run:
 					if girderAngle == 360:
 						girderSize = 50
 						girderAngle = 0
+				elif state == PLAYER_CONTROL_1 and currentWeapon == "bunker buster":
+					BunkerBuster.mode = not BunkerBuster.mode
+					if BunkerBuster.mode:
+						FloatingText(objectUnderControl.pos + Vector(0,-5), "drill mode", (20,20,20))
+					else:
+						FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
 			if event.key == pygame.K_s:
 				suddenDeath()
 			if event.key == pygame.K_t:
@@ -2601,8 +2817,7 @@ while run:
 				energising = False
 				
 	keys = pygame.key.get_pressed()
-	if keys[pygame.K_ESCAPE]:
-		run = False	
+	if keys[pygame.K_ESCAPE]: run = False	
 	#key hold:
 	if objectUnderControl and playerControl:
 		if keys[pygame.K_RIGHT]:
@@ -2615,8 +2830,7 @@ while run:
 			if energyLevel >= 1:
 				energyLevel = 1
 				fireWeapon = True
-	if pause:
-		continue
+	if pause: continue
 
 	# set camera target
 	if camTrack:
@@ -2641,17 +2855,14 @@ while run:
 			camTrack = None
 			camPos.y += mapScrollSpeed
 	
-	if camPos.y < 0:
-		camPos.y = 0
-	if camPos.y >= mapHeight - winHeight:
-		camPos.y = mapHeight - winHeight
+	if camPos.y < 0: camPos.y = 0
+	if camPos.y >= mapHeight - winHeight: camPos.y = mapHeight - winHeight
 	if mapClosed:
 		if camPos.x < 0:
 			camPos.x = 0
 		if camPos.x >= mapWidth - winWidth:
 			camPos.x = mapWidth - winWidth
-	if Earthquake.earthquake:
-		camPos.x += 25*sin(timeOverall); camPos.y += 15*sin(timeOverall * 1.8)
+	if Earthquake.earthquake: camPos.x += 25*sin(timeOverall); camPos.y += 15*sin(timeOverall * 1.8)
 	
 	# Fire
 	if fireWeapon and playerShootAble:
@@ -2754,6 +2965,10 @@ while run:
 			w = ElectricGrenade(weaponOrigin, weaponDir, energyLevel)
 		elif currentWeapon == "homing missile":
 			w = HomingMissile(weaponOrigin, weaponDir, energyLevel)
+		elif currentWeapon == "drill missile":
+			w = DrillMissile(weaponOrigin, weaponDir, energyLevel)
+		elif currentWeapon == "vortex grenade":
+			w = VortexGrenade(weaponOrigin, weaponDir, energyLevel)
 		
 		if w:
 			camTrack = w
@@ -2776,8 +2991,7 @@ while run:
 		p.step()
 		if not p.stable:
 			gameStable = False
-	for f in nonPhys:
-		f.step()
+	for f in nonPhys: f.step()
 	
 	# advance timer
 	timeOverall += 1
@@ -2786,23 +3000,19 @@ while run:
 			timeStep()
 			
 	cloud_maneger()
-	for cloud in Cloud._reg:
-		cloud.step()
-	
+	for cloud in Cloud._reg: cloud.step()
+		
 	# draw:
 	# win.fill(SKY_CYAN)
 	win.blit(imageSky, (0,0))
-	for cloud in Cloud._reg:
-		cloud.draw()
+	for cloud in Cloud._reg: cloud.draw()
 	drawBackGround(imageMountain2,4)
 	drawBackGround(imageMountain,2)
 	
 	
 	drawLand()
-	for p in PhysObj._reg:
-		p.draw()
-	for f in nonPhys:
-		f.draw()
+	for p in PhysObj._reg: p.draw()
+	for f in nonPhys: f.draw()
 	drawTarget()
 	# draw shooting indicator
 	if objectUnderControl and state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE, OPEN_MENU] and objectUnderControl.health > 0:
@@ -2817,8 +3027,7 @@ while run:
 			angle = objectUnderControl.shootAngle
 			pygame.draw.line(win, (0,0,0), (int(cPos[0] - camPos.x), int(cPos[1] - camPos.y)), ((int(cPos[0] + cos(angle) * i - camPos.x), int(cPos[1] + sin(angle) * i - camPos.y))))
 			i += 1
-	if currentWeapon == "girder" and state == PLAYER_CONTROL_1:
-		drawGirderHint()
+	if currentWeapon == "girder" and state == PLAYER_CONTROL_1: drawGirderHint()
 	drawExtra()
 	
 	# HUD
