@@ -17,6 +17,7 @@ myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
 # something electrical
 # hamburger ?
 # termites
+# time travel utility based on actions and weapon
 #
 # problem with worm switch, cant switch weapons in menu sometimes work
 
@@ -55,6 +56,7 @@ if True:
 	AIM_AID = 2
 	TELEPORT = 3
 	SWITCH_WORMS = 4
+	TIME_TRAVEL = 5
 	
 	MISSILES = (255, 255, 255)
 	GRENADES = (204, 255, 204)
@@ -69,10 +71,13 @@ turnTime = 40
 shockRadius = 1.5
 globalGravity = 0.2
 mapScrollSpeed = 8
+initialHealth = 100
 deployPacks = True
 diggingMatch = False
 randomPlace = True
 drawHealthBar = True
+mapClosed = False
+unlimitedMode = True
 
 # Multipliers
 damageMult = 0.8
@@ -99,12 +104,11 @@ currentWeapon = "missile"
 currentWeaponSurf = myfont.render(currentWeapon, False, (0,0,0))
 weaponStyle = CHARGABLE
 
-mapClosed = False
-initialHealth = 100
 wind = uniform(-1,1)
 actionMove = False
 aimAid = False
 switchingWorms = False
+timeTravel = False
 
 
 def createMapImage(heightNorm = None):
@@ -592,16 +596,24 @@ class PetrolBomb(PhysObj):#4
 		self.color = (158,66,43)
 		self.bounceBeforeDeath = 1
 		self.damp = 0.5
+		self.surf = pygame.Surface((3, 8)).convert_alpha()
+		self.surf.fill(self.color)
+		self.angle = 0
+	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 	def deathResponse(self):
 		boom(self.pos, 15)
 		if randint(0,50) == 1:
 			for i in range(80):
-				s = Fire(self.pos)
+				s = Fire(self.pos, 5)
 				s.vel = Vector(cos(2*pi*i/80), sin(2*pi*i/80))*uniform(3,4)
 		else:
 			for i in range(40):
-				s = Fire(self.pos)
+				s = Fire(self.pos, 5)
 				s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
+	def draw(self):
+		surf = pygame.transform.rotate(self.surf, self.angle)
+		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
 
 class Worm (PhysObj):
 	def __init__(self, pos, name=None, team=None):
@@ -711,7 +723,7 @@ class Worm (PhysObj):
 				timeRemaining(5)
 	def drawHealth(self):
 		pygame.draw.rect(win, (220,220,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), 20,3))
-		value = 20 * self.health/initialHealth
+		value = 20 * min(self.health/initialHealth, 1)
 		if value < 1:
 			value = 1
 		pygame.draw.rect(win, (0,220,0),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), int(value),3))
@@ -767,7 +779,7 @@ class Worm (PhysObj):
 		return string
 
 class Fire(PhysObj):
-	def __init__(self, pos):
+	def __init__(self, pos, delay = 0):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.damp = 0
@@ -776,16 +788,19 @@ class Fire(PhysObj):
 		self.windAffected = True
 		self.life = randint(50,70)
 		self.fallen = False
+		self.delay = delay
+		self.timer = 0
 	def collisionRespone(self, ppos):
 		self.fallen = True
 	def secondaryStep(self):
+		self.timer += 1
 		if self.fallen:
 			self.life -= 1
 		if self.life == 0:
 			self._reg.remove(self)
 			del self
 			return
-		if randint(0,1) == 1:
+		if randint(0,1) == 1 and self.timer > self.delay:
 			boom(self.pos + Vector(randint(-1,1),randint(-1,1)), 3, False, False, True)
 	def draw(self):
 		radius = 1
@@ -1054,8 +1069,8 @@ class HealthPack(PetrolCan):
 			self.deathResponse()
 	def effect(self, worm):
 		worm.health += 50
-		if worm.health > 100:
-			worm.health = 100
+		# if worm.health > 100:
+			# worm.health = 100
 		worm.sick = False
 		worm.color = (255, 206, 167)
 
@@ -1073,7 +1088,7 @@ class UtilityPack(HealthPack):# Utility Pack
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-1, int(self.pos.y) - int(camPos.y)-2))
 	def effect(self, worm):
-		effect = choice([MOON_GRAVITY, DOUBLE_DAMAGE, AIM_AID, TELEPORT, SWITCH_WORMS])
+		effect = choice([MOON_GRAVITY, DOUBLE_DAMAGE, AIM_AID, TELEPORT, SWITCH_WORMS, TIME_TRAVEL])
 		if effect == MOON_GRAVITY:
 			FloatingText(self.pos, "moon gravity", (0,200,200))
 		elif effect == DOUBLE_DAMAGE:
@@ -1084,6 +1099,8 @@ class UtilityPack(HealthPack):# Utility Pack
 			FloatingText(self.pos, "teleport", (0,200,200))
 		elif effect == SWITCH_WORMS:
 			FloatingText(self.pos, "switch worms", (0,200,200))
+		elif effect == TIME_TRAVEL:
+			FloatingText(self.pos, "time travel", (0,200,200))
 		worm.team.hasSpecial = True
 		worm.team.specialCounter[effect] += 1
 
@@ -1274,15 +1291,14 @@ class Banana(Grenade):
 			if i == 2:
 				camTrack = m
 	def secondaryStep(self):
-		self.timer += 1
+		if not self.used: 
+			self.timer += 1
 		if self.timer == fuseTime:
 			self.dead = True
-		if self.vel.x > 0:
-			self.angle -= self.vel.getMag()*2
-		else:
-			self.angle += self.vel.getMag()*2
+		self.angle -= self.vel.x*4
 	def draw(self):
-		win.blit(pygame.transform.rotate(self.surf, self.angle) , (int(self.pos.x - camPos.x - self.surf.get_size()[0]/2), int(self.pos.y - camPos.y - self.surf.get_size()[1]/2)))
+		surf = pygame.transform.rotate(self.surf, self.angle)
+		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
 
 class Earthquake:
 	earthquake = False
@@ -1942,6 +1958,80 @@ class VortexGrenade(Grenade):
 	def deathResponse(self):
 		Vortex(self.pos)
 
+class TimeAgent:
+	def __init__(self):
+		nonPhys.append(self)
+		self.positions = timeTravelPositions
+		self.time = 0
+		self.pos = self.positions[0]
+		self.color = timeTravelList["color"]
+		self.health = timeTravelList["health"]
+		self.nameSurf = timeTravelList["name"]
+		self.weapon = timeTravelList["weapon"]
+		
+		self.energy = 0
+		self.stepsForEnergy = int(timeTravelList["energy"]/0.05)
+		
+	def step(self):
+		if len(self.positions) == 0:
+			global timeTravelFire, timeTravelPositions, timeTravelList
+			timeTravelFire = True
+			fire(timeTravelList["weapon"])
+			nonPhys.remove(self)
+			timeTravelPositions = []
+			timeTravelList = {}
+			return
+		self.pos = self.positions.pop(0)
+		if len(self.positions) <= self.stepsForEnergy:
+			self.energy += 0.05
+			
+		self.time += 1
+	def draw(self):
+		pygame.draw.circle(win, self.color, point2world(self.pos), 3+1)
+		win.blit(self.nameSurf , ((int(self.pos[0]) - int(camPos.x) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(camPos.y) - 21)))
+		pygame.draw.rect(win, (220,220,220),(int(self.pos[0]) -10 -int(camPos.x), int(self.pos[1]) -15 -int(camPos.y), 20,3))
+		value = 20 * self.health/initialHealth
+		if value < 1:
+			value = 1
+		pygame.draw.rect(win, (0,220,0),(int(self.pos[0]) -10 -int(camPos.x), int(self.pos[1]) -15 -int(camPos.y), int(value),3))
+		
+		i = 0
+		while i < 20 * self.energy:
+			cPos = vectorCopy(self.pos)
+			angle = timeTravelList["weaponDir"].getAngle()
+			pygame.draw.line(win, (0,0,0), (int(cPos[0] - camPos.x), int(cPos[1] - camPos.y)), ((int(cPos[0] + cos(angle) * i - camPos.x), int(cPos[1] + sin(angle) * i - camPos.y))))
+			i += 1
+		
+timeTravelPositions = []
+timeTravelList = {}
+timeTravelFire = False
+def timeTravelInitiate():
+	global timeTravel, timeTravelList, time
+	timeTravel = True
+	timeTravelList = {}
+	timeTravelList["color"] = objectUnderControl.color
+	timeTravelList["name"] = objectUnderControl.name
+	timeTravelList["health"] = objectUnderControl.health
+	timeTravelList["initial pos"] = vectorCopy(objectUnderControl.pos)
+	timeTravelList["time in turn"] = time
+def timeTravelRecord():
+	timeTravelPositions.append(objectUnderControl.pos.vec2tup())
+def timeTravelPlay():
+	global timeTravel, time, timeTravelList
+	time = timeTravelList["time in turn"]
+	timeTravel = False
+	timeTravelList["weapon"] = currentWeapon
+	timeTravelList["weaponOrigin"] = vectorCopy(objectUnderControl.pos)
+	timeTravelList["energy"] = energyLevel
+	timeTravelList["weaponDir"] = Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle))
+	objectUnderControl.pos = timeTravelList["initial pos"]
+	TimeAgent()
+def timeTravelReset():
+	global timeTravelPositions, timeTravelList, timeTravelFire
+	timeTravelFire = False
+	timeTravelPositions = []
+	timeTravelList = {}
+	
 ################################################################################ Create World
 
 maps = []
@@ -1952,9 +2042,12 @@ maps.append(("wormsMaps/wMapbig1.png", 1000))
 maps.append(("wormsMaps/wMapbig2.png", 800))
 
 def createWorld():
+	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[42 - 1]
+	imageChoice = maps[26 - 1]
+	
+	if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1]]: mapClosed = True
 	imageFile, heightNorm = imageChoice
 	
 	global mapImage
@@ -2016,11 +2109,145 @@ weaponDictI = {}
 weaponStyleTup = []
 basicSet = []
 
+def fire(weapon = None):
+	global decrease, shotCount, nextState, state, camTrack, fireWeapon, energyLevel, energising, timeTravelFire, currentWeapon
+	if not weapon:
+		weapon = currentWeapon
+	decrease = True
+	if objectUnderControl:
+		weaponOrigin = vectorCopy(objectUnderControl.pos)
+		weaponDir = Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle))
+		energy = energyLevel
+		
+	if timeTravelFire:
+		decrease = False
+		weaponOrigin = timeTravelList["weaponOrigin"]
+		energy = timeTravelList["energy"]
+		weaponDir = timeTravelList["weaponDir"]
+		
+	# if currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0: return
+		
+	w = None
+	if weapon == "missile":
+		w = Missile(weaponOrigin, weaponDir, energy)
+	elif weapon == "grenade":
+		w = Grenade(weaponOrigin, weaponDir, energy)
+	elif weapon == "mortar":
+		w = Mortar(weaponOrigin, weaponDir, energy)
+	elif weapon == "petrol bomb":
+		w = PetrolBomb(weaponOrigin, weaponDir, energy)
+	elif weapon == "TNT":
+		w = TNT(weaponOrigin)
+		w.vel.x = objectUnderControl.facing * 0.5
+		w.vel.y = -0.8
+	elif weapon == "shotgun":
+		decrease = True
+		if state == PLAYER_CONTROL_1:
+			shotCount = 2 #this means 3 shots
+		fireShotgun(weaponOrigin, weaponDir)
+		if not shotCount == 0:
+			shotCount -= 1
+			nextState = FIRE_MULTIPLE
+		else:
+			decrease = True
+	elif weapon == "flame thrower":
+		decrease = False
+		if state == PLAYER_CONTROL_1:
+			shotCount = 70
+		fireFlameThrower(weaponOrigin, weaponDir)
+		if not shotCount == 0:
+			shotCount -= 1
+			nextState = FIRE_MULTIPLE
+		else:
+			nextState = PLAYER_CONTROL_2
+			decrease = True
+			timeRemaining(5)
+	elif weapon == "sticky bomb":
+		w = StickyBomb(weaponOrigin, weaponDir, energy)
+	elif weapon == "minigun":
+		decrease = False
+		if state == PLAYER_CONTROL_1:
+			shotCount = 20
+			if randint(0,50) == 1:
+				shotCount = 60
+		fireMiniGun(weaponOrigin, weaponDir)
+		if not shotCount == 0:
+			shotCount -= 1
+			nextState = FIRE_MULTIPLE
+		else:
+			nextState = PLAYER_CONTROL_2
+			decrease = True
+			timeRemaining(5)
+	elif weapon == "mine":
+		w = Mine(weaponOrigin, 70)
+		w.vel.x = objectUnderControl.facing * 0.5
+	elif weapon == "baseball":
+		fireBaseball(weaponOrigin, weaponDir)
+	elif weapon == "gas grenade":
+		w = GasGrenade(weaponOrigin, weaponDir, energy)
+	elif weapon == "gravity missile":
+		w = GravityMissile(weaponOrigin, weaponDir, energy)
+	elif weapon == "gamma gun":
+		decrease = True
+		if state == PLAYER_CONTROL_1:
+			shotCount = 1 #this means 2 shots
+		fireGammaGun(weaponOrigin, weaponDir)
+		if not shotCount == 0:
+			shotCount -= 1
+			nextState = FIRE_MULTIPLE
+		else:
+			decrease = True
+	elif weapon == "holy grenade":
+		w = HolyGrenade(weaponOrigin, weaponDir, energy)
+	elif weapon == "banana":
+		w = Banana(weaponOrigin, weaponDir, energy)
+	elif weapon == "cluster":
+		w = Cluster(weaponOrigin, weaponDir, energy)
+	elif weapon == "earthquake":
+		Earthquake()
+	elif weapon == "gemino mine":
+		w = Gemino(weaponOrigin, weaponDir, energy)
+	elif weapon == "plant seed":
+		w = PlantBomb(weaponOrigin, weaponDir, energy)
+	elif weapon == "sentry gun":
+		w = SentryGun(weaponOrigin, currentTeam.color)
+		w.pos.y -= objectUnderControl.radius + w.radius
+	elif weapon == "bee hive":
+		w = BeeHive(weaponOrigin, weaponDir, energy)
+	elif weapon == "bunker buster":
+		w = BunkerBuster(weaponOrigin, weaponDir, energy)
+	elif weapon == "electric grenade":
+		w = ElectricGrenade(weaponOrigin, weaponDir, energy)
+	elif weapon == "homing missile":
+		w = HomingMissile(weaponOrigin, weaponDir, energy)
+	elif weapon == "drill missile":
+		w = DrillMissile(weaponOrigin, weaponDir, energy)
+	elif weapon == "vortex grenade":
+		w = VortexGrenade(weaponOrigin, weaponDir, energy)
+	
+	if w and not timeTravelFire: camTrack = w
+		
+	if decrease:
+		currentTeam.weaponCounter[weaponDict[weapon]] -= 1
+		renderWeaponCount()
+
+	fireWeapon = False
+	energyLevel = 0
+	energising = False
+	
+	if timeTravelFire:
+		timeTravelFire = False
+		return
+	
+	state = nextState
+	if state == PLAYER_CONTROL_2: timeRemaining(5)
+
 for i in range(len(weapons)):
 	weaponDict[weapons[i][0]] = i
 	weaponDictI[i] = weapons[i][0]
 	weaponStyleTup.append(weapons[i][1])
-	basicSet.append(weapons[i][2])
+	if not unlimitedMode: basicSet.append(weapons[i][2])
+	else: basicSet.append(-1)
 
 wRects = []
 for i in range(1,len(weaponDict)):
@@ -2030,7 +2257,7 @@ for i in range(1,len(weaponDict)):
 	selected = False
 	color = weapons[i][3]
 	wRects.append( [index, textSurf, rect, selected, color] )
-specialStr = ["moon gravity", "double damage", "aim aid", "teleport", "switch worms"]
+specialStr = ["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel"]
 sRects = []
 for i in range(len(specialStr)):
 	textSurf = myfont.render(specialStr[i], False, (0,0,0))
@@ -2111,7 +2338,7 @@ def teamHealthDraw():
 	maxHealth = nWormsPerTeam * initialHealth
 	for i in range(totalTeams):
 		pygame.draw.rect(win, (220,220,220), (int(winWidth-50),int(10+i*3) , 40,2))
-		value = (teamsInfo[i]/maxHealth)*40
+		value = min(teamsInfo[i]/maxHealth, 1)*40
 		if value == 0:
 			continue
 		if value < 1:
@@ -2129,8 +2356,10 @@ def cycleWorms():
 	global radiusMult
 	damageMult = 0.8
 	radiusMult = 1
-	global aimAid, switchingWorms
+	global aimAid, switchingWorms, timeTravel
 	aimAid = False
+	if timeTravel:
+		timeTravelReset()
 	if switchingWorms:
 		if currentWeapon == "switch worms":
 			currentWeapon = "missile"
@@ -2406,12 +2635,12 @@ def loadGame():
 			pass
 			
 def randomLegendary(amount):
+	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
 			effect = choice(["holy grenade", "gemino mine", "bee hive"])
 			team.weaponCounter[weaponDict[effect]] += 1
-			# team.weaponCounter[weaponDict["banana"]] += 16
-
+			
 def suddenDeath():
 	for worm in PhysObj._worms:
 		worm.sicken()
@@ -2668,10 +2897,14 @@ while run:
 							weaponStyle = PUTABLE
 							currentTeam.specialCounter[sRect[0]] += 1
 							renderWeaponCount(True)
+						elif sRect[0] == TIME_TRAVEL:
+							if not timeTravel:
+								timeTravelInitiate()
 						state = PLAYER_CONTROL_1
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)\
 			# testing mainly
 			if state == PLAYER_CONTROL_1:
+				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# Bee((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), uniform(0,2*pi))
 				# Plant((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
@@ -2679,6 +2912,7 @@ while run:
 				# UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# w = deployPack(WEAPON_PACK)
 				# v = Vortex((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+				# if not timeTravel: timeTravelInitiate()
 				# camTrack = w
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
@@ -2771,8 +3005,6 @@ while run:
 			# randomize wind
 			if event.key == pygame.K_w:
 				wind = uniform(-1,1)
-			# if event.key == pygame.K_s:
-				# saveGame()
 			if event.key == pygame.K_l:
 				loadGame()
 			if event.key == pygame.K_p:
@@ -2800,14 +3032,17 @@ while run:
 			if event.key == pygame.K_s:
 				suddenDeath()
 			if event.key == pygame.K_t:
-				for sRect in sRects:
-					if sRect[0] == SWITCH_WORMS:
-						print(sRect)
+				print("timeTravel:", timeTravel)
+				print("lenght of positions:", len(timeTravelPositions))
+				print("length os set:", len(timeTravelList))
 		# key release
 		if event.type == pygame.KEYUP:
 			# fire release
 			if event.key == pygame.K_SPACE and playerShootAble:
-				if weaponStyle == CHARGABLE and energising:
+				if timeTravel:
+					timeTravelPlay()
+					energyLevel = 0
+				elif weaponStyle == CHARGABLE and energising:
 					fireWeapon = True
 				elif currentWeapon == "switch worms" and currentTeam.specialCounter[SWITCH_WORMS] > 0:
 					switchWorms()
@@ -2828,8 +3063,13 @@ while run:
 		if playerShootAble and keys[pygame.K_SPACE] and weaponStyle == CHARGABLE and energising:
 			energyLevel += 0.05
 			if energyLevel >= 1:
-				energyLevel = 1
-				fireWeapon = True
+				if timeTravel:
+					timeTravelPlay()
+					energyLevel = 0
+					energising = False
+				else:
+					energyLevel = 1
+					fireWeapon = True
 	if pause: continue
 
 	# set camera target
@@ -2865,125 +3105,7 @@ while run:
 	if Earthquake.earthquake: camPos.x += 25*sin(timeOverall); camPos.y += 15*sin(timeOverall * 1.8)
 	
 	# Fire
-	if fireWeapon and playerShootAble:
-		decrease = True
-		# weapon origin:
-		if objectUnderControl:
-			weaponOrigin = vectorCopy(objectUnderControl.pos)
-			# weapon direction (normalized):
-			weaponDir = Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle))
-		w = None
-		if currentWeapon == "missile":
-			w = Missile(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "grenade":
-			w = Grenade(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "mortar":
-			w = Mortar(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "petrol bomb":
-			w = PetrolBomb(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "TNT":
-			w = TNT(weaponOrigin)
-			w.vel.x = objectUnderControl.facing * 0.5
-			w.vel.y = -0.8
-		elif currentWeapon == "shotgun":
-			decrease = True
-			if state == PLAYER_CONTROL_1:
-				shotCount = 2 #this means 3 shots
-			fireShotgun(weaponOrigin, weaponDir)
-			if not shotCount == 0:
-				shotCount -= 1
-				nextState = FIRE_MULTIPLE
-			else:
-				decrease = True
-		elif currentWeapon == "flame thrower":
-			decrease = False
-			if state == PLAYER_CONTROL_1:
-				shotCount = 70
-			fireFlameThrower(weaponOrigin, weaponDir)
-			if not shotCount == 0:
-				shotCount -= 1
-				nextState = FIRE_MULTIPLE
-			else:
-				nextState = PLAYER_CONTROL_2
-				decrease = True
-				timeRemaining(5)
-		elif currentWeapon == "sticky bomb":
-			w = StickyBomb(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "minigun":
-			decrease = False
-			if state == PLAYER_CONTROL_1:
-				shotCount = 20
-				if randint(0,50) == 1:
-					shotCount = 60
-			fireMiniGun(weaponOrigin, weaponDir)
-			if not shotCount == 0:
-				shotCount -= 1
-				nextState = FIRE_MULTIPLE
-			else:
-				nextState = PLAYER_CONTROL_2
-				decrease = True
-				timeRemaining(5)
-		elif currentWeapon == "mine":
-			w = Mine(weaponOrigin, 70)
-			w.vel.x = objectUnderControl.facing * 0.5
-		elif currentWeapon == "baseball":
-			fireBaseball(weaponOrigin, weaponDir)
-		elif currentWeapon == "gas grenade":
-			w = GasGrenade(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "gravity missile":
-			w = GravityMissile(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "gamma gun":
-			decrease = True
-			if state == PLAYER_CONTROL_1:
-				shotCount = 1 #this means 2 shots
-			fireGammaGun(weaponOrigin, weaponDir)
-			if not shotCount == 0:
-				shotCount -= 1
-				nextState = FIRE_MULTIPLE
-			else:
-				decrease = True
-		elif currentWeapon == "holy grenade":
-			w = HolyGrenade(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "banana":
-			w = Banana(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "cluster":
-			w = Cluster(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "earthquake":
-			Earthquake()
-		elif currentWeapon == "gemino mine":
-			w = Gemino(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "plant seed":
-			w = PlantBomb(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "sentry gun":
-			w = SentryGun(weaponOrigin, currentTeam.color)
-			w.pos.y -= objectUnderControl.radius + w.radius
-		elif currentWeapon == "bee hive":
-			w = BeeHive(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "bunker buster":
-			w = BunkerBuster(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "electric grenade":
-			w = ElectricGrenade(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "homing missile":
-			w = HomingMissile(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "drill missile":
-			w = DrillMissile(weaponOrigin, weaponDir, energyLevel)
-		elif currentWeapon == "vortex grenade":
-			w = VortexGrenade(weaponOrigin, weaponDir, energyLevel)
-		
-		if w:
-			camTrack = w
-		
-		if decrease:
-			currentTeam.weaponCounter[weaponDict[currentWeapon]] -= 1
-			renderWeaponCount()
-
-		fireWeapon = False
-		energyLevel = 0
-		energising = False
-		
-		state = nextState
-		if state == PLAYER_CONTROL_2:
-			timeRemaining(5)
+	if fireWeapon and playerShootAble: fire()
 	
 	# step:
 	gameStable = True
@@ -2992,6 +3114,9 @@ while run:
 		if not p.stable:
 			gameStable = False
 	for f in nonPhys: f.step()
+	
+	if timeTravel:
+		timeTravelRecord()
 	
 	# advance timer
 	timeOverall += 1
@@ -3035,8 +3160,7 @@ while run:
 	timeDraw()
 	win.blit(currentWeaponSurf, ((int(25), int(8))))
 	
-	if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER]:
-		teamHealthDraw()
+	if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: teamHealthDraw()
 	# weapon menu:
 	if state == OPEN_MENU:
 		weaponMenuStep()
@@ -3045,8 +3169,6 @@ while run:
 	# debug:
 	# win.blit(myfont.render(str(state), False, (0,0,0)), ((int(1), int(winHeight-6))))
 	win.blit(myfont.render(str(int(damageThisTurn)), False, (0,0,0)), ((int(10), int(winHeight-6))))
-	# win.blit(myfont.render(str(int(roundCounter)), False, (0,255,0)), ((int(50), int(winHeight-6))))
-	# win.blit(myfont.render(str(int(menuOffset)), False, (0,0,0)), ((int(10), int(winHeight-6))))
 	if state == PLACING_WORMS:
 		win.blit(myfont.render(str(len(PhysObj._worms)), False, (0,0,0)), ((int(20), int(winHeight-6))))
 	# if gameStable:
@@ -3057,12 +3179,6 @@ while run:
 	
 	# screen manegement
 	screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-	
-	# screen manegement
-	# screenPos = Vector(0,0)
-	# if Earthquake.earthquake:
-		# screenPos.x = 50*sin(timeOverall); screenPos.y = 30*sin(timeOverall * 1.8)
-	# screen.blit(pygame.transform.scale(win, screen.get_rect().size), screenPos.vec2tupint())
 	
 	pygame.display.update()
 	
