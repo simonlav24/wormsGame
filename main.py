@@ -11,16 +11,6 @@ pygame.font.init()
 myfont = pygame.font.Font("fonts\pixelFont.ttf", 5)
 myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
 
-### TO DO LIST
-# https://worms2d.info/Weapons_(Worms_Unlimited)
-# balloon/jetpack
-# something electrical
-# hamburger ?
-# termites
-# time travel utility based on actions and weapon
-#
-# problem with worm switch, cant switch weapons in menu sometimes work
-
 scalingFactor = 3
 winWidth = int(1280 / scalingFactor)
 winHeight = int(720 / scalingFactor)
