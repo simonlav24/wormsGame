@@ -77,7 +77,7 @@ diggingMatch = False
 randomPlace = True
 drawHealthBar = True
 mapClosed = False
-unlimitedMode = False
+unlimitedMode = True
 moreWindAffected = False
 
 # Multipliers
@@ -2468,6 +2468,8 @@ if unlimitedMode:
 	for team in teams:
 		team.specialCounter = [99] * len(specialStr)
 		team.hasSpecial = True
+	for wRect in wRects:
+		wRect[5] = 0
 
 def renderWeaponCount(special = False):
 	global currentTeam, currentWeapon, currentWeaponSurf
@@ -2969,9 +2971,9 @@ def makeRandomTeams(teamQuantity, wormsPerTeam, names):
 	currentTeam = choice(teams)
 	teamChoser = randint(0,3) % totalTeams
 
-namesFile = open("names.txt", "r")
-randomNames = namesFile.read().splitlines()
-shuffle(randomNames)
+# namesFile = open("names.txt", "r")
+# randomNames = namesFile.read().splitlines()
+# shuffle(randomNames)
 
 namesCustom = ["eithan", "almog", "berry", "simon", "dor", "evgeny", "ted", "shahaf", "nakar", "dan", "yoni", "asi"]
 namesCustom2 = ["Cenzor", "aliza", "naomi", "phathi", "yohai", "yulia", "rom", "lidia", "acasha", "ziv", "mario", "hagar"]
