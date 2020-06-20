@@ -77,7 +77,7 @@ diggingMatch = False
 randomPlace = True
 drawHealthBar = True
 mapClosed = False
-unlimitedMode = True
+unlimitedMode = False
 moreWindAffected = False
 
 # Multipliers
