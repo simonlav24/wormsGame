@@ -743,7 +743,11 @@ class Worm (PhysObj):
 			if objectUnderControl == self:
 				# self died and is objectUnderControl
 				if state == FIRE_MULTIPLE:
-					nextState = WAIT_STABLE
+					nextState = PLAYER_CONTROL_2
+					# remove shotgun if current
+					if currentWeapon == "shotgun" or currentWeapon == "long bow":
+						self.team.weaponCounter[weaponDict[currentWeapon]] -= 1
+						renderWeaponCount()
 				state = nextState
 				timeRemaining(5)
 	def drawHealth(self):
@@ -2344,10 +2348,10 @@ if True:
 	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES))
 	weapons.append(("gas grenade", CHARGABLE, 5, GRENADES))
 	weapons.append(("electric grenade", CHARGABLE, 3, GRENADES))
-	weapons.append(("shotgun", GUN, 15, GUNS))
+	weapons.append(("shotgun", GUN, 5, GUNS))
 	weapons.append(("minigun", GUN, 6, GUNS))
 	weapons.append(("gamma gun", GUN, 6, GUNS))
-	weapons.append(("long bow", GUN, 9, GUNS))
+	weapons.append(("long bow", GUN, 3, GUNS))
 	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY))
 	weapons.append(("flame thrower", PUTABLE, 5, FIREY))
 	weapons.append(("mine", PUTABLE, 5, GRENADES))
@@ -2406,15 +2410,16 @@ def fire(weapon = None):
 		w.vel.x = objectUnderControl.facing * 0.5
 		w.vel.y = -0.8
 	elif weapon == "shotgun":
-		decrease = True
+		decrease = False
 		if state == PLAYER_CONTROL_1:
-			shotCount = 2 #this means 3 shots
-		fireShotgun(weaponOrigin, weaponDir)
-		if not shotCount == 0:
-			shotCount -= 1
+			shotCount = 3 # three shots
+		fireShotgun(weaponOrigin, weaponDir) # fire
+		shotCount -= 1
+		if shotCount > 0:
 			nextState = FIRE_MULTIPLE
-		else:
+		if shotCount == 0:
 			decrease = True
+			nextState = PLAYER_CONTROL_2
 	elif weapon == "flame thrower":
 		decrease = False
 		if state == PLAYER_CONTROL_1:
@@ -2496,16 +2501,17 @@ def fire(weapon = None):
 	elif weapon == "artillery assist":
 		w = Artillery(weaponOrigin, weaponDir, energy)
 	elif weapon == "long bow":
-		decrease = True
+		decrease = False
 		if state == PLAYER_CONTROL_1:
-			shotCount = 2 #this means 3 shots
-		w = LongBow(weaponOrigin, weaponDir)
+			shotCount = 3 # three shots
+		w = LongBow(weaponOrigin, weaponDir) # fire
 		w.ignore = objectUnderControl
-		if not shotCount == 0:
-			shotCount -= 1
+		shotCount -= 1
+		if shotCount > 0:
 			nextState = FIRE_MULTIPLE
-		else:
+		if shotCount == 0:
 			decrease = True
+			nextState = PLAYER_CONTROL_2
 
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -2578,7 +2584,7 @@ class Team:
 			string += worm.saveStr()
 		return string
 
-blues = Team(["red lion", "commercial", "swan", "brewers", "fred", "sparrow", "eithan", "red"], BLUE)
+blues = Team(["red lion", "commercial", "swan", "brewers", "fred", "sparrow", "eithan", "reed"], BLUE)
 reds = Team(["fix delux r", "vamp b", "birdie", "lordie", "pinkie", "katie", "angie", "miya"], RED)
 greens = Team(["blair", "major", "thatcher", "chellenge", "george", "mark", "mercury", "philip"], GREEN)
 yellows = Team(["colan", "GT", "jettets", "chevan", "jonie", "murph", "silvia", "flur"], YELLOW)
@@ -2940,7 +2946,7 @@ def randomStartingWeapons(amount):
 	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
-			effect = choice(["holy grenade", "gemino mine", "bee hive", "chilli pepper"])
+			effect = choice(["holy grenade", "gemino mine", "bee hive"])
 			team.weaponCounter[weaponDict[effect]] += 1
 			if randint(0,1) == 1:
 				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID])
@@ -3082,11 +3088,6 @@ def stateMachine():
 		playerControl = True #can play
 		playerShootAble = True
 		playerScrollAble = True
-		
-		nextState = PLAYER_CONTROL_2
-		if currentWeapon == "shotgun":
-			if not shotCount == 0:
-				nextState = FIRE_MULTIPLE
 		
 		if currentWeapon == "flame thrower" or currentWeapon == "minigun":
 			fireWeapon = True
