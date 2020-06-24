@@ -102,6 +102,11 @@ class Vector:
 			self.y = value
 	def __len__(self):
 		return 2
+	def rotate(self, angle):
+		x = self.x * math.cos(angle) - self.y * math.sin(angle)
+		y = self.x * math.sin(angle) + self.y * math.cos(angle)
+		self.x = x
+		self.y = y
 
 def normalize(vec):
 	vecRes = vectorCopy(vec)
@@ -125,7 +130,7 @@ def getAngleByTwoVectors(vec_org,vec_taget):
 	return math.atan2(vec_taget.y - vec_org.y, vec_taget.x - vec_org.x)
 	
 def vectorCopy(vec):
-	return Vector(vec.x,vec.y)
+	return Vector(vec[0],vec[1])
 
 def vecFromTuple(tup):
 	return Vector(tup[0], tup[1])
