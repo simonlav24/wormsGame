@@ -745,7 +745,7 @@ class Worm (PhysObj):
 				if state == FIRE_MULTIPLE:
 					nextState = PLAYER_CONTROL_2
 					# remove shotgun if current
-					if currentWeapon == "shotgun" or currentWeapon == "long bow":
+					if weaponStyle == GUN:
 						self.team.weaponCounter[weaponDict[currentWeapon]] -= 1
 						renderWeaponCount()
 				state = nextState
@@ -1342,7 +1342,7 @@ def fireGammaGun(start, direction):
 		extra.append((testPos.x, testPos.y, (0,255,255), 10))
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
-			break
+			continue
 		# if hits worm:
 		for worm in PhysObj._worms:
 			if dist(testPos, worm.pos) < worm.radius and not worm in hitted:
@@ -2302,7 +2302,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[12 - 1]
+	# imageChoice = maps[21 - 1]
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1]]: mapClosed = True
@@ -2350,7 +2350,7 @@ if True:
 	weapons.append(("electric grenade", CHARGABLE, 3, GRENADES))
 	weapons.append(("shotgun", GUN, 5, GUNS))
 	weapons.append(("minigun", GUN, 6, GUNS))
-	weapons.append(("gamma gun", GUN, 6, GUNS))
+	weapons.append(("gamma gun", GUN, 3, GUNS))
 	weapons.append(("long bow", GUN, 3, GUNS))
 	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY))
 	weapons.append(("flame thrower", PUTABLE, 5, FIREY))
@@ -2458,15 +2458,16 @@ def fire(weapon = None):
 	elif weapon == "gravity missile":
 		w = GravityMissile(weaponOrigin, weaponDir, energy)
 	elif weapon == "gamma gun":
-		decrease = True
+		decrease = False
 		if state == PLAYER_CONTROL_1:
-			shotCount = 1 #this means 2 shots
-		fireGammaGun(weaponOrigin, weaponDir)
-		if not shotCount == 0:
-			shotCount -= 1
+			shotCount = 2 # two shots
+		fireGammaGun(weaponOrigin, weaponDir) # fire
+		shotCount -= 1
+		if shotCount > 0:
 			nextState = FIRE_MULTIPLE
-		else:
+		if shotCount == 0:
 			decrease = True
+			nextState = PLAYER_CONTROL_2
 	elif weapon == "holy grenade":
 		w = HolyGrenade(weaponOrigin, weaponDir, energy)
 	elif weapon == "banana":
@@ -2648,7 +2649,7 @@ def teamHealthDraw():
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn, currentWeapon
-	global deploying, sentring, deployPacks, showTarget
+	global deploying, sentring, deployPacks, showTarget, switchingWorms
 
 	# reset special effects:
 	global globalGravity
@@ -2657,18 +2658,11 @@ def cycleWorms():
 	global radiusMult
 	damageMult = 0.8
 	radiusMult = 1
-	global aimAid, switchingWorms, timeTravel
+	global aimAid, timeTravel
 	aimAid = False
-	if timeTravel:
-		timeTravelReset()
-	if switchingWorms:
-		if currentWeapon == "switch worms":
-			currentWeapon = "missile"
-			weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-		switchingWorms = False
-		currentTeam.specialCounter[SWITCH_WORMS] -= 1
-	if objectUnderControl.jetpacking:
-		objectUnderControl.toggleJetpack()
+	if timeTravel: timeTravelReset()
+	if objectUnderControl.jetpacking: objectUnderControl.toggleJetpack()
+	switchingWorms = False
 	
 	# update damage:
 	if damageThisTurn > mostDamage[0]:
@@ -2769,13 +2763,12 @@ def cycleWorms():
 		camTrack = objectUnderControl
 
 def switchWorms():
-	global objectUnderControl, camTrack, switchingWorms
+	global objectUnderControl, camTrack
 	currentWorm = currentTeam.worms.index(objectUnderControl)
 	totalWorms = len(currentTeam.worms)
 	currentWorm = (currentWorm + 1) % totalWorms
 	objectUnderControl = currentTeam.worms[currentWorm]
 	camTrack = objectUnderControl
-	switchingWorms = True
 
 def isGroundAround(place, radius = 5):
 	for i in range(8):
@@ -2891,7 +2884,6 @@ def saveGame():
 	file.write(str(weaponStyle) + "\n")
 	file.write(str(wind) + "\n")
 	file.write(str(aimAid) + "\n")
-	file.write(str(switchingWorms) + "\n")
 	
 	file.write("map:\n")
 	file.write(str(mapWidth) + " " + str(mapHeight))
@@ -3221,10 +3213,9 @@ while run:
 							currentTeam.specialCounter[sRect[0]] += 1
 							renderWeaponCount(True)
 						elif sRect[0] == SWITCH_WORMS:
-							currentWeapon = "switch worms"
-							weaponStyle = PUTABLE
-							currentTeam.specialCounter[sRect[0]] += 1
-							renderWeaponCount(True)
+							if switchingWorms:
+								currentTeam.specialCounter[sRect[0]] += 1
+							switchingWorms = True
 						elif sRect[0] == TIME_TRAVEL:
 							if not timeTravel:
 								timeTravelInitiate()
@@ -3236,10 +3227,10 @@ while run:
 			if state == PLAYER_CONTROL_1:
 				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+				# UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# Covid19((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), uniform(0,2*pi))
 				# Plant((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# SentryGun((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), currentTeam.color)
-				# UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# camTrack = w
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
@@ -3252,9 +3243,23 @@ while run:
 			elif state == OPEN_MENU:
 				state = PLAYER_CONTROL_1
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll up
-			scrollMenu()
+			if state == OPEN_MENU:
+				scrollMenu()
+			else:
+				scalingFactor *= 1.1
+				if scalingFactor >= 3: scalingFactor = 3
+				winWidth = int(1280 / scalingFactor)
+				winHeight = int(720 / scalingFactor)
+				win = pygame.Surface((winWidth, winHeight))
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll down
-			scrollMenu(False)
+			if state == OPEN_MENU:
+				scrollMenu(False)
+			else:
+				scalingFactor *= 0.9
+				if scalingFactor <= 1: scalingFactor = 1
+				winWidth = int(1280 / scalingFactor)
+				winHeight = int(720 / scalingFactor)
+				win = pygame.Surface((winWidth, winHeight))
 		# key press
 		if event.type == pygame.KEYDOWN:
 			# controll worm
@@ -3352,6 +3357,8 @@ while run:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "drill mode", (20,20,20))
 					else:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
+				elif state == PLAYER_CONTROL_1 and switchingWorms:
+					switchWorms()
 			if event.key == pygame.K_s:
 				suddenDeath()
 			if event.key == pygame.K_t:
@@ -3369,8 +3376,6 @@ while run:
 					energyLevel = 0
 				elif weaponStyle == CHARGABLE and energising:
 					fireWeapon = True
-				elif currentWeapon == "switch worms" and currentTeam.specialCounter[SWITCH_WORMS] > 0:
-					switchWorms()
 				elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
 					fireWeapon = True
 					playerShootAble = False
@@ -3462,7 +3467,8 @@ while run:
 	for cloud in Cloud._reg: cloud.step()
 		
 	# draw:
-	win.blit(imageSky, (0,0))
+	# pygame.transform.scale(imageSky, screen.get_rect().size)
+	win.blit(pygame.transform.scale(imageSky, win.get_rect().size), (0,0))
 	for cloud in Cloud._reg: cloud.draw()
 	drawBackGround(imageMountain2,4)
 	drawBackGround(imageMountain,2)
@@ -3500,13 +3506,9 @@ while run:
 		weaponMenuDraw()
 	
 	# debug:
-	# win.blit(myfont.render(str(state), False, (0,0,0)), ((int(1), int(winHeight-6))))
 	win.blit(myfont.render(str(int(damageThisTurn)), False, (0,0,0)), ((int(10), int(winHeight-6))))
-	# win.blit(myfont.render(str(Smoke.smokeCount), False, (0,0,0)), ((int(10), int(winHeight-6))))
 	if state == PLACING_WORMS:
 		win.blit(myfont.render(str(len(PhysObj._worms)), False, (0,0,0)), ((int(20), int(winHeight-6))))
-	# if gameStable:
-		# win.blit(myfont.render("s", False, (0,0,0)), ((int(10), int(winHeight-6))))
 	
 	# reset actions
 	actionMove = False
