@@ -11,13 +11,6 @@ pygame.font.init()
 myfont = pygame.font.Font("fonts\pixelFont.ttf", 5)
 myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
 
-### TO DO LIST
-# https://worms2d.info/Weapons_(Worms_Unlimited)
-# hamburger ?
-# termites ?
-#
-# 
-
 scalingFactor = 3
 winWidth = int(1280 / scalingFactor)
 winHeight = int(720 / scalingFactor)
@@ -35,10 +28,12 @@ if True:
 	GRD = (255,255,255,255)
 	LAND_GREEN = (62,201,83,255)
 	SKY_CYAN = (139,255,247,255)
+	
 	CHARGABLE = 0
 	PUTABLE = 1
 	CLICKABLE = 2
 	GUN = 3
+	
 	RIGHT = 1
 	LEFT = -1
 	RED = (255,0,0)
@@ -47,9 +42,11 @@ if True:
 	GREEN = (0,255,0)
 	DOWN = 1
 	UP = -1
+	
 	HEALTH_PACK = 0
 	UTILITY_PACK = 1
 	WEAPON_PACK = 2
+	
 	MOON_GRAVITY = 0
 	DOUBLE_DAMAGE = 1
 	AIM_AID = 2
@@ -86,6 +83,7 @@ fallDamageMult = 1
 windMult = 1.5
 radiusMult = 1
 
+webVer = True
 ################################################################################ Map
 mapWidth = int(1024*1.5)
 mapHeight = 512
@@ -856,10 +854,13 @@ class Fire(PhysObj):
 
 class Smoke:
 	smokeCount = 0
-	def __init__(self, pos, vel = None):
+	def __init__(self, pos, vel = None, color = None):
 		PhysObj._reg.append(self)
 		Smoke.smokeCount += 1
-		self.color = (randint(0,40), randint(0,40), randint(0,40), 50)
+		if color:
+			self.color = color
+		else:
+			self.color = (randint(0,40), randint(0,40), randint(0,40), 50)
 		self.radius = randint(8,10)
 		self.pos = tup2vec(pos)
 		self.acc = Vector(0,0)
@@ -915,16 +916,26 @@ def fireShotgun(start, direction, power=15):#6
 		extra.append((testPos.x, testPos.y, (255,255,0), 3))
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
-			break
+			continue
 		# if hits worm:
 		for worm in PhysObj._worms:
-			if dist(testPos, worm.pos) < worm.radius:
+			if dist(testPos, worm.pos) < worm.radius + 1:
 				boom(testPos, power)
 				worm.vel += direction*2
 				hit = True
+				break
+		# if hits can:
+		for can in PetrolCan._cans:
+			if dist(testPos, can.pos) < can.radius + 1:
+				boom(testPos, power)
+				can.deathResponse()
+				hit = True
+				break
 			
 		if hit:
 			break
+			
+		
 		
 		# if hits map:
 		# if map[int(testPos.y) * mapWidth + int(testPos.x)] == GRD:
@@ -986,7 +997,9 @@ def fireMiniGun(start, direction):#0
 	fireShotgun(start, direction, 8)
 
 class PetrolCan(PhysObj):
+	_cans = [] 
 	def __init__(self, pos = (0,0)):
+		PetrolCan._cans.append(self)
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 5
@@ -999,7 +1012,9 @@ class PetrolCan(PhysObj):
 			f = Fire(self.pos)
 			f.vel.x = (i-20)*0.1*1.5
 			f.vel.y = uniform(-2,-0.4)
-		self._reg.remove(self)
+		PhysObj._reg.remove(self)
+		if self in PetrolCan._cans:
+			PetrolCan._cans.remove(self)
 	def secondaryStep(self):
 		if self.health <= 0:
 			self.deathResponse()
@@ -1167,6 +1182,8 @@ class UtilityPack(HealthPack):# Utility Pack
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-1, int(self.pos.y) - int(camPos.y)-2))
 	def effect(self, worm):
+		if unlimitedMode:
+			return
 		effect = choice([MOON_GRAVITY, DOUBLE_DAMAGE, AIM_AID, TELEPORT, SWITCH_WORMS, TIME_TRAVEL, JETPACK])
 		if effect == MOON_GRAVITY:
 			FloatingText(self.pos, "moon gravity", (0,200,200))
@@ -1200,6 +1217,8 @@ class WeaponPack(HealthPack):# Weapon Pack
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
 	def effect(self, worm):
+		if unlimitedMode:
+			return
 		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19"])
 		FloatingText(self.pos, effect, (0,200,200))
 		worm.team.weaponCounter[weaponDict[effect]] += 1
@@ -2164,7 +2183,106 @@ class Covid19:
 		height = 11
 		frame = timeOverall//2 % 5
 		win.blit(imageBat, point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)) )
-	
+
+class Artillery(PhysObj):
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 2
+		self.color = (128, 0, 0)
+		self.damp = 0.5
+		self.surf = pygame.Surface((3, 8)).convert_alpha()
+		self.surf.fill(self.color)
+		self.angle = 0
+		self.timer = 0
+		self.bombing = False
+		self.boomAffected = False
+		self.boomCount = 3
+	def draw(self):
+		surf = pygame.transform.rotate(self.surf, self.angle)
+		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
+	def secondaryStep(self):
+		if not self.bombing:
+			self.angle -= self.vel.x*4
+			if self.stable:
+				self.timer += 1
+			else:
+				self.timer = 0
+			if randint(0,5) == 0 and Smoke.smokeCount < 30:
+				Smoke(self.pos, None, (200,0,0,50))
+			self.stable = False
+			if self.timer == 50:
+				self.bombing = True
+		else:
+			self.stable = False
+			self.timer += 1
+			if self.timer % 10 == 0:
+				# boom(self.pos + vectorUnitRandom()*10, 30)
+				m = Missile((self.pos[0] + randint(-20,20), 0),(0,0),0 )
+				m.windAffected = False
+				m.boomAffected = False
+				m.megaBoom = False
+				if self.boomCount == 3:
+					global camTrack
+					camTrack = m
+				self.boomCount -= 1
+			if self.boomCount == 0:
+				self.dead = True
+
+class LongBow:
+	def __init__(self, pos, direction):
+		PhysObj._reg.append(self)
+		self.pos = vectorCopy(pos)
+		self.direction = direction
+		self.vel = direction.normalize() * 20
+		self.stable = False
+		self.boomAffected = False
+		self.stuck = None
+		self.color = (204, 102, 0)
+		self.ignore = None
+	def destroy(self):
+		PhysObj._reg.remove(self)
+		del self
+	def step(self):
+		if not self.stuck:
+			ppos = self.pos + self.vel
+			iterations = 15
+			for t in range(iterations):
+				value = t/iterations
+				testPos = (self.pos * value) + (ppos * (1-value))
+				if not isOnMap(testPos.vec2tupint()):
+					PhysObj._reg.remove(self)
+					return
+				# check map collision
+				if map.get_at(testPos.vec2tupint()) == GRD:
+					self.stuck = vectorCopy(testPos)
+				# check cans collision:
+				for can in PetrolCan._cans:
+					if dist(testPos, can.pos) < can.radius + 1:
+						can.deathResponse()
+						self.destroy()
+						return
+				# check worm collision
+				for worm in PhysObj._worms:
+					if worm == self.ignore:
+						continue
+					if dist(testPos, worm.pos) < worm.radius + 1:
+						worm.vel += self.direction*4
+						worm.vel.y -= 2
+						worm.damage(randint(20,30))
+						self.destroy()
+						return
+			self.pos = ppos
+		if self.stuck:
+			self.pos = self.stuck
+			pygame.draw.line(map, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+			pygame.draw.line(ground, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+			self.destroy()
+			
+	def draw(self):
+		pygame.draw.line(win, self.color, point2world(self.pos), point2world(self.pos - self.direction*8), 3)
+
 ################################################################################ Create World
 
 maps = []
@@ -2173,17 +2291,17 @@ for i in range(1,58):
 	maps.append((string, 512))
 maps.append(("wormsMaps/wMapbig1.png", 1000))
 maps.append(("wormsMaps/wMapbig2.png", 800))
+if webVer:
+	maps = [("wormsMaps/wMapbig1.png", 1000),("wormsMaps/wMap18.png", 512),("wormsMaps/wMap11.png", 512),("wormsMaps/wMap12.png", 512)]
 
 def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
-	maps = [("wMap12.png", 512)]
-	# imageChoice = choice(maps)
+	imageChoice = choice(maps)
 	# imageChoice = maps[12 - 1]
-	imageChoice = maps[0]
 	
-	
-	# if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1]]: mapClosed = True
+	if not webVer:
+		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1]]: mapClosed = True
 	imageFile, heightNorm = imageChoice
 	
 	global mapImage
@@ -2197,7 +2315,7 @@ def createWorld():
 		
 	placePetrolCan(randint(2,3))
 	placeMines(randint(2,3))
-	randomLegendary(1)
+	randomStartingWeapons(1)
 	if diggingMatch:
 		moreDigging()
 		mapClosed = True
@@ -2220,6 +2338,7 @@ if True:
 	weapons.append(("gravity missile", CHARGABLE, 10, MISSILES))
 	weapons.append(("bunker buster", CHARGABLE, 2, MISSILES))
 	weapons.append(("homing missile", CHARGABLE, 2, MISSILES))
+	weapons.append(("artillery assist", CHARGABLE, 1, MISSILES))
 	weapons.append(("grenade", CHARGABLE, 10, GRENADES))
 	weapons.append(("mortar", CHARGABLE, 3, GRENADES))
 	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES))
@@ -2228,6 +2347,7 @@ if True:
 	weapons.append(("shotgun", GUN, 15, GUNS))
 	weapons.append(("minigun", GUN, 6, GUNS))
 	weapons.append(("gamma gun", GUN, 6, GUNS))
+	weapons.append(("long bow", GUN, 9, GUNS))
 	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY))
 	weapons.append(("flame thrower", PUTABLE, 5, FIREY))
 	weapons.append(("mine", PUTABLE, 5, GRENADES))
@@ -2346,8 +2466,6 @@ def fire(weapon = None):
 		w = HolyGrenade(weaponOrigin, weaponDir, energy)
 	elif weapon == "banana":
 		w = Banana(weaponOrigin, weaponDir, energy)
-	elif weapon == "cluster":
-		w = Cluster(weaponOrigin, weaponDir, energy)
 	elif weapon == "earthquake":
 		Earthquake()
 	elif weapon == "gemino mine":
@@ -2374,9 +2492,23 @@ def fire(weapon = None):
 		for worm in objectUnderControl.team.worms:
 			w.bitten.append(worm)
 		
+		"artillery assistance"
+	elif weapon == "artillery assist":
+		w = Artillery(weaponOrigin, weaponDir, energy)
+	elif weapon == "long bow":
+		decrease = True
+		if state == PLAYER_CONTROL_1:
+			shotCount = 2 #this means 3 shots
+		w = LongBow(weaponOrigin, weaponDir)
+		w.ignore = objectUnderControl
+		if not shotCount == 0:
+			shotCount -= 1
+			nextState = FIRE_MULTIPLE
+		else:
+			decrease = True
+
+	if w and not timeTravelFire: camTrack = w	
 	
-	if w and not timeTravelFire: camTrack = w
-		
 	if decrease:
 		currentTeam.weaponCounter[weaponDict[weapon]] -= 1
 		renderWeaponCount()
@@ -2804,12 +2936,16 @@ def loadGame():
 		if checkingForTeam:
 			pass
 			
-def randomLegendary(amount):
+def randomStartingWeapons(amount):
 	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
 			effect = choice(["holy grenade", "gemino mine", "bee hive", "chilli pepper"])
 			team.weaponCounter[weaponDict[effect]] += 1
+			if randint(0,1) == 1:
+				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID])
+				team.specialCounter[effect] += 1
+				team.hasSpecial = True
 			
 def suddenDeath():
 	for worm in PhysObj._worms:
@@ -2823,6 +2959,7 @@ def moreDigging():
 		team.weaponCounter[weaponDict["bunker buster"]] += 3
 
 def scrollMenu(up = True):
+	max = 110
 	global menuOffset
 	if up:
 		menuOffset -= 50
@@ -2830,9 +2967,12 @@ def scrollMenu(up = True):
 			menuOffset = 0
 	else:
 		menuOffset += 50
-		if menuOffset > 90:
-			menuOffset = 90
+		if menuOffset > max:
+			menuOffset = max
 
+def isOnMap(vec):
+	return not (vec[0] < 0 or vec[0] >= mapWidth or vec[1] < 0 or vec[1] >= mapHeight)
+		
 ################################################################################ State machine
 
 # states:
@@ -2977,7 +3117,9 @@ def makeRandomTeams(teamQuantity, wormsPerTeam, names):
 
 namesCustom = ["eithan", "almog", "berry", "simon", "dor", "evgeny", "ted", "shahaf", "nakar", "dan", "yoni", "asi"]
 namesCustom2 = ["Cenzor", "aliza", "naomi", "phathi", "yohai", "yulia", "rom", "lidia", "acasha", "ziv", "mario", "hagar"]
-makeRandomTeams(4, 3, namesCustom2)
+namesCustom3 = ["Cenzor", "aliza", "naomi", "phathi", "yohai", "yulia", "rom", "lidia", "acasha", "ziv", "mario", "hagar", "eithan", "almog", "berry", "simon", "dor", "evgeny", "ted", "shahaf", "nakar", "dan", "yoni", "asi"]
+if webVer:
+	makeRandomTeams(4, 3, namesCustom3)
 
 ################################################################################ Main Loop
 run = True
@@ -3092,7 +3234,7 @@ while run:
 			# testing mainly
 			if state == PLAYER_CONTROL_1:
 				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
-				WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# Covid19((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), uniform(0,2*pi))
 				# Plant((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# SentryGun((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), currentTeam.color)
@@ -3212,7 +3354,7 @@ while run:
 			if event.key == pygame.K_s:
 				suddenDeath()
 			if event.key == pygame.K_t:
-				print("test key 't'")
+				print(currentTeam.specialCounter)
 			if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
 				scrollMenu()
 			if event.key == pygame.K_PAGEDOWN or event.key == pygame.K_KP3:
@@ -3301,7 +3443,7 @@ while run:
 		timeTravelRecord()
 	
 	# camera for wait to stable:
-	if state == WAIT_STABLE:
+	if state == WAIT_STABLE and timeOverall % 20 == 0:
 		for worm in PhysObj._worms:
 			if worm.stable:
 				continue
@@ -3319,7 +3461,6 @@ while run:
 	for cloud in Cloud._reg: cloud.step()
 		
 	# draw:
-	# win.fill(SKY_CYAN)
 	win.blit(imageSky, (0,0))
 	for cloud in Cloud._reg: cloud.draw()
 	drawBackGround(imageMountain2,4)
