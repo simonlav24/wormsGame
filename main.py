@@ -305,7 +305,8 @@ def drawBackGround(surf, parallax):
 	width = surf.get_width()
 	height = surf.get_height()
 	offset = (camPos.x/parallax)//width
-	for i in range(4):
+	times = winWidth//width + 2
+	for i in range(times):
 		x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
 		y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y))/parallax)
 		win.blit(surf, (x, y))
@@ -540,6 +541,7 @@ class Grenade (PhysObj):#2
 		self.timer += 1
 		if self.timer == fuseTime:
 			self.dead = True
+		self.stable = False
 
 class Mortar (Grenade):#3
 	def __init__(self, pos, direction, energy):
@@ -1223,7 +1225,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 	def effect(self, worm):
 		if unlimitedMode:
 			return
-		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19"])
+		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19", "mine strike"])
 		FloatingText(self.pos, effect, (0,200,200))
 		worm.team.weaponCounter[weaponDict[effect]] += 1
 
@@ -2013,7 +2015,9 @@ class VortexGrenade(Grenade):
 
 class TimeAgent:
 	def __init__(self):
-		nonPhys.append(self)
+		PhysObj._reg.append(self)
+		self.stable = False
+		self.boomAffected = False
 		self.positions = timeTravelPositions
 		self.time = 0
 		self.pos = self.positions[0]
@@ -2331,7 +2335,7 @@ def createWorld():
 # diggingMatch = True
 # unlimitedMode = True
 # moreWindAffected = True
-wormsPerTeam = 8
+wormsPerTeam = 4
 
 ################################################################################ Weapons setup
 
@@ -2363,7 +2367,7 @@ if True:
 	weapons.append(("sentry gun", PUTABLE, 0, MISC))
 	weapons.append(("airstrike", CLICKABLE, 1, AIRSTRIKE))
 	weapons.append(("napalm strike", CLICKABLE, 1, AIRSTRIKE))
-	weapons.append(("mine strike", CLICKABLE, 1, AIRSTRIKE))
+	weapons.append(("mine strike", CLICKABLE, 0, AIRSTRIKE))
 	weapons.append(("holy grenade", CHARGABLE, 0, LEGENDARY))
 	weapons.append(("banana", CHARGABLE, 0, LEGENDARY))
 	weapons.append(("earthquake", PUTABLE, 0, LEGENDARY))
@@ -2542,7 +2546,7 @@ wRects = []
 for i in range(1,len(weaponDict)):
 	index = i
 	textSurf = myfont.render(weaponDictI[i], False, (0,0,0))
-	rect = (winWidth - 100 + 2, 2 + i * 10 - 10, 100 - 4 ,8)
+	rect = [winWidth - 100 + 2, 2 + i * 10 - 10, 100 - 4 ,8]
 	selected = False
 	color = weapons[i][3]
 	if weapons[i][3] == AIRSTRIKE:
@@ -2556,7 +2560,7 @@ specialStr = ["moon gravity", "double damage", "aim aid", "teleport", "switch wo
 sRects = []
 for i in range(len(specialStr)):
 	textSurf = myfont.render(specialStr[i], False, (0,0,0))
-	rect = (winWidth - 200, 2 + i * 10, 100 - 4, 8)
+	rect = [winWidth - 200, 2 + i * 10, 100 - 4, 8]
 	selected = False
 	sRects.append( [i, textSurf, rect, selected] )
 
@@ -2798,12 +2802,13 @@ def randomPlacing(wormsPerTeam):
 	state = nextState
 
 def rectOffset(rect, y):
-	return (rect[0], rect[1] - y, rect[2], rect[3])
+	return ( rect[0], rect[1] - y, rect[2], rect[3])
 	
 def weaponMenuStep():
 	mousePos = pygame.mouse.get_pos()
 	mousePos = (mousePos[0]/scalingFactor, mousePos[1]/scalingFactor)
 	for wRect in wRects:
+		wRect[2][0] = winWidth - 100 + 2
 		if mousePos[0] > wRect[2][0] and mousePos[0] < wRect[2][0] + wRect[2][2] and mousePos[1] > wRect[2][1] - menuOffset and mousePos[1] < wRect[2][1] + wRect[2][3] - menuOffset:
 			wRect[3] = True
 		else:
@@ -2811,6 +2816,7 @@ def weaponMenuStep():
 	if not currentTeam.hasSpecial:
 		return
 	for sRect in sRects:
+		sRect[2][0] = winWidth - 200
 		if mousePos[0] > sRect[2][0] and mousePos[0] < sRect[2][0] + sRect[2][2] and mousePos[1] > sRect[2][1] - menuOffset*0 and mousePos[1] < sRect[2][1] + sRect[2][3] - menuOffset*0:
 			sRect[3] = True
 		else:
@@ -2822,7 +2828,6 @@ def weaponMenuDraw():
 	# draw main weapons
 	for i in wRects:
 		if i[3]:# selected
-			# pass
 			pygame.draw.rect(win, (255,0,0), rectOffset(i[2], menuOffset))
 		else:
 			pygame.draw.rect(win, i[4], rectOffset(i[2], menuOffset))
@@ -2938,7 +2943,7 @@ def randomStartingWeapons(amount):
 	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
-			effect = choice(["holy grenade", "gemino mine", "bee hive"])
+			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike"])
 			team.weaponCounter[weaponDict[effect]] += 1
 			if randint(0,1) == 1:
 				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID])
