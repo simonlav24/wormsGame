@@ -63,4 +63,12 @@ WEAPONS:
 # CHILLI PEPPER - chargeable, red hot chilli pepper.
 
 
+UTILITIES:
+# moon gravity - big step for wormanity
+# double damage - twice as fun
+# aim aid - laser sight for guns
+# teleport - activate and click somewhere
+# switch worms - activate and press tab to switch worms in team
+# time travel - activate and continue with your turn. shoot a chargeable weapon. 
+# jet pack - thrust with arrow keys
 
