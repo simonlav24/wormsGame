@@ -76,6 +76,7 @@ drawHealthBar = True
 mapClosed = False
 unlimitedMode = False
 moreWindAffected = False
+fortsMode = False
 
 # Multipliers
 damageMult = 0.8
@@ -84,6 +85,7 @@ windMult = 1.5
 radiusMult = 1
 
 webVer = True
+text = ""
 ################################################################################ Map
 mapWidth = int(1024*1.5)
 mapHeight = 512
@@ -191,14 +193,26 @@ def drawWindIndicator():
 	pygame.draw.line(win, (100,100,255), (20, 15), (int(20 + wind * 20),15))
 	pygame.draw.line(win, (0,0,255), (20, 10), (20,20))
 
-def giveGoodPlace():
+def giveGoodPlace(div = 0):
 	goodPlace = False
-	counter = 0###
+	counter = 0
+	
+	if fortsMode:
+		half = mapWidth/totalTeams
+		Slice = div % totalTeams
+		
+		left = half * Slice
+		right = left + half
+		if left <= 0: left += 6
+		if right >= mapWidth: right -= 6
+	else:
+		left, right = 6, mapWidth - 6
+	
 	if not diggingMatch:
 		while not goodPlace:
 			counter += 1
 			goodPlace = True
-			place = Vector(randint(6, mapWidth - 6), randint(6, mapHeight - 6))
+			place = Vector(randint(int(left), int(right)), randint(6, mapHeight - 6))
 			# check circle around
 			if isGroundAround(place):
 				goodPlace = False
@@ -235,7 +249,7 @@ def giveGoodPlace():
 				pygame.draw.circle(ground, SKY, place.vec2tup(), 5)
 	else:
 		while not goodPlace:
-			place = Vector(randint(6, mapWidth - 6), randint(6, mapHeight - 50))
+			place = Vector(randint(int(left), int(right)), randint(6, mapHeight - 50))
 			goodPlace = True
 			for worm in PhysObj._worms:
 				if dist(worm.pos, place) < 75:
@@ -2294,7 +2308,7 @@ class LongBow:
 ################################################################################ Create World
 
 maps = []
-for i in range(1,58):
+for i in range(1,74):
 	string = "wormsMaps/wMap" + str(i) + ".png"
 	maps.append((string, 512))
 maps.append(("wormsMaps/wMapbig1.png", 1000))
@@ -2306,7 +2320,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[21 - 1]
+	# imageChoice = maps[72 - 1]
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1]]: mapClosed = True
@@ -2335,7 +2349,8 @@ def createWorld():
 # diggingMatch = True
 # unlimitedMode = True
 # moreWindAffected = True
-wormsPerTeam = 4
+# fortsMode = True
+wormsPerTeam = 8
 
 ################################################################################ Weapons setup
 
@@ -2789,9 +2804,11 @@ def isGroundAround(place, radius = 5):
 	return False
 
 def randomPlacing(wormsPerTeam):
-	counter = 0
 	for i in range(wormsPerTeam * len(teams)):
-		place = giveGoodPlace()
+		if fortsMode:
+			place = giveGoodPlace(i)
+		else:
+			place = giveGoodPlace()
 		if diggingMatch:
 			pygame.draw.circle(map, SKY, place, 35)
 			pygame.draw.circle(ground, SKY, place, 35)
@@ -2975,6 +2992,22 @@ def scrollMenu(up = True):
 
 def isOnMap(vec):
 	return not (vec[0] < 0 or vec[0] >= mapWidth or vec[1] < 0 or vec[1] >= mapHeight)
+
+def cheatActive(code):
+	if code == "gibguns=":
+		unlimitedMode = True
+		for team in teams:
+			for i in range(len(team.weaponCounter)):
+				team.weaponCounter[i] = -1
+			team.specialCounter = [99] * len(specialStr)
+			team.hasSpecial = True
+		for wRect in wRects:
+			wRect[5] = 0
+	if code == "tetanus=":
+		suddenDeath()
+	if code == "wind=":
+		global wind
+		wind = uniform(-1,1)
 		
 ################################################################################ State machine
 
@@ -3126,7 +3159,7 @@ while run:
 	fpsClock.tick(30)
 	
 	stateMachine()
-		
+	
 	# events
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -3335,11 +3368,6 @@ while run:
 					currentWeapon = "minigun"
 					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
 					renderWeaponCount()
-			# randomize wind
-			if event.key == pygame.K_w:
-				wind = uniform(-1,1)
-			if event.key == pygame.K_l:
-				loadGame()
 			if event.key == pygame.K_p:
 				pause = not pause
 			if event.key == pygame.K_TAB:
@@ -3364,14 +3392,17 @@ while run:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
 				elif state == PLAYER_CONTROL_1 and switchingWorms:
 					switchWorms()
-			if event.key == pygame.K_s:
-				suddenDeath()
 			if event.key == pygame.K_t:
-				print(currentTeam.specialCounter)
+				pass
 			if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
 				scrollMenu()
 			if event.key == pygame.K_PAGEDOWN or event.key == pygame.K_KP3:
 				scrollMenu(False)
+				
+			text += event.unicode
+			if event.key == pygame.K_EQUALS:
+				cheatActive(text)
+				text = ""
 		# key release
 		if event.type == pygame.KEYUP:
 			# fire release
@@ -3405,6 +3436,7 @@ while run:
 				else:
 					energyLevel = 1
 					fireWeapon = True
+	
 	if pause: continue
 
 	# set camera target
