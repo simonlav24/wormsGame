@@ -2349,7 +2349,7 @@ def createWorld():
 # diggingMatch = True
 # unlimitedMode = True
 # moreWindAffected = True
-fortsMode = True
+# fortsMode = True
 wormsPerTeam = 8
 
 ################################################################################ Weapons setup
