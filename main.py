@@ -1382,7 +1382,7 @@ class HolyGrenade(Grenade):
 		self.timer += 1
 		if self.timer == fuseTime + 60:
 			self.dead = True
-		
+
 class Banana(Grenade):
 	def __init__(self, pos, direction, energy, used = False):
 		self.initialize()
@@ -1767,7 +1767,7 @@ class BunkerBuster(PhysObj):
 		a,b = self.pos.x,self.pos.y
 		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
 	def deathResponse(self):
-		boom(self.pos, 30)
+		boom(self.pos, 23)
 		
 def drawLightning(start, end):
 	halves = int(dist(end, start) / 4)
@@ -2048,7 +2048,7 @@ class TimeAgent:
 			global timeTravelFire, timeTravelPositions, timeTravelList
 			timeTravelFire = True
 			fire(timeTravelList["weapon"])
-			nonPhys.remove(self)
+			PhysObj._reg.remove(self)
 			timeTravelPositions = []
 			timeTravelList = {}
 			return
@@ -2349,7 +2349,7 @@ def createWorld():
 # diggingMatch = True
 # unlimitedMode = True
 # moreWindAffected = True
-# fortsMode = True
+fortsMode = True
 wormsPerTeam = 8
 
 ################################################################################ Weapons setup
@@ -3008,6 +3008,8 @@ def cheatActive(code):
 	if code == "wind=":
 		global wind
 		wind = uniform(-1,1)
+	if code == "goodbyecruelworld=":
+		boom(objectUnderControl.pos, 100)
 		
 ################################################################################ State machine
 
