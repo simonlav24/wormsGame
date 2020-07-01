@@ -29,6 +29,10 @@ class Vector:
 		return Vector(self.x, self.y).normalize()
 	def getAngle(self):
 		return math.atan2(self.y, self.x)
+	def setAngle(self, angle):
+		mag = self.getMag()
+		self.x = mag*math.cos(angle)
+		self.y = mag*math.sin(angle)
 	def get(self):
 		return [self.x,self.y]
 	def normal(self):
@@ -127,7 +131,7 @@ def dist(vec1,vec2):
 	return math.sqrt( (vec2[0] - vec1[0])**2 + (vec2[1] - vec1[1])**2 )
 
 def getAngleByTwoVectors(vec_org,vec_taget):
-	return math.atan2(vec_taget.y - vec_org.y, vec_taget.x - vec_org.x)
+	return math.atan2(vec_taget[1] - vec_org[1], vec_taget[0] - vec_org[0])
 	
 def vectorCopy(vec):
 	return Vector(vec[0],vec[1])
