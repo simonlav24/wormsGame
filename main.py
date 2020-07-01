@@ -210,15 +210,16 @@ def boom(pos, radius, debries = True, gravity = False, fire = False, mapHarm = T
 
 class Blast:
 	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
-	def __init__(self, pos, radius):
+	def __init__(self, pos, radius, smoke = 30):
 		nonPhys.append(self)
 		self.time = 0
 		self.pos = pos
 		self.radius = radius
 		self.rad = 0
 		self.time = 0
+		self.smoke = smoke
 	def step(self):
-		if randint(0,30) == 0:
+		if randint(0,self.smoke) == 0:
 			Smoke(self.pos)
 		self.time += 0.5
 		self.rad = 1.359 * self.time * exp(- 0.5 * self.time) * self.radius
@@ -226,14 +227,12 @@ class Blast:
 			nonPhys.remove(self)
 			del self
 	def draw(self):
-		layers[0].append((self._color[int(max(min(self.time, 5), 0))], self.pos, self.rad))
-		layers[1].append((self._color[int(max(min(self.time-1, 5), 0))], self.pos, self.rad*0.6))
-		layers[2].append((self._color[int(max(min(self.time-2, 5), 0))], self.pos, self.rad*0.3))
-		
-		
 		# pygame.draw.circle(win, self._color[int(max(min(self.time, 5), 0))], point2world(self.pos), int(self.rad))
 		# pygame.draw.circle(win, self._color[int(max(min(self.time-1,5), 0))], point2world(self.pos), int(self.rad*0.6))
 		# pygame.draw.circle(win, self._color[int(max(min(self.time-2,5), 0))], point2world(self.pos), int(self.rad*0.3))
+		layers[0].append((self._color[int(max(min(self.time, 5), 0))], self.pos, self.rad))
+		layers[1].append((self._color[int(max(min(self.time-1, 5), 0))], self.pos, self.rad*0.6))
+		layers[2].append((self._color[int(max(min(self.time-2, 5), 0))], self.pos, self.rad*0.3))
 		
 class Explossion:
 	def __init__(self, pos, radius):	
@@ -259,7 +258,7 @@ def giveGoodPlace(div = 0):
 	goodPlace = False
 	counter = 0
 	
-	if fortsMode:
+	if fortsMode and not div == -1:
 		half = mapWidth/totalTeams
 		Slice = div % totalTeams
 		
@@ -342,14 +341,14 @@ def placePetrolCan(quantity = 1):
 	noPlace = []
 	
 	for times in range(quantity):
-		place = giveGoodPlace()
+		place = giveGoodPlace(-1)
 		PetrolCan((place.x, place.y - 2))
 
 def placeMines(quantity = 1):
 	noPlace = []
 	
 	for times in range(quantity):
-		place = giveGoodPlace()
+		place = giveGoodPlace(-1)
 		m = Mine((place.x, place.y - 2))
 		m.damp = 0.1
 
@@ -667,7 +666,7 @@ class Missile (PhysObj):#1
 		a,b = self.pos.x,self.pos.y
 		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
 	def secondaryStep(self):
-		Blast(self.pos + vectorUnitRandom()*2, 5)
+		Blast(self.pos + vectorUnitRandom()*2, randint(5,8))
 fuseTime = 60
 class Grenade (PhysObj):#2
 	def __init__(self, pos, direction, energy):
@@ -837,13 +836,13 @@ class Worm (PhysObj):
 		win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
 		if self.health > 0 and drawHealthBar:
 			self.drawHealth()
-		if self.jetpacking:
-			if pygame.key.get_pressed()[pygame.K_UP]:
-				pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(self.radius, self.radius)), point2world(self.pos + Vector(-self.radius, self.radius)), point2world(self.pos + Vector(0, 5*self.radius))])
-			if pygame.key.get_pressed()[pygame.K_LEFT]:
-				pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(self.radius, self.radius)), point2world(self.pos + Vector(self.radius, -self.radius)), point2world(self.pos + Vector(5*self.radius, 0))])
-			if pygame.key.get_pressed()[pygame.K_RIGHT]:
-				pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(-self.radius, self.radius)), point2world(self.pos + Vector(-self.radius, -self.radius)), point2world(self.pos + Vector(-5*self.radius, 0))])
+		# if self.jetpacking:
+			# if pygame.key.get_pressed()[pygame.K_UP]:
+				# pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(self.radius, self.radius)), point2world(self.pos + Vector(-self.radius, self.radius)), point2world(self.pos + Vector(0, 5*self.radius))])
+			# if pygame.key.get_pressed()[pygame.K_LEFT]:
+				# pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(self.radius, self.radius)), point2world(self.pos + Vector(self.radius, -self.radius)), point2world(self.pos + Vector(5*self.radius, 0))])
+			# if pygame.key.get_pressed()[pygame.K_RIGHT]:
+				# pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(-self.radius, self.radius)), point2world(self.pos + Vector(-self.radius, -self.radius)), point2world(self.pos + Vector(-5*self.radius, 0))])
 	def __str__(self):
 		return self.nameStr
 	def __repr__(self):
@@ -896,7 +895,12 @@ class Worm (PhysObj):
 			
 		if self.jetpacking:
 			self.vel.limit(5)
-		
+			if pygame.key.get_pressed()[pygame.K_UP]:
+				Blast(self.pos + Vector(0, self.radius*1.5) + vectorUnitRandom()*2, randint(5,8))
+			if pygame.key.get_pressed()[pygame.K_LEFT]:
+				Blast(self.pos + Vector(self.radius*1.5, 0) + vectorUnitRandom()*2, randint(5,8))
+			if pygame.key.get_pressed()[pygame.K_RIGHT]:
+				Blast(self.pos + Vector(-self.radius*1.5, 0) + vectorUnitRandom()*2, randint(5,8))
 		self.shootVel = clamp(self.shootVel + self.shootAcc, 0.1, -0.1)
 		self.shootAngle += self.shootVel * self.facing
 		if self.facing == RIGHT:
@@ -950,6 +954,8 @@ class Fire(PhysObj):
 	def collisionRespone(self, ppos):
 		self.fallen = True
 	def secondaryStep(self):
+		if randint(0,10) == 1:
+			Blast(self.pos + vectorUnitRandom(), randint(self.radius,7), 150)
 		self.timer += 1
 		if self.fallen:
 			self.life -= 1
@@ -959,8 +965,8 @@ class Fire(PhysObj):
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
 			boom(self.pos + Vector(randint(-1,1),randint(-1,1)), 3, False, False, True)
-		if randint(0,100) == 0 and Smoke.smokeCount < 30:
-			Smoke(self.pos)
+		# if randint(0,100) == 0 and Smoke.smokeCount < 30:
+			# Smoke(self.pos)
 	def draw(self):
 		radius = 1
 		if self.life > 20:
@@ -2469,14 +2475,12 @@ def createWorld():
 	global mapImage
 	mapImage = pygame.image.load(imageFile)
 	
-	if not diggingMatch:
-		createMapImage(heightNorm)
+	if not diggingMatch: createMapImage(heightNorm)
 	else:
 		mapImage = None
 		createMapDigging()
-		
-	placePetrolCan(randint(2,3))
-	placeMines(randint(2,3))
+	placePetrolCan(randint(2,4))
+	placeMines(randint(2,4))
 	randomStartingWeapons(1)
 	if diggingMatch:
 		moreDigging()
@@ -3130,7 +3134,7 @@ def moreDigging():
 		team.weaponCounter[weaponDict["bunker buster"]] += 3
 
 def scrollMenu(up = True):
-	max = 110
+	max = len(weapons)*10 - 240
 	global menuOffset
 	if up:
 		menuOffset -= 50
@@ -3163,8 +3167,6 @@ def cheatActive(code):
 		boom(objectUnderControl.pos, 100)
 		
 ################################################################################ State machine
-
-# states:
 RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
 PLAYER_CONTROL_2 = 5; WAIT_STABLE = 6; FIRE_MULTIPLE = 7; OPEN_MENU = 8
 
@@ -3299,10 +3301,6 @@ def makeRandomTeams(teamQuantity, wormsPerTeam, names):
 	totalTeams = teamQuantity
 	currentTeam = choice(teams)
 	teamChoser = randint(0,3) % totalTeams
-
-# namesFile = open("names.txt", "r")
-# randomNames = namesFile.read().splitlines()
-# shuffle(randomNames)
 
 namesCustom = ["eithan", "almog", "berry", "simon", "dor", "evgeny", "ted", "shahaf", "nakar", "dan", "yoni", "asi"]
 namesCustom2 = ["Cenzor", "aliza", "naomi", "phathi", "yohai", "yulia", "rom", "lidia", "acasha", "ziv", "mario", "hagar"]
