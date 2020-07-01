@@ -226,9 +226,14 @@ class Blast:
 			nonPhys.remove(self)
 			del self
 	def draw(self):
-		pygame.draw.circle(win, self._color[int(max(min(self.time, 5), 0))], point2world(self.pos), int(self.rad))
-		pygame.draw.circle(win, self._color[int(max(min(self.time-1,5), 0))], point2world(self.pos), int(self.rad*0.6))
-		pygame.draw.circle(win, self._color[int(max(min(self.time-2,5), 0))], point2world(self.pos), int(self.rad*0.3))
+		layers[0].append((self._color[int(max(min(self.time, 5), 0))], self.pos, self.rad))
+		layers[1].append((self._color[int(max(min(self.time-1, 5), 0))], self.pos, self.rad*0.6))
+		layers[2].append((self._color[int(max(min(self.time-2, 5), 0))], self.pos, self.rad*0.3))
+		
+		
+		# pygame.draw.circle(win, self._color[int(max(min(self.time, 5), 0))], point2world(self.pos), int(self.rad))
+		# pygame.draw.circle(win, self._color[int(max(min(self.time-1,5), 0))], point2world(self.pos), int(self.rad*0.6))
+		# pygame.draw.circle(win, self._color[int(max(min(self.time-2,5), 0))], point2world(self.pos), int(self.rad*0.3))
 		
 class Explossion:
 	def __init__(self, pos, radius):	
@@ -357,6 +362,14 @@ def drawExtra():
 		if i[3] > 0:
 			extraNext.append((i[0], i[1], i[2], i[3]-1))
 	extra = extraNext
+
+layers = [[],[],[]]
+def drawLayers():
+	global layers
+	for j in layers:
+		for i in j:
+			pygame.draw.circle(win, i[0], point2world(i[1]), int(i[2]))
+	layers = [[],[],[]]
 
 def clamp(value, upper, lower):
 	if value > upper:
@@ -3414,7 +3427,7 @@ while run:
 				# Plant((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# SentryGun((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), currentTeam.color)
 				# camTrack = w
-				Explossion((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), randint(5,25))
+				# Blast((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), randint(5,25))
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
 			# this is the next state after placing all worms
@@ -3673,7 +3686,7 @@ while run:
 		if aimAid and weaponStyle == GUN:
 			point1 = vectorCopy(objectUnderControl.pos)
 			point2 = point1 + Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 500
-			pygame.draw.line(win, (0,0,255), (int(point1.x) - int(camPos.x), int(point1.y) - int(camPos.y)), (int(point2.x) - int(camPos.x), int(point2.y) - int(camPos.y)))
+			pygame.draw.line(win, (255,0,0), (int(point1.x) - int(camPos.x), int(point1.y) - int(camPos.y)), (int(point2.x) - int(camPos.x), int(point2.y) - int(camPos.y)))
 		i = 0
 		while i < 20 * energyLevel:
 			cPos = vectorCopy(objectUnderControl.pos)
@@ -3682,6 +3695,7 @@ while run:
 			i += 1
 	if currentWeapon == "girder" and state == PLAYER_CONTROL_1: drawGirderHint()
 	drawExtra()
+	drawLayers()
 	
 	# HUD
 	drawWindIndicator()
