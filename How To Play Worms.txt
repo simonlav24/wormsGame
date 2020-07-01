@@ -41,6 +41,7 @@ WEAPONS:
 # MINE - mine.
 # TNT - explosive TNT bomb.
 # COVID19 - releases the bat. very contagious.
+# SHEEP - baaaa.
 # BASEBALL - home running worms away.
 
 # GIRDER - clickable, place a girder. press tab for rotation and scaling.
@@ -69,6 +70,6 @@ UTILITIES:
 # aim aid - laser sight for guns
 # teleport - activate and click somewhere
 # switch worms - activate and press tab to switch worms in team
-# time travel - activate and continue with your turn. shoot a chargeable weapon. 
+# time travel - activate and continue with your turn. shoot a 'chargeable' weapon or 'place and run'. 
 # jet pack - thrust with arrow keys
 
