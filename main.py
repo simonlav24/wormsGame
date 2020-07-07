@@ -1,5 +1,5 @@
 from math import pi, cos, sin, atan2, sqrt, exp, degrees
-from random import uniform, randint, choice, shuffle
+from random import shuffle ,randint, uniform, choice
 from vector import *
 import pygame
 from pygame import gfxdraw
@@ -67,7 +67,7 @@ if True:
 	AIRSTRIKE = (204, 255, 255)
 
 # Game parameters
-turnTime = 40 
+turnTime = 45 
 shockRadius = 1.5
 globalGravity = 0.2
 mapScrollSpeed = 8
@@ -81,6 +81,7 @@ unlimitedMode = False
 moreWindAffected = False
 fortsMode = False
 davidAndGoliathMode = False
+randomWeapons = False
 
 # Multipliers
 damageMult = 0.8
@@ -109,12 +110,43 @@ currentWeapon = "missile"
 currentWeaponSurf = myfont.render(currentWeapon, False, (0,0,0))
 weaponStyle = CHARGABLE
 
+# randomSeed = 2
+# def uniform(a,b):
+	# global randomSeed
+	# ins = (725 + randomSeed)*(sin(pi*randomSeed) + sin(randomSeed))
+	# mod = b + 1 - a
+	# result = ins % mod
+	# result += a
+	# randomSeed += 1
+	# if randomSeed > 35000: randomSeed = -35000
+	# if result > b or result < a:
+		# print("fuck")
+	# return result
+
+# def randint(a,b):
+	# global randomSeed
+	# ins = (725 + randomSeed)*(sin(pi*randomSeed) + sin(randomSeed))
+	# mod = b + 1 - a
+	# result = int(ins % mod)
+	# result += a
+	# randomSeed += 1
+	# if randomSeed > 35000: randomSeed = -35000
+	# if result > b or result < a:
+		# print("fuck")
+	# return result
+	
+# def choice(iterable):
+	# length = len(iterable)
+	# index = randint(0,length-1)
+	# return iterable[index]
+	
 wind = uniform(-1,1)
 actionMove = False
 aimAid = False
 switchingWorms = False
 timeTravel = False
 jetPackFuel = 100
+
 
 def createMapImage(heightNorm = None):
 	global mapImage
@@ -472,10 +504,15 @@ def timeOnTimer():
 	global state, nextState
 	if state == PLAYER_CONTROL_1:
 		state = WAIT_STABLE
+		
 	elif state == PLAYER_CONTROL_2:
 		state = nextState
+		
 	elif state == FIRE_MULTIPLE:
 		state = PLAYER_CONTROL_2
+		
+	if objectUnderControl.rope:
+			objectUnderControl.toggleRope(None)
 def timeDraw():
 	win.blit(myfont.render(str(time), False, (0,0,0)) , ((int(10), int(8))))
 def timeReset():
@@ -756,6 +793,8 @@ class PetrolBomb(PhysObj):#4
 		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
 
 class Worm (PhysObj):
+	healthMode = 0
+	roped = False
 	def __init__(self, pos, name=None, team=None):
 		self._worms.append(self)
 		self.initialize()
@@ -777,30 +816,48 @@ class Worm (PhysObj):
 		else:
 			self.nameStr = randomNames.pop()
 		self.name = myfont.render(self.nameStr, False, self.teamColor)
+		self.healthStr = myfont.render(str(self.health), False, self.teamColor)
 		self.score = 0
 		self.jetpacking = False
+		self.rope = None #[pos, radius]
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
+			### JETPACK
 			if self.jetpacking and playerControl:
 				global jetPackFuel
 				if pygame.key.get_pressed()[pygame.K_UP]:
 					self.acc.y -= globalGravity + 0.5
 					jetPackFuel -= 0.5
-					if randint(0,2) == 0 and Smoke.smokeCount < 30:
-						Smoke(self.pos + Vector(0, self.radius * 3.5), Vector(uniform(-0.5, 0.5), 1))
 				if pygame.key.get_pressed()[pygame.K_LEFT]:
 					self.acc.x -= 0.5
 					jetPackFuel -= 0.5
-					if randint(0,2) == 0 and Smoke.smokeCount < 30:
-						Smoke(self.pos + Vector(self.radius * 3.5, 0), Vector(1, uniform(-0.5, 0.5)))
 				if pygame.key.get_pressed()[pygame.K_RIGHT]:
 					self.acc.x += 0.5
 					jetPackFuel -= 0.5
-					if randint(0,2) == 0 and Smoke.smokeCount < 30:
-						Smoke(self.pos + Vector(-self.radius * 3.5, 0), Vector(-1, uniform(-0.5, 0.5)))
 				if jetPackFuel <= 0:
 					self.toggleJetpack()
+			#### ROPE
+			if self.rope and playerControl:
+				if pygame.key.get_pressed()[pygame.K_LEFT]:
+					self.acc.x -= 0.1
+				if pygame.key.get_pressed()[pygame.K_RIGHT]:
+					self.acc.x += 0.1
+				if pygame.key.get_pressed()[pygame.K_UP]:
+					if self.rope[1] > 5:
+						self.rope[1] = self.rope[1]-2
+						directionToRope = (self.rope[0][-1] - self.pos).getDir()
+						ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
+						if not checkFreePos(self, ppos):
+							self.rope[1] = self.rope[1]+2
+
+				if pygame.key.get_pressed()[pygame.K_DOWN]:
+					self.rope[1] = self.rope[1]+2
+					directionToRope = (self.rope[0][-1] - self.pos).getDir()
+					ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
+					if not checkFreePos(self, ppos):
+						self.rope[1] = self.rope[1]-2
+				
 			self.acc.y += globalGravity
 		else:# up
 			self.acc.y -= globalGravity
@@ -815,6 +872,15 @@ class Worm (PhysObj):
 		self.fallAffected = not self.fallAffected
 		global jetPackFuel
 		jetPackFuel = 100
+	def toggleRope(self, pos):
+		if pos:
+			self.rope = [[pos], dist(self.pos, pos)]
+			self.damp = 0.7
+			self.fallAffected = False
+		else:
+			self.rope = None
+			self.damp = 0.2
+			self.fallAffected = True
 	def damage(self, value):
 		if self.health > 0: # if alive
 			dmg = int(value * damageMult)
@@ -825,24 +891,24 @@ class Worm (PhysObj):
 			
 			FloatingText(self.pos.vec2tup(), str(dmg))
 			self.health -= dmg
+			if self.health < 0:
+				self.health = 0
+			if Worm.healthMode == 1:
+				self.healthStr = myfont.render(str(self.health), False, self.teamColor)
 			global damageThisTurn
 			if not self == objectUnderControl:
 				if not sentring and not self in objectUnderControl.team.worms:
 					damageThisTurn += dmg
-			if self.health < 0:
-				self.health = 0
 	def draw(self):
 		pygame.draw.circle(win, self.color, (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), int(self.radius)+1)
 		win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
+		if self.rope:
+			# rope = [point2world(self.pos)]
+			rope = [point2world(x) for x in self.rope[0]]
+			rope.append(point2world(self.pos))
+			pygame.draw.lines(win, (250,250,0), False, rope)
 		if self.health > 0 and drawHealthBar:
 			self.drawHealth()
-		# if self.jetpacking:
-			# if pygame.key.get_pressed()[pygame.K_UP]:
-				# pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(self.radius, self.radius)), point2world(self.pos + Vector(-self.radius, self.radius)), point2world(self.pos + Vector(0, 5*self.radius))])
-			# if pygame.key.get_pressed()[pygame.K_LEFT]:
-				# pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(self.radius, self.radius)), point2world(self.pos + Vector(self.radius, -self.radius)), point2world(self.pos + Vector(5*self.radius, 0))])
-			# if pygame.key.get_pressed()[pygame.K_RIGHT]:
-				# pygame.draw.polygon(win, (255, 106, 69), [point2world(self.pos + Vector(-self.radius, self.radius)), point2world(self.pos + Vector(-self.radius, -self.radius)), point2world(self.pos + Vector(-5*self.radius, 0))])
 	def __str__(self):
 		return self.nameStr
 	def __repr__(self):
@@ -865,11 +931,14 @@ class Worm (PhysObj):
 				state = nextState
 				timeRemaining(5)
 	def drawHealth(self):
-		pygame.draw.rect(win, (220,220,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), 20,3))
-		value = 20 * min(self.health/initialHealth, 1)
-		if value < 1:
-			value = 1
-		pygame.draw.rect(win, (0,220,0),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), int(value),3))
+		if Worm.healthMode == 0:
+			pygame.draw.rect(win, (220,220,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), 20,3))
+			value = 20 * min(self.health/initialHealth, 1)
+			if value < 1:
+				value = 1
+			pygame.draw.rect(win, (0,220,0),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), int(value),3))
+		else:
+			win.blit(self.healthStr , ((int(self.pos.x) - int(camPos.x) - int(self.healthStr.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 15)))
 		# draw jetpack fuel
 		if self.jetpacking:
 			pygame.draw.rect(win, (220,220,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -25 -int(camPos.y), 20,3))
@@ -878,6 +947,7 @@ class Worm (PhysObj):
 				value = 1
 			pygame.draw.rect(win, (0,0,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -25 -int(camPos.y), int(value),3))
 	def secondaryStep(self):
+		global state, nextState
 		if objectUnderControl == self and playerControl and self.health > 0:
 			self.damp = 0.1
 		
@@ -892,15 +962,64 @@ class Worm (PhysObj):
 			self.damp = 0.2
 			self.shootAcc = 0
 			self.shootVel = 0
-			
-		if self.jetpacking:
+		
+		## jetpacking
+		if self.jetpacking and not state == WAIT_STABLE:
 			self.vel.limit(5)
 			if pygame.key.get_pressed()[pygame.K_UP]:
-				Blast(self.pos + Vector(0, self.radius*1.5) + vectorUnitRandom()*2, randint(5,8))
+				Blast(self.pos + Vector(0, self.radius*1.5) + vectorUnitRandom()*2, randint(5,8), 80)
 			if pygame.key.get_pressed()[pygame.K_LEFT]:
-				Blast(self.pos + Vector(self.radius*1.5, 0) + vectorUnitRandom()*2, randint(5,8))
+				Blast(self.pos + Vector(self.radius*1.5, 0) + vectorUnitRandom()*2, randint(5,8), 80)
 			if pygame.key.get_pressed()[pygame.K_RIGHT]:
-				Blast(self.pos + Vector(-self.radius*1.5, 0) + vectorUnitRandom()*2, randint(5,8))
+				Blast(self.pos + Vector(-self.radius*1.5, 0) + vectorUnitRandom()*2, randint(5,8), 80)
+		
+		## roping
+		if self.rope:
+			if dist(self.pos, self.rope[0][-1]) > self.rope[1]:
+				directionToRope = (self.rope[0][-1] - self.pos).getDir()
+				ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
+				# if checkFreePos(self, ppos):
+				self.pos = ppos
+				normal = directionToRope.normal()
+				mul = dotProduct(self.vel, normal)/(normal.getMag()**2)
+				self.vel = normal * mul
+			
+			if dist(self.pos, self.rope[0][-1]) < self.rope[1] - 2:
+				directionToRope = (self.rope[0][-1] - self.pos).getDir()
+				ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
+				# if checkFreePos(self, ppos):
+				self.pos = ppos
+				normal = directionToRope.normal()
+				mul = dotProduct(self.vel, normal)/(normal.getMag()**2)
+				self.vel = normal * mul
+			
+			# check secondary rope position
+			for i in range(int(self.rope[1])-2):
+				start = self.pos
+				direction = (self.rope[0][-1] - self.pos).normalize()
+				testPos = start + direction * i
+				if not isOnMap(testPos):
+					break
+				if map.get_at(testPos.vec2tupint()) == GRD:
+					self.rope[0].append(testPos)
+					self.rope[1] = dist(self.pos, self.rope[0][-1])
+					break
+			if len(self.rope[0]) > 1:
+				count = int(dist(self.pos, self.rope[0][-2]))
+				for i in range(int(dist(self.pos, self.rope[0][-2]))):
+					start = self.pos
+					direction = (self.rope[0][-2] - self.pos).normalize()
+					testPos = start + direction * i
+					if not isOnMap(testPos):
+						break
+					if map.get_at(testPos.vec2tupint()) == GRD:
+						break
+					if i == count-1:
+						self.rope[1] = dist(self.pos, self.rope[0][-2])
+						self.rope[0].pop(-1)
+			self.damp = 0.7
+			
+		
 		self.shootVel = clamp(self.shootVel + self.shootAcc, 0.1, -0.1)
 		self.shootAngle += self.shootVel * self.facing
 		if self.facing == RIGHT:
@@ -908,7 +1027,6 @@ class Worm (PhysObj):
 		elif self.facing == LEFT:
 			self.shootAngle = clamp(self.shootAngle, pi + pi/2, pi/2)
 
-		global state, nextState
 		if self.health <= 0:
 			self.dieded()
 		# check if on map:
@@ -924,7 +1042,7 @@ class Worm (PhysObj):
 			self.gravity = DOWN
 		if actionMove or actionMove:
 			# self.move()
-			if objectUnderControl == self and self.health > 0 and not self.jetpacking:
+			if objectUnderControl == self and self.health > 0 and not self.jetpacking and not self.rope:
 				move(self)
 	def saveStr(self):
 		string = ""
@@ -1285,6 +1403,8 @@ class HealthPack(PetrolCan):
 			self.deathResponse()
 	def effect(self, worm):
 		worm.health += 50
+		if Worm.healthMode == 1:
+			worm.healthStr = myfont.render(str(worm.health), False, worm.teamColor)
 		# if worm.health > 100:
 			# worm.health = 100
 		worm.sick = False
@@ -2451,6 +2571,36 @@ class Sheep(PhysObj):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(self.facing*self.radius,0)), 4)
 
+def shootRope(start, direction):
+	for t in range(5,500):
+		testPos = start + direction * t
+		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
+			continue
+		if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			objectUnderControl.toggleRope(testPos)
+			break
+
+class Armageddon:
+	def __init__(self):
+		PhysObj._reg.append(self)
+		self.stable = False
+		self.boomAffected = False
+		self.timer = 700
+	def step(self):
+		self.timer -= 1
+		if self.timer == 0:
+			PhysObj._reg.remove(self)
+			del self
+			return
+		if timeOverall % 10 == 0:
+			for i in range(randint(1,2)):
+				x = randint(-100, mapWidth + 100)
+				m = Missile((x, -10), Vector(randint(-10,10), 5).normalize(), 1)
+				m.windAffected = False
+				m.boomRadius = 40
+	def draw(self):
+		pass
+
 ################################################################################ Create World
 
 maps = []
@@ -2466,7 +2616,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[70 - 1]
+	# imageChoice = maps[68 - 1]
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1]]: mapClosed = True
@@ -2494,6 +2644,7 @@ def createWorld():
 # moreWindAffected = True
 # davidAndGoliathMode = True
 # fortsMode = True
+# randomWeapons = True
 wormsPerTeam = 8
 
 ################################################################################ Weapons setup
@@ -2523,6 +2674,7 @@ if True:
 	weapons.append(("sheep", PUTABLE, 1, GRENADES))
 	weapons.append(("baseball", PUTABLE, 3, MISC))
 	weapons.append(("girder", CLICKABLE, -1, MISC))
+	weapons.append(("rope", PUTABLE, 3, MISC))
 	weapons.append(("plant seed", CHARGABLE, 2, MISC))
 	weapons.append(("sentry gun", PUTABLE, 0, MISC))
 	weapons.append(("airstrike", CLICKABLE, 1, AIRSTRIKE))
@@ -2680,6 +2832,15 @@ def fire(weapon = None):
 	elif weapon == "sheep":
 		w = Sheep(weaponOrigin + Vector(0,-5))
 		w.facing = objectUnderControl.facing
+	elif weapon == "rope":
+		angle = weaponDir.getAngle()
+		if angle > 0:
+			decrease = False
+		else:
+			Worm.roped = True
+			decrease = False
+			shootRope(weaponOrigin, weaponDir)
+		nextState = PLAYER_CONTROL_1
 
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -2834,6 +2995,9 @@ def cycleWorms():
 	if timeTravel: timeTravelReset()
 	if objectUnderControl.jetpacking: objectUnderControl.toggleJetpack()
 	switchingWorms = False
+	if Worm.roped:
+		objectUnderControl.team.weaponCounter[weaponDict["rope"]] -= 1
+		Worm.roped = False
 	
 	# update damage:
 	if damageThisTurn > mostDamage[0]:
@@ -3121,7 +3285,16 @@ def randomStartingWeapons(amount):
 				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID])
 				team.specialCounter[effect] += 1
 				team.hasSpecial = True
-			
+
+def randomWeaponsGive():
+	for team in teams:
+		for i in range(len(team.weaponCounter)):
+			if team.weaponCounter[i] == -1:
+				continue
+			else:
+				if randint(0,1) == 1:
+					team.weaponCounter[i] = randint(0,5)
+
 def suddenDeath():
 	for worm in PhysObj._worms:
 		worm.sicken()
@@ -3158,14 +3331,15 @@ def cheatActive(code):
 			team.hasSpecial = True
 		for wRect in wRects:
 			wRect[5] = 0
-	if code == "tetanus=":
+	if code == "suddendeath=":
 		suddenDeath()
 	if code == "wind=":
 		global wind
 		wind = uniform(-1,1)
 	if code == "goodbyecruelworld=":
 		boom(objectUnderControl.pos, 100)
-		
+	if code == "armageddon=":
+		Armageddon()
 ################################################################################ State machine
 RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
 PLAYER_CONTROL_2 = 5; WAIT_STABLE = 6; FIRE_MULTIPLE = 7; OPEN_MENU = 8
@@ -3212,9 +3386,13 @@ def stateMachine():
 				for i in range(length):
 					if i == 0:
 						team.worms[i].health = initialHealth + (length - 1) * (initialHealth//2)
+						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].teamColor)
 					else:
 						team.worms[i].health = (initialHealth//2)
+						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].teamColor)
 			initialHealth = teams[0].worms[0].health
+		
+		if randomWeapons: randomWeaponsGive()
 	elif state == CHOOSE_STARTER:
 		playerControlPlacing = False
 		playerControl = False
@@ -3418,14 +3596,11 @@ while run:
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)\
 			# testing mainly
 			if state == PLAYER_CONTROL_1:
+				# mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
-				# Covid19((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), uniform(0,2*pi))
-				# Plant((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
-				# SentryGun((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), currentTeam.color)
 				# camTrack = w
-				# Blast((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y), randint(5,25))
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
 			# this is the next state after placing all worms
@@ -3473,8 +3648,7 @@ while run:
 						fireWeapon = False
 						if currentWeapon == "homing missile" and not showTarget:
 							energising = False
-					
-						
+
 				# facing key
 				if event.key == pygame.K_RIGHT:
 					objectUnderControl.facing = RIGHT
@@ -3486,10 +3660,11 @@ while run:
 					if objectUnderControl.shootAngle >= -pi/2 and objectUnderControl.shootAngle <= pi/2:
 						objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
 					camTrack = objectUnderControl
-			# weapon change by keyboard
+			
 			if event.key == pygame.K_SPACE:
 					if Sheep.trigger == False:
 						Sheep.trigger = True
+			# weapon change by keyboard
 			if state == PLAYER_CONTROL_1:
 				if event.key == pygame.K_1:
 					currentWeapon = "missile"
@@ -3531,6 +3706,11 @@ while run:
 					currentWeapon = "minigun"
 					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
 					renderWeaponCount()
+				elif event.key == pygame.K_MINUS:
+					currentWeapon = "rope"
+					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
+					renderWeaponCount()
+			# misc
 			if event.key == pygame.K_p:
 				pause = not pause
 			if event.key == pygame.K_TAB:
@@ -3561,7 +3741,12 @@ while run:
 				scrollMenu()
 			if event.key == pygame.K_PAGEDOWN or event.key == pygame.K_KP3:
 				scrollMenu(False)
-				
+			if event.key == pygame.K_F2:
+				Worm.healthMode = (Worm.healthMode + 1) % 2
+				if Worm.healthMode == 1:
+					for worm in PhysObj._worms:
+						worm.healthStr = myfont.render(str(worm.health), False, worm.teamColor)
+			
 			text += event.unicode
 			if event.key == pygame.K_EQUALS:
 				cheatActive(text)
@@ -3575,10 +3760,26 @@ while run:
 					energyLevel = 0
 				elif weaponStyle == CHARGABLE and energising:
 					fireWeapon = True
-				elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
+				# putable/gun weapons case
+				elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
+					fireWeapon = True
+					# if objectUnderControl.rope: #rope
+						# objectUnderControl.toggleRope(None)
+						# fireWeapon = False
+					playerShootAble = False
+				# rope case:
+				elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
+					# if not currently roping:
 					fireWeapon = True
 					playerShootAble = False
+					# if currently roping:
+					if objectUnderControl.rope: #rope
+						objectUnderControl.toggleRope(None)
+						fireWeapon = False
+					
 				energising = False
+			elif event.key == pygame.K_SPACE and objectUnderControl.rope:
+				objectUnderControl.toggleRope(None)
 				
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_ESCAPE]: run = False	
