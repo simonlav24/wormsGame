@@ -189,29 +189,29 @@ def renderLand():
 				if map.get_at((x,y)) == GRD:
 					ground.fill((randint(80, 120), randint(30, 70), 0), ((x,y), (1, 1)))
 
-def boom(pos, radius, debries = True, gravity = False, fire = False, mapHarm = True):
+def boom(pos, radius, debries = True, gravity = False, fire = False):
 	radius *= radiusMult
 	global camTrack
 	boomPos = Vector(pos[0], pos[1])
+	# sample ground colors:
+	if debries:
+		colors = []
+		for i in range(10):
+			sample = (pos + vectorUnitRandom() * uniform(0,radius)).vec2tupint()
+			if isOnMap(sample):
+				color = ground.get_at(sample)
+				if not color == SKY:
+					colors.append(color)
+		if len(colors) == 0:
+			colors.append((255,255,0))
 	# ground delete
-	if mapHarm:
-		# sample ground colors:
-		if debries:
-			colors = []
-			for i in range(10):
-				sample = (pos + vectorUnitRandom() * uniform(0,radius)).vec2tupint()
-				if isOnMap(sample):
-					color = ground.get_at(sample)
-					if not color == SKY:
-						colors.append(color)
-			if len(colors) == 0:
-				colors.append((255,255,0))
-		if not fire:
-			Explossion(pos, radius)
-		# for i in range(radius//4):
-			# Explossion(pos + vectorUnitRandom() * uniform(0,radius/2), uniform(10, radius*0.7))
-		pygame.draw.circle(map, SKY, (int(pos[0]), int(pos[1])), int(radius))
-		pygame.draw.circle(ground, SKY, (int(pos[0]), int(pos[1])), int(radius))
+	if not fire:
+		Explossion(pos, radius)
+	# for i in range(radius//4):
+		# Explossion(pos + vectorUnitRandom() * uniform(0,radius/2), uniform(10, radius*0.7))
+	pygame.draw.circle(map, SKY, (int(pos[0]), int(pos[1])), int(radius))
+	pygame.draw.circle(ground, SKY, (int(pos[0]), int(pos[1])), int(radius))
+	
 	
 	listToCheck = PhysObj._reg if not fire else PhysObj._worms
 	
@@ -1027,16 +1027,18 @@ class Worm (PhysObj):
 		elif self.facing == LEFT:
 			self.shootAngle = clamp(self.shootAngle, pi + pi/2, pi/2)
 
-		if self.health <= 0:
+		if self.health <= 0 and not self.color == (167,167,167):
 			self.dieded()
+			Commentator.que.append((self.nameStr, choice(Commentator.stringsDmg), self.team.color))
 		# check if on map:
-		if self.pos.y >= mapHeight: #if true than worm is out of map
+		if self.pos.y >= mapHeight:
 			global damageThisTurn
 			if not self == objectUnderControl:
 				if not sentring and not self in objectUnderControl.team.worms:
 					damageThisTurn += self.health
 			self.health = 0
 			self.dieded()
+			Commentator.que.append((self.nameStr, choice(Commentator.stringsFlw), self.team.color))
 			self._reg.remove(self)
 		if self.pos.y < 0:
 			self.gravity = DOWN
@@ -1388,6 +1390,7 @@ class HealthPack(PetrolCan):
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = False
+		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x) -5 - int(camPos.x),int(self.pos.y) -5 - int(camPos.y) , 10,10))
 		pygame.draw.rect(win, (255,108,80), (int(self.pos.x) -4 - int(camPos.x),int(self.pos.y) -1 - int(camPos.y) , 8,2))
@@ -1421,6 +1424,7 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = False
+		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-1, int(self.pos.y) - int(camPos.y)-2))
@@ -1456,6 +1460,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = False
+		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
@@ -2890,13 +2895,14 @@ for i in range(len(specialStr)):
 
 ################################################################################ Teams
 class Team:
-	def __init__(self, namesList, color):
+	def __init__(self, namesList, color, name = ""):
 		self.nameList = namesList
 		self.color = color
 		self.weaponCounter = basicSet.copy()
 		self.specialCounter = [0] * len(specialStr)
 		self.hasSpecial = False
 		self.worms = []
+		self.name = name
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
@@ -2913,10 +2919,10 @@ class Team:
 			string += worm.saveStr()
 		return string
 
-blues = Team(["red lion", "commercial", "swan", "brewers", "fred", "sparrow", "eithan", "reed"], BLUE)
-reds = Team(["fix delux r", "vamp b", "birdie", "lordie", "pinkie", "katie", "angie", "miya"], RED)
-greens = Team(["blair", "major", "thatcher", "chellenge", "george", "mark", "mercury", "philip"], GREEN)
-yellows = Team(["colan", "GT", "jettets", "chevan", "jonie", "murph", "silvia", "flur"], YELLOW)
+blues = Team(["red lion", "commercial", "swan", "brewers", "fred", "sparrow", "eithan", "reed"], BLUE, "blue")
+reds = Team(["fix delux r", "vamp b", "birdie", "lordie", "pinkie", "katie", "angie", "miya"], RED, "red")
+greens = Team(["blair", "major", "thatcher", "chellenge", "george", "mark", "mercury", "philip"], GREEN, "green")
+yellows = Team(["colan", "GT", "jettets", "chevan", "jonie", "murph", "silvia", "flur"], YELLOW, "yellow")
 
 # choose playing teams here
 teams = [blues, reds, yellows, greens]
@@ -3002,6 +3008,11 @@ def cycleWorms():
 	# update damage:
 	if damageThisTurn > mostDamage[0]:
 		mostDamage = (damageThisTurn, objectUnderControl.nameStr)
+	if damageThisTurn > int(initialHealth * 2.5):
+		Commentator.que.append((objectUnderControl.nameStr, choice([("awesome shot ", "!"), ("", " is on fire!"), ("", " shows no mercy")]), objectUnderControl.team.color))
+	elif damageThisTurn > int(initialHealth * 1.5):
+		Commentator.que.append((objectUnderControl.nameStr, choice([("good shot ", "!"), ("nicely done ","")]), objectUnderControl.team.color))
+		
 	damageThisTurn = 0
 	
 	# check winners
@@ -3028,7 +3039,10 @@ def cycleWorms():
 				file.write("time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(color2str(team.color)) \
 					 + "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:6}'.format(mostDamage[1]+adding) + "\n")
 				file.close()
-				run = False
+				commentator.que.append((team.name, ("taem "," won!"), team.color))
+				camTrack = team.worms[0]
+				nextState = WIN
+				# run = False
 				return
 	
 	roundCounter += 1
@@ -3209,6 +3223,47 @@ def cloud_maneger():
 		pos = Vector(choice([camPos.x - Cloud.cWidth - 100, camPos.x + winWidth + 100]), randint(5, mapHeight - 150))
 		Cloud(pos)
 
+class Commentator:
+	que = []#(name, strings, color)
+	timer = 0
+	mode = 0 #0-wait, 1-render, 2-show
+	textSurf = None
+	name = None
+	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed")]
+	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " went to ort braude"), ("", " has divided by zero")]
+	stringsCrt = [("a jewel from the heavens!", ""), ("go fetch", ""), ("what's in the box?", ""), ("its raining crates, halelujah!", "")]
+	def step(self):
+		if self.mode == 0:
+			if len(self.que) == 0:
+				return
+			else:
+				self.mode = 1
+		elif self.mode == 1:
+			nameSurf = myfont.render(self.que[0][0], False, self.que[0][2])
+				
+			string1 = self.que[0][1][0]
+			string2 = self.que[0][1][1]
+			
+			stringSurf1 = myfont.render(string1, False, (0,0,0))
+			stringSurf2 = myfont.render(string2, False, (0,0,0))
+			# combine strings
+			self.textSurf = pygame.Surface((nameSurf.get_width() + stringSurf1.get_width() + stringSurf2.get_width(), nameSurf.get_height())).convert_alpha()
+			self.textSurf.fill((0,0,0,0))
+			self.textSurf.blit(stringSurf1, (0,0))
+			self.textSurf.blit(nameSurf, (stringSurf1.get_width(),0))
+			self.textSurf.blit(stringSurf2, (stringSurf1.get_width() + nameSurf.get_width() ,0))
+			# print(self.que)
+			self.que.pop(0)
+			self.mode = 2
+			self.timer = 2*30 + 1*15
+		elif self.mode == 2:
+			win.blit(self.textSurf, (int(winWidth/2 - self.textSurf.get_width()/2), 10))
+			
+			self.timer -= 1
+			if self.timer == 0:
+				self.mode = 0
+commentator = Commentator()
+
 def saveGame():
 	file = open("wormsSave.txt", 'w')
 	# team parameters:
@@ -3340,9 +3395,11 @@ def cheatActive(code):
 		boom(objectUnderControl.pos, 100)
 	if code == "armageddon=":
 		Armageddon()
+	if code == "reset=":
+		state, nextState = RESET, RESET
 ################################################################################ State machine
 RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
-PLAYER_CONTROL_2 = 5; WAIT_STABLE = 6; FIRE_MULTIPLE = 7; OPEN_MENU = 8
+PLAYER_CONTROL_2 = 5; WAIT_STABLE = 6; FIRE_MULTIPLE = 7; OPEN_MENU = 8; WIN = 9
 
 state, nextState = RESET, RESET
 
@@ -3351,7 +3408,7 @@ playerControlPlacing = False; playerShootAble = False; gameStableCounter = 0
 
 def stateMachine():
 	global state, nextState, gameStable, playerControl, playerControlPlacing, playerShootAble, playerScrollAble
-	global objectUnderControl, camTrack, gameStable, gameStableCounter, shotCount, fireWeapon, currentWeapon
+	global objectUnderControl, camTrack, gameStable, gameStableCounter, shotCount, fireWeapon, currentWeapon, run
 	if state == RESET:
 		gameStable = False
 		playerActionComplete = False
@@ -3461,7 +3518,10 @@ def stateMachine():
 			fireWeapon = True
 			if not shotCount == 0:
 				nextState = FIRE_MULTIPLE
-
+	elif state == WIN:
+		gameStableCounter += 1
+		if gameStableCounter == 30*3:
+			run = False
 ################################################################################ Setup
 
 def makeRandomTeams(teamQuantity, wormsPerTeam, names):
@@ -3900,6 +3960,7 @@ while run:
 	drawWindIndicator()
 	timeDraw()
 	win.blit(currentWeaponSurf, ((int(25), int(8))))
+	commentator.step()
 	
 	if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: teamHealthDraw()
 	# weapon menu:
