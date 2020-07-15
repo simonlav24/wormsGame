@@ -45,6 +45,7 @@ WEAPONS:
 # BASEBALL - home running worms away.
 
 # GIRDER - clickable, place a girder. press tab for rotation and scaling.
+# ROPE - swing your way to action.
 # PLANT SEED - chargeable, throws seed that grows on impact.
 # SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn.
 
@@ -62,6 +63,7 @@ WEAPONS:
 # VORTEX GRENADE - chargeable, creates a vortex sucking in worms and then repelling them.
 # BUSTER STRIKE - clickable, an airstrike of bunker busters.
 # CHILLI PEPPER - chargeable, red hot chilli pepper.
+# RAGING BULL - moooo bi**h get out the way.
 
 
 UTILITIES:
