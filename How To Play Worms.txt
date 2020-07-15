@@ -40,7 +40,7 @@ WEAPONS:
 -place and run-
 # MINE - mine.
 # TNT - explosive TNT bomb.
-# COVID19 - releases the bat. very contagious.
+# COVID19 - very contagious.
 # SHEEP - baaaa.
 # BASEBALL - home running worms away.
 
