@@ -24,6 +24,7 @@ screen = pygame.display.set_mode((screenWidth,screenHeight))
 
 # IDEAS:
 # piggy bank
+# god mode
 
 # Macros
 if True:
@@ -95,6 +96,7 @@ text = ""
 mapWidth = int(1024*1.5)
 mapHeight = 512
 map = pygame.Surface((mapWidth, mapHeight))
+
 ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 
 camPos = Vector(0,0)
@@ -110,36 +112,6 @@ currentWeapon = "missile"
 currentWeaponSurf = myfont.render(currentWeapon, False, (0,0,0))
 weaponStyle = CHARGABLE
 
-# randomSeed = 2
-# def uniform(a,b):
-	# global randomSeed
-	# ins = (725 + randomSeed)*(sin(pi*randomSeed) + sin(randomSeed))
-	# mod = b + 1 - a
-	# result = ins % mod
-	# result += a
-	# randomSeed += 1
-	# if randomSeed > 35000: randomSeed = -35000
-	# if result > b or result < a:
-		# print("fuck")
-	# return result
-
-# def randint(a,b):
-	# global randomSeed
-	# ins = (725 + randomSeed)*(sin(pi*randomSeed) + sin(randomSeed))
-	# mod = b + 1 - a
-	# result = int(ins % mod)
-	# result += a
-	# randomSeed += 1
-	# if randomSeed > 35000: randomSeed = -35000
-	# if result > b or result < a:
-		# print("fuck")
-	# return result
-	
-# def choice(iterable):
-	# length = len(iterable)
-	# index = randint(0,length-1)
-	# return iterable[index]
-	
 wind = uniform(-1,1)
 actionMove = False
 aimAid = False
@@ -437,7 +409,7 @@ def drawBackGround(surf, parallax):
 	times = winWidth//width + 2
 	for i in range(times):
 		x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
-		y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y))/parallax)
+		y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight)  - int(camPos.y))/parallax)
 		win.blit(surf, (x, y))
 
 def point2world(point):
@@ -601,6 +573,7 @@ class PhysObj:
 			if testPos.y < 0:
 				r += pi /8
 				continue
+			
 			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 				collision = True
@@ -674,7 +647,7 @@ class Debrie (PhysObj):
 		# gravity:
 		self.acc.y += globalGravity * 2.5
 	def draw(self):
-		pygame.draw.circle(win, self.color, (int(self.pos.x - camPos.x), int(self.pos.y - camPos.y)), int(self.radius))
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius))
 
 class Missile (PhysObj):#1
 	def __init__(self, pos, direction, energy):
@@ -900,7 +873,7 @@ class Worm (PhysObj):
 				if not sentring and not self in objectUnderControl.team.worms:
 					damageThisTurn += dmg
 	def draw(self):
-		pygame.draw.circle(win, self.color, (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), int(self.radius)+1)
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
 		if self.rope:
 			# rope = [point2world(self.pos)]
@@ -1046,6 +1019,9 @@ class Worm (PhysObj):
 			# self.move()
 			if objectUnderControl == self and self.health > 0 and not self.jetpacking and not self.rope:
 				move(self)
+		
+		
+		
 	def saveStr(self):
 		string = ""
 		string += str(self.nameStr) + ":\n"
@@ -1155,8 +1131,6 @@ class TNT(PhysObj):#5
 
 shotCount = 0
 def fireShotgun(start, direction, power=15):#6
-	if power == 15 and randint(0,100) == 1:
-		power = 8
 	hit = False
 
 	for t in range(5,500):
@@ -1467,7 +1441,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 	def effect(self, worm):
 		if unlimitedMode:
 			return
-		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19", "mine strike"])
+		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19", "mine strike", "raging bull"])
 		FloatingText(self.pos, effect, (0,200,200))
 		worm.team.weaponCounter[weaponDict[effect]] += 1
 
@@ -1611,6 +1585,8 @@ class HolyGrenade(Grenade):
 		self.timer += 1
 		if self.timer == fuseTime + 60:
 			self.dead = True
+		if self.timer == fuseTime + 30:
+			Commentator.que.append(choice([("hand grenade",("o lord bless this thy ",""),(210,210,0)), ("",("blow thine enemy to tiny bits ",""),(210,210,0)), ("",("feast upon the lambs and sloths and carp",""),(210,210,0)), ("",("three shall be the number thous shalt count",""),(210,210,0)), ("",("thou shall snuff that",""),(210,210,0))]))
 
 class Banana(Grenade):
 	def __init__(self, pos, direction, energy, used = False):
@@ -2193,6 +2169,7 @@ class Vortex():
 		self.boomAffected = False
 		self.stable = False
 	def step(self):
+		self.stable = False
 		if self.inhale:
 			self.rot += 0.001
 			if self.rot > 0.1:
@@ -2344,7 +2321,7 @@ class ChilliPepper(PhysObj):
 		self.surf = pygame.Surface((width, height)).convert_alpha()
 		self.surf.fill((0,0,0,0))
 		pygame.draw.polygon(self.surf, (230, 46, 0), [(0,0), (width-1, 0), (width//2, height)])
-		self.damp = 0.65
+		self.damp = 0.8
 		self.angle = 0
 		self.boomAffected = False
 		self.bounceBeforeDeath = 6
@@ -2540,7 +2517,7 @@ class Sheep(PhysObj):
 	def __init__(self, pos):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(0,-2.5)
+		self.vel = Vector(0,-3)
 		self.radius = 6
 		self.color = (250,240,240)
 		self.damp = 0.2
@@ -2571,7 +2548,6 @@ class Sheep(PhysObj):
 		rad = self.radius + 1
 		wig = 0.4*sin(0.5*self.timer)
 		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(pi/4 + wig), rad * sin(pi/4 + wig))), 2)
-		# pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(-self.radius*(2/3), self.radius)), 2)
 		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(3*pi/4 - wig), rad * sin(3*pi/4 - wig))), 2)
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(self.facing*self.radius,0)), 4)
@@ -2606,6 +2582,53 @@ class Armageddon:
 	def draw(self):
 		pass
 
+class Bull(PhysObj):
+	def __init__(self, pos):
+		self.ignore = []
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(0,-3)
+		self.radius = 6
+		self.color = (165, 39, 40)
+		self.damp = 0.2
+		self.hits = 5
+		self.timer = 0
+		self.facing = RIGHT
+		self.boomAffected = False
+		self.windAffected = False
+	def secondaryStep(self):
+		self.stable = False
+		self.timer += 1
+		moved = move(self)
+		moved = move(self)
+		if not moved:
+			if isGroundAround(self.pos, self.radius+1):
+				self.hits -= 1
+				boom(self.pos, 35)
+				self.vel += Vector(-self.facing*3,-1)
+		for worm in PhysObj._worms:
+			if worm in self.ignore:
+				continue
+			if dist(worm.pos, self.pos) < self.radius:
+				self.ignore.append(worm)
+				self.hits -= 1
+				boom(self.pos, 35)
+				self.vel += Vector(-self.facing*3,-1)
+		if self.timer % 10 == 0:
+			self.ignore = []
+		if self.hits == 0:
+			self.dead = True
+		if self.timer >= 300:
+			boom(self.pos, 35)
+			self.dead = True
+	def draw(self):
+		rad = self.radius + 1
+		wig = 0.4*sin(0.5*self.timer)
+		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(pi/4 + wig), rad * sin(pi/4 + wig))), 2)
+		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(3*pi/4 - wig), rad * sin(3*pi/4 - wig))), 2)
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(self.facing*(self.radius +1),-1)), 4)
+
 ################################################################################ Create World
 
 maps = []
@@ -2621,10 +2644,10 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[68 - 1]
+	# imageChoice = maps[64 - 1]
 	
 	if not webVer:
-		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1]]: mapClosed = True
+		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1, 64-1]]: mapClosed = True
 	imageFile, heightNorm = imageChoice
 	
 	global mapImage
@@ -2693,6 +2716,7 @@ if True:
 	weapons.append(("vortex grenade", CHARGABLE, 0, LEGENDARY))
 	weapons.append(("buster strike", CLICKABLE, 0, LEGENDARY))
 	weapons.append(("chilli pepper", CHARGABLE, 0, LEGENDARY))
+	weapons.append(("raging bull", PUTABLE, 0, LEGENDARY))
 
 weaponDict = {}
 weaponDictI = {}
@@ -2846,7 +2870,11 @@ def fire(weapon = None):
 			decrease = False
 			shootRope(weaponOrigin, weaponDir)
 		nextState = PLAYER_CONTROL_1
-
+	elif weapon == "raging bull":
+		w = Bull(weaponOrigin + Vector(0,-5))
+		w.facing = objectUnderControl.facing
+		w.ignore.append(objectUnderControl)
+	
 	if w and not timeTravelFire: camTrack = w	
 	
 	if decrease:
@@ -3223,15 +3251,15 @@ def cloud_maneger():
 		pos = Vector(choice([camPos.x - Cloud.cWidth - 100, camPos.x + winWidth + 100]), randint(5, mapHeight - 150))
 		Cloud(pos)
 
-class Commentator:
-	que = []#(name, strings, color)
+class Commentator:#(name, strings, color)
+	que = []
 	timer = 0
 	mode = 0 #0-wait, 1-render, 2-show
 	textSurf = None
 	name = None
 	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed")]
 	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " went to ort braude"), ("", " has divided by zero")]
-	stringsCrt = [("a jewel from the heavens!", ""), ("go fetch", ""), ("what's in the box?", ""), ("its raining crates, halelujah!", "")]
+	stringsCrt = [("a jewel from the heavens!", ""), ("go fetch", ""), ("what's in the box?", ""), ("its raining crates, halelujah!", ""), ("got this on ebay",""), (" ","")]
 	def step(self):
 		if self.mode == 0:
 			if len(self.que) == 0:
@@ -3899,6 +3927,7 @@ while run:
 	if fireWeapon and playerShootAble: fire()
 	
 	# step:
+	
 	gameStable = True
 	for p in PhysObj._reg:
 		p.step()
@@ -3928,7 +3957,6 @@ while run:
 	for cloud in Cloud._reg: cloud.step()
 		
 	# draw:
-	# pygame.transform.scale(imageSky, screen.get_rect().size)
 	win.blit(pygame.transform.scale(imageSky, win.get_rect().size), (0,0))
 	for cloud in Cloud._reg: cloud.draw()
 	drawBackGround(imageMountain2,4)
