@@ -5,22 +5,23 @@ import pygame
 from pygame import gfxdraw
 pygame.init()
 
-fpsClock = pygame.time.Clock()
-
-pygame.font.init()
-myfont = pygame.font.Font("fonts\pixelFont.ttf", 5)
-myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
-
-scalingFactor = 3
-winWidth = int(1280 / scalingFactor)
-winHeight = int(720 / scalingFactor)
-# winWidth = int(640 / scalingFactor)
-# winHeight = int(480 / scalingFactor)
-win = pygame.Surface((winWidth, winHeight))
-
-screenWidth = int(winWidth * scalingFactor)
-screenHeight = int(winHeight * scalingFactor)
-screen = pygame.display.set_mode((screenWidth,screenHeight))
+if True:
+	fpsClock = pygame.time.Clock()
+	
+	pygame.font.init()
+	myfont = pygame.font.Font("fonts\pixelFont.ttf", 5)
+	myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
+	
+	scalingFactor = 3
+	winWidth = int(1280 / scalingFactor)
+	winHeight = int(720 / scalingFactor)
+	# winWidth = int(640 / scalingFactor)
+	# winHeight = int(480 / scalingFactor)
+	win = pygame.Surface((winWidth, winHeight))
+	
+	screenWidth = int(winWidth * scalingFactor)
+	screenHeight = int(winHeight * scalingFactor)
+	screen = pygame.display.set_mode((screenWidth,screenHeight))
 
 # IDEAS:
 # piggy bank
@@ -68,57 +69,59 @@ if True:
 	AIRSTRIKE = (204, 255, 255)
 
 # Game parameters
-turnTime = 45 
-shockRadius = 1.5
-globalGravity = 0.2
-mapScrollSpeed = 8
-initialHealth = 100
-deployPacks = True
-diggingMatch = False
-randomPlace = True
-drawHealthBar = True
-mapClosed = False
-unlimitedMode = False
-moreWindAffected = False
-fortsMode = False
-davidAndGoliathMode = False
-randomWeapons = False
+if True:
+	turnTime = 45 
+	shockRadius = 1.5
+	globalGravity = 0.2
+	mapScrollSpeed = 8
+	initialHealth = 100
+	deployPacks = True
+	diggingMatch = False
+	randomPlace = True
+	drawHealthBar = True
+	mapClosed = False
+	unlimitedMode = False
+	moreWindAffected = False
+	fortsMode = False
+	davidAndGoliathMode = False
+	randomWeapons = False
+	
+	# Multipliers
+	damageMult = 0.8
+	fallDamageMult = 1
+	windMult = 1.5
+	radiusMult = 1
+	
+	text = ""
+webVer = True 
 
-# Multipliers
-damageMult = 0.8
-fallDamageMult = 1
-windMult = 1.5
-radiusMult = 1
-
-webVer = True
-text = ""
 ################################################################################ Map
-mapWidth = int(1024*1.5)
-mapHeight = 512
-map = pygame.Surface((mapWidth, mapHeight))
-
-ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
-
-camPos = Vector(0,0)
-camTarget = Vector(0,0)
-
-objectUnderControl = None
-camTrack = None
-
-energising = False
-energyLevel = 0
-fireWeapon = False
-currentWeapon = "missile"
-currentWeaponSurf = myfont.render(currentWeapon, False, (0,0,0))
-weaponStyle = CHARGABLE
-
-wind = uniform(-1,1)
-actionMove = False
-aimAid = False
-switchingWorms = False
-timeTravel = False
-jetPackFuel = 100
-
+if True:
+	mapWidth = int(1024*1.5)
+	mapHeight = 512
+	map = pygame.Surface((mapWidth, mapHeight))
+	
+	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
+	
+	camPos = Vector(0,0)
+	camTarget = Vector(0,0)
+	
+	objectUnderControl = None
+	camTrack = None
+	
+	energising = False
+	energyLevel = 0
+	fireWeapon = False
+	currentWeapon = "missile"
+	currentWeaponSurf = myfont.render(currentWeapon, False, (0,0,0))
+	weaponStyle = CHARGABLE
+	
+	wind = uniform(-1,1)
+	actionMove = False
+	aimAid = False
+	switchingWorms = False
+	timeTravel = False
+	jetPackFuel = 100
 
 def createMapImage(heightNorm = None):
 	global mapImage
@@ -146,7 +149,7 @@ def createMapDigging():
 	
 def drawLand():
 	win.blit(ground, (-int(camPos.x), -int(camPos.y)))
-				
+
 def renderLand():
 	ground.fill(SKY)
 	if mapImage:
@@ -237,7 +240,7 @@ class Blast:
 		layers[0].append((self._color[int(max(min(self.time, 5), 0))], self.pos, self.rad))
 		layers[1].append((self._color[int(max(min(self.time-1, 5), 0))], self.pos, self.rad*0.6))
 		layers[2].append((self._color[int(max(min(self.time-2, 5), 0))], self.pos, self.rad*0.3))
-		
+
 class Explossion:
 	def __init__(self, pos, radius):	
 		nonPhys.append(self)
@@ -253,7 +256,7 @@ class Explossion:
 			del self
 	def draw(self):
 		pass
-		
+
 def drawWindIndicator():
 	pygame.draw.line(win, (100,100,255), (20, 15), (int(20 + wind * 20),15))
 	pygame.draw.line(win, (0,0,255), (20, 10), (20,20))
@@ -381,20 +384,6 @@ def clamp(value, upper, lower):
 		value = lower
 	return value
 
-def color2str(color):
-	if color == RED:
-		return "red"
-	elif color == YELLOW:
-		return "yellow"
-	elif color == GREEN:
-		return "green"
-	elif color == BLUE:
-		return "blue"
-
-def sign(x):
-	if x > 0: return 1
-	elif x < 0: return -1
-	return 0
 # sprites
 imageMountain = pygame.image.load("mountain.png").convert_alpha()
 imageMountain2 = pygame.image.load("mountain2.png").convert_alpha()
@@ -781,15 +770,14 @@ class Worm (PhysObj):
 		self.shootVel = 0
 		self.health = initialHealth
 		self.team = team
-		self.teamColor = team.color
 		self.sick = False
 		self.gravity = DOWN
 		if name:
 			self.nameStr = name
 		else:
 			self.nameStr = randomNames.pop()
-		self.name = myfont.render(self.nameStr, False, self.teamColor)
-		self.healthStr = myfont.render(str(self.health), False, self.teamColor)
+		self.name = myfont.render(self.nameStr, False, self.team.color)
+		self.healthStr = myfont.render(str(self.health), False, self.team.color)
 		self.score = 0
 		self.jetpacking = False
 		self.rope = None #[pos, radius]
@@ -867,7 +855,7 @@ class Worm (PhysObj):
 			if self.health < 0:
 				self.health = 0
 			if Worm.healthMode == 1:
-				self.healthStr = myfont.render(str(self.health), False, self.teamColor)
+				self.healthStr = myfont.render(str(self.health), False, self.team.color)
 			global damageThisTurn
 			if not self == objectUnderControl:
 				if not sentring and not self in objectUnderControl.team.worms:
@@ -882,6 +870,12 @@ class Worm (PhysObj):
 			pygame.draw.lines(win, (250,250,0), False, rope)
 		if self.health > 0 and drawHealthBar:
 			self.drawHealth()
+		if self.pos.y < 0:
+			width = 25
+			height = 10
+			pygame.draw.rect(win, (0,0,0), (point2world((self.pos.x - width/2,10)), (width, height)))
+			num = myfont.render(str(int(-self.pos.y)), False, self.team.color)
+			win.blit(num, point2world((self.pos.x - num.get_width()/2, 12)))
 	def __str__(self):
 		return self.nameStr
 	def __repr__(self):
@@ -889,7 +883,7 @@ class Worm (PhysObj):
 	def dieded(self):
 		global state, nextState, teams
 		self.color = (167,167,167)
-		self.name = myfont.render(self.nameStr, False, whiten(self.teamColor))
+		self.name = myfont.render(self.nameStr, False, whiten(self.team.color))
 		if self in self._worms:
 			self._worms.remove(self)
 			self.team.worms.remove(self)
@@ -1019,9 +1013,6 @@ class Worm (PhysObj):
 			# self.move()
 			if objectUnderControl == self and self.health > 0 and not self.jetpacking and not self.rope:
 				move(self)
-		
-		
-		
 	def saveStr(self):
 		string = ""
 		string += str(self.nameStr) + ":\n"
@@ -1201,6 +1192,7 @@ class StickyBomb (Grenade):#9
 			self.sticked = True
 			self.stick = vectorCopy((self.pos + ppos)/2)
 	def secondaryStep(self):
+		self.stable = False
 		if self.stick:
 			self.pos = self.stick
 		self.timer += 1
@@ -1279,13 +1271,19 @@ class Mine(PhysObj):
 	def deathResponse(self):
 		boom(self.pos, 30)
 	def draw(self):
-		pygame.draw.circle(win, self.color, (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), int(self.radius)+1)
-		# pygame.draw.circle(win, (52,66,71,10), (int(self.pos.x - camPos.x), int(self.pos.y - camPos.y)), 35)
+		if diggingMatch:
+			if self.activated:
+				pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+				if self.timer % 2 == 0:
+					pygame.draw.circle(win, (222,63,49), point2world(self.pos), 1)
+			return
+
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)		
 		if not self.activated:
-			pygame.draw.circle(win, (222,63,49), (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), 1)
+			pygame.draw.circle(win, (222,63,49), point2world(self.pos), 1)
 		else:
 			if self.timer % 2 == 0:
-				pygame.draw.circle(win, (222,63,49), (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), 1)
+				pygame.draw.circle(win, (222,63,49), point2world(self.pos), 1)
 
 def fireBaseball(start, direction):
 	global camTrack
@@ -1381,7 +1379,7 @@ class HealthPack(PetrolCan):
 	def effect(self, worm):
 		worm.health += 50
 		if Worm.healthMode == 1:
-			worm.healthStr = myfont.render(str(worm.health), False, worm.teamColor)
+			worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
 		# if worm.health > 100:
 			# worm.health = 100
 		worm.sick = False
@@ -1441,7 +1439,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 	def effect(self, worm):
 		if unlimitedMode:
 			return
-		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19", "mine strike", "raging bull"])
+		effect = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom"])
 		FloatingText(self.pos, effect, (0,200,200))
 		worm.team.weaponCounter[weaponDict[effect]] += 1
 
@@ -1624,7 +1622,7 @@ class Banana(Grenade):
 		self.angle -= self.vel.x*4
 	def draw(self):
 		surf = pygame.transform.rotate(self.surf, self.angle)
-		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Earthquake:
 	earthquake = False
@@ -2012,6 +2010,7 @@ class ElectricGrenade(PhysObj):
 		rad = 20
 		boom(self.pos, rad)
 	def secondaryStep(self):
+		self.stable = False
 		self.timer += 1
 		if self.timer == fuseTime:
 			self.electrifying = True
@@ -2019,11 +2018,10 @@ class ElectricGrenade(PhysObj):
 			self.dead = True
 		if self.electrifying:
 			self.stable = False
+			self.worms = []
 			for worm in PhysObj._worms:
-				if dist(self.pos, worm.pos) < 100 and not worm in self.worms:
+				if dist(self.pos, worm.pos) < 100:
 					self.worms.append(worm)
-				if dist(self.pos, worm.pos) >= 100 and worm in self.worms:
-					self.worms.remove(worm)
 			if len(self.worms) == 0:
 				self.emptyCounter += 1
 				if self.emptyCounter == 30:
@@ -2033,11 +2031,12 @@ class ElectricGrenade(PhysObj):
 		for worm in self.worms:
 			if randint(1,100) < 5:
 				worm.damage(randint(1,8))
-				worm.vel -= Vector(sign(self.pos.x - worm.pos.x)*uniform(0.8,2.2), uniform(0.8,2.2))
+				a = lambda x : 1 if x >= 0 else -1
+				worm.vel -= Vector(a(self.pos.x - worm.pos.x)*uniform(1.2,2.2), uniform(1.2,3.2))
 			if worm.health <= 0:
 				self.worms.remove(worm)
 	def draw(self):
-		pygame.draw.circle(win, self.color, (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), int(self.radius)+1)
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		for worm in self.worms:
 			drawLightning(self.pos, worm.pos)
 
@@ -2292,17 +2291,22 @@ def timeTravelInitiate():
 	timeTravelList["health"] = objectUnderControl.health
 	timeTravelList["initial pos"] = vectorCopy(objectUnderControl.pos)
 	timeTravelList["time in turn"] = time
+	timeTravelList["jet pack"] = jetPackFuel
 def timeTravelRecord():
 	timeTravelPositions.append(objectUnderControl.pos.vec2tup())
 def timeTravelPlay():
-	global timeTravel, time, timeTravelList
+	global timeTravel, time, timeTravelList, jetPackFuel
 	time = timeTravelList["time in turn"]
 	timeTravel = False
 	timeTravelList["weapon"] = currentWeapon
 	timeTravelList["weaponOrigin"] = vectorCopy(objectUnderControl.pos)
 	timeTravelList["energy"] = energyLevel
 	timeTravelList["weaponDir"] = Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle))
+	objectUnderControl.health = timeTravelList["health"]
+	if Worm.healthMode == 1:
+		objectUnderControl.healthStr = myfont.render(str(objectUnderControl.health), False, objectUnderControl.team.color)
 	objectUnderControl.pos = timeTravelList["initial pos"]
+	jetPackFuel = timeTravelList["jet pack"]
 	TimeAgent()
 def timeTravelReset():
 	global timeTravelPositions, timeTravelList, timeTravelFire
@@ -2559,6 +2563,7 @@ def shootRope(start, direction):
 			continue
 		if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			objectUnderControl.toggleRope(testPos)
+			Worm.roped = True
 			break
 
 class Armageddon:
@@ -2629,6 +2634,58 @@ class Bull(PhysObj):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(self.facing*(self.radius +1),-1)), 4)
 
+class ElectroBoom(PhysObj):
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		PhysObj._reg.remove(self)
+		PhysObj._reg.insert(0,self)
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 2
+		self.color = (120, 230, 230)
+		self.damp = 0.7
+		self.timer = 0
+		self.worms = []
+		self.network = []
+		self.used = []
+		self.electrifying = False
+	def secondaryStep(self):
+		self.stable = False
+		self.timer += 1
+		if self.timer == fuseTime:
+			self.electrifying = True
+			self.calculate()
+		if self.timer == fuseTime + 60:
+			for net in self.network:
+				for worm in net[1]:
+					boom(worm.pos + vectorUnitRandom() * uniform(1,5), randint(10,16) )
+				boom(net[0].pos + vectorUnitRandom() * uniform(1,5), randint(10,16) )
+			boom(self.pos + vectorUnitRandom() * uniform(1,5), randint(10,16))
+			self.dead = True
+	def calculate(self):
+		for worm in PhysObj._worms:
+			if worm in objectUnderControl.team.worms:
+				continue
+			if dist(self.pos, worm.pos) < 150:
+				self.worms.append(worm)
+		for selfWorm in self.worms:
+			net = []
+			for worm in PhysObj._worms:
+				if worm == selfWorm or worm in self.used or worm in self.worms or worm in objectUnderControl.team.worms:
+					continue
+				if dist(selfWorm.pos, worm.pos) < 150 and not worm in self.worms:
+					net.append(worm)
+					self.used.append(worm)
+			self.network.append((selfWorm, net))
+	def draw(self):
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		
+		for worm in self.worms:
+			drawLightning(self.pos, worm.pos)
+		for net in self.network:
+			for worm in net[1]:
+				drawLightning(net[0].pos, worm.pos)
+			
 ################################################################################ Create World
 
 maps = []
@@ -2658,7 +2715,7 @@ def createWorld():
 		mapImage = None
 		createMapDigging()
 	placePetrolCan(randint(2,4))
-	placeMines(randint(2,4))
+	if not diggingMatch: placeMines(randint(2,4))
 	randomStartingWeapons(1)
 	if diggingMatch:
 		moreDigging()
@@ -2717,6 +2774,7 @@ if True:
 	weapons.append(("buster strike", CLICKABLE, 0, LEGENDARY))
 	weapons.append(("chilli pepper", CHARGABLE, 0, LEGENDARY))
 	weapons.append(("raging bull", PUTABLE, 0, LEGENDARY))
+	weapons.append(("electro boom", CHARGABLE, 0, LEGENDARY))
 
 weaponDict = {}
 weaponDictI = {}
@@ -2866,7 +2924,6 @@ def fire(weapon = None):
 		if angle > 0:
 			decrease = False
 		else:
-			Worm.roped = True
 			decrease = False
 			shootRope(weaponOrigin, weaponDir)
 		nextState = PLAYER_CONTROL_1
@@ -2874,6 +2931,8 @@ def fire(weapon = None):
 		w = Bull(weaponOrigin + Vector(0,-5))
 		w.facing = objectUnderControl.facing
 		w.ignore.append(objectUnderControl)
+	elif weapon == "electro boom":
+		w = ElectroBoom(weaponOrigin, weaponDir, energy)
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -2953,7 +3012,7 @@ greens = Team(["blair", "major", "thatcher", "chellenge", "george", "mark", "mer
 yellows = Team(["colan", "GT", "jettets", "chevan", "jonie", "murph", "silvia", "flur"], YELLOW, "yellow")
 
 # choose playing teams here
-teams = [blues, reds, yellows, greens]
+teams = [blues, greens, yellows, reds]
 shuffle(teams)
 totalTeams = len(teams)
 
@@ -3059,12 +3118,12 @@ def cycleWorms():
 		# someone won
 		for team in teams:
 			if not len(team.worms) == 0:
-				print("team", color2str(team.color), "won!")
+				print("team", team.name, "won!")
 				file = open('wormsRecord.txt', 'a')
 				adding = ""
 				if davidAndGoliathMode:
 					adding += "_dVg_"
-				file.write("time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(color2str(team.color)) \
+				file.write("time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(team.name) \
 					 + "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:6}'.format(mostDamage[1]+adding) + "\n")
 				file.close()
 				commentator.que.append((team.name, ("taem "," won!"), team.color))
@@ -3362,7 +3421,7 @@ def randomStartingWeapons(amount):
 	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
-			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike"])
+			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike", "electro boom"])
 			team.weaponCounter[weaponDict[effect]] += 1
 			if randint(0,1) == 1:
 				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID])
@@ -3403,6 +3462,9 @@ def scrollMenu(up = True):
 
 def isOnMap(vec):
 	return not (vec[0] < 0 or vec[0] >= mapWidth or vec[1] < 0 or vec[1] >= mapHeight)
+
+class Cam:
+	pos = Vector()
 
 def cheatActive(code):
 	if code == "gibguns=":
@@ -3463,7 +3525,8 @@ def stateMachine():
 		nextState = CHOOSE_STARTER
 		if randomPlace:
 			randomPlacing(wormsPerTeam)
-		
+		if diggingMatch:
+			placeMines(100)
 		if davidAndGoliathMode:
 			global initialHealth
 			for team in teams:
@@ -3471,10 +3534,10 @@ def stateMachine():
 				for i in range(length):
 					if i == 0:
 						team.worms[i].health = initialHealth + (length - 1) * (initialHealth//2)
-						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].teamColor)
+						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
 					else:
 						team.worms[i].health = (initialHealth//2)
-						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].teamColor)
+						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
 			initialHealth = teams[0].worms[0].health
 		
 		if randomWeapons: randomWeaponsGive()
@@ -3703,41 +3766,44 @@ while run:
 			if state == OPEN_MENU:
 				scrollMenu()
 			else:
+				if not camTrack:
+					Cam.pos = Vector((screenWidth/2)/scalingFactor + camPos.x, (screenHeight/2)/scalingFactor + camPos.y)
+					camTrack = Cam
 				scalingFactor *= 1.1
 				if scalingFactor >= 3: scalingFactor = 3
 				winWidth = int(1280 / scalingFactor)
 				winHeight = int(720 / scalingFactor)
 				win = pygame.Surface((winWidth, winHeight))
+				
+				camTarget.x = camTrack.pos.x - winWidth /2
+				camTarget.y = camTrack.pos.y - winHeight /2
 				camPos = vectorCopy(camTarget)
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll down
 			if state == OPEN_MENU:
 				scrollMenu(False)
 			else:
+				if not camTrack:
+					Cam.pos = Vector((screenWidth/2)/scalingFactor + camPos.x, (screenHeight/2)/scalingFactor + camPos.y)
+					camTrack = Cam
 				scalingFactor *= 0.9
 				if scalingFactor <= 1: scalingFactor = 1
 				winWidth = int(1280 / scalingFactor)
 				winHeight = int(720 / scalingFactor)
 				win = pygame.Surface((winWidth, winHeight))
+				
+				camTarget.x = camTrack.pos.x - winWidth /2
+				camTarget.y = camTrack.pos.y - winHeight /2
 				camPos = vectorCopy(camTarget)
+
 		# key press
 		if event.type == pygame.KEYDOWN:
-			# controll worm
+			# controll worm, jump and facing
 			if objectUnderControl and playerControl:
 				if event.key == pygame.K_RETURN:
 					# jump
 					if objectUnderControl.stable and objectUnderControl.health > 0:
 						objectUnderControl.vel += Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 3
 						objectUnderControl.stable = False
-				# fire on key press
-				if event.key == pygame.K_SPACE:
-					if weaponStyle == CHARGABLE and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
-						energising = True
-						energyLevel = 0
-						fireWeapon = False
-						if currentWeapon == "homing missile" and not showTarget:
-							energising = False
-
-				# facing key
 				if event.key == pygame.K_RIGHT:
 					objectUnderControl.facing = RIGHT
 					if objectUnderControl.shootAngle >= pi/2 and objectUnderControl.shootAngle <= (3/2)*pi:
@@ -3748,10 +3814,17 @@ while run:
 					if objectUnderControl.shootAngle >= -pi/2 and objectUnderControl.shootAngle <= pi/2:
 						objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
 					camTrack = objectUnderControl
-			
+			# fire on key press
 			if event.key == pygame.K_SPACE:
-					if Sheep.trigger == False:
-						Sheep.trigger = True
+				if objectUnderControl and playerControl:
+					if weaponStyle == CHARGABLE and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
+						energising = True
+						energyLevel = 0
+						fireWeapon = False
+						if currentWeapon == "homing missile" and not showTarget:
+							energising = False
+				if Sheep.trigger == False:
+					Sheep.trigger = True
 			# weapon change by keyboard
 			if state == PLAYER_CONTROL_1:
 				if event.key == pygame.K_1:
@@ -3824,6 +3897,7 @@ while run:
 				elif state == PLAYER_CONTROL_1 and switchingWorms:
 					switchWorms()
 			if event.key == pygame.K_t:
+				#objectUnderControl.health -= 50
 				pass
 			if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
 				scrollMenu()
@@ -3833,7 +3907,7 @@ while run:
 				Worm.healthMode = (Worm.healthMode + 1) % 2
 				if Worm.healthMode == 1:
 					for worm in PhysObj._worms:
-						worm.healthStr = myfont.render(str(worm.health), False, worm.teamColor)
+						worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
 			
 			text += event.unicode
 			if event.key == pygame.K_EQUALS:
@@ -3842,32 +3916,32 @@ while run:
 		# key release
 		if event.type == pygame.KEYUP:
 			# fire release
-			if event.key == pygame.K_SPACE and playerShootAble:
-				if timeTravel:
-					timeTravelPlay()
-					energyLevel = 0
-				elif weaponStyle == CHARGABLE and energising:
-					fireWeapon = True
-				# putable/gun weapons case
-				elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
-					fireWeapon = True
-					# if objectUnderControl.rope: #rope
-						# objectUnderControl.toggleRope(None)
-						# fireWeapon = False
-					playerShootAble = False
-				# rope case:
-				elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
-					# if not currently roping:
-					fireWeapon = True
-					playerShootAble = False
-					# if currently roping:
-					if objectUnderControl.rope: #rope
-						objectUnderControl.toggleRope(None)
-						fireWeapon = False
-					
-				energising = False
-			elif event.key == pygame.K_SPACE and objectUnderControl.rope:
-				objectUnderControl.toggleRope(None)
+			if event.key == pygame.K_SPACE:
+				if playerShootAble:
+					if timeTravel:
+						timeTravelPlay()
+						energyLevel = 0
+					elif weaponStyle == CHARGABLE and energising:
+						fireWeapon = True
+					# putable/gun weapons case
+					elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
+						fireWeapon = True
+						# if objectUnderControl.rope: #rope
+							# objectUnderControl.toggleRope(None)
+							# fireWeapon = False
+						playerShootAble = False
+					# rope case:
+					elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
+						# if not currently roping:
+						fireWeapon = True
+						playerShootAble = False
+						# if currently roping:
+						if objectUnderControl.rope: #rope
+							objectUnderControl.toggleRope(None)
+							fireWeapon = False
+					energising = False
+				elif objectUnderControl.rope:
+					objectUnderControl.toggleRope(None)
 				
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_ESCAPE]: run = False	
@@ -3896,6 +3970,7 @@ while run:
 		camTarget.x = camTrack.pos.x - winWidth /2
 		camTarget.y = camTrack.pos.y - winHeight /2
 		camPos += (camTarget - camPos) * 0.2
+		# camPos = vectorCopy(camTarget)
 	
 	# use edge map scroll
 	if playerScrollAble and pygame.mouse.get_focused():
