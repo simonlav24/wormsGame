@@ -7,6 +7,7 @@ KEYS:
 # space - hold to shoot chargeable (missiles, grenades etc) weapons, press to shoot non chargeable weapons.
 # tab - change some weapons mode, changes delay time for grenades.
 # p - toggle game pause.
+# F2 - toggle health visualization mode.
 
 # mouse left click - press for clickable weapons. (airstrikes, teleport etc).
 # mouse right click - open weapons menu.
@@ -32,6 +33,7 @@ WEAPONS:
 # MINIGUN - fires minigun.
 # GAMMA GUN - fires gamma radiation makes worms sick. can pass through terrain.
 # LONG BOW - shoots arrows. 3 arrows.
+# PORTAL GUN - the cake is a deception. 
 
 -fire weapons-
 # PETROL BOMB - chargeable, throws a pentrol bomb, explosive fire spreader.
@@ -61,10 +63,9 @@ WEAPONS:
 # GEMINO MINE - chargeable, throws a mine cursed by the gemino curse.
 # BEE HIVE - chargeable, wakes the bees at impact.
 # VORTEX GRENADE - chargeable, creates a vortex sucking in worms and then repelling them.
-# BUSTER STRIKE - clickable, an airstrike of bunker busters.
 # CHILLI PEPPER - chargeable, red hot chilli pepper.
 # RAGING BULL - moooo bi**h get out the way.
-
+# ELECTRO BOOM - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
 
 UTILITIES:
 # moon gravity - big step for wormanity
