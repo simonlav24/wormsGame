@@ -9,7 +9,6 @@ game development practice for fun. pygame required.
 - tab - change some weapons mode, changes delay time for grenades.
 - p - toggle game pause.
 - F2 - toggle health visualization mode.
-
 - mouse left click - press for clickable weapons. (airstrikes, teleport etc).
 - mouse right click - open weapons menu.
 - mouse scroll - scroll weapons menu.
@@ -46,7 +45,6 @@ game development practice for fun. pygame required.
 - COVID19 - very contagious.
 - SHEEP - baaaa.
 - BASEBALL - home running worms away.
-
 - GIRDER - clickable, place a girder. press tab for rotation and scaling.
 - ROPE - swing your way to action.
 - PLANT SEED - chargeable, throws seed that grows on impact.
