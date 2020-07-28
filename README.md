@@ -50,7 +50,7 @@ game development practice for fun. pygame required.
 - PLANT SEED - chargeable, throws seed that grows on impact.
 - SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn.
 
- > Aerial-
+ > Aerial
 - AIRSTRIKE - clickable, missile strike, wind sensitive.
 - NAPALM STRIKE - clickable, smelly, firey mess. wind sensitive.
 - MINE STRIKE - clickable, mine strike.
