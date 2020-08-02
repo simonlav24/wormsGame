@@ -2855,7 +2855,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	imageChoice = maps[75 - 1]
+	# imageChoice = maps[75 - 1]
 	# imageChoice = maps[-2]
 	
 	if not webVer:
