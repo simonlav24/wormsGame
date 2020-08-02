@@ -58,7 +58,15 @@ class Vector:
 	def __truediv__(self,mag):
 		if mag == 0:
 			return self
-		return Vector(self.x/mag,self.y/mag)
+		return Vector(self.x/mag, self.y/mag)
+	def __div__(self, mag):
+		if mag == 0:
+			return self
+		return Vector(self.x//mag, self.y//mag)
+	def __floordiv__(self, mag):
+		if mag == 0:
+			return self
+		return Vector(self.x//mag, self.y//mag)
 	def __str__(self):
 		return "(" + str(self.x) + ", " + str(self.y) + ")"
 	def __repr__(self):
