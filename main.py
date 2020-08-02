@@ -78,7 +78,7 @@ if True:
 	randomPlace = True
 	drawHealthBar = True
 	mapClosed = False
-	unlimitedMode = False
+	unlimitedMode = True
 	moreWindAffected = False
 	fortsMode = False
 	davidAndGoliathMode = False
@@ -181,8 +181,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 	# ground delete
 	if not fire:
 		Explossion(pos, radius)
-	# for i in range(radius//4):
-		# Explossion(pos + vectorUnitRandom() * uniform(0,radius/2), uniform(10, radius*0.7))
+	
 	pygame.draw.circle(map, SKY, (int(pos[0]), int(pos[1])), int(radius))
 	pygame.draw.circle(ground, SKY, (int(pos[0]), int(pos[1])), int(radius))
 	
@@ -389,6 +388,7 @@ imageMountain2 = pygame.image.load("mountain2.png").convert_alpha()
 imageSky = pygame.transform.scale(pygame.image.load("sky.png"), (winWidth, winHeight))
 imageCloud = pygame.image.load("cloud.png").convert_alpha()
 imageBat = pygame.image.load("bat.png").convert_alpha()
+imageTurret = pygame.image.load("turret.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -769,7 +769,7 @@ class Worm (PhysObj):
 		self.shootVel = 0
 		self.health = initialHealth
 		self.team = team
-		self.sick = False
+		self.sick = 0
 		self.gravity = DOWN
 		if name:
 			self.nameStr = name
@@ -784,7 +784,7 @@ class Worm (PhysObj):
 		# gravity:
 		if self.gravity == DOWN:
 			### JETPACK
-			if self.jetpacking and playerControl:
+			if self.jetpacking and playerControl and objectUnderControl == self:
 				global jetPackFuel
 				if pygame.key.get_pressed()[pygame.K_UP]:
 					self.acc.y -= globalGravity + 0.5
@@ -824,8 +824,8 @@ class Worm (PhysObj):
 	def drawCursor(self):
 		shootVec = self.pos + Vector((cos(self.shootAngle) * 20) ,sin(self.shootAngle) * 20)
 		pygame.draw.circle(win, (255,255,255), (int(shootVec.x) - int(camPos.x), int(shootVec.y) - int(camPos.y)), 2)
-	def sicken(self):
-		self.sick = True
+	def sicken(self, sickness = 1):
+		self.sick = sickness
 		self.color = (128, 189,66)
 	def toggleJetpack(self):
 		self.jetpacking = not self.jetpacking
@@ -930,7 +930,7 @@ class Worm (PhysObj):
 			self.shootVel = 0
 		
 		## jetpacking
-		if self.jetpacking and not state == WAIT_STABLE:
+		if self.jetpacking and not state == WAIT_STABLE and objectUnderControl == self:
 			self.vel.limit(5)
 			if pygame.key.get_pressed()[pygame.K_UP]:
 				Blast(self.pos + Vector(0, self.radius*1.5) + vectorUnitRandom()*2, randint(5,8), 80)
@@ -984,7 +984,11 @@ class Worm (PhysObj):
 						self.rope[1] = dist(self.pos, self.rope[0][-2])
 						self.rope[0].pop(-1)
 			self.damp = 0.7
-			
+		
+		#virus
+		if self.sick == 2 and self.health > 0 and not state == WAIT_STABLE:
+			if randint(1,200) == 1:
+				SickGas(self.pos, 2)
 		
 		self.shootVel = clamp(self.shootVel + self.shootAcc, 0.1, -0.1)
 		self.shootAngle += self.shootVel * self.facing
@@ -1300,7 +1304,7 @@ def fireBaseball(start, direction):
 				camTrack = worm
 
 class SickGas:
-	def __init__(self, pos):
+	def __init__(self, pos, sickness = 1):
 		PhysObj._reg.append(self)
 		self.color = (102, 255, 127, 100)
 		self.radius = randint(8,18)
@@ -1310,6 +1314,7 @@ class SickGas:
 		self.stable = False
 		self.boomAffected = False
 		self.time = 0
+		self.sickness = sickness
 	def draw(self):
 		pygame.gfxdraw.filled_circle(win, int(self.pos.x - camPos.x), int(self.pos.y - camPos.y), self.radius, self.color)
 	def step(self):
@@ -1326,7 +1331,7 @@ class SickGas:
 		self.pos += self.vel
 		for worm in PhysObj._worms:
 			if dist(self.pos, worm.pos) < self.radius + worm.radius:
-				worm.sicken()
+				worm.sicken(self.sickness)
 
 class GasGrenade(Grenade):
 	def __init__(self, pos, direction, energy):
@@ -1381,7 +1386,7 @@ class HealthPack(PetrolCan):
 			worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
 		# if worm.health > 100:
 			# worm.health = 100
-		worm.sick = False
+		worm.sick = 0
 		worm.color = (255, 206, 167)
 
 class UtilityPack(HealthPack):# Utility Pack
@@ -1438,7 +1443,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.fallAffected = False
 		self.windAffected = False
 		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
-		self.box = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "buster strike", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom"])
+		self.box = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry gun", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom"])
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
@@ -1736,6 +1741,10 @@ class SentryGun(PhysObj):
 		self.firing = False
 		self.timer = 20
 		self.timesFired = randint(5,7)
+		self.angle = 0
+		self.angle2for = uniform(0, 2*pi)
+		self.surf = imageTurret.copy()
+		pygame.draw.circle(self.surf, self.teamColor, tup2vec(self.surf.get_size())//2, 2)
 	def fire(self):
 		self.firing = True
 	def engage(self):
@@ -1755,17 +1764,26 @@ class SentryGun(PhysObj):
 		if self.firing:
 			self.timer -= 1
 			self.stable = False
+			self.angle2for = (self.target.pos - self.pos).getAngle()
 			if self.timer <= 0 and self.target:
-				fireMiniGun(self.pos, self.target.pos - self.pos)
+				direction = self.target.pos - self.pos
+				fireMiniGun(self.pos, direction)
+				self.angle = direction.getAngle()
 				self.shots -= 1
 				if self.shots == 0:
 					self.firing = False
 					self.shots = 10
 					self.timer = 20
 					self.timesFired -= 1
+					self.target = None
 					if self.timesFired == 0:
 						self.health = 0
-
+		
+		# if not self.target:
+		self.angle += (self.angle2for - self.angle)*0.2
+		if not self.target and timeOverall % 60 == 0:
+			self.angle2for = uniform(0,2*pi)
+		
 		# extra "damp"
 		if self.vel.x > 0.1:
 			self.vel.x = 0.1
@@ -1781,11 +1799,15 @@ class SentryGun(PhysObj):
 			
 			del self
 	def draw(self):
-		point1 = self.pos + vectorFromAngle(-5*pi/4, self.radius+2)
-		point3 = self.pos + vectorFromAngle(pi/4, self.radius+2)
-		pygame.draw.lines(win, self.color, False, [point2world(point1), point2world(self.pos), point2world(point3)], 3)
-		pygame.draw.rect(win, (0, 51, 0), (point2world((self.pos.x - 3, self.pos.y - 2)), (6, 4)) )
-		pygame.draw.circle(win, self.teamColor, point2world(self.pos + Vector(2,0)), 1)
+		# point1 = self.pos + vectorFromAngle(-5*pi/4, self.radius+2)
+		# point3 = self.pos + vectorFromAngle(pi/4, self.radius+2)
+		# pygame.draw.lines(win, self.color, False, [point2world(point1), point2world(self.pos), point2world(point3)], 3)
+		# pygame.draw.rect(win, (0, 51, 0), (point2world((self.pos.x - 3, self.pos.y - 2)), (6, 4)) )
+		# pygame.draw.circle(win, self.teamColor, point2world(self.pos + Vector(2,0)), 1)
+		size = Vector(4*2,10*2)
+		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
+		pygame.draw.line(win, self.teamColor, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
+		
 	def damage(self, value):
 		dmg = value
 		if self.health > 0:
@@ -2413,7 +2435,7 @@ class Covid19:
 						self.target.vel.x += 2
 					# PhysObj._reg.remove(self)
 					self.target.damage(10)
-					self.target.sicken()
+					self.target.sicken(2)
 					self.bitten.append(self.target)
 					self.target = None
 	def draw(self):
@@ -2693,11 +2715,16 @@ class ElectroBoom(PhysObj):
 				drawLightning(net[0].pos, worm.pos)
 
 def firePortal(start, direction):
-	hit = False
-
-	for t in range(5,500):
+	steps = 500
+	for t in range(5,steps):
 		testPos = start + direction * t
 		extra.append((testPos.x, testPos.y, (255,255,255), 3))
+		
+		# missed
+		if t == steps - 1:
+			if len(Portal._reg) % 2 == 1:
+				p = Portal._reg.pop(-1)
+				PhysObj._reg.remove(p)
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
@@ -2762,14 +2789,21 @@ class Portal:
 			PhysObj._reg.remove(self)
 			Portal._reg.remove(self)
 			
-			PhysObj._reg.remove(self.brother)
-			Portal._reg.remove(self.brother)
+			if self.brother:
+				PhysObj._reg.remove(self.brother)
+				Portal._reg.remove(self.brother)
 			
-			del self.brother
+				del self.brother
 			del self
 			
 			return
-			
+		
+		if state == PLAYER_CONTROL_1 and not self.brother:
+			PhysObj._reg.remove(self)
+			Portal._reg.remove(self)
+			del self
+			return
+		
 		# mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 		if self.brother:
 			Bro = (self.pos - objectUnderControl.pos)
@@ -2805,11 +2839,15 @@ class Portal:
 ################################################################################ Create World
 
 maps = []
-for i in range(1,74):
+for i in range(1,79):
 	string = "wormsMaps/wMap" + str(i) + ".png"
 	maps.append((string, 512))
 maps.append(("wormsMaps/wMapbig1.png", 1000))
 maps.append(("wormsMaps/wMapbig2.png", 800))
+maps.append(("wormsMaps/wMapbig3.png", 800))
+maps.append(("wormsMaps/wMapbig4.png", 800))
+maps.append(("wormsMaps/wMapbig5.png", 800))
+maps.append(("wormsMaps/wMapbig6.png", 700))
 if webVer:
 	maps = [("wormsMaps/wMapbig1.png", 1000),("wormsMaps/wMap18.png", 512),("wormsMaps/wMap11.png", 512),("wormsMaps/wMap12.png", 512)]
 
@@ -2817,7 +2855,8 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[72 - 1]
+	imageChoice = maps[75 - 1]
+	# imageChoice = maps[-2]
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1, 64-1]]: mapClosed = True
@@ -2846,6 +2885,7 @@ def createWorld():
 # davidAndGoliathMode = True
 # fortsMode = True
 # randomWeapons = True
+initialHealth = 100
 wormsPerTeam = 8
 
 ################################################################################ Weapons setup
@@ -2877,7 +2917,7 @@ if True:
 	weapons.append(("girder", CLICKABLE, -1, MISC))
 	weapons.append(("rope", PUTABLE, 3, MISC))
 	weapons.append(("plant seed", CHARGABLE, 2, MISC))
-	weapons.append(("sentry gun", PUTABLE, 0, MISC))
+	weapons.append(("sentry turret", PUTABLE, 0, MISC))
 	weapons.append(("airstrike", CLICKABLE, 1, AIRSTRIKE))
 	weapons.append(("napalm strike", CLICKABLE, 1, AIRSTRIKE))
 	weapons.append(("mine strike", CLICKABLE, 0, AIRSTRIKE))
@@ -2995,7 +3035,7 @@ def fire(weapon = None):
 		w = Gemino(weaponOrigin, weaponDir, energy)
 	elif weapon == "plant seed":
 		w = PlantBomb(weaponOrigin, weaponDir, energy)
-	elif weapon == "sentry gun":
+	elif weapon == "sentry turret":
 		w = SentryGun(weaponOrigin, currentTeam.color)
 		w.pos.y -= objectUnderControl.radius + w.radius
 	elif weapon == "bee hive":
@@ -3311,7 +3351,7 @@ def cycleWorms():
 	
 	# sick:
 	for worm in PhysObj._worms:
-		if worm.sick and worm.health > 5:
+		if not worm.sick == 0 and worm.health > 5:
 			worm.damage(min(int(5/damageMult)+1, int((worm.health-5)/damageMult) +1))
 	damageThisTurn = 0
 	if nextState == PLAYER_CONTROL_1:
@@ -3893,7 +3933,6 @@ while run:
 				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				p = UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
-				p.box = "portal gun"
 				# camTrack = w
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
