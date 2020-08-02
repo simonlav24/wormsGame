@@ -78,7 +78,7 @@ if True:
 	randomPlace = True
 	drawHealthBar = True
 	mapClosed = False
-	unlimitedMode = True
+	unlimitedMode = False
 	moreWindAffected = False
 	fortsMode = False
 	davidAndGoliathMode = False
