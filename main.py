@@ -89,10 +89,10 @@ if True:
 	fallDamageMult = 1
 	windMult = 1.5
 	radiusMult = 1
-	packMult = 1
+	packMult = 2
 	
 	text = ""
-webVer = True 
+webVer = False 
 
 ################################################################################ Map
 if True:
@@ -389,6 +389,8 @@ imageSky = pygame.transform.scale(pygame.image.load("sky.png"), (winWidth, winHe
 imageCloud = pygame.image.load("cloud.png").convert_alpha()
 imageBat = pygame.image.load("bat.png").convert_alpha()
 imageTurret = pygame.image.load("turret.png").convert_alpha()
+imageParachute = pygame.image.load("parachute.png").convert_alpha()
+
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -461,6 +463,7 @@ def timeStep():
 	if not time <= 0:
 		time -= 1
 def timeOnTimer():
+	# onTime time end time
 	global state, nextState
 	if state == PLAYER_CONTROL_1:
 		state = WAIT_STABLE
@@ -472,7 +475,9 @@ def timeOnTimer():
 		state = PLAYER_CONTROL_2
 		
 	if objectUnderControl.rope:
-			objectUnderControl.toggleRope(None)
+		objectUnderControl.toggleRope(None)
+	if objectUnderControl.parachuting:
+		objectUnderControl.toggleParachute()
 def timeDraw():
 	win.blit(myfont.render(str(time), False, (0,0,0)) , ((int(10), int(8))))
 def timeReset():
@@ -780,6 +785,7 @@ class Worm (PhysObj):
 		self.score = 0
 		self.jetpacking = False
 		self.rope = None #[pos, radius]
+		self.parachuting = False
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
@@ -810,15 +816,18 @@ class Worm (PhysObj):
 						ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
 						if not checkFreePos(self, ppos):
 							self.rope[1] = self.rope[1]+2
-
 				if pygame.key.get_pressed()[pygame.K_DOWN]:
 					self.rope[1] = self.rope[1]+2
 					directionToRope = (self.rope[0][-1] - self.pos).getDir()
 					ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
 					if not checkFreePos(self, ppos):
 						self.rope[1] = self.rope[1]-2
-				
+			
 			self.acc.y += globalGravity
+			
+			if self.parachuting:
+				if self.vel.y > 1:
+					self.vel.y = 1
 		else:# up
 			self.acc.y -= globalGravity
 	def drawCursor(self):
@@ -841,6 +850,8 @@ class Worm (PhysObj):
 			self.rope = None
 			self.damp = 0.2
 			self.fallAffected = True
+	def toggleParachute(self):
+		self.parachuting = not self.parachuting
 	def damage(self, value):
 		if self.health > 0: # if alive
 			dmg = int(value * damageMult)
@@ -860,6 +871,8 @@ class Worm (PhysObj):
 				if not sentring and not self in objectUnderControl.team.worms:
 					damageThisTurn += dmg
 	def draw(self):
+		if self.parachuting:
+			win.blit(imageParachute, point2world(self.pos - tup2vec(imageParachute.get_size())/2 + Vector(0,-15)))
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
 		if self.rope:
@@ -867,6 +880,7 @@ class Worm (PhysObj):
 			rope = [point2world(x) for x in self.rope[0]]
 			rope.append(point2world(self.pos))
 			pygame.draw.lines(win, (250,250,0), False, rope)
+		
 		if self.health > 0 and drawHealthBar:
 			self.drawHealth()
 		if self.pos.y < 0:
@@ -985,7 +999,14 @@ class Worm (PhysObj):
 						self.rope[0].pop(-1)
 			self.damp = 0.7
 		
-		#virus
+		## parachuting
+		if self.parachuting:
+			# print(self.vel.y)
+			if self.vel.y < 1:
+				self.toggleParachute()
+			self.vel.x = wind * 1.5
+		
+		# virus
 		if self.sick == 2 and self.health > 0 and not state == WAIT_STABLE:
 			if randint(1,200) == 1:
 				SickGas(self.pos, 2)
@@ -2855,8 +2876,8 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[75 - 1]
-	# imageChoice = maps[-2]
+	# imageChoice = maps[78 - 1]
+	# imageChoice = maps[-3]
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1, 64-1]]: mapClosed = True
@@ -2916,6 +2937,7 @@ if True:
 	weapons.append(("baseball", PUTABLE, 3, MISC))
 	weapons.append(("girder", CLICKABLE, -1, MISC))
 	weapons.append(("rope", PUTABLE, 3, MISC))
+	weapons.append(("parachute", PUTABLE, 3, MISC))
 	weapons.append(("plant seed", CHARGABLE, 2, MISC))
 	weapons.append(("sentry turret", PUTABLE, 0, MISC))
 	weapons.append(("airstrike", CLICKABLE, 1, AIRSTRIKE))
@@ -2951,7 +2973,7 @@ def fire(weapon = None):
 		weaponOrigin = timeTravelList["weaponOrigin"]
 		energy = timeTravelList["energy"]
 		weaponDir = timeTravelList["weaponDir"]
-		
+	
 	w = None
 	if weapon == "missile":
 		w = Missile(weaponOrigin, weaponDir, energy)
@@ -3098,6 +3120,16 @@ def fire(weapon = None):
 		if shotCount == 0:
 			decrease = True
 			nextState = PLAYER_CONTROL_1
+	elif weapon == "parachute":
+		if objectUnderControl.parachuting:
+			objectUnderControl.toggleParachute()
+			decrease = False
+		else:
+			if objectUnderControl.vel.y > 1:
+				objectUnderControl.toggleParachute()
+			else:
+				decrease = False
+		nextState = PLAYER_CONTROL_1
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -3205,8 +3237,6 @@ def renderWeaponCount(special = False):
 		return
 	if currentWeapon == "teleport":
 		currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.specialCounter[TELEPORT]), False, (0,0,0))
-	elif currentWeapon == "switch worms":
-		currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.specialCounter[SWITCH_WORMS]), False, (0,0,0))
 	
 def calculateTeamHealth():
 	global teamsInfo
@@ -3925,6 +3955,7 @@ while run:
 						elif sRect[0] == JETPACK:
 							objectUnderControl.toggleJetpack()
 						state = PLAYER_CONTROL_1
+					sRect[3] = False
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)\
 			# testing mainly
 			if state == PLAYER_CONTROL_1:
@@ -4107,14 +4138,14 @@ while run:
 					elif weaponStyle == CHARGABLE and energising:
 						fireWeapon = True
 					# putable/gun weapons case
-					elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
+					elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
 						fireWeapon = True
 						# if objectUnderControl.rope: #rope
 							# objectUnderControl.toggleRope(None)
 							# fireWeapon = False
 						playerShootAble = False
 					# rope case:
-					elif (weaponStyle in [PUTABLE, GUN]) and playerShootAble and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
+					elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
 						# if not currently roping:
 						fireWeapon = True
 						playerShootAble = False
@@ -4125,6 +4156,8 @@ while run:
 					energising = False
 				elif objectUnderControl.rope:
 					objectUnderControl.toggleRope(None)
+				elif objectUnderControl.parachuting:
+					objectUnderControl.toggleParachute()
 				
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_ESCAPE]: run = False	
