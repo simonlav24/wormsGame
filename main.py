@@ -89,7 +89,7 @@ if True:
 	fallDamageMult = 1
 	windMult = 1.5
 	radiusMult = 1
-	packMult = 2
+	packMult = 1
 	
 	text = ""
 webVer = True 
