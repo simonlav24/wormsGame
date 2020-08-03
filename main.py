@@ -92,7 +92,7 @@ if True:
 	packMult = 2
 	
 	text = ""
-webVer = False 
+webVer = True 
 
 ################################################################################ Map
 if True:
@@ -383,13 +383,13 @@ def clamp(value, upper, lower):
 	return value
 
 # sprites
-imageMountain = pygame.image.load("mountain.png").convert_alpha()
-imageMountain2 = pygame.image.load("mountain2.png").convert_alpha()
-imageSky = pygame.transform.scale(pygame.image.load("sky.png"), (winWidth, winHeight))
-imageCloud = pygame.image.load("cloud.png").convert_alpha()
-imageBat = pygame.image.load("bat.png").convert_alpha()
-imageTurret = pygame.image.load("turret.png").convert_alpha()
-imageParachute = pygame.image.load("parachute.png").convert_alpha()
+imageMountain = pygame.image.load("assets/mountain.png").convert_alpha()
+imageMountain2 = pygame.image.load("assets/mountain2.png").convert_alpha()
+imageSky = pygame.transform.scale(pygame.image.load("assets/sky.png"), (winWidth, winHeight))
+imageCloud = pygame.image.load("assets/cloud.png").convert_alpha()
+imageBat = pygame.image.load("assets/bat.png").convert_alpha()
+imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
+imageParachute = pygame.image.load("assets/parachute.png").convert_alpha()
 
 
 def drawBackGround(surf, parallax):
