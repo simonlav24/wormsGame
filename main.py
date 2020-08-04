@@ -1,4 +1,4 @@
-from math import pi, cos, sin, atan2, sqrt, exp, degrees
+from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians
 from random import shuffle ,randint, uniform, choice
 from vector import *
 from pygame import gfxdraw
@@ -390,7 +390,7 @@ imageCloud = pygame.image.load("assets/cloud.png").convert_alpha()
 imageBat = pygame.image.load("assets/bat.png").convert_alpha()
 imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
 imageParachute = pygame.image.load("assets/parachute.png").convert_alpha()
-
+imageVenus = pygame.image.load("assets/venus.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -626,7 +626,9 @@ class PhysObj:
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 
 class Debrie (PhysObj):
+	_debries = []
 	def __init__(self, pos, blast, colors):
+		Debrie._debries.append(self)
 		self.initialize()
 		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
 		self.pos = Vector(pos[0],pos[1])
@@ -1051,6 +1053,7 @@ class Worm (PhysObj):
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
 		self.initialize()
+		Debrie._debries.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.damp = 0
 		self.red = 255
@@ -1092,7 +1095,7 @@ class Fire(PhysObj):
 class Smoke:
 	smokeCount = 0
 	def __init__(self, pos, vel = None, color = None):
-		PhysObj._reg.append(self)
+		nonPhys.append(self)
 		Smoke.smokeCount += 1
 		if color:
 			self.color = color
@@ -1115,7 +1118,7 @@ class Smoke:
 		if self.time % 5 == 0:
 			self.radius -= 1
 			if self.radius == 0:
-				PhysObj._reg.remove(self)
+				nonPhys.remove(self)
 				Smoke.smokeCount -= 1
 				del self
 				return
@@ -1143,6 +1146,9 @@ class TNT(PhysObj):#5
 		boom(self.pos, 40)
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -2) - int(camPos.x),int(self.pos.y -4) - int(camPos.y) , 3,8))
+		pygame.draw.line(win, (90,90,90), point2world(self.pos + Vector(-1,-4)), point2world(self.pos + Vector(-1, -5*(120 - self.timer)/120 - 4)), 1)
+		if randint(0,10) == 1:
+			Blast(self.pos + Vector(-1, -5*(120 - self.timer)/120 - 4), randint(3,6), 150)
 
 shotCount = 0
 def fireShotgun(start, direction, power=15):#6
@@ -1326,7 +1332,7 @@ def fireBaseball(start, direction):
 
 class SickGas:
 	def __init__(self, pos, sickness = 1):
-		PhysObj._reg.append(self)
+		nonPhys.append(self)
 		self.color = (102, 255, 127, 100)
 		self.radius = randint(8,18)
 		self.pos = tup2vec(pos)
@@ -1343,7 +1349,7 @@ class SickGas:
 		if self.time % 8 == 0:
 			self.radius -= 1
 			if self.radius == 0:
-				PhysObj._reg.remove(self)
+				nonPhys.remove(self)
 				del self
 				return
 		self.acc.x = wind * 0.1 * windMult * uniform(0.2,1)
@@ -1697,22 +1703,23 @@ class Gemino(PhysObj):
 		pygame.draw.circle(win, (222,63,49), (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), 1)
 
 class Plant:
-	def __init__(self, pos, radius = 5, direction = -1):
+	def __init__(self, pos, radius = 5, angle = -1, venus = False):
 		PhysObj._reg.append(self)
 		self.pos = Vector(pos[0], pos[1])
-		if direction == -1:
-			self.direction = uniform(0, 2*pi)
+		if angle == -1:
+			self.angle = uniform(0, 2*pi)
 		else:
-			self.direction = direction
+			self.angle = angle
 		self.stable = False
 		self.boomAffected = False
 		self.radius = radius
 		self.time = 0
-		self.green = 170
+		self.green = 135
+		self.venus = venus
 	def step(self):
-		self.pos += vectorFromAngle(self.direction + uniform(-1,1))
-		if randint(1,100) <= 2:
-			Plant(self.pos, self.radius, self.direction + choice([pi/3, -pi/3]))
+		self.pos += vectorFromAngle(self.angle + uniform(-1,1))
+		if randint(1,100) <= 2 and not self.venus:
+			Plant(self.pos, self.radius, self.angle + choice([pi/3, -pi/3]))
 		self.time += 1
 		if self.time % 10 == 0:
 			self.radius -= 1
@@ -1722,26 +1729,55 @@ class Plant:
 		if self.green < 0:
 			self.green = 0
 		pygame.draw.circle(map, GRD, (int(self.pos[0]), int(self.pos[1])), int(self.radius))
-		pygame.draw.circle(ground, (0,self.green,0), (int(self.pos[0]), int(self.pos[1])), int(self.radius))
+		pygame.draw.circle(ground, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), int(self.radius))
 		
 		if self.radius == 0:
 			PhysObj._reg.remove(self)
+			if self.venus:
+				Venus(self.pos, self.angle)
 			del self
 	def draw(self):
 		pass
 
 class PlantBomb(PhysObj):
+	venus = False
 	def __init__(self, pos, direction, energy):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (204, 204, 0)
-		self.bounceBeforeDeath = 1
 		self.damp = 0.5
-	def deathResponse(self):
-		for i in range(randint(4,5)):
-			Plant(self.pos)
+		self.venus = PlantBomb.venus
+	def collisionRespone(self, ppos):
+		# colission with world:
+		response = Vector(0,0)
+		r = angle - pi#- pi/2
+		while r < angle + pi:#+ pi/2:
+			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
+			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+				if mapClosed:
+					response += ppos - testPos
+					r += pi /8
+					continue
+				else:
+					r += pi /8
+					continue
+			if testPos.y < 0:
+				r += pi /8
+				continue
+			
+			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+				response += ppos - testPos
+			
+			r += pi /8
+		PhysObj._reg.remove(self)
+		
+		if not self.venus:
+			for i in range(randint(4,5)):
+				Plant(ppos)
+		else:
+			Plant(ppos, 5, response.getAngle(), True)
 
 sentring = False
 class SentryGun(PhysObj):
@@ -2857,6 +2893,113 @@ class Portal:
 	def draw(self):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 
+class Venus:
+	# _reg = []
+	grow = -1
+	catch = 0
+	idle = 1
+	hold = 2
+	release = 3
+	def __init__(self, pos, angle = -1):
+		nonPhys.append(self)
+		self.pos = pos
+		self.offset = Vector(25, 0)
+		
+		if angle == -1:
+			self.direction = vectorUnitRandom()
+		else:
+			self.direction = vectorFromAngle(angle)
+		self.angle = self.direction.getAngle()
+		self.d1 = self.direction.normal()
+		self.d2 = self.d1 * -1
+		
+		self.snap = 0
+		self.gap = 0
+		
+		self.mode = Venus.grow
+		self.timer = 0
+		self.scale = 0
+		self.explossive = False
+		self.opening = -pi/2 + uniform(0, 0.8)
+	def step(self):
+	
+		self.gap = 5*(self.snap + pi/2)/(pi/2)
+		self.p1 = self.pos + self.d1 * self.gap
+		self.p2 = self.pos + self.d2 * self.gap
+		
+		if self.mode == Venus.grow:
+			self.scale += 0.1
+			if self.scale >= 1:
+				self.scale = 1
+				self.mode = Venus.hold
+			return
+			
+		self.timer += 1
+		
+		if self.mode == Venus.idle:
+			pos = self.pos + self.direction * 25
+			for worm in PhysObj._reg:
+				if worm in Debrie._debries:
+					continue
+				if dist(worm.pos, pos) <= 25:
+					
+					self.mode = Venus.catch
+					if worm in PhysObj._worms:
+						global damageThisTurn
+						if not worm == objectUnderControl:
+							if not sentring and not worm in objectUnderControl.team.worms:
+								damageThisTurn += worm.health
+						worm.health = 0
+						worm.dieded()
+						Commentator.que.append(choice([("", ("yummy",""), worm.team.color), (worm.nameStr, ("", " was delicious"), worm.team.color), (worm.nameStr, ("", " is good protein"), worm.team.color), (worm.nameStr, ("", " is some serious gourmet s**t"), worm.team.color)]))
+					else:
+						self.explossive = True
+					PhysObj._reg.remove(worm)
+					break
+					
+		elif self.mode == Venus.catch:
+			self.snap += 0.5
+			if self.snap >= 0:
+				self.snap = 0
+				self.mode = Venus.hold
+				self.timer = 0
+		elif self.mode == Venus.hold:
+			if self.timer == 30:
+				self.mode = Venus.release
+				if self.explossive:
+					self.explossive = False
+					for i in range(randint(6,14)):
+						s = Smoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
+						nonPhys.remove(s)
+						nonPhys.insert(0,s)
+		elif self.mode == Venus.release:
+			self.snap -= 0.1
+			if self.snap <= self.opening:
+				self.snap = self.opening
+				self.mode = Venus.idle
+		if not map.get_at(self.pos.vec2tupint()) == GRD:
+			nonPhys.remove(self)		
+	def draw(self):
+		# pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
+		# pygame.draw.circle(win, (255,255,255), point2world(self.p1), 2)
+		# pygame.draw.circle(win, (255,255,255), point2world(self.p2), 2)
+		
+		# pygame.draw.circle(win, (255,255,255), point2world(self.pos + self.direction * 25), 25, 1)
+		if self.scale < 1:
+			image = pygame.transform.scale(imageVenus, (tup2vec(imageVenus.get_size()) * self.scale).vec2tupint())
+		else:
+			image = imageVenus
+		
+		rotated_image = pygame.transform.rotate(image, -degrees(self.angle - self.snap))
+		rotated_offset = rotateVector(self.offset, self.angle - self.snap)
+		rect = rotated_image.get_rect(center=(self.p2 + rotated_offset).vec2tupint())
+		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
+		
+		rotated_image = pygame.transform.rotate(pygame.transform.flip(image, False, True), -degrees(self.angle + self.snap))
+		rotated_offset = rotateVector(self.offset, self.angle + self.snap)
+		rect = rotated_image.get_rect(center=(self.p1 + rotated_offset).vec2tupint())
+		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
+		
 ################################################################################ Create World
 
 maps = []
@@ -2876,7 +3019,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[78 - 1]
+	# imageChoice = maps[74 - 1]
 	# imageChoice = maps[-3]
 	
 	if not webVer:
@@ -3364,6 +3507,9 @@ def cycleWorms():
 		for wRect in wRects:
 			if not wRect[5] == 0:
 				wRect[5] -= 1
+	
+	# update debries
+	Debrie._debries = []
 	
 	showTarget = False
 	# change wind:
@@ -3964,6 +4110,7 @@ while run:
 				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# p = UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+				# Venus(mouse)
 				# camTrack = w
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
@@ -4089,7 +4236,19 @@ while run:
 			if event.key == pygame.K_p:
 				pause = not pause
 			if event.key == pygame.K_TAB:
-				if state == PLAYER_CONTROL_1 and weaponStyle == CHARGABLE and not currentWeapon == "bunker buster":
+				if state == PLAYER_CONTROL_1 and currentWeapon == "bunker buster":
+					BunkerBuster.mode = not BunkerBuster.mode
+					if BunkerBuster.mode:
+						FloatingText(objectUnderControl.pos + Vector(0,-5), "drill mode", (20,20,20))
+					else:
+						FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
+				elif state == PLAYER_CONTROL_1 and currentWeapon == "plant seed":
+					PlantBomb.venus = not PlantBomb.venus
+					if PlantBomb.venus:
+						FloatingText(objectUnderControl.pos + Vector(0,-5), "venus fly trap", (20,20,20))
+					else:
+						FloatingText(objectUnderControl.pos + Vector(0,-5), "plant mode", (20,20,20))
+				elif state == PLAYER_CONTROL_1 and weaponStyle == CHARGABLE and not currentWeapon == "bunker buster":
 					fuseTime += 30
 					if fuseTime > 120:
 						fuseTime = 30
@@ -4102,16 +4261,10 @@ while run:
 					if girderAngle == 360:
 						girderSize = 50
 						girderAngle = 0
-				elif state == PLAYER_CONTROL_1 and currentWeapon == "bunker buster":
-					BunkerBuster.mode = not BunkerBuster.mode
-					if BunkerBuster.mode:
-						FloatingText(objectUnderControl.pos + Vector(0,-5), "drill mode", (20,20,20))
-					else:
-						FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
 				elif state == PLAYER_CONTROL_1 and switchingWorms:
 					switchWorms()
 			if event.key == pygame.K_t:
-				# pygame.display.toggle_fullscreen()
+				# print(nonPhys)
 				pass
 			if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
 				scrollMenu()
