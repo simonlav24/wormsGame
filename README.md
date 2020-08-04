@@ -42,12 +42,14 @@ game development practice for fun. pygame required.
  > Place and run
 - MINE - mine.
 - TNT - explosive TNT bomb.
-- COVID19 - very contagious.
+- COVID19 - very contagious. sick worms will cough and spread the virus.
 - SHEEP - baaaa.
 - BASEBALL - home running worms away.
 - GIRDER - clickable, place a girder. press tab for rotation and scaling.
 - ROPE - swing your way to action.
-- PLANT SEED - chargeable, throws seed that grows on impact.
+- PARACHUTE - glide down safely. wind sensitive.
+- PLANT SEED\ VENUS FLY TRAP - chargeable, throws seed that grows on impact.
+press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everything.
 - SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn.
 
  > Aerial
