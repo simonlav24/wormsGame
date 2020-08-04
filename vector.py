@@ -132,6 +132,11 @@ def vectorUnitRandom():
 def vectorFromAngle(angle, mag = 1):
 	return Vector(mag * math.cos(angle), mag * math.sin(angle))
 
+def rotateVector(vec, angle):
+	x = vec.x * math.cos(angle) - vec.y * math.sin(angle)
+	y = vec.x * math.sin(angle) + vec.y * math.cos(angle)
+	return Vector(x, y)
+
 def dotProduct(vec1, vec2):
 	return vec1.dot(vec2)
 
@@ -140,7 +145,7 @@ def dist(vec1,vec2):
 
 def getAngleByTwoVectors(vec_org,vec_taget):
 	return math.atan2(vec_taget[1] - vec_org[1], vec_taget[0] - vec_org[0])
-	
+
 def vectorCopy(vec):
 	return Vector(vec[0],vec[1])
 
