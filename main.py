@@ -391,6 +391,8 @@ imageBat = pygame.image.load("assets/bat.png").convert_alpha()
 imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
 imageParachute = pygame.image.load("assets/parachute.png").convert_alpha()
 imageVenus = pygame.image.load("assets/venus.png").convert_alpha()
+imagePokeball = pygame.image.load("assets/pokeball.png").convert_alpha()
+imageGreenShell = pygame.image.load("assets/greenShell.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -586,10 +588,15 @@ class PhysObj:
 			fdot = self.vel.dot(response)
 			if not self.bounceBeforeDeath == 1:
 				self.vel = ((response * -2 * fdot) + self.vel) * self.damp
+				# if response.x > 0:
+					# self.vel.x += 0.4
+				# else:
+					# self.vel.x -= 0.4
 			
 			if self.bounceBeforeDeath > 0:
 				self.bounceBeforeDeath -= 1
 				self.dead = self.bounceBeforeDeath == 0
+				
 		else:
 			self.pos = ppos
 			# flew out map but not worms !
@@ -788,6 +795,8 @@ class Worm (PhysObj):
 		self.jetpacking = False
 		self.rope = None #[pos, radius]
 		self.parachuting = False
+		
+		self.cpu = False
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
@@ -882,7 +891,9 @@ class Worm (PhysObj):
 			rope = [point2world(x) for x in self.rope[0]]
 			rope.append(point2world(self.pos))
 			pygame.draw.lines(win, (250,250,0), False, rope)
-		
+		if self.cpu:
+			pygame.draw.circle(win, (200,0,0), point2world(self.pos + Vector(0,-5)), 2)
+			cpuDraw()
 		if self.health > 0 and drawHealthBar:
 			self.drawHealth()
 		if self.pos.y < 0:
@@ -944,6 +955,63 @@ class Worm (PhysObj):
 			self.damp = 0.2
 			self.shootAcc = 0
 			self.shootVel = 0
+		
+		## CPU
+		if state == PLAYER_CONTROL_1 and objectUnderControl == self and playerControl and self.cpu:
+			# gather fire information
+			CpuHolder.team = self.team
+			cpuGather()
+			cpuProccess(self)
+			
+			if CpuHolder.mode == CpuHolder.READY:
+				global energyLevel
+				direction = CpuHolder.direction
+				energy = CpuHolder.energy
+			
+				# calculate needed facing
+				if not CpuHolder.checkList["facing"]:
+					if direction.x >= 0:
+						onKeyPressRight()
+					else:
+						onKeyPressLeft()
+					CpuHolder.checkList["facing"] = True
+				
+				# calculate needed shootAngle
+				if CpuHolder.checkList["facing"] and not CpuHolder.checkList["angle"]:
+					needed = direction
+					current = vectorFromAngle(self.shootAngle)
+					current.x = needed.x
+					if needed.y > current.y:
+						# down
+						self.shootAcc = 0.04
+					else:
+						self.shootAcc = -0.04
+					if needed.y - 0.04 < current.y and current.y < needed.y + 0.04:
+						# print("mine:", self.shootAngle, "needed:", direction.getAngle(), "facing:", self.facing)
+						# if self.facing == RIGHT:
+							# self.shootAngle = direction.getAngle()
+						# else:
+							# self.shootAngle = direction.getAngle() + 2*pi
+						# print("correction: mine:", self.shootAngle, "needed:", direction.getAngle(), "facing:", self.facing)
+						CpuHolder.checkList["angle"] = True
+						
+				if CpuHolder.checkList["facing"] and CpuHolder.checkList["angle"] and not CpuHolder.checkList["pressed"]:
+					onKeyPressSpace()
+					CpuHolder.checkList["pressed"] = True
+				
+				if CpuHolder.checkList["facing"] and CpuHolder.checkList["angle"] and CpuHolder.checkList["pressed"] and not CpuHolder.checkList["hold"]:
+					onKeyHoldSpace()
+					if energyLevel >= CpuHolder.energy:			
+						CpuHolder.checkList["hold"] = True
+						# CpuHolder.mode = CpuHolder.DUMMY
+				if CpuHolder.checkList["facing"] and CpuHolder.checkList["angle"] and CpuHolder.checkList["pressed"] and CpuHolder.checkList["hold"] and not CpuHolder.checkList["release"]:
+					onKeyReleaseSpace()
+					energyLevel = CpuHolder.energy
+					CpuHolder.checkList["release"] = True
+					CpuHolder.mode = CpuHolder.DUMMY
+					
+			if CpuHolder.mode == CpuHolder.STUCK:
+				pass
 		
 		## jetpacking
 		if self.jetpacking and not state == WAIT_STABLE and objectUnderControl == self:
@@ -1049,6 +1117,230 @@ class Worm (PhysObj):
 		string += str(self.sick) + "\n"
 		string += str(self.gravity) + "\n"
 		return string
+
+##########################CPU
+class CpuHolder:
+	index = 0
+	
+	DUMMY = 0
+	RESET = 1
+	CHECK = 2
+	CALCULATE = 3
+	CHECK_PATH = 4
+	FIRE = 5
+	READY = 6
+	STUCK = 7
+	TRYAGAIN = 8
+	
+	long = 0
+	
+	team = None
+	
+	mode = DUMMY
+	targets = []
+	velCount = 0
+
+	initialPos = None
+	direction = None
+	energy = None
+	
+	checkList = {"facing":False, "angle":False, "pressed":False, "hold":False, "release":False}
+	weaponsCheckList = {"missile":False, "grenade":False}
+	weapons = ["missile", "grenade"]
+	weapon = None
+	
+def cpuLonger():
+	CpuHolder.long += 1
+	if CpuHolder.long == 5:
+		CpuHolder.mode = CpuHolder.STUCK
+	else:
+		print("cant find path, checking long = ", CpuHolder.long)
+		CpuHolder.mode = CpuHolder.TRYAGAIN
+
+def cpuGather():
+	if CpuHolder.mode == CpuHolder.DUMMY:
+		CpuHolder.long = 0
+		CpuHolder.mode = CpuHolder.RESET
+
+def cpuProccess(self):
+	# print(CpuHolder.mode)
+	if CpuHolder.mode == CpuHolder.RESET:
+		CpuHolder.targets = []
+		CpuHolder.direction = None
+		CpuHolder.energy = None
+		CpuHolder.index = 0
+		CpuHolder.velCount = 0
+		CpuHolder.mode = CpuHolder.CHECK
+		CpuHolder.checkList = {"facing":False, "angle":False, "pressed":False, "hold":False, "release":False}
+		CpuHolder.weaponsCheckList = {"missile":False, "grenade":False}
+		CpuHolder.long = 0
+		CpuHolder.weapon = None
+	
+	if CpuHolder.mode == CpuHolder.TRYAGAIN:
+		CpuHolder.targets = []
+		CpuHolder.direction = None
+		CpuHolder.energy = None
+		CpuHolder.index = 0
+		CpuHolder.velCount = 0
+		CpuHolder.mode = CpuHolder.CHECK
+		CpuHolder.checkList = {"facing":False, "angle":False, "pressed":False, "hold":False, "release":False}
+	
+	elif CpuHolder.mode == CpuHolder.CHECK:
+		# print("check")
+		worm2check = PhysObj._worms[CpuHolder.index]
+		if not worm2check.team == CpuHolder.team:
+			distance = dist(worm2check.pos, self.pos)
+			if distance < 400:
+				# if too close than ignore
+				if not distance < 50:
+					CpuHolder.targets.append([worm2check, None, 0, False]) # 0:target, 1:velInitial, 2:steps, 3:good_path
+		
+		CpuHolder.index += 1
+		if CpuHolder.index == len(PhysObj._worms):
+			CpuHolder.index = 0
+			CpuHolder.mode = CpuHolder.CALCULATE
+			if len(CpuHolder.targets) == 0:
+				print("cant find worms")
+				CpuHolder.mode = CpuHolder.STUCK
+			
+	elif CpuHolder.mode == CpuHolder.CALCULATE:
+		worm2check = CpuHolder.targets[CpuHolder.index][0]
+		# print("calculate", worm2check)
+		posFinal = worm2check.pos + Vector(0, worm2check.radius)
+		CpuHolder.initialPos = self.pos
+		# missile acc
+		if currentWeapon == "missile":
+			acc = Vector(wind * 0.1 * windMult, globalGravity)
+		else:
+			acc = Vector(0, globalGravity)
+
+		rang = (CpuHolder.long * 30, CpuHolder.long * 30 + 30)
+		
+		for i in range(rang[0], rang[1]):
+			velInitial = (posFinal - CpuHolder.initialPos - acc * (i*(i+1)/2) )/i
+			if velInitial.getMag() <= 10:
+				# print("found")
+				CpuHolder.targets[CpuHolder.index][1] = velInitial
+				CpuHolder.targets[CpuHolder.index][2] = i
+				CpuHolder.velCount += 1
+				break
+		
+		# if we find velocity then velocity is inserted to target
+		# if not velocity is None
+		
+		CpuHolder.index += 1
+		if CpuHolder.index == len(CpuHolder.targets):
+			CpuHolder.index = 0
+			CpuHolder.mode = CpuHolder.CHECK_PATH
+			if CpuHolder.velCount == 0:
+				print("cant find vel")
+				cpuLonger()
+	
+	elif CpuHolder.mode == CpuHolder.CHECK_PATH:
+		# print("check path")
+		# print(CpuHolder.targets)
+		target = CpuHolder.targets[CpuHolder.index]
+		
+		if currentWeapon == "missile":
+			acc = Vector(wind * 0.1 * windMult, globalGravity)
+		else:
+			acc = Vector(0, globalGravity)
+		
+		if target[1]: # if has velocity
+			# print("has velocity,", target)
+			target[3] = True
+			for i in range(target[2]):
+				# print("inside", target[1])
+				posCurrent = CpuHolder.initialPos + target[1] * i + acc * (i*(i+1)/2)
+				extra.append((posCurrent.x, posCurrent.y, (255,255,255), 10))
+				if map.get_at(posCurrent.vec2tupint()) == GRD:
+					target[3] = False
+					break
+			
+		
+		CpuHolder.index += 1
+		if CpuHolder.index == len(CpuHolder.targets):
+			CpuHolder.index = 0
+			
+			# pick currect fuseTime:
+			global fuseTime
+			fuseTime = CpuHolder.long * 30 + 30
+			
+			
+			# pick first to fire:
+			picked = False
+			
+			pick = 1
+			
+			# pick from strongest team:
+			if pick == 1:
+				strongestTeamIndex = teamsInfo.index(max(teamsInfo))
+				# print(strongestTeamIndex)
+				for tar in CpuHolder.targets:
+					if tar[3] and tar[0].team == teams[strongestTeamIndex]:
+						print("choosed", tar[0].nameStr, "by strongest team")
+						picked = True
+						CpuHolder.direction = normalize(tar[1])
+						CpuHolder.energy = tar[1].getMag()/10
+						break
+					
+					
+			# pick first in order, defult:
+			if not picked:
+				for tar in CpuHolder.targets:
+					if tar[3]:
+						picked = True
+						CpuHolder.direction = normalize(tar[1])
+						CpuHolder.energy = tar[1].getMag()/10
+						break
+					
+			if picked:
+				CpuHolder.mode = CpuHolder.READY
+			else:
+				cpuLonger()
+
+def cpuDraw():
+	for target in CpuHolder.targets:
+		pygame.draw.circle(win, (255,255,255), point2world(target[0].pos + Vector(0, -10)), 3)
+	if CpuHolder.initialPos and CpuHolder.direction:
+		pygame.draw.line(win, (255,255,255), point2world(CpuHolder.initialPos), point2world(CpuHolder.initialPos + CpuHolder.direction * 10))
+
+def cpuUpdateCycle():
+	if CpuHolder.mode == CpuHolder.STUCK:
+		CpuHolder.mode = CpuHolder.DUMMY
+
+class CPU:#redundent
+	only = None
+	def __init__(self, pos):
+		CPU.only = self
+		self.pos = pos
+		nonPhys.append(self)
+		CpuHolder.initialPos = self.pos
+		
+		self.data = None
+		
+		self.firing = False
+	def step(self):
+		cpuProccess(self)
+		if CpuHolder.mode == CpuHolder.READY:
+			CpuHolder.mode = CpuHolder.DUMMY
+			# self.fireAnim()
+			self.data = (CpuHolder.direction, CpuHolder.energy)
+			
+	def fireAnim(self):
+		Missile(self.pos, CpuHolder.direction, CpuHolder.energy)
+	def draw(self):
+		pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
+		for target in CpuHolder.targets:
+			pygame.draw.circle(win, (255,255,255), point2world(target[0].pos + Vector(0, -10)), 3)
+	def changePos(self, pos):
+		self.pos = pos
+		CpuHolder.initialPos = self.pos
+	def gather(self):
+		CpuHolder.long = 0
+		CpuHolder.mode = CpuHolder.RESET
+		
+##########################CPU
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
@@ -1470,7 +1762,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.fallAffected = False
 		self.windAffected = False
 		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
-		self.box = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom"])
+		self.box = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom", "pokeball", "green shell"])
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
@@ -2685,7 +2977,6 @@ class Bull(PhysObj):
 		self.timer = 0
 		self.facing = RIGHT
 		self.boomAffected = False
-		self.windAffected = False
 	def secondaryStep(self):
 		self.stable = False
 		self.timer += 1
@@ -2999,7 +3290,204 @@ class Venus:
 		rotated_offset = rotateVector(self.offset, self.angle + self.snap)
 		rect = rotated_image.get_rect(center=(self.p1 + rotated_offset).vec2tupint())
 		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
+
+class Ball(PhysObj):#########EXPERIMENTAL
+	def __init__(self, pos):
+		self.initialize()
+		self.pos = Vector(pos[0],pos[1])
 		
+		self.radius = 5
+		self.damp = 0.5
+	def step(self):
+		self.applyForce()
+		
+		# velocity
+		self.vel += self.acc
+		# position
+		ppos = self.pos + self.vel
+		
+		# reset forces
+		self.acc *= 0
+		self.stable = False
+		
+		angle = atan2(self.vel.y, self.vel.x)
+		response = Vector(0,0)
+		collision = False
+		
+		# colission with world:
+		r = angle - pi#- pi/2
+		while r < angle + pi:#+ pi/2:
+			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
+			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+				if mapClosed:
+					response += ppos - testPos
+					collision = True
+					r += pi /8
+					continue
+				else:
+					r += pi /8
+					continue
+			if testPos.y < 0:
+				r += pi /8
+				continue
+			
+			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+				response += ppos - testPos
+				collision = True
+			
+			r += pi /8
+		
+		magVel = self.vel.getMag()
+		
+		if collision:
+			self.collisionRespone(ppos)
+			if self.vel.getMag() > 5 and self.fallAffected:
+				self.damage(self.vel.getMag() * 1.5 * fallDamageMult)
+			self.stable = True
+			
+			response.normalize()
+			
+			fdot = self.vel.dot(response)
+			if not self.bounceBeforeDeath == 1:
+				self.vel = ((response * -2 * fdot) + self.vel) * self.damp
+				if response.x > 0:
+					self.vel.x += 0.5
+				else:
+					self.vel.x -= 0.5
+			
+			if self.bounceBeforeDeath > 0:
+				self.bounceBeforeDeath -= 1
+				self.dead = self.bounceBeforeDeath == 0
+				
+		else:
+			self.pos = ppos
+			# flew out map but not worms !
+			if self.pos.y > mapHeight and not self in self._worms:
+				self.outOfMapResponse()
+				self._reg.remove(self)
+				return
+		
+		if magVel < 0.1: # double jump problem
+			self.stable = True
+		
+		self.secondaryStep()
+		
+		if self.dead:
+			self._reg.remove(self)
+			self.deathResponse()
+			del self
+	def collisionRespone(self, ppos):
+		if self.vel.getMag() > 5:
+			boom(ppos, 7)
+
+class PokeBall(PhysObj):
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 2
+		self.color = (0,0,200)
+		self.damp = 0.5
+		self.timer = 0
+		self.hold = None
+		self.health = 30
+		self.name = None
+		self.angle = 0
+	def damage(self, value):
+		dmg = int(value * damageMult)
+		if dmg < 1:
+			dmg = 1
+		if dmg > self.health:
+			dmg = self.health
+		
+		# FloatingText(self.pos.vec2tup(), str(dmg))
+		self.health -= dmg
+		if self.health <= 0:
+			self.health = 0
+			self.dead = True
+	
+	def deathResponse(self):
+		if self.hold:
+			self.hold.pos = self.pos + Vector(0,- (self.radius + self.hold.radius))
+			self.hold.vel = Vector(0,-1)
+			PhysObj._reg.append(self.hold)
+			PhysObj._worms.append(self.hold)
+			self.hold.team.worms.append(self.hold)
+		else:
+			boom(self.pos, 20)
+	
+	def secondaryStep(self):
+		self.timer += 1
+		if self.timer == fuseTime:
+			closer = [None, 7000]
+			for worm in PhysObj._worms:
+				distance = dist(self.pos, worm.pos)
+				if distance < closer[1]:
+					closer = [worm, distance]
+			if closer[1] < 50:
+				self.hold = closer[0]
+		if self.timer == fuseTime + 30:
+			if self.hold:
+				# store worm
+				# print(self.hold.nameStr)
+				# print("reg:", PhysObj._reg)
+				PhysObj._reg.remove(self.hold)
+				# print("worms:", PhysObj._worms)
+				PhysObj._worms.remove(self.hold)
+				self.hold.team.worms.remove(self.hold)
+				self.name = myfont.render(self.hold.nameStr, False, self.hold.team.color)
+			else:
+				self.dead = True
+		self.angle -= self.vel.x*4
+	def draw(self):
+		surf = pygame.transform.rotate(imagePokeball, self.angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+		
+		if self.timer >= fuseTime and self.timer < fuseTime + 30 and self.hold:
+			drawLightning(self.pos, self.hold.pos)
+		if self.name:
+			win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
+	
+class GreenShell(PhysObj):
+	def __init__(self, pos):
+		self.ignore = []
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(0,-2)
+		self.radius = 6
+		self.damp = 0.01
+		self.timer = 0
+		self.boomAffected = False
+		self.facing = RIGHT
+		self.ignore = []
+	def secondaryStep(self):
+		self.stable = False
+		self.timer += 1
+		moved = move(self)
+		moved = move(self)
+		moved = move(self)
+		if not moved:
+			self.facing *= -1
+		for worm in PhysObj._reg:
+			if worm == self:
+				continue
+			if worm in self.ignore:
+				continue
+			if dist(worm.pos, self.pos) < self.radius + worm.radius:
+				self.ignore.append(worm)
+				worm.vel = Vector(self.facing * randint(1,2),-randint(2,4))
+				if worm in PhysObj._worms:
+					worm.damage(randint(10,25))
+				
+		if self.timer % 20 == 0:
+			self.ignore = []
+		if self.timer >= 300:
+			boom(self.pos, 25)
+			self.dead = True
+	def draw(self):
+		index = int((self.timer % 12)/3)
+		win.blit(imageGreenShell, point2world(self.pos - Vector(16,16)/2), ((index*16, 0), (16,16)))
+
 ################################################################################ Create World
 
 maps = []
@@ -3019,7 +3507,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[74 - 1]
+	# imageChoice = maps[11 - 1]
 	# imageChoice = maps[-3]
 	
 	if not webVer:
@@ -3049,7 +3537,7 @@ def createWorld():
 # davidAndGoliathMode = True
 # fortsMode = True
 # randomWeapons = True
-initialHealth = 100
+# initialHealth = 200
 wormsPerTeam = 8
 
 ################################################################################ Weapons setup
@@ -3095,6 +3583,8 @@ if True:
 	weapons.append(("chilli pepper", CHARGABLE, 0, LEGENDARY))
 	weapons.append(("raging bull", PUTABLE, 0, LEGENDARY))
 	weapons.append(("electro boom", CHARGABLE, 0, LEGENDARY))
+	weapons.append(("pokeball", CHARGABLE, 0, LEGENDARY))
+	weapons.append(("green shell", PUTABLE, 0, LEGENDARY))
 
 weaponDict = {} # str => int
 weaponDictI = {} # int => str
@@ -3110,6 +3600,10 @@ def fire(weapon = None):
 		weaponOrigin = vectorCopy(objectUnderControl.pos)
 		weaponDir = Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle))
 		energy = energyLevel
+		# cheating
+		if objectUnderControl.cpu:
+			energy = CpuHolder.energy
+			weaponDir = CpuHolder.direction
 		
 	if timeTravelFire:
 		decrease = False
@@ -3273,7 +3767,12 @@ def fire(weapon = None):
 			else:
 				decrease = False
 		nextState = PLAYER_CONTROL_1
-	
+	elif weapon == "pokeball":
+		w = PokeBall(weaponOrigin, weaponDir, energy)
+	elif weapon == "green shell":
+		w = GreenShell(weaponOrigin + Vector(0,-5))
+		w.facing = objectUnderControl.facing
+		w.ignore.append(objectUnderControl)
 	if w and not timeTravelFire: camTrack = w	
 	
 	if decrease:
@@ -3322,7 +3821,7 @@ for i in range(len(specialStr)):
 
 ################################################################################ Teams
 class Team:
-	def __init__(self, namesList, color, name = ""):
+	def __init__(self, namesList, color, name = "", cpu = False):
 		self.nameList = namesList
 		self.color = color
 		self.weaponCounter = basicSet.copy()
@@ -3330,11 +3829,15 @@ class Team:
 		self.hasSpecial = False
 		self.worms = []
 		self.name = name
+		self.cpu = cpu
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
 		if len(self.nameList) > 0:
-			self.worms.append(Worm(pos, self.nameList.pop(0), self))
+			w = Worm(pos, self.nameList.pop(0), self)
+			self.worms.append(w)
+			w.cpu = self.cpu
+			
 	def saveStr(self):
 		string = ""
 		string += "color" + list2str(self.color) + "\n"
@@ -3351,7 +3854,7 @@ reds = Team(["fix delux r", "vamp b", "birdie", "lordie", "pinkie", "katie", "an
 greens = Team(["blair", "major", "thatcher", "chellenge", "george", "mark", "mercury", "philip"], GREEN, "green")
 yellows = Team(["colan", "GT", "jettets", "chevan", "jonie", "murph", "silvia", "flur"], YELLOW, "yellow")
 
-teams = [blues, greens, yellows, reds]
+teams = [blues, greens, reds, yellows]
 shuffle(teams)
 totalTeams = len(teams)
 
@@ -3428,6 +3931,9 @@ def cycleWorms():
 	if Worm.roped:
 		objectUnderControl.team.weaponCounter[weaponDict["rope"]] -= 1
 		Worm.roped = False
+	
+	# update cpu:
+	cpuUpdateCycle()
 	
 	# update damage:
 	if damageThisTurn > mostDamage[0]:
@@ -3778,7 +4284,7 @@ def randomStartingWeapons(amount):
 	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
-			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike", "electro boom"])
+			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike", "electro boom", "pokeball", "green shell"])
 			team.weaponCounter[weaponDict[effect]] += 1
 			if randint(0,2) >= 1:
 				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID, SWITCH_WORMS])
@@ -3975,6 +4481,76 @@ def stateMachine():
 		gameStableCounter += 1
 		if gameStableCounter == 30*3:
 			run = False
+
+################################################################################ Keys action
+def onKeyPressRight():
+	global camTrack
+	objectUnderControl.facing = RIGHT
+	if objectUnderControl.shootAngle >= pi/2 and objectUnderControl.shootAngle <= (3/2)*pi:
+		objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
+	camTrack = objectUnderControl
+
+def onKeyPressLeft():
+	global camTrack
+	objectUnderControl.facing = LEFT
+	if objectUnderControl.shootAngle >= -pi/2 and objectUnderControl.shootAngle <= pi/2:
+		objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
+	camTrack = objectUnderControl
+
+def onKeyPressSpace():
+	global energising, energyLevel, fireWeapon
+	if objectUnderControl and playerControl:
+		if weaponStyle == CHARGABLE and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
+			energising = True
+			energyLevel = 0
+			fireWeapon = False
+			if currentWeapon == "homing missile" and not showTarget:
+				energising = False
+	if Sheep.trigger == False:
+		Sheep.trigger = True
+
+def onKeyHoldSpace():
+	global energyLevel, energising, fireWeapon
+	energyLevel += 0.05
+	if energyLevel >= 1:
+		if timeTravel:
+			timeTravelPlay()
+			energyLevel = 0
+			energising = False
+		else:
+			energyLevel = 1
+			fireWeapon = True
+
+def onKeyReleaseSpace():
+	global energyLevel, fireWeapon, playerShootAble, energising
+	if playerShootAble:
+		if timeTravel:
+			timeTravelPlay()
+			energyLevel = 0
+		elif weaponStyle == CHARGABLE and energising:
+			fireWeapon = True
+		# putable/gun weapons case
+		elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
+			fireWeapon = True
+			# if objectUnderControl.rope: #rope
+				# objectUnderControl.toggleRope(None)
+				# fireWeapon = False
+			playerShootAble = False
+		# rope case:
+		elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
+			# if not currently roping:
+			fireWeapon = True
+			playerShootAble = False
+			# if currently roping:
+			if objectUnderControl.rope: #rope
+				objectUnderControl.toggleRope(None)
+				fireWeapon = False
+		energising = False
+	elif objectUnderControl.rope:
+		objectUnderControl.toggleRope(None)
+	elif objectUnderControl.parachuting:
+		objectUnderControl.toggleParachute()
+
 ################################################################################ Setup
 
 def makeRandomTeams(teamQuantity, wormsPerTeam, names):
@@ -4110,7 +4686,6 @@ while run:
 				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# p = UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
-				# Venus(mouse)
 				# camTrack = w
 				pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
@@ -4166,26 +4741,29 @@ while run:
 						objectUnderControl.vel += Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 3
 						objectUnderControl.stable = False
 				if event.key == pygame.K_RIGHT:
-					objectUnderControl.facing = RIGHT
-					if objectUnderControl.shootAngle >= pi/2 and objectUnderControl.shootAngle <= (3/2)*pi:
-						objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
-					camTrack = objectUnderControl
+					# objectUnderControl.facing = RIGHT
+					# if objectUnderControl.shootAngle >= pi/2 and objectUnderControl.shootAngle <= (3/2)*pi:
+						# objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
+					# camTrack = objectUnderControl
+					onKeyPressRight()
 				if event.key == pygame.K_LEFT:
-					objectUnderControl.facing = LEFT
-					if objectUnderControl.shootAngle >= -pi/2 and objectUnderControl.shootAngle <= pi/2:
-						objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
-					camTrack = objectUnderControl
+					# objectUnderControl.facing = LEFT
+					# if objectUnderControl.shootAngle >= -pi/2 and objectUnderControl.shootAngle <= pi/2:
+						# objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
+					# camTrack = objectUnderControl
+					onKeyPressLeft()
 			# fire on key press
 			if event.key == pygame.K_SPACE:
-				if objectUnderControl and playerControl:
-					if weaponStyle == CHARGABLE and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
-						energising = True
-						energyLevel = 0
-						fireWeapon = False
-						if currentWeapon == "homing missile" and not showTarget:
-							energising = False
-				if Sheep.trigger == False:
-					Sheep.trigger = True
+				# if objectUnderControl and playerControl:
+					# if weaponStyle == CHARGABLE and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
+						# energising = True
+						# energyLevel = 0
+						# fireWeapon = False
+						# if currentWeapon == "homing missile" and not showTarget:
+							# energising = False
+				# if Sheep.trigger == False:
+					# Sheep.trigger = True
+				onKeyPressSpace()
 			# weapon change by keyboard
 			if state == PLAYER_CONTROL_1:
 				if event.key == pygame.K_1:
@@ -4264,7 +4842,10 @@ while run:
 				elif state == PLAYER_CONTROL_1 and switchingWorms:
 					switchWorms()
 			if event.key == pygame.K_t:
-				# print(nonPhys)
+				# Missile(CpuHolder.initialPos, CpuHolder.direction, CpuHolder.energy)
+				pass
+			if event.key == pygame.K_y:
+				# objectUnderControl.cpu = not objectUnderControl.cpu
 				pass
 			if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
 				scrollMenu()
@@ -4284,33 +4865,34 @@ while run:
 		if event.type == pygame.KEYUP:
 			# fire release
 			if event.key == pygame.K_SPACE:
-				if playerShootAble:
-					if timeTravel:
-						timeTravelPlay()
-						energyLevel = 0
-					elif weaponStyle == CHARGABLE and energising:
-						fireWeapon = True
-					# putable/gun weapons case
-					elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
-						fireWeapon = True
+				# if playerShootAble:
+					# if timeTravel:
+						# timeTravelPlay()
+						# energyLevel = 0
+					# elif weaponStyle == CHARGABLE and energising:
+						# fireWeapon = True
+					##putable/gun weapons case
+					# elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and not currentWeapon == "rope":
+						# fireWeapon = True
+						##if objectUnderControl.rope: #rope
+						##	objectUnderControl.toggleRope(None)
+						##	fireWeapon = False
+						# playerShootAble = False
+					##rope case:
+					# elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
+						##if not currently roping:
+						# fireWeapon = True
+						# playerShootAble = False
+						##if currently roping:
 						# if objectUnderControl.rope: #rope
 							# objectUnderControl.toggleRope(None)
 							# fireWeapon = False
-						playerShootAble = False
-					# rope case:
-					elif (weaponStyle in [PUTABLE, GUN]) and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 and currentWeapon == "rope":
-						# if not currently roping:
-						fireWeapon = True
-						playerShootAble = False
-						# if currently roping:
-						if objectUnderControl.rope: #rope
-							objectUnderControl.toggleRope(None)
-							fireWeapon = False
-					energising = False
-				elif objectUnderControl.rope:
-					objectUnderControl.toggleRope(None)
-				elif objectUnderControl.parachuting:
-					objectUnderControl.toggleParachute()
+					# energising = False
+				# elif objectUnderControl.rope:
+					# objectUnderControl.toggleRope(None)
+				# elif objectUnderControl.parachuting:
+					# objectUnderControl.toggleParachute()
+				onKeyReleaseSpace()
 				
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_ESCAPE]: run = False	
@@ -4322,15 +4904,16 @@ while run:
 			actionMove = True
 		# fire hold
 		if playerShootAble and keys[pygame.K_SPACE] and weaponStyle == CHARGABLE and energising:
-			energyLevel += 0.05
-			if energyLevel >= 1:
-				if timeTravel:
-					timeTravelPlay()
-					energyLevel = 0
-					energising = False
-				else:
-					energyLevel = 1
-					fireWeapon = True
+			# energyLevel += 0.05
+			# if energyLevel >= 1:
+				# if timeTravel:
+					# timeTravelPlay()
+					# energyLevel = 0
+					# energising = False
+				# else:
+					# energyLevel = 1
+					# fireWeapon = True
+			onKeyHoldSpace()
 	
 	if pause: continue
 
@@ -4431,14 +5014,14 @@ while run:
 	if objectUnderControl and state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE, OPEN_MENU] and objectUnderControl.health > 0:
 		objectUnderControl.drawCursor()
 		if aimAid and weaponStyle == GUN:
-			point1 = vectorCopy(objectUnderControl.pos)
-			point2 = point1 + Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 500
-			pygame.draw.line(win, (255,0,0), (int(point1.x) - int(camPos.x), int(point1.y) - int(camPos.y)), (int(point2.x) - int(camPos.x), int(point2.y) - int(camPos.y)))
+			p1 = vectorCopy(objectUnderControl.pos)
+			p2 = point1 + Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 500
+			pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
 		i = 0
 		while i < 20 * energyLevel:
 			cPos = vectorCopy(objectUnderControl.pos)
 			angle = objectUnderControl.shootAngle
-			pygame.draw.line(win, (0,0,0), (int(cPos[0] - camPos.x), int(cPos[1] - camPos.y)), ((int(cPos[0] + cos(angle) * i - camPos.x), int(cPos[1] + sin(angle) * i - camPos.y))))
+			pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + vectorFromAngle(angle) * i))
 			i += 1
 	if currentWeapon == "girder" and state == PLAYER_CONTROL_1: drawGirderHint()
 	drawExtra()
