@@ -123,6 +123,7 @@ class Vector:
 def normalize(vec):
 	vecRes = vectorCopy(vec)
 	vecRes.normalize()
+	return vecRes
 	
 def vectorUnitRandom():
 	x = random.randint(-10000,10000)
