@@ -33,7 +33,7 @@ game development practice for fun. pygame required.
 - MINIGUN - fires minigun.
 - GAMMA GUN - fires gamma radiation makes worms sick. can pass through terrain.
 - LONG BOW - shoots arrows. 3 arrows.
-- PORTAL GUN - the cake is a deception. 
+- PORTAL GUN - the cake is a deception. obtainable by utility crate.
 
  > Fire weapons
 - PETROL BOMB - chargeable, throws a pentrol bomb, explosive fire spreader.
@@ -42,7 +42,7 @@ game development practice for fun. pygame required.
  > Place and run
 - MINE - mine.
 - TNT - explosive TNT bomb.
-- COVID19 - very contagious. sick worms will cough and spread the virus.
+- COVID19 - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
 - SHEEP - baaaa.
 - BASEBALL - home running worms away.
 - GIRDER - clickable, place a girder. press tab for rotation and scaling.
@@ -50,7 +50,7 @@ game development practice for fun. pygame required.
 - PARACHUTE - glide down safely. wind sensitive.
 - PLANT SEED\ VENUS FLY TRAP - chargeable, throws seed that grows on impact.
 press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everything.
-- SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn.
+- SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
 
  > Aerial
 - AIRSTRIKE - clickable, missile strike, wind sensitive.
@@ -58,6 +58,8 @@ press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everyt
 - MINE STRIKE - clickable, mine strike.
 
  > legen.. darys
+ 
+ Legendary weapons can be obtained by weapon crates marked with "W".
 - HOLY GRENADE - chargeable, feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
 - BANANA - chargeable, multiplying banana of mass destruction.
 - EARTHQUAKE - quakes the earth.
@@ -71,6 +73,7 @@ press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everyt
 - GREEN SHELL - actual Koopa Troopa shell
 
 # UTILITIES:
+ Utilities can be obtained by utility crates marked with "?".
 - moon gravity - big step for wormanity
 - double damage - twice as fun
 - aim aid - laser sight for guns
