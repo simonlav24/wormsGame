@@ -67,6 +67,8 @@ press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everyt
 - CHILLI PEPPER - chargeable, red hot chilli pepper.
 - RAGING BULL - moooo bi**h get out the way.
 - ELECTRO BOOM - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
+- POKEBALL - cathes worms. store them until the ball is damaged.
+- GREEN SHELL - actual Koopa Troopa shell
 
 # UTILITIES:
 - moon gravity - big step for wormanity
