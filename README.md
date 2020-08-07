@@ -1,5 +1,5 @@
 # wormsGame
-game development practice for fun. pygame required.
+game development practice for educational purposes and fun. pygame required.
 
  > KEYS:
 - right/left arrow keys - movement.
