@@ -343,21 +343,25 @@ def giveGoodPlace(div = 0):
 	return place
 
 def placePetrolCan(quantity = 1):
-	noPlace = []
-	
 	for times in range(quantity):
 		place = giveGoodPlace(-1)
 		PetrolCan((place.x, place.y - 2))
 
 def placeMines(quantity = 1):
-	noPlace = []
-	
 	for times in range(quantity):
 		place = giveGoodPlace(-1)
 		m = Mine((place.x, place.y - 2))
 		m.damp = 0.1
 
+def placePlants(quantity = 1):
+	for times in range(quantity):
+		place = giveGoodPlace(-1)
+		PlantBomb((place.x, place.y - 2), (0,0), 0)
+		
 extra = [] #posx, posy, color, repeat
+def addExtra(pos, color = (255,255,255), delay = 5):
+	extra.append((pos[0], pos[1], color, delay))
+
 def drawExtra():
 	global extra
 	extraNext = []
@@ -383,16 +387,17 @@ def clamp(value, upper, lower):
 	return value
 
 # sprites
-imageMountain = pygame.image.load("assets/mountain.png").convert_alpha()
-imageMountain2 = pygame.image.load("assets/mountain2.png").convert_alpha()
-imageSky = pygame.transform.scale(pygame.image.load("assets/sky.png"), (winWidth, winHeight))
-imageCloud = pygame.image.load("assets/cloud.png").convert_alpha()
-imageBat = pygame.image.load("assets/bat.png").convert_alpha()
-imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
-imageParachute = pygame.image.load("assets/parachute.png").convert_alpha()
-imageVenus = pygame.image.load("assets/venus.png").convert_alpha()
-imagePokeball = pygame.image.load("assets/pokeball.png").convert_alpha()
-imageGreenShell = pygame.image.load("assets/greenShell.png").convert_alpha()
+if True:
+	imageMountain = pygame.image.load("assets/mountain.png").convert_alpha()
+	imageMountain2 = pygame.image.load("assets/mountain2.png").convert_alpha()
+	imageSky = pygame.transform.scale(pygame.image.load("assets/sky.png"), (winWidth, winHeight))
+	imageCloud = pygame.image.load("assets/cloud.png").convert_alpha()
+	imageBat = pygame.image.load("assets/bat.png").convert_alpha()
+	imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
+	imageParachute = pygame.image.load("assets/parachute.png").convert_alpha()
+	imageVenus = pygame.image.load("assets/venus.png").convert_alpha()
+	imagePokeball = pygame.image.load("assets/pokeball.png").convert_alpha()
+	imageGreenShell = pygame.image.load("assets/greenShell.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -423,6 +428,22 @@ def move(obj):
 				return True
 	return False
 
+def moveFallProof(obj):
+	dir = obj.facing
+	if checkFreePosFallProof(obj, obj.pos + Vector(dir, 0)):
+		obj.pos += Vector(dir, 0)
+		return True
+	else:
+		for i in range(1,5):
+			if checkFreePosFallProof(obj, obj.pos + Vector(dir, -i)):
+				obj.pos += Vector(dir, -i)
+				return True
+		for i in range(1,5):
+			if checkFreePosFallProof(obj, obj.pos + Vector(dir, i)):
+				obj.pos += Vector(dir, i)
+				return True
+	return False
+
 def checkFreePos(obj, pos):
 	r = 0
 	while r < 2 * pi:
@@ -442,6 +463,82 @@ def checkFreePos(obj, pos):
 		
 		r += pi /8
 	return True
+
+def checkFreePosFallProof(obj, pos):
+	r = 0
+	while r < 2 * pi:
+		testPos = Vector((obj.radius) * cos(r) + pos.x, (obj.radius) * sin(r) + pos.y)
+		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+			if mapClosed:
+				return False
+			else:
+				r += pi /8
+				continue
+		if testPos.y < 0:
+			r += pi /8
+			continue
+			
+		if not map.get_at((int(testPos.x), int(testPos.y))) == (0,0,0):
+			return False
+		
+		r += pi /8
+	# check for falling
+	groundUnder = False
+	for i in range(int(obj.radius), 50):
+		# extra.append((pos.x, pos.y + i, (255,255,255), 5))
+		if map.get_at((int(pos.x), int(pos.y + i))) == GRD:
+			groundUnder = True
+			break
+	return groundUnder
+
+def checkPotential(obj, count):
+	pot = []
+	
+	for i in range(1, count):
+		pos = obj.pos + Vector(i * obj.facing, 0)
+		if not isOnMap(pos):
+			break
+		pot.append(pos)
+	
+	for i in pot:
+		if map.get_at(i.vec2tupint()) == (0,0,0):
+			while map.get_at(i.vec2tupint()) == (0,0,0):
+				if isOnMap((i[0], i[1] + 1)):
+					i.y += 1
+				else:
+					break
+		else:
+			while map.get_at(i.vec2tupint()) == GRD:
+				if isOnMap((i[0], i[1] - 1)):
+					i.y -= 1
+				else:
+					break
+	
+	if len(pot) == 0:
+		return pot
+		
+	cut = None
+	for i in range(1, len(pot)):
+		prev = pot[i-1]
+		curr = pot[i]
+		# check for fall safety:
+		distance = prev.y - curr.y
+		if distance < 0:
+			#going down
+			if abs(distance) > 70:
+				cut = i
+				break
+		if distance > 0:
+			#going up
+			if abs(distance) > 5:
+				cut = i
+				break
+			
+	pot = pot[0:i]
+	
+	for i in pot:
+		addExtra(i)
+	return pot
 
 def whiten(color):
 	r = color[0]
@@ -958,9 +1055,27 @@ class Worm (PhysObj):
 		
 		## CPU
 		if state == PLAYER_CONTROL_1 and objectUnderControl == self and playerControl and self.cpu:
-			# gather fire information
 			CpuHolder.team = self.team
-			cpuGather()
+					
+			if CpuHolder.mode == CpuHolder.CHECK_SURROUNDING:
+				CpuHolder.targetMove = cpuTakeALook(self)
+				if CpuHolder.targetMove:
+					print("desided to move, worm:", CpuHolder.closeToWorm, "petrol:", CpuHolder.closeToPetrol)
+					CpuHolder.mode = CpuHolder.MOVE
+					
+				else:
+					CpuHolder.mode = CpuHolder.DUMMY
+					print("desided to stay")
+			
+			if CpuHolder.mode == CpuHolder.MOVE:
+				moved = cpuMove(self, CpuHolder.targetMove)
+				if not moved:
+					CpuHolder.mode = CpuHolder.CHECK_SURROUNDING
+				
+			if CpuHolder.mode == CpuHolder.DUMMY:
+				print("gathering shot info")
+				cpuGather()
+			
 			cpuProccess(self)
 			
 			if CpuHolder.mode == CpuHolder.READY:
@@ -1003,7 +1118,6 @@ class Worm (PhysObj):
 					onKeyHoldSpace()
 					if energyLevel >= CpuHolder.energy:			
 						CpuHolder.checkList["hold"] = True
-						# CpuHolder.mode = CpuHolder.DUMMY
 				if CpuHolder.checkList["facing"] and CpuHolder.checkList["angle"] and CpuHolder.checkList["pressed"] and CpuHolder.checkList["hold"] and not CpuHolder.checkList["release"]:
 					onKeyReleaseSpace()
 					energyLevel = CpuHolder.energy
@@ -1103,8 +1217,7 @@ class Worm (PhysObj):
 			self._reg.remove(self)
 		if self.pos.y < 0:
 			self.gravity = DOWN
-		if actionMove or actionMove:
-			# self.move()
+		if actionMove:
 			if objectUnderControl == self and self.health > 0 and not self.jetpacking and not self.rope:
 				move(self)
 	def saveStr(self):
@@ -1118,25 +1231,28 @@ class Worm (PhysObj):
 		string += str(self.gravity) + "\n"
 		return string
 
-##########################CPU
+##########################<CPU>
 class CpuHolder:
 	index = 0
 	
-	DUMMY = 0
-	RESET = 1
-	CHECK = 2
-	CALCULATE = 3
-	CHECK_PATH = 4
-	FIRE = 5
-	READY = 6
-	STUCK = 7
-	TRYAGAIN = 8
+	DUMMY = 0 #nothing to do
+	RESET = 1 #ready to calculate shot from 0
+	CHECK = 2 #check worms
+	CALCULATE = 3 #calculate shot
+	CHECK_PATH = 4 #check if shot hits ground
+	READY = 5 #ready to shoot
+	STUCK = 6 #cant shoot
+	TRYAGAIN = 7 #try again with longer shot
+	SETTLE = 10 #ready to calculate shot
+	
+	CHECK_SURROUNDING = 8 #check personal area to see if need to move
+	MOVE = 9
 	
 	long = 0
 	
 	team = None
 	
-	mode = DUMMY
+	mode = CHECK_SURROUNDING
 	targets = []
 	velCount = 0
 
@@ -1149,6 +1265,80 @@ class CpuHolder:
 	weapons = ["missile", "grenade"]
 	weapon = None
 	
+	closeToWorm = None
+	closeToPetrol = None
+	
+	potRight = []
+	potLeft = []
+	
+	targetMove = None
+
+# move:
+# if too close to same\other worms\petrol can
+# if no worms around
+# if collectible is nearby
+# if move:
+# dont fall
+# dont go near mines
+
+def cpuPotential(self):
+	walkLeft = 0
+	walkRight = 0
+	if CpuHolder.closeToWorm:
+		directionToWorm = CpuHolder.closeToWorm.pos - self.pos
+		if directionToWorm.x > 0: #worm is to the right
+			walkLeft += 1
+		else:
+			walkRight += 1
+	if CpuHolder.closeToPetrol:
+		directionToPetrol = CpuHolder.closeToPetrol.pos - self.pos
+		if directionToPetrol.x > 0: #worm is to the right
+			walkLeft += 1
+		else:
+			walkRight += 1
+	
+	if walkLeft == 0 and walkRight == 0:
+		return None
+	
+	if walkRight > walkLeft:
+		return CpuHolder.potRight[-1]
+	else:
+		return CpuHolder.potLeft[-1]
+		
+def cpuMove(self, posToMove):
+	if (posToMove - self.pos).x > 0:
+		onKeyPressRight()
+	else:
+		onKeyPressLeft()
+	
+	if dist(self.pos, posToMove) > 5:
+		return moveFallProof(self)
+	else:
+		CpuHolder.closeToWorm = None
+		CpuHolder.closeToPetrol = None
+		CpuHolder.targetMove = None
+		return False
+
+def cpuTakeALook(self):
+	# if too close to same\other worms\petrol can
+	for worm in PhysObj._worms:
+		if worm == self:
+			continue
+		if dist(self.pos, worm.pos) < 30:
+			CpuHolder.closeToWorm = worm
+	for can in PetrolCan._cans:
+		if dist(self.pos, can.pos) < 30:
+			CpuHolder.closeToPetrol = can
+	
+	# check potentials:
+	onKeyPressRight()
+	CpuHolder.potRight = checkPotential(self, 50)
+	onKeyPressLeft()
+	CpuHolder.potLeft = checkPotential(self, 50)
+	
+	if CpuHolder.closeToWorm or CpuHolder.closeToPetrol:
+		return cpuPotential(self)
+
 def cpuLonger():
 	CpuHolder.long += 1
 	if CpuHolder.long == 5:
@@ -1307,7 +1497,7 @@ def cpuDraw():
 
 def cpuUpdateCycle():
 	if CpuHolder.mode == CpuHolder.STUCK:
-		CpuHolder.mode = CpuHolder.DUMMY
+		CpuHolder.mode = CpuHolder.CHECK_SURROUNDING
 
 class CPU:#redundent
 	only = None
@@ -1326,7 +1516,6 @@ class CPU:#redundent
 			CpuHolder.mode = CpuHolder.DUMMY
 			# self.fireAnim()
 			self.data = (CpuHolder.direction, CpuHolder.energy)
-			
 	def fireAnim(self):
 		Missile(self.pos, CpuHolder.direction, CpuHolder.energy)
 	def draw(self):
@@ -1340,7 +1529,7 @@ class CPU:#redundent
 		CpuHolder.long = 0
 		CpuHolder.mode = CpuHolder.RESET
 		
-##########################CPU
+##########################</CPU>
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
@@ -1958,7 +2147,7 @@ class Earthquake:
 	earthquake = False
 	def __init__(self):
 		self.timer = 210
-		PhysObj._reg.append(self)
+		nonPhys.append(self)
 		self.stable = False
 		self.boomAffected = False
 		Earthquake.earthquake = True
@@ -1970,7 +2159,7 @@ class Earthquake:
 				obj.vel += Vector(randint(-1,1), -uniform(0,1))
 		self.timer -= 1
 		if self.timer == 0:
-			PhysObj._reg.remove(self)
+			nonPhys.remove(self)
 			Earthquake.earthquake = False
 			del self
 		
@@ -2032,7 +2221,7 @@ class Plant:
 		pass
 
 class PlantBomb(PhysObj):
-	venus = False
+	venus = True
 	def __init__(self, pos, direction, energy):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
@@ -2044,6 +2233,7 @@ class PlantBomb(PhysObj):
 	def collisionRespone(self, ppos):
 		# colission with world:
 		response = Vector(0,0)
+		angle = atan2(self.vel.y, self.vel.x)
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
@@ -2349,7 +2539,7 @@ class BunkerBuster(PhysObj):
 	def deathResponse(self):
 		boom(self.pos, 23)
 		
-def drawLightning(start, end):
+def drawLightning(start, end, color = (153, 255, 255)):
 	halves = int(dist(end, start) / 4)
 	if halves == 0:
 		halves = 1
@@ -2363,10 +2553,10 @@ def drawLightning(start, end):
 			point = ((start + direction * t) + vectorUnitRandom() * uniform(-10,10)).vec2tupint()
 		points.append(point2world(point))
 	if not len(points) <= 1:
-		pygame.draw.lines(win, (153, 255, 255), False, points, 2)
+		pygame.draw.lines(win, color, False, points, 2)
 	else:
-		pygame.draw.lines(win, (153, 255, 255), False, [point2world(start), point2world(end)], 2)
-	pygame.draw.circle(win, (153, 255, 255), (int(end.x) - int(camPos.x), int(end.y) - int(camPos.y)), int(PhysObj._worms[0].radius) + 3)
+		pygame.draw.lines(win, color, False, [point2world(start), point2world(end)], 2)
+	pygame.draw.circle(win, color, (int(end.x) - int(camPos.x), int(end.y) - int(camPos.y)), int(PhysObj._worms[0].radius) + 3)
 
 class ElectricGrenade(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -2889,7 +3079,6 @@ class LongBow:
 			pygame.draw.line(map, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
 			pygame.draw.line(ground, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
 			self.destroy()
-			
 	def draw(self):
 		pygame.draw.line(win, self.color, point2world(self.pos), point2world(self.pos - self.direction*8), 3)
 
@@ -2945,14 +3134,14 @@ def shootRope(start, direction):
 
 class Armageddon:
 	def __init__(self):
-		PhysObj._reg.append(self)
+		nonPhys.append(self)
 		self.stable = False
 		self.boomAffected = False
 		self.timer = 700
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
-			PhysObj._reg.remove(self)
+			nonPhys.remove(self)
 			del self
 			return
 		if timeOverall % 10 == 0:
@@ -3268,8 +3457,11 @@ class Venus:
 			if self.snap <= self.opening:
 				self.snap = self.opening
 				self.mode = Venus.idle
-		if not map.get_at(self.pos.vec2tupint()) == GRD:
-			nonPhys.remove(self)		
+		if isOnMap(self.pos.vec2tupint()):
+			if not map.get_at(self.pos.vec2tupint()) == GRD:
+				nonPhys.remove(self)
+		else:
+			nonPhys.remove(self)
 	def draw(self):
 		# pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 		# pygame.draw.circle(win, (255,255,255), point2world(self.p1), 2)
@@ -3418,7 +3610,8 @@ class PokeBall(PhysObj):
 	
 	def secondaryStep(self):
 		self.timer += 1
-		if self.timer == fuseTime:
+		
+		if self.timer >= fuseTime and self.timer <= fuseTime + 60 and not self.hold:
 			closer = [None, 7000]
 			for worm in PhysObj._worms:
 				distance = dist(self.pos, worm.pos)
@@ -3426,7 +3619,8 @@ class PokeBall(PhysObj):
 					closer = [worm, distance]
 			if closer[1] < 50:
 				self.hold = closer[0]
-		if self.timer == fuseTime + 30:
+				
+		if self.timer == fuseTime + 60:
 			if self.hold:
 				# store worm
 				# print(self.hold.nameStr)
@@ -3436,6 +3630,7 @@ class PokeBall(PhysObj):
 				PhysObj._worms.remove(self.hold)
 				self.hold.team.worms.remove(self.hold)
 				self.name = myfont.render(self.hold.nameStr, False, self.hold.team.color)
+				Commentator.que.append(choice([(self.hold.nameStr, ("",", i choose you"), self.hold.team.color), ("", ("", "gotta catch 'em al"), self.hold.team.color), (self.hold.nameStr, ("", " will help beat the next gym leader"), self.hold.team.color)]))
 			else:
 				self.dead = True
 		self.angle -= self.vel.x*4
@@ -3443,17 +3638,17 @@ class PokeBall(PhysObj):
 		surf = pygame.transform.rotate(imagePokeball, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 		
-		if self.timer >= fuseTime and self.timer < fuseTime + 30 and self.hold:
-			drawLightning(self.pos, self.hold.pos)
+		if self.timer >= fuseTime and self.timer < fuseTime + 60 and self.hold:
+			drawLightning(self.pos, self.hold.pos, (255, 255, 204))
 		if self.name:
-			win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
+			win.blit(self.name , point2world(self.pos + Vector(-self.name.get_width()/2, -21)))
 	
 class GreenShell(PhysObj):
 	def __init__(self, pos):
 		self.ignore = []
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(0,-2)
+		self.vel = Vector(0,-0.5)
 		self.radius = 6
 		self.damp = 0.01
 		self.timer = 0
@@ -3491,15 +3686,20 @@ class GreenShell(PhysObj):
 ################################################################################ Create World
 
 maps = []
-for i in range(1,79):
+for i in range(1,82 + 1):
 	string = "wormsMaps/wMap" + str(i) + ".png"
 	maps.append((string, 512))
-maps.append(("wormsMaps/wMapbig1.png", 1000))
-maps.append(("wormsMaps/wMapbig2.png", 800))
-maps.append(("wormsMaps/wMapbig3.png", 800))
-maps.append(("wormsMaps/wMapbig4.png", 800))
-maps.append(("wormsMaps/wMapbig5.png", 800))
-maps.append(("wormsMaps/wMapbig6.png", 700))
+if True:
+	maps.append(("wormsMaps/wMapbig1.png", 1000))
+	maps.append(("wormsMaps/wMapbig2.png", 800))
+	maps.append(("wormsMaps/wMapbig3.png", 800))
+	maps.append(("wormsMaps/wMapbig4.png", 800))
+	maps.append(("wormsMaps/wMapbig5.png", 800))
+	maps.append(("wormsMaps/wMapbig6.png", 700))
+	maps.append(("wormsMaps/wMapbig7.png", 800))
+	maps.append(("wormsMaps/wMapbig8.png", 800))
+	maps.append(("wormsMaps/wMapbig9.png", 800))
+	maps.append(("wormsMaps/wMapbig10.png", 800))
 if webVer:
 	maps = [("wormsMaps/wMapbig1.png", 1000),("wormsMaps/wMap18.png", 512),("wormsMaps/wMap11.png", 512),("wormsMaps/wMap12.png", 512)]
 
@@ -3507,8 +3707,8 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[11 - 1]
-	# imageChoice = maps[-3]
+	# imageChoice = maps[6 - 1]
+	imageChoice = maps[-1]
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1, 64-1]]: mapClosed = True
@@ -3522,6 +3722,7 @@ def createWorld():
 		mapImage = None
 		createMapDigging()
 	placePetrolCan(randint(2,4))
+	placePlants(randint(0,2))
 	if not diggingMatch: placeMines(randint(2,4))
 	randomStartingWeapons(1)
 	if diggingMatch:
@@ -4842,10 +5043,11 @@ while run:
 				elif state == PLAYER_CONTROL_1 and switchingWorms:
 					switchWorms()
 			if event.key == pygame.K_t:
-				# Missile(CpuHolder.initialPos, CpuHolder.direction, CpuHolder.energy)
+				checkPotential(objectUnderControl, 100)
 				pass
 			if event.key == pygame.K_y:
 				# objectUnderControl.cpu = not objectUnderControl.cpu
+				# CpuHolder.mode = CpuHolder.CHECK_SURROUNDING
 				pass
 			if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
 				scrollMenu()
@@ -4924,7 +5126,6 @@ while run:
 		camPos += (camTarget - camPos) * 0.2
 	
 	# set scalling
-	
 	if not scalling == scalingFactor:
 		scalling += (scalingFactor - scalling) * 0.2
 		if abs(scalling - scalingFactor) <= 0.001:
@@ -5015,7 +5216,7 @@ while run:
 		objectUnderControl.drawCursor()
 		if aimAid and weaponStyle == GUN:
 			p1 = vectorCopy(objectUnderControl.pos)
-			p2 = point1 + Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 500
+			p2 = p1 + Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 500
 			pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
 		i = 0
 		while i < 20 * energyLevel:
