@@ -3775,7 +3775,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	imageChoice = maps[6 - 1]
+	# imageChoice = maps[6 - 1]
 	# imageChoice = ("wormsMaps/race2.png", 900)
 	# imageChoice = maps[-1]
 	
