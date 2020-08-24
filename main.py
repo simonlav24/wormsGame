@@ -197,6 +197,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 			# shockwave
 			direction = (p.pos - boomPos).normalize()
 			p.vel += direction * - 0.5 * (1/shockRadius) * (distance - radius * shockRadius) * 1.3
+			# print(p.vel.getMag())
 			p.stable = False
 			# damage
 			if p.health:
@@ -246,6 +247,8 @@ class Explossion:
 		self.radius = radius
 		self.times = radius//5
 		self.time = 0
+		# for i in range(int(self.times)):
+			# Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7)) 
 	def step(self):
 		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7))
 		self.time += 1
@@ -639,7 +642,7 @@ class PhysObj:
 		# velocity
 		self.vel += self.acc
 		# position
-		ppos = self.pos + self.vel
+		ppos = self.pos + self.vel #+ self.acc * 0.5 #########################TEST TEST TEST TEST TESET
 		
 		# reset forces
 		self.acc *= 0
@@ -702,7 +705,7 @@ class PhysObj:
 				self._reg.remove(self)
 				return
 		
-		if magVel < 0.1: # double jump problem
+		if magVel < 0.1: # creates a double jump problem
 			self.stable = True
 		
 		self.secondaryStep()
@@ -1528,7 +1531,18 @@ class CPU:#redundent
 	def gather(self):
 		CpuHolder.long = 0
 		CpuHolder.mode = CpuHolder.RESET
-		
+
+class CpuProbe:
+	def __init__(self, pos, facing):
+		nonPhys.append(self)
+		self.radius = 3.5
+		self.pos = pos
+		self.facing = facing
+	def step(self):
+		if actionMove:
+			moveFallProof(self)
+	def draw(self):
+		pygame.draw.circle(win, (255,255,255), point2world(self.pos), int(self.radius)+1, 1)
 ##########################</CPU>
 
 class Fire(PhysObj):
@@ -2366,6 +2380,7 @@ class Bee:
 		self.target = None
 		self.lifespan = 330
 		self.unreachable = []
+		self.vel = Vector()
 	def step(self):
 		self.lifespan -= 1
 		if self.lifespan == 0:
@@ -2815,7 +2830,6 @@ class TimeAgent:
 		
 		self.energy = 0
 		self.stepsForEnergy = int(timeTravelList["energy"]/0.05)
-		
 	def step(self):
 		if len(self.positions) == 0:
 			global timeTravelFire, timeTravelPositions, timeTravelList
@@ -3041,6 +3055,11 @@ class LongBow:
 		self.stuck = None
 		self.color = (204, 102, 0)
 		self.ignore = None
+
+		self.triangle = [Vector(0,3), Vector(6,0), Vector(0,-3)]
+		for vec in self.triangle:
+			vec.rotate(self.direction.getAngle())
+		
 	def destroy(self):
 		PhysObj._reg.remove(self)
 		del self
@@ -3076,11 +3095,23 @@ class LongBow:
 			self.pos = ppos
 		if self.stuck:
 			self.pos = self.stuck
+			
+			points = [(self.pos - self.direction * 10 + i).vec2tupint() for i in self.triangle]
+			pygame.draw.polygon(ground, (230,235,240), points)
+			pygame.draw.polygon(map, GRD, points)
+			
 			pygame.draw.line(map, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
 			pygame.draw.line(ground, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+			
 			self.destroy()
 	def draw(self):
+		points = [point2world(self.pos - self.direction * 10 + i) for i in self.triangle]
+		pygame.draw.polygon(win, (230,235,240), points)
+	
 		pygame.draw.line(win, self.color, point2world(self.pos), point2world(self.pos - self.direction*8), 3)
+		
+		points = [point2world(self.pos + i) for i in self.triangle]
+		pygame.draw.polygon(win, (230,235,240), points)
 
 class Sheep(PhysObj):
 	trigger = False
@@ -3597,7 +3628,6 @@ class PokeBall(PhysObj):
 		if self.health <= 0:
 			self.health = 0
 			self.dead = True
-	
 	def deathResponse(self):
 		if self.hold:
 			self.hold.pos = self.pos + Vector(0,- (self.radius + self.hold.radius))
@@ -3607,7 +3637,6 @@ class PokeBall(PhysObj):
 			self.hold.team.worms.append(self.hold)
 		else:
 			boom(self.pos, 20)
-	
 	def secondaryStep(self):
 		self.timer += 1
 		
@@ -3633,6 +3662,10 @@ class PokeBall(PhysObj):
 				Commentator.que.append(choice([(self.hold.nameStr, ("",", i choose you"), self.hold.team.color), ("", ("", "gotta catch 'em al"), self.hold.team.color), (self.hold.nameStr, ("", " will help beat the next gym leader"), self.hold.team.color)]))
 			else:
 				self.dead = True
+		
+		# print(self.vel.getMag())
+		if self.vel.getMag() < 0.14:
+			self.vel *= 0
 		self.angle -= self.vel.x*4
 	def draw(self):
 		surf = pygame.transform.rotate(imagePokeball, self.angle)
@@ -3655,38 +3688,69 @@ class GreenShell(PhysObj):
 		self.boomAffected = False
 		self.facing = RIGHT
 		self.ignore = []
+		self.speed = 3
 	def secondaryStep(self):
-		self.stable = False
 		self.timer += 1
-		moved = move(self)
-		moved = move(self)
-		moved = move(self)
-		if not moved:
-			self.facing *= -1
-		for worm in PhysObj._reg:
-			if worm == self:
-				continue
-			if worm in self.ignore:
-				continue
-			if dist(worm.pos, self.pos) < self.radius + worm.radius:
-				self.ignore.append(worm)
-				worm.vel = Vector(self.facing * randint(1,2),-randint(2,4))
-				if worm in PhysObj._worms:
-					worm.damage(randint(10,25))
+			
+		if not self.speed == 0:
+			self.damp = 0.01
+			self.boomAffected = False
+			self.stable = False
+			for i in range(self.speed):
+				moved = move(self)
+			
+			if not moved:
+				self.facing *= -1
+				
+			for worm in PhysObj._reg:
+				if worm == self:
+					continue
+				if worm in self.ignore:
+					continue
+				if dist(worm.pos, self.pos) < self.radius + worm.radius:
+					self.ignore.append(worm)
+					worm.vel = Vector(self.facing * randint(1,2),-randint(2,4))*0.8
+					if worm in PhysObj._worms:
+						worm.damage(randint(10,25))
+		else:
+			self.damp = 0.5
+			self.boomAffected = True
+			self.stable = True
 				
 		if self.timer % 20 == 0:
 			self.ignore = []
+		
+		if self.timer == 100:
+			self.speed = 2
+		if self.timer == 200:
+			self.speed = 1
 		if self.timer >= 300:
-			boom(self.pos, 25)
-			self.dead = True
+			self.speed = 0
+			if int(self.vel.x) >= 1:
+				if self.vel.x >= 0:
+					self.facing = RIGHT
+				else:
+					self.facing = LEFT
+				if int(self.vel.x) >= 3:
+					self.speed = 3
+				else:
+					self.speed = int(self.vel.x)
+				
+				self.timer = (3 - self.speed) * 100
+			
+			# boom(self.pos, 25)
+			# self.dead = True
 	def draw(self):
-		index = int((self.timer % 12)/3)
+		if not self.speed == 0:
+			index = int((self.timer*(self.speed/3) % 12)/3)
+		else:
+			index = 0	
 		win.blit(imageGreenShell, point2world(self.pos - Vector(16,16)/2), ((index*16, 0), (16,16)))
 
 ################################################################################ Create World
 
 maps = []
-for i in range(1,82 + 1):
+for i in range(1,87 + 1):
 	string = "wormsMaps/wMap" + str(i) + ".png"
 	maps.append((string, 512))
 if True:
@@ -3700,6 +3764,10 @@ if True:
 	maps.append(("wormsMaps/wMapbig8.png", 800))
 	maps.append(("wormsMaps/wMapbig9.png", 800))
 	maps.append(("wormsMaps/wMapbig10.png", 800))
+	maps.append(("wormsMaps/wMapbig11.png", 800))
+	maps.append(("wormsMaps/wMapbig12.png", 800))
+	maps.append(("wormsMaps/wMapbig13.png", 1000))
+	maps.append(("wormsMaps/wMapbig14.png", 800))
 if webVer:
 	maps = [("wormsMaps/wMapbig1.png", 1000),("wormsMaps/wMap18.png", 512),("wormsMaps/wMap11.png", 512),("wormsMaps/wMap12.png", 512)]
 
@@ -3707,11 +3775,13 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[6 - 1]
+	imageChoice = maps[6 - 1]
+	# imageChoice = ("wormsMaps/race2.png", 900)
 	# imageChoice = maps[-1]
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1, 64-1]]: mapClosed = True
+		if imageChoice[0] == "wormsMaps/wMapbig8.png": mapClosed = True
 	imageFile, heightNorm = imageChoice
 	
 	global mapImage
@@ -4534,6 +4604,7 @@ class Cam:
 	pos = Vector()
 
 def cheatActive(code):
+	# print(code)
 	if code == "gibguns=":
 		unlimitedMode = True
 		for team in teams:
@@ -4555,6 +4626,12 @@ def cheatActive(code):
 	if code == "reset=":
 		global state, nextState
 		state, nextState = RESET, RESET
+	if code[0:5] == "gunme" and len(code) == 7:
+		mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+		amount = int(code[5])
+		for i in range(amount):
+			WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -4882,8 +4959,8 @@ while run:
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)\
 			# testing mainly
 			if state == PLAYER_CONTROL_1:
-				# mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-				# Portal(mouse)
+				mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+				# CpuProbe(mouse, RIGHT)
 				# HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 				# p = UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
@@ -5009,6 +5086,10 @@ while run:
 					renderWeaponCount()
 				elif event.key == pygame.K_MINUS:
 					currentWeapon = "rope"
+					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
+					renderWeaponCount()
+				elif event.key == pygame.K_EQUALS:
+					currentWeapon = "parachute"
 					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
 					renderWeaponCount()
 			# misc
