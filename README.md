@@ -75,10 +75,12 @@ press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everyt
 
 # UTILITIES:
  Utilities can be obtained by utility crates marked with "?".
-- moon gravity - big step for wormanity
-- double damage - twice as fun
-- aim aid - laser sight for guns
-- teleport - activate and click somewhere
-- switch worms - activate and press tab to switch worms in team
+- moon gravity - big step for wormanity.
+- double damage - twice as fun.
+- aim aid - laser sight for guns.
+- teleport - activate and click somewhere.
+- switch worms - activate and press tab to switch worms in team.
 - time travel - activate and continue with your turn. shoot a 'chargeable' weapon or 'place and run'. 
-- jet pack - thrust with arrow keys
+- jet pack - thrust with arrow keys.
+- portal gun - to use in weapons.
+- traveling kit - more ropes and parachutes.
