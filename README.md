@@ -33,6 +33,7 @@ game development practice for educational purposes and fun. pygame required.
 - MINIGUN - fires minigun.
 - GAMMA GUN - fires gamma radiation makes worms sick. can pass through terrain.
 - LONG BOW - shoots arrows. 3 arrows.
+- LASER GUN - destructive laser destroy destructively every destructive thing on its way.
 - PORTAL GUN - the cake is a deception. obtainable by utility crate.
 
  > Fire weapons
