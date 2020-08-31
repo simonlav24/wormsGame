@@ -177,14 +177,13 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 				if not color == SKY:
 					colors.append(color)
 		if len(colors) == 0:
-			colors.append((255,255,0))
+			colors = Blast._color
 	# ground delete
 	if not fire:
 		Explossion(pos, radius)
 	
 	pygame.draw.circle(map, SKY, (int(pos[0]), int(pos[1])), int(radius))
 	pygame.draw.circle(ground, SKY, (int(pos[0]), int(pos[1])), int(radius))
-	
 	
 	listToCheck = PhysObj._reg if not fire else PhysObj._worms
 	
@@ -236,9 +235,9 @@ class Blast:
 		# pygame.draw.circle(win, self._color[int(max(min(self.time, 5), 0))], point2world(self.pos), int(self.rad))
 		# pygame.draw.circle(win, self._color[int(max(min(self.time-1,5), 0))], point2world(self.pos), int(self.rad*0.6))
 		# pygame.draw.circle(win, self._color[int(max(min(self.time-2,5), 0))], point2world(self.pos), int(self.rad*0.3))
-		layers[0].append((self._color[int(max(min(self.time, 5), 0))], self.pos, self.rad))
-		layers[1].append((self._color[int(max(min(self.time-1, 5), 0))], self.pos, self.rad*0.6))
-		layers[2].append((self._color[int(max(min(self.time-2, 5), 0))], self.pos, self.rad*0.3))
+		layersCircles[0].append((self._color[int(max(min(self.time, 5), 0))], self.pos, self.rad))
+		layersCircles[1].append((self._color[int(max(min(self.time-1, 5), 0))], self.pos, self.rad*0.6))
+		layersCircles[2].append((self._color[int(max(min(self.time-2, 5), 0))], self.pos, self.rad*0.3))
 
 class Explossion:
 	def __init__(self, pos, radius):	
@@ -374,14 +373,23 @@ def drawExtra():
 			extraNext.append((i[0], i[1], i[2], i[3]-1))
 	extra = extraNext
 
-layers = [[],[],[]]
+layersCircles = [[],[],[]]
+layersLines = [] #color, start, end, width, delay
 def drawLayers():
-	global layers
-	for j in layers:
+	global layersCircles, layersLines
+	layersLinesNext = []
+	
+	for i in layersLines:
+		pygame.draw.line(win, i[0], point2world(i[1]), point2world(i[2]), i[3])
+		if i[4]:
+			layersLinesNext.append((i[0], i[1], i[2], i[3], i[4]-1))
+	layersLines = layersLinesNext
+	
+	for j in layersCircles:
 		for i in j:
 			pygame.draw.circle(win, i[0], point2world(i[1]), int(i[2]))
-	layers = [[],[],[]]
-
+	layersCircles = [[],[],[]]
+	
 def clamp(value, upper, lower):
 	if value > upper:
 		value = upper
@@ -596,9 +604,11 @@ class FloatingText: #pos, text, color
 		self.pos = Vector(pos[0], pos[1])
 		self.surf = myfont.render(str(text), False, color)
 		self.time = 0
+		self.phase = uniform(0,2*pi)
 	def step(self):
 		self.time += 1
 		self.pos.y -= 0.5
+		self.pos.x += 0.25 * sin(0.1 * timeOverall + self.phase)
 		if self.time == 50:
 			nonPhys.remove(self)
 			del self
@@ -1651,7 +1661,7 @@ def fireShotgun(start, direction, power=15):#6
 
 	for t in range(5,500):
 		testPos = start + direction * t
-		extra.append((testPos.x, testPos.y, (255,255,0), 3))
+		extra.append((testPos.x, testPos.y, (255, 204, 102), 3))
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
@@ -1813,9 +1823,9 @@ class Mine(PhysObj):
 def fireBaseball(start, direction):
 	global camTrack
 	hitted = []
+	layersLines.append(((255, 204, 0), start + direction * 5, start + direction * 20, 4, 15))
 	for t in range(5, 20):
 		testPos = start + direction * t
-		extra.append((testPos.x, testPos.y, (255,255,0), 10))
 		for worm in PhysObj._worms:
 			if dist(testPos, worm.pos) < worm.radius:
 				if worm in hitted:
@@ -1904,6 +1914,7 @@ class HealthPack(PetrolCan):
 			self.deathResponse()
 	def effect(self, worm):
 		worm.health += 50
+		FloatingText(self.pos, "+50", (0,230,0))
 		if Worm.healthMode == 1:
 			worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
 		# if worm.health > 100:
@@ -1923,7 +1934,7 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.fallAffected = False
 		self.windAffected = False
 		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
-		self.box = choice([MOON_GRAVITY, DOUBLE_DAMAGE, AIM_AID, TELEPORT, SWITCH_WORMS, TIME_TRAVEL, JETPACK, "portal gun"])
+		self.box = choice([MOON_GRAVITY, DOUBLE_DAMAGE, AIM_AID, TELEPORT, SWITCH_WORMS, TIME_TRAVEL, JETPACK, "portal gun", "travel kit"])
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-1, int(self.pos.y) - int(camPos.y)-2))
@@ -1945,9 +1956,14 @@ class UtilityPack(HealthPack):# Utility Pack
 			FloatingText(self.pos, "time travel", (0,200,200))
 		elif self.box == JETPACK:
 			FloatingText(self.pos, "jet pack", (0,200,200))
-		elif self.box == "portal gun":#portal gun
+		elif self.box == "portal gun":
 			FloatingText(self.pos, self.box, (0,200,200))
 			worm.team.weaponCounter[weaponDict[self.box]] += 1
+			return
+		elif self.box == "travel kit":
+			FloatingText(self.pos, self.box, (0,200,200))
+			worm.team.weaponCounter[weaponDict["rope"]] += 3
+			worm.team.weaponCounter[weaponDict["parachute"]] += 3
 			return
 		
 		worm.team.hasSpecial = True
@@ -2935,6 +2951,7 @@ class Covid19:
 		self.unreachable = []
 		self.bitten = []
 	def step(self):
+		# life:
 		self.lifespan -= 1
 		if self.lifespan == 0:
 			PhysObj._reg.remove(self)
@@ -2957,10 +2974,10 @@ class Covid19:
 					self.unreachable.append(self.target)
 					self.target = None
 		except IndexError:
-			print("bee index error")
+			print("bat index error")
 		self.pos = ppos
 		
-		if self.lifespan % 40 == 0:
+		if self.lifespan % 80 == 0:
 			self.unreachable = []
 		
 		if self.lifespan < 410: # if alive
@@ -3059,7 +3076,6 @@ class LongBow:
 		self.triangle = [Vector(0,3), Vector(6,0), Vector(0,-3)]
 		for vec in self.triangle:
 			vec.rotate(self.direction.getAngle())
-		
 	def destroy(self):
 		PhysObj._reg.remove(self)
 		del self
@@ -3737,9 +3753,6 @@ class GreenShell(PhysObj):
 					self.speed = int(self.vel.x)
 				
 				self.timer = (3 - self.speed) * 100
-			
-			# boom(self.pos, 25)
-			# self.dead = True
 	def draw(self):
 		if not self.speed == 0:
 			index = int((self.timer*(self.speed/3) % 12)/3)
@@ -3747,10 +3760,66 @@ class GreenShell(PhysObj):
 			index = 0	
 		win.blit(imageGreenShell, point2world(self.pos - Vector(16,16)/2), ((index*16, 0), (16,16)))
 
+def fireLaser(start, direction, power=15):
+	hit = False
+	color = (254, 153, 35)
+	square = [Vector(1,5), Vector(1,-5), Vector(-10,-5), Vector(-10,5)]
+	for i in square:
+		i.rotate(direction.getAngle())
+	
+	# print(square)
+	for t in range(5,500):
+		testPos = start + direction * t
+		# extra.append((testPos.x, testPos.y, (255,0,0), 3))
+		
+		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
+			layersCircles[0].append((color, start, 5))
+			layersCircles[0].append((color, testPos, 5))
+			layersLines.append((color, start, testPos, 10, 1))
+			continue
+			
+		# if hits worm:
+		for worm in PhysObj._worms:
+			if worm == objectUnderControl:
+				continue
+			if dist(testPos, worm.pos) < worm.radius + 2:
+				if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
+				layersCircles[0].append((color, start + direction * 5, 5))
+				layersCircles[0].append((color, testPos, 5))
+				layersLines.append((color, start + direction * 5, testPos, 10, 1))
+				
+				boom(worm.pos + Vector(randint(-1,1),randint(-1,1)), 2, False, False, True)
+				# worm.damage(randint(1,5))
+				# worm.vel += direction*2 + vectorUnitRandom()
+				hit = True
+				break
+		# if hits can:
+		for can in PetrolCan._cans:
+			if dist(testPos, can.pos) < can.radius + 1:
+				can.deathResponse()
+				# hit = True
+				break
+		if hit:
+			break
+		
+		# if hits map:
+		if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
+			layersCircles[0].append((color, start + direction * 5, 5))
+			layersCircles[0].append((color, testPos, 5))
+			layersLines.append((color, start + direction * 5, testPos, 10, 1))
+			points = []
+			for i in square:
+				points.append((testPos + i).vec2tupint())
+			
+			pygame.draw.polygon(map, SKY, points)
+			pygame.draw.polygon(ground, SKY, points)
+			break
+
 ################################################################################ Create World
 
 maps = []
-for i in range(1,87 + 1):
+for i in range(1,89 + 1):
 	string = "wormsMaps/wMap" + str(i) + ".png"
 	maps.append((string, 512))
 if True:
@@ -3775,8 +3844,9 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[6 - 1]
+	# imageChoice = maps[89 - 1]
 	# imageChoice = ("wormsMaps/race2.png", 900)
+	# imageChoice = ("wormsMaps/wMapbig4.png", 800)
 	# imageChoice = maps[-1]
 	
 	if not webVer:
@@ -3786,18 +3856,12 @@ def createWorld():
 	
 	global mapImage
 	mapImage = pygame.image.load(imageFile)
-	
 	if not diggingMatch: createMapImage(heightNorm)
-	else:
-		mapImage = None
-		createMapDigging()
+	else: mapImage = None; createMapDigging()
 	placePetrolCan(randint(2,4))
-	placePlants(randint(0,2))
-	if not diggingMatch: placeMines(randint(2,4))
+	if not diggingMatch: placeMines(randint(2,4)); placePlants(randint(0,2))
+	else: moreDigging(); mapClosed = True
 	randomStartingWeapons(1)
-	if diggingMatch:
-		moreDigging()
-		mapClosed = True
 	renderLand()
 
 # drawHealthBar = False
@@ -3815,51 +3879,50 @@ wormsPerTeam = 8
 
 weapons = []
 if True:
-	weapons.append(("missile", CHARGABLE, -1, MISSILES))
-	weapons.append(("gravity missile", CHARGABLE, 10, MISSILES))
-	weapons.append(("bunker buster", CHARGABLE, 2, MISSILES))
-	weapons.append(("homing missile", CHARGABLE, 2, MISSILES))
-	weapons.append(("artillery assist", CHARGABLE, 1, MISSILES))
-	weapons.append(("grenade", CHARGABLE, 10, GRENADES))
-	weapons.append(("mortar", CHARGABLE, 3, GRENADES))
-	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES))
-	weapons.append(("gas grenade", CHARGABLE, 5, GRENADES))
-	weapons.append(("electric grenade", CHARGABLE, 3, GRENADES))
-	weapons.append(("shotgun", GUN, 5, GUNS))
-	weapons.append(("minigun", GUN, 6, GUNS))
-	weapons.append(("gamma gun", GUN, 3, GUNS))
-	weapons.append(("long bow", GUN, 3, GUNS))
-	weapons.append(("portal gun", GUN, 0, GUNS))
-	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY))
-	weapons.append(("flame thrower", PUTABLE, 5, FIREY))
-	weapons.append(("mine", PUTABLE, 5, GRENADES))
-	weapons.append(("TNT", PUTABLE, 1, GRENADES))
-	weapons.append(("covid 19", PUTABLE, 0, GRENADES))
-	weapons.append(("sheep", PUTABLE, 1, GRENADES))
-	weapons.append(("baseball", PUTABLE, 3, MISC))
-	weapons.append(("girder", CLICKABLE, -1, MISC))
-	weapons.append(("rope", PUTABLE, 3, MISC))
-	weapons.append(("parachute", PUTABLE, 3, MISC))
-	weapons.append(("plant seed", CHARGABLE, 2, MISC))
-	weapons.append(("sentry turret", PUTABLE, 0, MISC))
-	weapons.append(("airstrike", CLICKABLE, 1, AIRSTRIKE))
-	weapons.append(("napalm strike", CLICKABLE, 1, AIRSTRIKE))
-	weapons.append(("mine strike", CLICKABLE, 0, AIRSTRIKE))
-	weapons.append(("holy grenade", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("banana", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("earthquake", PUTABLE, 0, LEGENDARY))
-	weapons.append(("gemino mine", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("bee hive", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("vortex grenade", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("chilli pepper", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("raging bull", PUTABLE, 0, LEGENDARY))
-	weapons.append(("electro boom", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("pokeball", CHARGABLE, 0, LEGENDARY))
-	weapons.append(("green shell", PUTABLE, 0, LEGENDARY))
+	weapons.append(("missile", CHARGABLE, -1, MISSILES, False))
+	weapons.append(("gravity missile", CHARGABLE, 10, MISSILES, False))
+	weapons.append(("bunker buster", CHARGABLE, 2, MISSILES, False))
+	weapons.append(("homing missile", CHARGABLE, 2, MISSILES, False))
+	weapons.append(("artillery assist", CHARGABLE, 1, MISSILES, False))
+	weapons.append(("grenade", CHARGABLE, 10, GRENADES, True))
+	weapons.append(("mortar", CHARGABLE, 3, GRENADES, True))
+	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES, True))
+	weapons.append(("gas grenade", CHARGABLE, 5, GRENADES, True))
+	weapons.append(("electric grenade", CHARGABLE, 3, GRENADES, True))
+	weapons.append(("shotgun", GUN, 5, GUNS, False))
+	weapons.append(("minigun", GUN, 6, GUNS, False))
+	weapons.append(("gamma gun", GUN, 3, GUNS, False))
+	weapons.append(("long bow", GUN, 3, GUNS, False))
+	weapons.append(("laser gun", GUN, 3, GUNS, False))
+	weapons.append(("portal gun", GUN, 0, GUNS, False))
+	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY, False))
+	weapons.append(("flame thrower", PUTABLE, 5, FIREY, False))
+	weapons.append(("mine", PUTABLE, 5, GRENADES, False))
+	weapons.append(("TNT", PUTABLE, 1, GRENADES, False))
+	weapons.append(("covid 19", PUTABLE, 0, GRENADES, False))
+	weapons.append(("sheep", PUTABLE, 1, GRENADES, False))
+	weapons.append(("baseball", PUTABLE, 3, MISC, False))
+	weapons.append(("girder", CLICKABLE, -1, MISC, False))
+	weapons.append(("rope", PUTABLE, 3, MISC, False))
+	weapons.append(("parachute", PUTABLE, 3, MISC, False))
+	weapons.append(("plant seed", CHARGABLE, 2, MISC, False))
+	weapons.append(("sentry turret", PUTABLE, 0, MISC, False))
+	weapons.append(("airstrike", CLICKABLE, 1, AIRSTRIKE, False))
+	weapons.append(("napalm strike", CLICKABLE, 1, AIRSTRIKE, False))
+	weapons.append(("mine strike", CLICKABLE, 0, AIRSTRIKE, False))
+	weapons.append(("holy grenade", CHARGABLE, 0, LEGENDARY, True))
+	weapons.append(("banana", CHARGABLE, 0, LEGENDARY, True))
+	weapons.append(("earthquake", PUTABLE, 0, LEGENDARY, False))
+	weapons.append(("gemino mine", CHARGABLE, 0, LEGENDARY, False))
+	weapons.append(("bee hive", CHARGABLE, 0, LEGENDARY, False))
+	weapons.append(("vortex grenade", CHARGABLE, 0, LEGENDARY, True))
+	weapons.append(("chilli pepper", CHARGABLE, 0, LEGENDARY, False))
+	weapons.append(("raging bull", PUTABLE, 0, LEGENDARY, False))
+	weapons.append(("electro boom", CHARGABLE, 0, LEGENDARY, True))
+	weapons.append(("pokeball", CHARGABLE, 0, LEGENDARY, True))
+	weapons.append(("green shell", PUTABLE, 0, LEGENDARY, False))
 
-weaponDict = {} # str => int
-weaponDictI = {} # int => str
-weaponStyleTup = []
+weaponDict = {}
 basicSet = []
 
 def fire(weapon = None):
@@ -3992,7 +4055,7 @@ def fire(weapon = None):
 		decrease = False
 		if state == PLAYER_CONTROL_1:
 			shotCount = 3 # three shots
-		w = LongBow(weaponOrigin, weaponDir) # fire
+		w = LongBow(weaponOrigin + weaponDir * 5, weaponDir) # fire
 		w.ignore = objectUnderControl
 		shotCount -= 1
 		if shotCount > 0:
@@ -4044,6 +4107,20 @@ def fire(weapon = None):
 		w = GreenShell(weaponOrigin + Vector(0,-5))
 		w.facing = objectUnderControl.facing
 		w.ignore.append(objectUnderControl)
+	elif weapon == "laser gun":
+		decrease = False
+		if state == PLAYER_CONTROL_1:
+			shotCount = 70
+		fireLaser(weaponOrigin, weaponDir)
+		if not shotCount == 0:
+			shotCount -= 1
+			nextState = FIRE_MULTIPLE
+		else:
+			nextState = PLAYER_CONTROL_2
+			decrease = True
+			timeRemaining(5)
+	
+	
 	if w and not timeTravelFire: camTrack = w	
 	
 	if decrease:
@@ -4063,16 +4140,14 @@ def fire(weapon = None):
 
 for i in range(len(weapons)):
 	weaponDict[weapons[i][0]] = i
-	weaponDictI[i] = weapons[i][0]
-	weaponStyleTup.append(weapons[i][1])
+	weaponDict[i] = weapons[i][0]
 	if not unlimitedMode: basicSet.append(weapons[i][2])
 	else: basicSet.append(-1)
-
 wRects = []
-for i in range(len(weaponDict)):
+for i in range(len(weapons)):
 	index = i
-	textSurf = myfont.render(weaponDictI[i], False, (0,0,0))
-	rect = None #[winWidth - 100 + 2, 2 + i * 10 - 10, 100 - 4 ,8]
+	textSurf = myfont.render(weaponDict[i], False, (0,0,0))
+	rect = None
 	selected = False
 	color = weapons[i][3]
 	if weapons[i][3] == AIRSTRIKE:
@@ -4108,7 +4183,6 @@ class Team:
 			w = Worm(pos, self.nameList.pop(0), self)
 			self.worms.append(w)
 			w.cpu = self.cpu
-			
 	def saveStr(self):
 		string = ""
 		string += "color" + list2str(self.color) + "\n"
@@ -4151,6 +4225,14 @@ def renderWeaponCount(special = False):
 			currentWeaponSurf = myfont.render(currentWeapon, False, (0,0,0))
 		else:
 			currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.weaponCounter[weaponDict[currentWeapon]]), False, (0,0,0))
+		
+		if weapons[weaponDict[currentWeapon]][4]:
+			delayAdd = myfont.render("delay: " + str(fuseTime//30), False, (0,0,0))
+			surf = pygame.Surface((currentWeaponSurf.get_width() + delayAdd.get_width() + 10, currentWeaponSurf.get_height()), pygame.SRCALPHA)
+			surf.blit(currentWeaponSurf, (0,0))
+			surf.blit(delayAdd, (currentWeaponSurf.get_width() + 10,0))
+			currentWeaponSurf = surf
+		
 		return
 	if currentWeapon == "teleport":
 		currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.specialCounter[TELEPORT]), False, (0,0,0))
@@ -4360,9 +4442,8 @@ def rectOffset(rect, y):
 	return ( rect[0], rect[1] - y, rect[2], rect[3])
 
 def weaponMenuInit():
-	# print(wRects)
 	count = 0
-	for i in range(len(weaponDict)):
+	for i in range(len(weapons)):
 		# if > 0 in current team
 		if currentTeam.weaponCounter[i] == 0:
 			rect = None
@@ -4583,6 +4664,7 @@ def moreDigging():
 	for team in teams:
 		team.weaponCounter[weaponDict["minigun"]] += 5
 		team.weaponCounter[weaponDict["bunker buster"]] += 3
+		team.weaponCounter[weaponDict["laser gun"]] += 3
 
 def scrollMenu(up = True):
 	length = len([i for i in currentTeam.weaponCounter if not i == 0]) + 1
@@ -4631,6 +4713,14 @@ def cheatActive(code):
 		amount = int(code[5])
 		for i in range(amount):
 			WeaponPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+	if code[0:9] == "utilizeme" and len(code) == 11:
+		mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+		amount = int(code[9])
+		for i in range(amount):
+			UtilityPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+	if code == "aspirin=":
+		mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+		HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 
 ################################################################################ State machine
 if True:
@@ -4751,7 +4841,7 @@ def stateMachine():
 		playerShootAble = True
 		playerScrollAble = True
 		
-		if currentWeapon == "flame thrower" or currentWeapon == "minigun":
+		if currentWeapon == "flame thrower" or currentWeapon == "minigun" or currentWeapon == "laser gun":
 			fireWeapon = True
 			if not shotCount == 0:
 				nextState = FIRE_MULTIPLE
@@ -4802,7 +4892,7 @@ def onKeyHoldSpace():
 def onKeyReleaseSpace():
 	global energyLevel, fireWeapon, playerShootAble, energising
 	if playerShootAble:
-		if timeTravel:
+		if timeTravel and not currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0:
 			timeTravelPlay()
 			energyLevel = 0
 		elif weaponStyle == CHARGABLE and energising:
@@ -4880,7 +4970,7 @@ while run:
 				if currentWeapon == "teleport":
 					currentTeam.specialCounter[TELEPORT] -= 1
 					currentWeapon = "missile"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
+					weaponStyle = weapons[weaponDict[currentWeapon]][1]
 					objectUnderControl.pos = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 					timeRemaining(5)
 					state = nextState
@@ -4913,9 +5003,9 @@ while run:
 						# print(wRect[5])
 						if not wRect[5] == 0:
 							break
-						currentWeapon = weaponDictI[wRect[0]]
+						currentWeapon = weaponDict[wRect[0]]
 						renderWeaponCount()
-						weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
+						weaponStyle = weapons[weaponDict[currentWeapon]][1]
 						state = PLAYER_CONTROL_1
 						wRect[3] = False
 						break
@@ -5044,53 +5134,45 @@ while run:
 				onKeyPressSpace()
 			# weapon change by keyboard
 			if state == PLAYER_CONTROL_1:
+				weaponsSwitch = False
 				if event.key == pygame.K_1:
 					currentWeapon = "missile"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_2:
 					currentWeapon = "grenade"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_3:
 					currentWeapon = "mortar"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_4:
 					currentWeapon = "petrol bomb"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_5:
 					currentWeapon = "TNT"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_6:
 					currentWeapon = "shotgun"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_7:
 					currentWeapon = "girder"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_8:
 					currentWeapon = "flame thrower"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_9:
 					currentWeapon = "sticky bomb"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_0:
 					currentWeapon = "minigun"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_MINUS:
 					currentWeapon = "rope"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
-					renderWeaponCount()
+					weaponsSwitch = True
 				elif event.key == pygame.K_EQUALS:
 					currentWeapon = "parachute"
-					weaponStyle = weaponStyleTup[weaponDict[currentWeapon]]
+					weaponsSwitch = True
+				if weaponsSwitch:
+					weaponStyle = weapons[weaponDict[currentWeapon]][1]
 					renderWeaponCount()
 			# misc
 			if event.key == pygame.K_p:
@@ -5108,12 +5190,13 @@ while run:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "venus fly trap", (20,20,20))
 					else:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "plant mode", (20,20,20))
-				elif state == PLAYER_CONTROL_1 and weaponStyle == CHARGABLE and not currentWeapon == "bunker buster":
+				elif state == PLAYER_CONTROL_1 and weapons[weaponDict[currentWeapon]][4]:
 					fuseTime += 30
 					if fuseTime > 120:
 						fuseTime = 30
 					string = "delay " + str(fuseTime//30) + " sec"
 					FloatingText(objectUnderControl.pos + Vector(0,-5), string, (20,20,20))
+					renderWeaponCount()
 				elif state == PLAYER_CONTROL_1 and currentWeapon == "girder":
 					girderAngle += 45
 					if girderAngle == 180:
@@ -5286,7 +5369,6 @@ while run:
 	for cloud in Cloud._reg: cloud.draw()
 	drawBackGround(imageMountain2,4)
 	drawBackGround(imageMountain,2)
-	
 	
 	drawLand()
 	for p in PhysObj._reg: p.draw()
