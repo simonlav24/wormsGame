@@ -50,7 +50,7 @@ game development practice for educational purposes and fun. pygame required.
 - ROPE - swing your way to action.
 - PARACHUTE - glide down safely. wind sensitive.
 - PLANT SEED\ VENUS FLY TRAP - chargeable, throws seed that grows on impact.
-press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN
+press tab to activate VENUS FLY TRAP mode. vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN
 - SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
 
  > Aerial
