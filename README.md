@@ -50,7 +50,7 @@ game development practice for educational purposes and fun. pygame required.
 - ROPE - swing your way to action.
 - PARACHUTE - glide down safely. wind sensitive.
 - PLANT SEED\ VENUS FLY TRAP - chargeable, throws seed that grows on impact.
-press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everything.
+press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN
 - SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
 
  > Aerial
@@ -72,6 +72,7 @@ press tab to activate VENUS FLY TRAP mode. vicious plant that will devour everyt
 - ELECTRO BOOM - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
 - POKEBALL - cathes worms. store them until the ball is damaged.
 - GREEN SHELL - actual Koopa Troopa shell
+- GUIDED MISSILE - use LEFT and RIGHT to controll in air.
 
 # UTILITIES:
  Utilities can be obtained by utility crates marked with "?".
