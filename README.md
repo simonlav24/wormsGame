@@ -72,7 +72,7 @@ press tab to activate VENUS FLY TRAP mode. vicious plant that will devour anythi
 - ELECTRO BOOM - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
 - POKEBALL - cathes worms. store them until the ball is damaged.
 - GREEN SHELL - actual Koopa Troopa shell
-- GUIDED MISSILE - use LEFT and RIGHT to controll in air.
+- GUIDED MISSILE - controllable missile. use RIGHT KEY and LEFT KEY to control.
 
 # UTILITIES:
  Utilities can be obtained by utility crates marked with "?".
