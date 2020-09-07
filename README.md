@@ -1,4 +1,4 @@
-# wormsGame
+# WormsGame
 game development practice for educational purposes and fun. pygame required.
 
  > KEYS:
@@ -13,7 +13,7 @@ game development practice for educational purposes and fun. pygame required.
 - mouse right click - open weapons menu.
 - mouse scroll - scroll weapons menu.
 
-# weapons
+# Weapons
  > Missiles
 - MISSILE - chargeable, shoots a missile, wind sensitive.
 - GRAVITY MISSILE - chargeable, shoots a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
@@ -74,7 +74,7 @@ press tab to activate VENUS FLY TRAP mode. vicious plant that will devour anythi
 - GREEN SHELL - actual Koopa Troopa shell
 - GUIDED MISSILE - controllable missile. use RIGHT KEY and LEFT KEY to control.
 
-# UTILITIES:
+# Utilities:
  Utilities can be obtained by utility crates marked with "?".
 - moon gravity - big step for wormanity.
 - double damage - twice as fun.
