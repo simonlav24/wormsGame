@@ -1981,7 +1981,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.fallAffected = False
 		self.windAffected = False
 		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
-		self.box = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom", "pokeball", "green shell"])
+		self.box = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom", "pokeball", "green shell", "guided missile"])
 	def draw(self):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
@@ -2115,6 +2115,10 @@ def fireGammaGun(start, direction):
 				worm.damage(int(10/damageMult)+1)
 				worm.sicken()
 				hitted.append(worm)
+		# if hits plant:
+		for plant in Venus._reg:
+			if dist(testPos, plant.pos + plant.direction * 25) <= 25:
+				plant.mutant = True
 
 class HolyGrenade(Grenade):
 	def __init__(self, pos, direction, energy):
@@ -2397,6 +2401,7 @@ class Bee:
 		self.lifespan = 330
 		self.unreachable = []
 		self.vel = Vector()
+		self.surf = None
 	def step(self):
 		self.lifespan -= 1
 		if self.lifespan == 0:
@@ -2451,7 +2456,7 @@ class Bee:
 					self.target.damage(uniform(1,8))
 					del self
 	def draw(self):
-		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius)
+		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())))
 
 class BeeHive(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -2463,6 +2468,12 @@ class BeeHive(PhysObj):
 		self.damp = 0.5
 		self.unload = False
 		self.beeCount = 50
+		
+		self.beeSurf = pygame.Surface((4,4), pygame.SRCALPHA)
+		self.beeSurf.fill((255,255,0), ((1,2), (1,3)))
+		self.beeSurf.fill((0,0,0), ((2,2), (2,3)))
+		self.beeSurf.fill((255,255,0), ((3,2), (3,3)))
+		self.beeSurf.fill((143,234,217,100), ((1,0), (2,2)))
 	def secondaryStep(self):
 		if self.beeCount <= 0:
 			self.dead = True
@@ -2472,7 +2483,8 @@ class BeeHive(PhysObj):
 	def collisionRespone(self, ppos):
 		out = randint(1,3)
 		for i in range(out):
-			Bee(self.pos, uniform(0,2*pi))
+			b = Bee(self.pos, uniform(0,2*pi))
+			b.surf = self.beeSurf
 			self.beeCount -= 1
 	
 class BunkerBuster(PhysObj):
@@ -3421,7 +3433,7 @@ class Portal:
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 
 class Venus:
-	# _reg = []
+	_reg = []
 	grow = -1
 	catch = 0
 	idle = 1
@@ -3429,6 +3441,7 @@ class Venus:
 	release = 3
 	def __init__(self, pos, angle = -1):
 		nonPhys.append(self)
+		Venus._reg.append(self)
 		self.pos = pos
 		self.offset = Vector(25, 0)
 		
@@ -3448,9 +3461,13 @@ class Venus:
 		self.scale = 0
 		self.explossive = False
 		self.opening = -pi/2 + uniform(0, 0.8)
+		self.mutant = False
+		self.desired = None
 	def step(self):
 	
 		self.gap = 5*(self.snap + pi/2)/(pi/2)
+		self.d1 = self.direction.normal()
+		self.d2 = self.d1 * -1
 		self.p1 = self.pos + self.d1 * self.gap
 		self.p2 = self.pos + self.d2 * self.gap
 		
@@ -3460,11 +3477,34 @@ class Venus:
 				self.scale = 1
 				self.mode = Venus.hold
 			return
-			
+		
+		self.angle = self.direction.getAngle()
 		self.timer += 1
+		if self.desired:
+			current = self.direction.getAngle()
+					
+			if self.desired - current > pi:
+				self.desired -= 2*pi
+			if current - self.desired > pi:
+				self.desired += 2*pi
+			
+			current += (self.desired - current) * 0.2
+			self.direction.setAngle(current)
 		
 		if self.mode == Venus.idle:
 			pos = self.pos + self.direction * 25
+						
+			if self.mutant:
+				maxDist = 800
+				closest = None
+				for worm in PhysObj._worms:
+					distance = dist(worm.pos, self.pos)
+					if distance < maxDist and distance < 80:
+						maxDist = distance
+						closest = worm
+				if closest:
+					self.desired = (closest.pos - self.pos).getAngle()
+						
 			for worm in PhysObj._reg:
 				if worm in Debrie._debries:
 					continue
@@ -3483,7 +3523,6 @@ class Venus:
 						self.explossive = True
 					PhysObj._reg.remove(worm)
 					break
-					
 		elif self.mode == Venus.catch:
 			self.snap += 0.5
 			if self.snap >= 0:
@@ -3504,22 +3543,27 @@ class Venus:
 			if self.snap <= self.opening:
 				self.snap = self.opening
 				self.mode = Venus.idle
+		
+		# check if self is destroyed
 		if isOnMap(self.pos.vec2tupint()):
 			if not map.get_at(self.pos.vec2tupint()) == GRD:
 				nonPhys.remove(self)
+				Venus._reg.remove(self)
 		else:
 			nonPhys.remove(self)
+			Venus._reg.remove(self)
 	def draw(self):
 		# pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 		# pygame.draw.circle(win, (255,255,255), point2world(self.p1), 2)
 		# pygame.draw.circle(win, (255,255,255), point2world(self.p2), 2)
 		
 		# pygame.draw.circle(win, (255,255,255), point2world(self.pos + self.direction * 25), 25, 1)
-		if self.scale < 1:
-			image = pygame.transform.scale(imageVenus, (tup2vec(imageVenus.get_size()) * self.scale).vec2tupint())
-		else:
-			image = imageVenus
+		# pygame.draw.circle(win, (255,255,255), point2world(self.pos), 80, 1)
 		
+		if self.scale < 1: image = pygame.transform.scale(imageVenus, (tup2vec(imageVenus.get_size()) * self.scale).vec2tupint())
+		else: image = imageVenus.copy()
+		if self.mutant: image.fill((0, 125, 255, 100), special_flags=pygame.BLEND_MULT)
+			
 		rotated_image = pygame.transform.rotate(image, -degrees(self.angle - self.snap))
 		rotated_offset = rotateVector(self.offset, self.angle - self.snap)
 		rect = rotated_image.get_rect(center=(self.p2 + rotated_offset).vec2tupint())
@@ -3719,9 +3763,7 @@ class GreenShell(PhysObj):
 				self.facing *= -1
 				
 			for worm in PhysObj._reg:
-				if worm == self:
-					continue
-				if worm in self.ignore:
+				if worm == self or worm in self.ignore or worm in Portal._reg:
 					continue
 				if dist(worm.pos, self.pos) < self.radius + worm.radius:
 					self.ignore.append(worm)
@@ -3816,6 +3858,66 @@ def fireLaser(start, direction, power=15):
 			pygame.draw.polygon(ground, SKY, points)
 			break
 
+class GuidedMissile(PhysObj):
+	def __init__(self, pos):
+		self.initialize()
+		self.pos = pos
+		self.speed = 5.5
+		self.vel = Vector(0, -self.speed)
+		self.stable = False
+		self.surf = pygame.Surface((10,6), pygame.SRCALPHA)
+		pygame.draw.polygon(self.surf, (255,255,0), [(0,0), (0,6), (10,3)])
+		self.radius = 3
+	def applyForce(self):
+		pass
+	def turn(self, direc):
+		self.vel.rotate(direc * 0.1)
+	def step(self):
+		global camTrack
+		camTrack = self
+		self.pos += self.vel
+		if pygame.key.get_pressed()[pygame.K_LEFT]:
+			self.vel.rotate(-0.3)
+		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+			self.vel.rotate(0.3)
+		Blast(self.pos - self.vel * 1.5 + vectorUnitRandom()*2, randint(5,8))
+		
+		angle = atan2(self.vel.y, self.vel.x)
+		r = angle - pi
+		collision = False
+		while r < angle + pi:#+ pi/2:
+			testPos = Vector((self.radius) * cos(r) + self.pos.x, (self.radius) * sin(r) + self.pos.y)
+			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+				if mapClosed:
+					collision = True
+					r += pi /8
+					continue
+				else:
+					r += pi /8
+					continue
+			if testPos.y < 0:
+				r += pi /8
+				continue
+			
+			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+				collision = True
+			
+			r += pi /8
+		
+		if collision:
+			boom(self.pos, 35)
+			if randint(0,30) == 1:
+				for i in range(80):
+					s = Fire(self.pos, 5)
+					s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,4)
+			PhysObj._reg.remove(self)
+		if self.pos.y > mapHeight:
+			PhysObj._reg.remove(self)
+		
+	def draw(self):
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+
 ################################################################################ Create World
 
 maps = []
@@ -3844,10 +3946,9 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[89 - 1]
+	# imageChoice = maps[94 - 1]
 	# imageChoice = ("wormsMaps/race2.png", 900)
-	# imageChoice = ("wormsMaps/wMapbig4.png", 800)
-	# imageChoice = maps[-1]
+	# imageChoice = ("wormsMaps/wMapbig3.png", 1700)
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1, 64-1]]: mapClosed = True
@@ -3880,11 +3981,11 @@ wormsPerTeam = 8
 weapons = []
 if True:
 	weapons.append(("missile", CHARGABLE, -1, MISSILES, False))
-	weapons.append(("gravity missile", CHARGABLE, 10, MISSILES, False))
+	weapons.append(("gravity missile", CHARGABLE, 5, MISSILES, False))
 	weapons.append(("bunker buster", CHARGABLE, 2, MISSILES, False))
 	weapons.append(("homing missile", CHARGABLE, 2, MISSILES, False))
 	weapons.append(("artillery assist", CHARGABLE, 1, MISSILES, False))
-	weapons.append(("grenade", CHARGABLE, 10, GRENADES, True))
+	weapons.append(("grenade", CHARGABLE, 5, GRENADES, True))
 	weapons.append(("mortar", CHARGABLE, 3, GRENADES, True))
 	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES, True))
 	weapons.append(("gas grenade", CHARGABLE, 5, GRENADES, True))
@@ -3921,6 +4022,7 @@ if True:
 	weapons.append(("electro boom", CHARGABLE, 0, LEGENDARY, True))
 	weapons.append(("pokeball", CHARGABLE, 0, LEGENDARY, True))
 	weapons.append(("green shell", PUTABLE, 0, LEGENDARY, False))
+	weapons.append(("guided missile", PUTABLE, 0, LEGENDARY, False))
 
 weaponDict = {}
 basicSet = []
@@ -4119,7 +4221,9 @@ def fire(weapon = None):
 			nextState = PLAYER_CONTROL_2
 			decrease = True
 			timeRemaining(5)
-	
+	elif weapon == "guided missile":
+		w = GuidedMissile(weaponOrigin + Vector(0,-5))
+		nextState = WAIT_STABLE
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -4636,7 +4740,7 @@ def randomStartingWeapons(amount):
 	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
-			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike", "electro boom", "pokeball", "green shell"])
+			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike", "electro boom", "pokeball", "green shell", "guided missile"])
 			team.weaponCounter[weaponDict[effect]] += 1
 			if randint(0,2) >= 1:
 				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID, SWITCH_WORMS])
