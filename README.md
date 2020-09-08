@@ -49,8 +49,7 @@ game development practice for educational purposes and fun. pygame required.
 - GIRDER - clickable, place a girder. press tab for rotation and scaling.
 - ROPE - swing your way to action.
 - PARACHUTE - glide down safely. wind sensitive.
-- PLANT SEED\ VENUS FLY TRAP - chargeable, throws seed that grows on impact.
-press tab to activate VENUS FLY TRAP mode. vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN
+- VENUS FLY TRAP - chargeable, throws seed that grows to a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
 - SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
 
  > Aerial
