@@ -3946,7 +3946,7 @@ def createWorld():
 	global mapClosed
 	# imageFile = ("lastWormsGround.png", 512)
 	imageChoice = choice(maps)
-	# imageChoice = maps[94 - 1]
+	# imageChoice = maps[41 - 1]
 	# imageChoice = ("wormsMaps/race2.png", 900)
 	# imageChoice = ("wormsMaps/wMapbig3.png", 1700)
 	
@@ -4006,7 +4006,7 @@ if True:
 	weapons.append(("girder", CLICKABLE, -1, MISC, False))
 	weapons.append(("rope", PUTABLE, 3, MISC, False))
 	weapons.append(("parachute", PUTABLE, 3, MISC, False))
-	weapons.append(("plant seed", CHARGABLE, 2, MISC, False))
+	weapons.append(("venus fly trap", CHARGABLE, 1, MISC, False))
 	weapons.append(("sentry turret", PUTABLE, 0, MISC, False))
 	weapons.append(("airstrike", CLICKABLE, 1, AIRSTRIKE, False))
 	weapons.append(("napalm strike", CLICKABLE, 1, AIRSTRIKE, False))
@@ -4128,7 +4128,7 @@ def fire(weapon = None):
 		Earthquake()
 	elif weapon == "gemino mine":
 		w = Gemino(weaponOrigin, weaponDir, energy)
-	elif weapon == "plant seed":
+	elif weapon == "venus fly trap":
 		w = PlantBomb(weaponOrigin, weaponDir, energy)
 	elif weapon == "sentry turret":
 		w = SentryGun(weaponOrigin, currentTeam.color)
@@ -4241,6 +4241,10 @@ def fire(weapon = None):
 	
 	state = nextState
 	if state == PLAYER_CONTROL_2: timeRemaining(5)
+	
+	# for uselist:
+	if state == PLAYER_CONTROL_2 or state == WAIT_STABLE:
+		addToUseList(currentWeapon)
 
 for i in range(len(weapons)):
 	weaponDict[weapons[i][0]] = i
@@ -5046,6 +5050,15 @@ namesCustom2 = ["Cenzor", "aliza", "naomi", "phathi", "yohai", "yulia", "rom", "
 if webVer:
 	makeRandomTeams(4, 4, namesCustom + namesCustom2)
 
+useList = []
+def addToUseList(string):
+	useList.append(myfont.render(string, False, (0,0,0)))
+	if len(useList) > 4:
+		useList.pop(0)
+def drawUseList():
+	for i in range(len(useList)):
+		win.blit(useList[i], (30 + 80 * i,winHeight - 6))
+
 ################################################################################ Main Loop
 run = True
 pause = False
@@ -5288,7 +5301,7 @@ while run:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "drill mode", (20,20,20))
 					else:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
-				elif state == PLAYER_CONTROL_1 and currentWeapon == "plant seed":
+				elif state == PLAYER_CONTROL_1 and currentWeapon == "venus fly trap":
 					PlantBomb.venus = not PlantBomb.venus
 					if PlantBomb.venus:
 						FloatingText(objectUnderControl.pos + Vector(0,-5), "venus fly trap", (20,20,20))
@@ -5500,6 +5513,7 @@ while run:
 	timeDraw()
 	win.blit(currentWeaponSurf, ((int(25), int(8))))
 	commentator.step()
+	# drawUseList()#funf
 	
 	if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: teamHealthDraw()
 	# weapon menu:
