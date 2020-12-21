@@ -41,7 +41,7 @@ game development practice in python for educational purposes and fun. pygame req
 - PETROL BOMB - chargeable, throws a pentrol bomb, explosive fire spreader.
 - FLAME THROWER - it werfs flammen.
 
- > Place and run
+ > Place and run\ Traveling
 - MINE - mine.
 - TNT - explosive TNT bomb.
 - COVID19 - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
@@ -52,6 +52,7 @@ game development practice in python for educational purposes and fun. pygame req
 - PARACHUTE - glide down safely. wind sensitive.
 - VENUS FLY TRAP - chargeable, throws seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
 - SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
+- ENDER PEARL - throw and teleport to where it lands.
 
  > Aerial
 - AIRSTRIKE - clickable, missile strike, wind sensitive.
