@@ -1,5 +1,6 @@
 # WormsGame
-game development practice for educational purposes and fun. pygame required.
+![Alt text](wormsShoot.png?raw=true "Worms")
+game development practice in python for educational purposes and fun. pygame required.
 
  > KEYS:
 - right/left arrow keys - movement.
