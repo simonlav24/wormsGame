@@ -2,7 +2,7 @@
 ![Alt text](wormsShoot.png?raw=true "Worms")
 game development practice in python for educational purposes and fun. pygame required.
 
- > KEYS:
+# how to play
 - right/left arrow keys - movement.
 - up/down arrow keys - pointing.
 - enter - jump in pointing direction.
