@@ -51,6 +51,7 @@ if True:
 	HEALTH_PACK = 0
 	UTILITY_PACK = 1
 	WEAPON_PACK = 2
+	FLAG_DEPLOY = 3
 	
 	MOON_GRAVITY = 0
 	DOUBLE_DAMAGE = 1
@@ -90,6 +91,7 @@ if True:
 	drakRadius = 70
 	pointsMode = False
 	useListMode = False
+	captureTheFlag = False
 	
 	# Multipliers
 	damageMult = 0.8
@@ -124,7 +126,7 @@ if True:
 	camTarget = Vector(0,0)
 	
 	objectUnderControl = None
-	camTrack = None
+	camTrack = None # object to track
 	
 	energising = False
 	energyLevel = 0
@@ -409,7 +411,11 @@ def placePlants(quantity = 1):
 	for times in range(quantity):
 		place = giveGoodPlace(-1)
 		PlantBomb((place.x, place.y - 2), (0,0), 0)
-		
+
+def placeFlag():
+	place = giveGoodPlace(-1)
+	Flag(place)
+
 extra = [] #posx, posy, color, repeat
 def addExtra(pos, color = (255,255,255), delay = 5):
 	extra.append((pos[0], pos[1], color, delay))
@@ -1017,6 +1023,7 @@ class Worm (PhysObj):
 		self.parachuting = False
 		self.cpu = False
 		self.wormCollider = True
+		self.flagHolder = False
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
@@ -1101,6 +1108,11 @@ class Worm (PhysObj):
 			if not self == objectUnderControl:
 				if not sentring and not self in currentTeam.worms:
 					damageThisTurn += dmg
+			if captureTheFlag:
+				if self.flagHolder:
+					self.team.flagHolder = False
+					self.flagHolder = False
+					Flag(self.pos)
 	def draw(self):
 		if not self is objectUnderControl:
 			pygame.draw.circle(wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
@@ -1108,6 +1120,9 @@ class Worm (PhysObj):
 			return
 		if self.parachuting:
 			win.blit(imageParachute, point2world(self.pos - tup2vec(imageParachute.get_size())/2 + Vector(0,-15)))
+		if self.flagHolder:
+			pygame.draw.line(win, (51, 51, 0), point2world(self.pos), point2world(self.pos + Vector(0, -3 * self.radius)))
+			pygame.draw.rect(win, (220,0,0), (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
 		if self.rope:
@@ -1133,6 +1148,10 @@ class Worm (PhysObj):
 		global state, nextState, teams
 		self.color = (167,167,167)
 		self.name = myfont.render(self.nameStr, False, whiten(self.team.color))
+		if self.flagHolder:
+			self.flagHolder = False
+			self.team.flagHolder = False
+			Flag(self.pos)
 		if self in self._worms:
 			self._worms.remove(self)
 			self.team.worms.remove(self)
@@ -1337,6 +1356,13 @@ class Worm (PhysObj):
 			Commentator.que.append((self.nameStr, choice(Commentator.stringsDmg), self.team.color))
 		# check if on map:
 		if self.pos.y >= mapHeight:
+			if captureTheFlag:
+				if self.flagHolder:
+					self.flagHolder = False
+					self.team.flagHolder = False
+					p = deployPack(FLAG_DEPLOY)
+					global camTrack
+					camTrack = p
 			global damageThisTurn
 			if not self == objectUnderControl:
 				if not sentring and not self in currentTeam.worms:
@@ -1349,6 +1375,9 @@ class Worm (PhysObj):
 			self.dieded()
 			Commentator.que.append((self.nameStr, choice(Commentator.stringsFlw), self.team.color))
 			self._reg.remove(self)
+		if captureTheFlag:
+			if self.flagHolder and self.health <= 0:
+				print("dead and holding")
 		if self.pos.y < 0:
 			self.gravity = DOWN
 		if actionMove:
@@ -2166,10 +2195,12 @@ def deployPack(pack):
 	
 	if pack == HEALTH_PACK:
 		p = HealthPack((x, y))
-	if pack == UTILITY_PACK:
+	elif pack == UTILITY_PACK:
 		p = UtilityPack((x, y))
-	if pack == WEAPON_PACK:
+	elif pack == WEAPON_PACK:
 		p = WeaponPack((x, y))
+	elif pack == FLAG_DEPLOY:
+		p = Flag((x, y))
 	return p
 
 airStrikeDir = RIGHT
@@ -3658,10 +3689,10 @@ class Venus:
 					self.desired = (closest.pos - self.pos).getAngle()
 						
 			for worm in PhysObj._reg:
-				if worm in Debrie._debries or worm in Portal._reg:
+				if worm in Debrie._debries or worm in Portal._reg or worm in Flag.flags:
 					continue
 				if dist(worm.pos, pos) <= 25:
-					
+			
 					self.mode = Venus.catch
 					if worm in PhysObj._worms:
 						global damageThisTurn
@@ -3865,13 +3896,11 @@ class PokeBall(PhysObj):
 				
 		if self.timer == fuseTime + 60:
 			if self.hold:
-				# store worm
-				# print(self.hold.nameStr)
-				# print("reg:", PhysObj._reg)
 				PhysObj._reg.remove(self.hold)
-				# print("worms:", PhysObj._worms)
 				PhysObj._worms.remove(self.hold)
 				self.hold.team.worms.remove(self.hold)
+				if self.hold.flagHolder:
+					Flag(self.hold.pos)
 				self.name = myfont.render(self.hold.nameStr, False, self.hold.team.color)
 				Commentator.que.append(choice([(self.hold.nameStr, ("",", i choose you"), self.hold.team.color), ("", ("", "gotta catch 'em al"), self.hold.team.color), (self.hold.nameStr, ("", " will help beat the next gym leader"), self.hold.team.color)]))
 			else:
@@ -4146,7 +4175,7 @@ class EndPearl(PhysObj):
 		pos = self.pos + response * (objectUnderControl.radius + 2)
 		objectUnderControl.pos = pos
 
-class Path:
+class Path: #?
 	def __init__(self):
 		nonPhys.append(self)
 		self.points = []
@@ -4166,6 +4195,37 @@ class Path:
 			pygame.draw.circle(win, (0,0,0), point2world(i), 5)
 	def step(self):
 		pass
+
+class Flag(PhysObj):
+	flags = []
+	def __init__(self, pos=(0,0)):
+		self.initialize()
+		Flag.flags.append(self)
+		self.pos = Vector(pos[0], pos[1])
+		self.radius = 3.5
+		self.color = (220,0,0)
+		self.damp = 0.1
+	def secondaryStep(self):
+		if objectUnderControl:
+			if not objectUnderControl in PhysObj._worms:
+				return
+			if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius:
+				# worm has flag
+				objectUnderControl.flagHolder = True
+				objectUnderControl.team.flagHolder = True
+				PhysObj._reg.remove(self)
+				Flag.flags.remove(self)
+				del self
+				return
+	def outOfMapResponse(self):
+		# print("im out")
+		Flag.flags.remove(self)
+		p = deployPack(FLAG_DEPLOY)
+		global camTrack
+		camTrack = p
+	def draw(self):
+		pygame.draw.line(win, (51, 51, 0), point2world(self.pos + Vector(0, self.radius)), point2world(self.pos + Vector(0, -3 * self.radius)))
+		pygame.draw.rect(win, self.color, (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
 
 ################################################################################ Create World
 
@@ -4232,6 +4292,7 @@ if True:
 	parser.add_argument("-points", "--points_mode", type=bool, nargs="?", const=True, default=False, help="Activate Points mode.")
 	parser.add_argument("-used", "--used_list", type=bool, nargs="?", const=True, default=False, help="Activate Used List mode.")
 	parser.add_argument("-closed", "--closed_map", type=bool, nargs="?", const=True, default=False, help="Activate closed map mode.")
+	parser.add_argument("-ctf", "--ctf", type=bool, nargs='?', const=True, default=False, help="Activate captureTheFlag mode.")
 	
 	args = parser.parse_args()
 	
@@ -4246,6 +4307,7 @@ if True:
 	pointsMode = args.points_mode
 	useListMode = args.used_list
 	mapClosed = args.closed_map
+	captureTheFlag = args.ctf
 
 # drawHealthBar = False
 # randomPlace = False
@@ -4324,6 +4386,7 @@ def fire(weapon = None):
 		energy = timeTravelList["energy"]
 		weaponDir = timeTravelList["weaponDir"]
 	
+	avail = True
 	w = None
 	if weapon == "missile":
 		w = Missile(weaponOrigin, weaponDir, energy)
@@ -4414,6 +4477,7 @@ def fire(weapon = None):
 		w = BeeHive(weaponOrigin, weaponDir, energy)
 	elif weapon == "bunker buster":
 		w = BunkerBuster(weaponOrigin, weaponDir, energy)
+		avail = False
 	elif weapon == "electric grenade":
 		w = ElectricGrenade(weaponOrigin, weaponDir, energy)
 	elif weapon == "homing missile":
@@ -4512,7 +4576,7 @@ def fire(weapon = None):
 	if w and not timeTravelFire: camTrack = w	
 	
 	# position to available position
-	if w:
+	if w and avail:
 		availpos = getClosestPosAvail(w)
 		if availpos:
 			# addExtra(availpos, (255,0,0),100)
@@ -4580,6 +4644,7 @@ class Team:
 		self.damage = 0
 		self.killCount = 0
 		self.points = 0
+		self.flagHolder = False
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
@@ -4677,7 +4742,7 @@ def teamHealthDraw():
 		if not value <= 0:
 			pygame.draw.rect(win, teams[i].color, (int(winWidth-50), int(10+i*3), int(value),2))
 		
-		if pointsMode:
+		if pointsMode or captureTheFlag:
 			if maxPoints == 0:
 				continue
 			value = (teams[i].points / maxPoints) * 40
@@ -4685,6 +4750,83 @@ def teamHealthDraw():
 				value = 1
 			if not value == 0:
 				pygame.draw.rect(win, (220,220,220), (int(winWidth-50) - 1 - int(value), int(10+i*3), int(value), 2))
+			if captureTheFlag:
+				if teams[i].flagHolder:
+					pygame.draw.circle(win, (220,0,0), (int(winWidth-50) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
+
+def checkWinners():
+	global mostDamage, run, camTrack, nextState
+	count = 0
+	end = False
+	winningTeam = None
+	for team in teams:
+		if len(team.worms) == 0:
+			count += 1
+	if count == totalTeams:
+		# all dead
+		end = True
+		print("everyone dead")
+		run = False
+		return end
+	elif count == totalTeams - 1:
+		# someone won
+		
+		if captureTheFlag:
+			for team in teams:
+				if team.flagHolder:
+					team.points += 1
+					break
+		
+		end = True
+		adding = ""
+					 
+		# won in points mode:
+		if pointsMode:
+			lastTeam = None
+			for team in teams:
+				if not len(team.worms) == 0:
+					lastTeam = team
+			if lastTeam:
+				lastTeam.points += 150
+				# find winners:
+				teamsFinals = sorted(teams, key = lambda x: x.points)
+				winningTeam = teamsFinals[-1]
+			adding += "points: " + str(winningTeam.points) +"\n"
+		
+		# won in capture the flag mode:
+		elif captureTheFlag:
+			teamsFinals = sorted(teams, key = lambda x: x.points)
+			if teamsFinals[-1].points == teamsFinals[-2].points:
+				# tie. pick one at chance
+				winningTeam = teamsFinals[-1]
+			else:
+				winningTeam = teamsFinals[-1]
+			adding += "CTF mode" + "\n"
+				
+		# regular win:
+		else:
+			for team in teams:
+				if not len(team.worms) == 0:
+					winningTeam = team
+					if davidAndGoliathMode:
+						adding += "_dVg_"
+					adding += "\n"
+		
+		string = "time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name) \
+					 + "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
+		string += adding
+		
+	if end:
+		file = open('wormsRecord.txt', 'a')
+		file.write(string)
+		file.close()
+		
+		commentator.que.append((winningTeam.name, ("taem "," won!"), winningTeam.color))
+		if len(winningTeam.worms) > 0:
+			camTrack = winningTeam.worms[0]
+		nextState = WIN
+		pygame.image.save(ground, "lastWormsGround.png")
+	return end
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn, currentWeapon
@@ -4707,7 +4849,7 @@ def cycleWorms():
 		Worm.roped = False
 	
 	# update cpu:
-	cpuUpdateCycle()
+	#cpuUpdateCycle()
 	
 	# update damage:
 	if damageThisTurn > mostDamage[0]:
@@ -4718,60 +4860,11 @@ def cycleWorms():
 		Commentator.que.append((objectUnderControl.nameStr, choice([("good shot ", "!"), ("nicely done ","")]), objectUnderControl.team.color))
 	
 	currentTeam.damage += damageThisTurn
-	currentTeam.points = currentTeam.damage + 50 * currentTeam.killCount
+	if pointsMode:
+		currentTeam.points = currentTeam.damage + 50 * currentTeam.killCount
 	damageThisTurn = 0
-	
-	# check winners
-	count = 0
-	for team in teams:
-		if len(team.worms) == 0:
-			count += 1
-	if count == totalTeams:
-		pygame.image.save(ground, "lastWormsGround.png")
-		# all dead
-		print("everyone dead")
-		run = False
+	if checkWinners():
 		return
-	elif count == totalTeams - 1:
-		pygame.image.save(ground, "lastWormsGround.png")
-		# someone won
-		
-		if pointsMode:
-			lastTeam = None
-			for team in teams:
-				if not len(team.worms) == 0:
-					lastTeam = team
-			if lastTeam:
-				lastTeam.points += 100
-				# find winners:
-				teamsFinals = sorted(teams, key = lambda x: x.points)
-				winningTeam = teamsFinals[-1]
-				
-				print("team", winningTeam.name, "won in points mode!")
-				file = open('wormsRecord.txt', 'a')
-				file.write("time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name) \
-					 + "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1]) + "points: " + str(winningTeam.points) +"\n")
-				file.close()
-				
-				commentator.que.append((winningTeam.name, ("taem "," won!"), winningTeam.color))
-				nextState = WIN
-				return
-		
-		for team in teams:
-			if not len(team.worms) == 0:
-				print("team", team.name, "won!")
-				file = open('wormsRecord.txt', 'a')
-				adding = ""
-				if davidAndGoliathMode:
-					adding += "_dVg_"
-				file.write("time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(team.name) \
-					 + "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:6}'.format(mostDamage[1]+adding) + "\n")
-				file.close()
-				commentator.que.append((team.name, ("taem "," won!"), team.color))
-				camTrack = team.worms[0]
-				nextState = WIN
-				return
-	
 	roundCounter += 1
 	
 	# deploy pack:
@@ -4810,6 +4903,14 @@ def cycleWorms():
 			
 	deploying = False
 	sentring = False
+	
+	
+	
+	if captureTheFlag:
+		for team in teams:
+			if team.flagHolder:
+				team.points += 1
+				break
 	
 	# update weapons delay
 	if roundCounter % totalTeams == 0:
@@ -5279,6 +5380,8 @@ def stateMachine():
 				team.specialCounter[FLARE] += 3
 				team.hasSpecial = True
 		if randomWeapons: randomWeaponsGive()
+		if captureTheFlag:
+			placeFlag()
 	elif state == CHOOSE_STARTER:
 		playerControlPlacing = False
 		playerControl = False
@@ -5725,6 +5828,8 @@ if __name__ == "__main__":
 							worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
 				if event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
 					scalingFactor = 3
+				# if event.key == pygame.K_n:
+					# pygame.image.save(win, "wormshoot" + str(timeOverall) + ".png")	
 				text += event.unicode
 				if event.key == pygame.K_EQUALS:
 					cheatActive(text)
