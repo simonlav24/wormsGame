@@ -74,6 +74,7 @@ if True:
 if True:
 	turnTime = 45
 	shockRadius = 1.5
+	burnRadius = 1.2
 	globalGravity = 0.2
 	mapScrollSpeed = 8
 	initialHealth = 100
@@ -219,12 +220,22 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 					colors.append(color)
 		if len(colors) == 0:
 			colors = Blast._color
+	
 	# ground delete
 	if not fire:
 		Explossion(pos, radius)
+		# draw burn:
+		boomer = pygame.Surface((radius*burnRadius*2, radius*burnRadius*2), pygame.SRCALPHA)
+		pygame.draw.circle(boomer, (0,0,0,randint(100,180)), (radius*burnRadius, radius*burnRadius), radius * burnRadius)
+		ground.blit(boomer, (pos - Vector(radius*burnRadius, radius*burnRadius)).vec2tupint())
+		
+		skyMask = map.copy()
+		skyMask.set_colorkey(GRD)
+		ground.blit(skyMask, (0,0))
+		ground.set_colorkey(SKY)
 	
-	pygame.draw.circle(map, SKY, (int(pos[0]), int(pos[1])), int(radius))
-	pygame.draw.circle(ground, SKY, (int(pos[0]), int(pos[1])), int(radius))
+	pygame.draw.circle(map, SKY, pos.vec2tupint(), int(radius))
+	pygame.draw.circle(ground, SKY, pos.vec2tupint(), int(radius))
 	
 	listToCheck = PhysObj._reg if not fire else PhysObj._worms
 	
@@ -237,7 +248,6 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 			# shockwave
 			direction = (p.pos - boomPos).normalize()
 			p.vel += direction * - 0.5 * (1/shockRadius) * (distance - radius * shockRadius) * 1.3
-			# print(p.vel.getMag())
 			p.stable = False
 			# damage
 			if p.health:
@@ -312,7 +322,7 @@ def drawWindIndicator():
 	pygame.draw.line(win, (100,100,255), (20, 15), (int(20 + wind * 20),15))
 	pygame.draw.line(win, (0,0,255), (20, 10), (20,20))
 
-def giveGoodPlace(div = 0):
+def giveGoodPlace(div = 0, girderPlace = True):
 	goodPlace = False
 	counter = 0
 	
@@ -327,60 +337,7 @@ def giveGoodPlace(div = 0):
 	else:
 		left, right = 6, mapWidth - 6
 	
-	if not diggingMatch:
-		while not goodPlace:
-
-			counter += 1
-			goodPlace = True
-			place = Vector(randint(int(left), int(right)), randint(6, mapHeight - 6))
-			# check circle around
-			if isGroundAround(place):
-				goodPlace = False
-			if  not goodPlace:
-				continue
-			
-			if counter > 8000:
-				# check only worms around
-				for worm in PhysObj._worms:
-					if dist(worm.pos, place) < 50:
-						goodPlace = False
-						break
-				if  not goodPlace:
-					continue
-				# girder down 
-				girder(place + Vector(0,20))
-				return place
-			
-			# put place down
-			y = place.y
-			for i in range(mapHeight):
-				if y + i >= mapHeight:
-					goodPlace = False
-					break
-				if map.get_at((place.x, y + i)) == GRD or wormCol.get_at((place.x, y + i)) != (0,0,0) or extraCol.get_at((place.x, y + i)) != (0,0,0):
-					y = y + i - 7
-					break
-			if  not goodPlace:
-				continue
-			place.y = y
-			# check for nearby worms in radius 50
-			for worm in PhysObj._worms:
-				if dist(worm.pos, place) < 50:
-					goodPlace = False
-					break
-					# print("F2")
-			if  not goodPlace:
-				continue
-			for mine in PhysObj._mines:
-				if dist(mine.pos, place) < 40:
-					goodPlace = False
-					break
-			if  not goodPlace:
-				continue
-			if isGroundAround(place):
-				pygame.draw.circle(map, SKY, place.vec2tup(), 5)
-				pygame.draw.circle(ground, SKY, place.vec2tup(), 5)
-	else:
+	if diggingMatch:
 		while not goodPlace:
 			place = Vector(randint(int(left), int(right)), randint(6, mapHeight - 50))
 			goodPlace = True
@@ -390,16 +347,81 @@ def giveGoodPlace(div = 0):
 					break
 				if  not goodPlace:
 					continue
+		return place
 	
-	if counter >= 8000: # will never get here :)
-		print("above 8000:", counter)
+	while not goodPlace:
+		# give rand place
+		counter += 1
+		goodPlace = True
+		place = Vector(randint(int(left), int(right)), randint(6, mapHeight - 6))
+		
+		# if in ground 
+		if isGroundAround(place):
+			goodPlace = False
+			continue
+		
+		if counter > 8000:
+			# if too many iterations, girder place
+			if not girderPlace:
+				return None
+			for worm in PhysObj._worms:
+				if dist(worm.pos, place) < 50:
+					goodPlace = False
+					break
+			if  not goodPlace:
+				continue
+			girder(place + Vector(0,20))
+			return place
+		
+		# put place down
+		y = place.y
+		for i in range(mapHeight):
+			if y + i >= mapHeight:
+				goodPlace = False
+				break
+			if map.get_at((place.x, y + i)) == GRD or wormCol.get_at((place.x, y + i)) != (0,0,0) or extraCol.get_at((place.x, y + i)) != (0,0,0):
+				y = y + i - 7
+				break
+		if  not goodPlace:
+			continue
+		place.y = y
+		
+		# check for nearby worms in radius 50
+		for worm in PhysObj._worms:
+			if dist(worm.pos, place) < 50:
+				goodPlace = False
+				break
+		if  not goodPlace:
+			continue
+		
+		# check for nearby mines in radius 40
+		for mine in PhysObj._mines:
+			if dist(mine.pos, place) < 40:
+				goodPlace = False
+				break
+		if  not goodPlace:
+			continue
+		
+		# check for nearby petrol cans in radius 30
+		for can in PetrolCan._cans:
+			if dist(can.pos, place) < 40:
+				goodPlace = False
+				break
+		if  not goodPlace:
+			continue
+		
+		# if all conditions are met, make hole and place
+		if isGroundAround(place):
+			pygame.draw.circle(map, SKY, place.vec2tup(), 5)
+			pygame.draw.circle(ground, SKY, place.vec2tup(), 5)
+	# print(counter)
 	return place
 
 def placePetrolCan(quantity = 1):
 	for times in range(quantity):
-		place = giveGoodPlace(-1)
-		pt = PetrolCan((place.x, place.y - 2))
-		pt.draw()
+		place = giveGoodPlace(-1, False)
+		if place:
+			pt = PetrolCan((place.x, place.y - 2))
 
 def placeMines(quantity = 1):
 	for times in range(quantity):
@@ -409,8 +431,9 @@ def placeMines(quantity = 1):
 
 def placePlants(quantity = 1):
 	for times in range(quantity):
-		place = giveGoodPlace(-1)
-		PlantBomb((place.x, place.y - 2), (0,0), 0)
+		place = giveGoodPlace(-1, False)
+		if place:
+			PlantBomb((place.x, place.y - 2), (0,0), 0)
 
 def placeFlag():
 	place = giveGoodPlace(-1)
@@ -473,7 +496,7 @@ def drawBackGround(surf, parallax):
 	times = winWidth//width + 2
 	for i in range(times):
 		x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
-		y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight)  - int(camPos.y))/parallax)
+		y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y))/parallax)
 		win.blit(surf, (x, y))
 
 def point2world(point):
@@ -736,6 +759,7 @@ class PhysObj:
 		
 		# velocity
 		self.vel += self.acc
+		self.limitVel()
 		# position
 		ppos = self.pos + self.vel
 		
@@ -769,27 +793,14 @@ class PhysObj:
 				response += ppos - testPos
 				collision = True
 				r += pi /8; continue
-			
-			# if self in PhysObj._worms:
-				# if worm and touch other worms:
-				# getAt = wormCol.get_at((int(testPos.x), int(testPos.y)))
-				# if getAt != (0,0,0) and getAt[0] != self.wormColcolor:
-					# response += ppos - testPos
-					# collision = True
-				# if worm and touch extras:
-				# elif not self.extraCollider and extraCol.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
-					# response += ppos - testPos
-					# collision = True
 
 			else:
-				getAt = wormCol.get_at((int(testPos.x), int(testPos.y)))
-				if not self.wormCollider and getAt != (0,0,0):
+				if not self.wormCollider and wormCol.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
 					response += ppos - testPos
 					collision = True
 				elif not self.extraCollider and extraCol.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
 					response += ppos - testPos
 					collision = True
-			
 			
 			r += pi /8
 		
@@ -851,6 +862,8 @@ class PhysObj:
 	def collisionRespone(self, ppos):
 		pass
 	def outOfMapResponse(self):
+		pass
+	def limitVel(self):
 		pass
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
@@ -1114,7 +1127,7 @@ class Worm (PhysObj):
 					self.flagHolder = False
 					Flag(self.pos)
 	def draw(self):
-		if not self is objectUnderControl:
+		if not self is objectUnderControl and self.health > 0:
 			pygame.draw.circle(wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
 		if darkness and not isVisibleInDarkness(self):
 			return
@@ -2665,7 +2678,7 @@ class BeeHive(PhysObj):
 			b = Bee(self.pos, uniform(0,2*pi))
 			b.surf = self.beeSurf
 			self.beeCount -= 1
-	
+
 class BunkerBuster(PhysObj):
 	mode = False #True = drill
 	def __init__(self, pos, direction, energy):
@@ -2858,79 +2871,8 @@ class HomingMissile(PhysObj):
 			self.activated = True
 		if self.timer == 20 + 30*5:
 			self.activated = False
-	def step(self):
-		self.applyForce()
-		
-		# velocity
-		self.vel += self.acc
+	def limitVel(self):
 		self.vel.limit(15)
-		# position
-		ppos = self.pos + self.vel
-		
-		# reset forces
-		self.acc *= 0
-		self.stable = False
-		
-		angle = atan2(self.vel.y, self.vel.x)
-		response = Vector(0,0)
-		collision = False
-		
-		# colission with world:
-		r = angle - pi#- pi/2
-		while r < angle + pi:#+ pi/2:
-			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
-				if mapClosed:
-					response += ppos - testPos
-					collision = True
-					r += pi /8
-					continue
-				else:
-					r += pi /8
-					continue
-			if testPos.y < 0:
-				r += pi /8
-				continue
-			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-				response += ppos - testPos
-				collision = True
-			
-			r += pi /8
-		
-		magVel = self.vel.getMag()
-		
-		if collision:
-			self.collisionRespone(ppos)
-			if self.vel.getMag() > 5 and self.fallAffected:
-				self.damage(self.vel.getMag() * 1.5 * fallDamageMult)
-			self.stable = True
-			
-			response.normalize()
-			
-			fdot = self.vel.dot(response)
-			if not self.bounceBeforeDeath == 1:
-				self.vel = ((response * -2 * fdot) + self.vel) * self.damp
-			
-			if self.bounceBeforeDeath > 0:
-				self.bounceBeforeDeath -= 1
-				self.dead = self.bounceBeforeDeath == 0
-		else:
-			self.pos = ppos
-			# flew out map but not worms !
-			if self.pos.y > mapHeight and not self in self._worms:
-				self.outOfMapResponse()
-				self._reg.remove(self)
-				return
-		
-		if magVel < 0.1:
-			self.stable = True
-		
-		self.secondaryStep()
-		
-		if self.dead:
-			self._reg.remove(self)
-			self.deathResponse()
-			del self
 	def outOfMapResponse(self):
 		global showTarget
 		showTarget = False
@@ -3906,6 +3848,9 @@ class PokeBall(PhysObj):
 			else:
 				self.dead = True
 		
+		if self.timer <= fuseTime + 60 + 15:
+			gameDistable()
+		
 		# print(self.vel.getMag())
 		if self.vel.getMag() < 0.14:
 			self.vel *= 0
@@ -4258,9 +4203,7 @@ def createWorld():
 		imageChoice = choice(maps)
 	else:
 		imageChoice = maps[mapChoice - 1]
-	# imageChoice = maps[19 - 1]
 	# imageChoice = ("wormsMaps/race2.png", 900)
-	# imageChoice = ("wormsMaps/wMapbig14.png", 800)
 	
 	if not webVer:
 		if imageChoice in [maps[i] for i in [19-1, 26-1, 40-1, 41-1, 64-1]]: mapClosed = True
@@ -4271,9 +4214,6 @@ def createWorld():
 	mapImage = pygame.image.load(imageFile)
 	if not diggingMatch: createMapImage(heightNorm)
 	else: mapImage = None; createMapDigging()
-	placePetrolCan(randint(2,4))
-	if not diggingMatch: placeMines(randint(2,4)); placePlants(randint(0,2))
-	else: moreDigging(); mapClosed = True
 	randomStartingWeapons(1)
 	renderLand()
 
@@ -5326,13 +5266,13 @@ if True:
 	PLAYER_CONTROL_2 = 5; WAIT_STABLE = 6; FIRE_MULTIPLE = 7; OPEN_MENU = 8; WIN = 9
 	
 	state, nextState = RESET, RESET
-
+	loadingSurf = myfontbigger.render("simon's worms Loading", False, WHITE)
 	gameStable = False; playerScrollAble = False; playerControl = False
 	playerControlPlacing = False; playerShootAble = False; gameStableCounter = 0
 
 def stateMachine():
 	global state, nextState, gameStable, playerControl, playerControlPlacing, playerShootAble, playerScrollAble
-	global objectUnderControl, camTrack, gameStableCounter, shotCount, fireWeapon, currentWeapon, run
+	global objectUnderControl, camTrack, gameStableCounter, shotCount, fireWeapon, currentWeapon, run, mapClosed
 	if state == RESET:
 		gameStable = False
 		playerActionComplete = False
@@ -5351,16 +5291,27 @@ def stateMachine():
 		
 		nextState = PLACING_WORMS
 		state = nextState
-	elif state == PLACING_WORMS:
+	elif state == PLACING_WORMS: #modes
 		playerControlPlacing = True #can move with mouse and place worms, but cant play them
 		playerControl = False
 		playerScrollAble = True
 		
 		nextState = CHOOSE_STARTER
+		# place mines:
+		if not diggingMatch:
+			placeMines(randint(2,4))
+		# place worms:
 		if randomPlace:
 			randomPlacing(wormsPerTeam)
+		placePetrolCan(randint(2,4))
+		# place plants:
+		if not diggingMatch:
+			placePlants(randint(0,2))
+		
 		if diggingMatch:
-			placeMines(100)
+			placeMines(80)
+			moreDigging()
+			mapClosed = True
 		if davidAndGoliathMode:
 			global initialHealth
 			for team in teams:
@@ -5379,7 +5330,8 @@ def stateMachine():
 			for team in teams:
 				team.specialCounter[FLARE] += 3
 				team.hasSpecial = True
-		if randomWeapons: randomWeaponsGive()
+		if randomWeapons:
+			randomWeaponsGive()
 		if captureTheFlag:
 			placeFlag()
 	elif state == CHOOSE_STARTER:
@@ -5913,7 +5865,6 @@ if __name__ == "__main__":
 			camTarget.y = camTrack.pos.y - winHeight /2
 			camPos = vectorCopy(camTarget)
 		
-		
 		# use edge map scroll
 		mousePos = pygame.mouse.get_pos()
 		if playerScrollAble and pygame.mouse.get_focused():
@@ -6028,6 +5979,10 @@ if __name__ == "__main__":
 		win.blit(myfont.render(str(int(damageThisTurn)), False, HUDColor), ((int(5), int(winHeight-6))))
 		if state == PLACING_WORMS:
 			win.blit(myfont.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
+		
+		if state in [RESET, GENERATE_TERRAIN] or (state in [PLACING_WORMS, CHOOSE_STARTER] and randomPlace):
+			win.fill((0,0,0))
+			win.blit(loadingSurf, (winWidth/2 - loadingSurf.get_width()/2, winHeight/2 - loadingSurf.get_height()/2))
 		
 		# reset actions
 		actionMove = False
