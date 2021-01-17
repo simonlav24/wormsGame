@@ -107,6 +107,9 @@ if True:
 webVer = True 
 
 # ideas:
+# SHOOTING TARGETS
+# world distorter, make the vortex effect on the ground permanently
+#
 # batarang
 # drone
 # sleep dart
@@ -809,7 +812,7 @@ class PhysObj:
 		if collision:
 			self.collisionRespone(ppos)
 			if magVel > 5 and self.fallAffected:
-				self.damage(magVel * 1.5 * fallDamageMult)
+				self.damage(magVel * 1.5 * fallDamageMult, 1)
 			self.stable = True
 			
 			response.normalize()
@@ -857,7 +860,7 @@ class PhysObj:
 		pass
 	def secondaryStep(self):
 		pass
-	def damage(self, value):
+	def damage(self, value, damageType=0):
 		pass
 	def collisionRespone(self, ppos):
 		pass
@@ -1103,7 +1106,7 @@ class Worm (PhysObj):
 			self.fallAffected = True
 	def toggleParachute(self):
 		self.parachuting = not self.parachuting
-	def damage(self, value):
+	def damage(self, value, damageType=0):
 		if self.health > 0: # if alive
 			dmg = int(value * damageMult)
 			if dmg < 1:
@@ -1827,23 +1830,7 @@ def fireShotgun(start, direction, power=15):#6
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
-		## if hits worm:
-		#for worm in PhysObj._worms:
-		#	if dist(testPos, worm.pos) < worm.radius + 1:
-		#		boom(testPos, power)
-		#		worm.vel += direction*2
-		#		hit = True
-		#		break
-		## if hits can:
-		#for can in PetrolCan._cans:
-		#	if dist(testPos, can.pos) < can.radius + 1:
-		#		boom(testPos, power)
-		#		can.deathResponse()
-		#		hit = True
-		#		break
-		#if hit:
-		#	break
-		# if hits map:
+
 		at = (int(testPos.x), int(testPos.y))
 		if map.get_at(at) == GRD or wormCol.get_at(at) != (0,0,0) or extraCol.get_at(at) != (0,0,0):
 			boom(testPos, power)
@@ -1927,7 +1914,7 @@ class PetrolCan(PhysObj):
 	def secondaryStep(self):
 		if self.health <= 0:
 			self.deathResponse()
-	def damage(self, value):
+	def damage(self, value, damageType=0):
 		dmg = value * damageMult
 		if self.health > 0:
 			self.health -= int(dmg)
@@ -2573,7 +2560,7 @@ class SentryGun(PhysObj):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 		pygame.draw.line(win, self.teamColor, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
 		
-	def damage(self, value):
+	def damage(self, value, damageType=0):
 		dmg = value
 		if self.health > 0:
 			self.health -= int(dmg)
@@ -2596,6 +2583,7 @@ class Bee:
 		self.surf = None
 	def step(self):
 		self.lifespan -= 1
+		gameDistable()
 		if self.lifespan == 0:
 			PhysObj._reg.remove(self)
 			del self
@@ -2893,14 +2881,13 @@ class HomingMissile(PhysObj):
 class Vortex():
 	vortexRadius = 180
 	def __init__(self, pos):
-		PhysObj._reg.append(self)
+		nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.rot = 0
 		self.inhale = True
 		self.boomAffected = False
-		self.stable = False
 	def step(self):
-		self.stable = False
+		gameDistable()
 		if self.inhale:
 			self.rot += 0.001
 			if self.rot > 0.1:
@@ -2911,7 +2898,7 @@ class Vortex():
 		
 		if self.inhale:
 			for worm in PhysObj._reg:
-				if worm == self:
+				if worm in Portal._reg:
 					continue
 				if dist(self.pos, worm.pos) < Vortex.vortexRadius:
 					worm.acc += (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
@@ -2922,13 +2909,13 @@ class Vortex():
 						worm.damage(randint(1,8))
 		else:
 			for worm in PhysObj._reg:
-				if worm == self:
+				if worm in Portal._reg:
 					continue
 				if dist(self.pos, worm.pos) < Vortex.vortexRadius:
 					worm.acc -= (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
 			
 		if not self.inhale and self.rot < 0:
-			PhysObj._reg.remove(self)
+			nonPhys.remove(self)
 			del self
 	def draw(self):
 		width = 50
@@ -3443,7 +3430,7 @@ def firePortal(start, direction):
 			if len(Portal._reg) % 2 == 1:
 				p = Portal._reg.pop(-1)
 				PhysObj._reg.remove(p)
-		
+
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
 
@@ -3457,6 +3444,8 @@ def firePortal(start, direction):
 				
 				check = testPos + Vector(8 * cos(ti), 8 * sin(ti))
 				
+				if check.x >= mapWidth or check.y >= mapHeight or check.x < 0 or check.y < 0:
+					continue
 				if map.get_at(check.vec2tupint()) == GRD:
 					# extra.append((check.x, check.y, (255,255,255), 100))
 					response +=  Vector(8 * cos(ti), 8 * sin(ti))
@@ -3796,13 +3785,15 @@ class PokeBall(PhysObj):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (0,0,200)
-		self.damp = 0.5
+		self.damp = 0.4
 		self.timer = 0
 		self.hold = None
-		self.health = 30
+		self.health = 10
 		self.name = None
 		self.angle = 0
-	def damage(self, value):
+	def damage(self, value, damageType=0):
+		if damageType == 1:
+			return
 		dmg = int(value * damageMult)
 		if dmg < 1:
 			dmg = 1
@@ -4714,7 +4705,7 @@ def checkWinners():
 		if captureTheFlag:
 			for team in teams:
 				if team.flagHolder:
-					team.points += 1
+					team.points += 1 + 3 #3 points bonus for surviving team
 					break
 		
 		end = True
@@ -4843,8 +4834,6 @@ def cycleWorms():
 			
 	deploying = False
 	sentring = False
-	
-	
 	
 	if captureTheFlag:
 		for team in teams:
@@ -5027,20 +5016,23 @@ def cloud_maneger():
 
 class Commentator:#(name, strings, color)
 	que = []
-	timer = 0
-	mode = 0 #0-wait, 1-render, 2-show
+	timer = 0 #0-wait, 1-render, 2-show
+	WAIT = 0
+	RENDER = 1
+	SHOW = 2
+	mode = 0
 	textSurf = None
 	name = None
 	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed")]
 	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " went to ort braude"), ("", " has divided by zero")]
 	stringsCrt = [("a jewel from the heavens!", ""), ("its raining crates, halelujah!", ""), (" ","")]
 	def step(self):
-		if self.mode == 0:
+		if self.mode == Commentator.WAIT:
 			if len(self.que) == 0:
 				return
 			else:
-				self.mode = 1
-		elif self.mode == 1:
+				self.mode = Commentator.RENDER
+		elif self.mode == Commentator.RENDER:
 			nameSurf = myfont.render(self.que[0][0], False, self.que[0][2])
 				
 			string1 = self.que[0][1][0]
@@ -5054,16 +5046,15 @@ class Commentator:#(name, strings, color)
 			self.textSurf.blit(stringSurf1, (0,0))
 			self.textSurf.blit(nameSurf, (stringSurf1.get_width(),0))
 			self.textSurf.blit(stringSurf2, (stringSurf1.get_width() + nameSurf.get_width() ,0))
-			# print(self.que)
 			self.que.pop(0)
-			self.mode = 2
+			self.mode = Commentator.SHOW
 			self.timer = 2*30 + 1*15
-		elif self.mode == 2:
+		elif self.mode == Commentator.SHOW:
 			win.blit(self.textSurf, (int(winWidth/2 - self.textSurf.get_width()/2), 10))
 			
 			self.timer -= 1
 			if self.timer == 0:
-				self.mode = 0
+				self.mode = Commentator.WAIT
 commentator = Commentator()
 
 def saveGame():
