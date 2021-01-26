@@ -93,6 +93,7 @@ if True:
 	pointsMode = False
 	useListMode = False
 	captureTheFlag = False
+	targetsMode = False
 	
 	# Multipliers
 	damageMult = 0.8
@@ -107,12 +108,9 @@ if True:
 webVer = True 
 
 # ideas:
-# SHOOTING TARGETS
-# world distorter, make the vortex effect on the ground permanently
 #
 # batarang
 # drone
-# sleep dart
 
 ################################################################################ Map
 if True:
@@ -805,7 +803,7 @@ class PhysObj:
 					response += ppos - testPos
 					collision = True
 			
-			r += pi /8
+			r += pi / 8
 		
 		magVel = self.vel.getMag()
 		
@@ -928,7 +926,7 @@ class Grenade (PhysObj):#2
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (0,100,0)
-		self.damp = 0.5
+		self.damp = 0.4
 		self.timer = 0
 	def deathResponse(self):
 		rad = 30
@@ -949,7 +947,7 @@ class Mortar (Grenade):#3
 		self.radius = 2
 		self.color = (0,50,0)
 		self.bounceBeforeDeath = -1
-		self.damp = 0.5
+		self.damp = 0.4
 		self.timer = 0
 	def deathResponse(self):
 		global camTrack
@@ -1040,6 +1038,7 @@ class Worm (PhysObj):
 		self.cpu = False
 		self.wormCollider = True
 		self.flagHolder = False
+		self.sleep = False
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
@@ -1156,6 +1155,9 @@ class Worm (PhysObj):
 			pygame.draw.rect(win, (0,0,0), (point2world((self.pos.x - width/2,10)), (width, height)))
 			num = myfont.render(str(int(-self.pos.y)), False, self.team.color)
 			win.blit(num, point2world((self.pos.x - num.get_width()/2, 12)))
+		if self.sleep:
+			if timeOverall % 30 == 0:
+				FloatingText(self.pos, "z", (0,0,0))
 	def __str__(self):
 		return self.nameStr
 	def __repr__(self):
@@ -1934,7 +1936,7 @@ class Mine(PhysObj):
 		self.pos = tup2vec(pos)
 		self.radius = 2
 		self.color = (52,66,71)
-		self.damp = 0.55
+		self.damp = 0.4
 		self.activated = False
 		self.alive = delay == 0
 		self.timer = delay
@@ -2057,7 +2059,7 @@ class HealthPack(PetrolCan):
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = False
-		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
+		#Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
 			return
@@ -2094,7 +2096,7 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = False
-		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
+		#Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 		self.box = choice([MOON_GRAVITY, DOUBLE_DAMAGE, AIM_AID, TELEPORT, SWITCH_WORMS, TIME_TRAVEL, JETPACK, "portal gun", "travel kit", "ender pearls"])
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
@@ -2147,8 +2149,10 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = False
-		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
-		self.box = choice(["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "mine strike", "raging bull", "electro boom", "pokeball", "green shell", "guided missile"])
+		weaponsInBox = ["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "raging bull", "electro boom", "pokeball", "green shell", "guided missile"]
+		if not mapClosed:
+			weaponsInBox .append("mine strike")
+		self.box = choice(weaponsInBox)
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
 			return
@@ -2214,7 +2218,7 @@ def fireAirstrike(pos):
 		f.megaBoom = False
 		f.boomAffected = False
 		f.radius = 1
-		f.boomRadius = 18
+		f.boomRadius = 19
 		if i == 2:
 			camTrack = f
 
@@ -2247,16 +2251,6 @@ def fireNapalmStrike(pos):
 		f.vel = Vector(cos(uniform(pi, 2*pi)), sin(uniform(pi, 2*pi))) * 0.5
 		if i == 2:
 			camTrack = f
-
-def fireBusterStrike(pos): # deleted
-	global camTrack
-	x = pos[0]
-	y = 5
-	BunkerBuster.mode = True
-	for i in range(3):
-		b = BunkerBuster((x - 40 + 40*i, y - i), (0,0), 0)
-		if i == 1:
-			camTrack = b
 
 class GravityMissile(Missile):
 	def deathResponse(self):
@@ -3183,7 +3177,7 @@ class Artillery(PhysObj):
 				self.dead = True
 
 class LongBow:
-	def __init__(self, pos, direction):
+	def __init__(self, pos, direction, sleep=False):
 		PhysObj._reg.append(self)
 		self.pos = vectorCopy(pos)
 		self.direction = direction
@@ -3193,7 +3187,7 @@ class LongBow:
 		self.stuck = None
 		self.color = (204, 102, 0)
 		self.ignore = None
-
+		self.sleep = sleep
 		self.triangle = [Vector(0,3), Vector(6,0), Vector(0,-3)]
 		for vec in self.triangle:
 			vec.rotate(self.direction.getAngle())
@@ -3226,7 +3220,8 @@ class LongBow:
 					if dist(testPos, worm.pos) < worm.radius + 1:
 						worm.vel += self.direction*4
 						worm.vel.y -= 2
-						worm.damage(randint(15,25))
+						worm.damage(randint(15,25) if self.sleep else randint(10,20))
+						if self.sleep: worm.sleep = True
 						self.destroy()
 						return
 			self.pos = ppos
@@ -4163,10 +4158,159 @@ class Flag(PhysObj):
 		pygame.draw.line(win, (51, 51, 0), point2world(self.pos + Vector(0, self.radius)), point2world(self.pos + Vector(0, -3 * self.radius)))
 		pygame.draw.rect(win, self.color, (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
 
+class ShootingTarget:
+	numTargets = 10
+	_reg = []
+	def __init__(self):
+		nonPhys.append(self)
+		ShootingTarget._reg.append(self)
+		self.pos = Vector(randint(10, mapWidth - 10), randint(10, mapHeight - 50))
+		self.radius = 10
+		pygame.draw.circle(map, GRD, self.pos, self.radius)
+		self.points = [self.pos + vectorFromAngle((i / 11) * 2 * pi) * (self.radius - 2) for i in range(10)]
+	def step(self):
+		for point in self.points:
+			if map.get_at(point.vec2tupint()) != GRD:
+				boom(self.pos, 15)
+				nonPhys.remove(self)
+				ShootingTarget._reg.remove(self)
+				currentTeam.points += 1
+				if len(ShootingTarget._reg) < ShootingTarget.numTargets:
+					ShootingTarget()
+				return
+		
+	def draw(self):
+		pygame.draw.circle(win, WHITE, point2world(self.pos), int(self.radius))
+		pygame.draw.circle(win, RED, point2world(self.pos), int(self.radius - 4))
+		pygame.draw.circle(win, WHITE, point2world(self.pos), int(self.radius - 8))
+
+class Distorter(Grenade):
+	def deathResponse(self):
+		global ground
+		width = 150
+		arr = []
+		for x in range(int(self.pos.x) - width//2, int(self.pos.x) + width//2):
+			for y in range(int(self.pos.y) - width//2, int(self.pos.y) + width//2):
+				if dist(Vector(x,y), self.pos) > width//2:
+					continue
+				rot = (dist(Vector(x,y), self.pos) - width//2) * 0.1
+				direction = Vector(x,y) - self.pos
+				direction.rotate(rot)
+				getAt = (self.pos + direction)
+				getAt = getAt.vec2tupint()
+				if getAt[0] < 0 or getAt[0] >= mapWidth or getAt[1] < 0 or getAt[1] >= mapHeight:
+					arr.append((0,0,0,0))
+				else:
+					pixelColor = ground.get_at(getAt)
+					arr.append(pixelColor)
+		# for worm in PhysObj._worms:
+			# if dist(self.pos, worm.pos) < width//2:
+				# rot = (dist(worm.pos, self.pos) - width//2) * 0.1
+				# direction = worm.pos - self.pos
+				# direction.rotate(rot)
+				# getAt = (self.pos + direction)
+				# worm.pos = getAt
+		for x in range(int(self.pos.x) - width//2, int(self.pos.x) + width//2):
+			for y in range(int(self.pos.y) - width//2, int(self.pos.y) + width//2):
+				if dist(Vector(x,y), self.pos) > width//2:
+					continue
+				color = arr.pop(0)
+				if len(color) == 4 and color[3] == 0:
+					map.set_at((x,y), SKY)
+				else:
+					map.set_at((x,y), GRD)
+				ground.set_at((x,y), color)
+
+raoning = False
+class Raon(PhysObj):
+	_raons = []
+	searching = 0
+	idle = 1
+	pointing = 2
+	advancing = 3
+	wait = 4
+	def __init__(self, pos, direction, energy):
+		Raon._raons.append(self)
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 3
+		self.color = (255, 204, 0)
+		self.damp = 0.2
+		self.target = None
+		self.state = Raon.wait
+		self.timer = 10
+		self.facing = RIGHT
+	def secondaryStep(self):
+		if self.state == Raon.wait:
+			self.timer -= 1
+			if self.timer == 0:
+				self.state = Raon.idle
+			else:
+				return
+		if not self.state == Raon.advancing:
+			self.search()
+		if self.target:
+			self.facing = RIGHT if self.target.pos.x > self.pos.x else LEFT
+		if self.state == Raon.pointing:
+			if dist(self.pos, self.target.pos) > 150:
+				self.state = Raon.idle
+				self.target = None
+			if self.proximity():
+				self.dead = True
+				Raon._raons.remove(self)
+		if self.state == Raon.advancing:
+			gameDistable()
+			moved = move(self)
+			self.timer -= 1
+			if self.timer == 0:
+				self.state = Raon.pointing
+			if self.proximity():
+				self.dead = True
+				Raon._raons.remove(self)
+	def deathResponse(self):
+		boom(self.pos, 25)
+	def proximity(self):
+		if dist(self.target.pos, self.pos) < self.radius + self.target.radius + 2:
+			return True
+		return False
+	def search(self):
+		closest = [PhysObj._worms[0], dist(self.pos, PhysObj._worms[0].pos)]
+		for worm in PhysObj._worms:
+			distance = dist(worm.pos, self.pos)
+			if distance < closest[1]:
+				closest = [worm, distance]
+		if closest[1] < 150:
+			self.target = closest[0]
+			self.state = Raon.pointing
+		else:
+			self.state = Raon.idle
+	def advance(self):
+		if not self.state == Raon.pointing:
+			return False
+		self.state = Raon.advancing
+		self.timer = 20
+		return True
+	def draw(self):
+		
+		#pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		pygame.draw.rect(win, self.color, (point2world(self.pos - Vector(self.radius, self.radius)), (self.radius * 2, self.radius * 2)))
+		pygame.draw.line(win, (255,0,0), point2world(self.pos + Vector(self.radius-1, self.radius)), point2world(self.pos + Vector(-self.radius, self.radius)))
+		pygame.draw.line(win, (0,0,0), point2world(self.pos + Vector(0, self.radius - 1)), point2world(self.pos + Vector(0, self.radius + 2)))
+		pygame.draw.line(win, (0,0,0), point2world(self.pos + Vector(-2, self.radius - 1)), point2world(self.pos + Vector(-2, self.radius + 2)))
+		pygame.draw.line(win, (0,0,0), point2world(self.pos + Vector(2, self.radius - 1)), point2world(self.pos + Vector(2, self.radius + 2)))
+		if self.state == Raon.pointing or self.state == Raon.advancing:
+			#pygame.draw.line(win, (255,0,0), point2world(self.pos), point2world(self.pos + (self.target.pos - self.pos)*0.5))
+			pygame.draw.circle(win, (255,255,255), point2world(self.pos + Vector(self.facing * self.radius/2,0)), 2)
+			win.set_at(point2world(self.pos + Vector(self.facing * (self.radius/2), -1)), (0,0,0))
+		if self.state == Raon.idle or self.state == Raon.wait:
+			pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
+			win.set_at(point2world(self.pos), (0,0,0))
+
 ################################################################################ Create World
 
 maps = []
-for i in range(1,89 + 1):
+for i in range(1,98 + 1):
 	string = "wormsMaps/wMap" + str(i) + ".png"
 	maps.append((string, 512))
 if True:
@@ -4205,7 +4349,6 @@ def createWorld():
 	mapImage = pygame.image.load(imageFile)
 	if not diggingMatch: createMapImage(heightNorm)
 	else: mapImage = None; createMapDigging()
-	randomStartingWeapons(1)
 	renderLand()
 
 import argparse
@@ -4224,6 +4367,7 @@ if True:
 	parser.add_argument("-used", "--used_list", type=bool, nargs="?", const=True, default=False, help="Activate Used List mode.")
 	parser.add_argument("-closed", "--closed_map", type=bool, nargs="?", const=True, default=False, help="Activate closed map mode.")
 	parser.add_argument("-ctf", "--ctf", type=bool, nargs='?', const=True, default=False, help="Activate captureTheFlag mode.")
+	parser.add_argument("-targets", "--targets", type=bool, nargs='?', const=True, default=False, help="Activate shooting targets mode.")
 	
 	args = parser.parse_args()
 	
@@ -4239,6 +4383,7 @@ if True:
 	useListMode = args.used_list
 	mapClosed = args.closed_map
 	captureTheFlag = args.ctf
+	targetsMode = args.targets
 
 # drawHealthBar = False
 # randomPlace = False
@@ -4258,10 +4403,12 @@ if True:
 	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES, True))
 	weapons.append(("gas grenade", CHARGABLE, 5, GRENADES, True))
 	weapons.append(("electric grenade", CHARGABLE, 3, GRENADES, True))
+	weapons.append(("raon launcher", CHARGABLE, 1, GRENADES, False))
 	weapons.append(("shotgun", GUN, 5, GUNS, False))
 	weapons.append(("minigun", GUN, 6, GUNS, False))
 	weapons.append(("gamma gun", GUN, 3, GUNS, False))
 	weapons.append(("long bow", GUN, 3, GUNS, False))
+	weapons.append(("sleeping dart", GUN, 0, GUNS, False))
 	weapons.append(("laser gun", GUN, 3, GUNS, False))
 	weapons.append(("portal gun", GUN, 0, GUNS, False))
 	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY, False))
@@ -4503,6 +4650,21 @@ def fire(weapon = None):
 	elif weapon == "ender pearl":
 		w = EndPearl(weaponOrigin, weaponDir, energy)
 		nextState = PLAYER_CONTROL_1
+	elif weapon == "sleeping dart":
+		decrease = False
+		if state == PLAYER_CONTROL_1:
+			shotCount = 3 # three shots
+		w0 = LongBow(weaponOrigin + weaponDir * 5, weaponDir, True) # fire
+		w0.ignore = objectUnderControl
+		shotCount -= 1
+		if shotCount > 0:
+			nextState = FIRE_MULTIPLE
+		if shotCount == 0:
+			decrease = True
+			nextState = PLAYER_CONTROL_2
+	elif weapon == "raon launcher":
+		w = Raon(weaponOrigin, weaponDir, energy * 0.95)
+		w = Raon(weaponOrigin, weaponDir, energy * 1.05)
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -4510,7 +4672,6 @@ def fire(weapon = None):
 	if w and avail:
 		availpos = getClosestPosAvail(w)
 		if availpos:
-			# addExtra(availpos, (255,0,0),100)
 			w.pos = availpos
 	
 	if decrease:
@@ -4673,7 +4834,7 @@ def teamHealthDraw():
 		if not value <= 0:
 			pygame.draw.rect(win, teams[i].color, (int(winWidth-50), int(10+i*3), int(value),2))
 		
-		if pointsMode or captureTheFlag:
+		if pointsMode or captureTheFlag or targetsMode:
 			if maxPoints == 0:
 				continue
 			value = (teams[i].points / maxPoints) * 40
@@ -4722,7 +4883,7 @@ def checkWinners():
 				# find winners:
 				teamsFinals = sorted(teams, key = lambda x: x.points)
 				winningTeam = teamsFinals[-1]
-			adding += "points: " + str(winningTeam.points) +"\n"
+			adding += "points: " + str(winningTeam.points)
 		
 		# won in capture the flag mode:
 		elif captureTheFlag:
@@ -4732,7 +4893,7 @@ def checkWinners():
 				winningTeam = teamsFinals[-1]
 			else:
 				winningTeam = teamsFinals[-1]
-			adding += "CTF mode" + "\n"
+			adding += "CTF mode"
 				
 		# regular win:
 		else:
@@ -4741,18 +4902,26 @@ def checkWinners():
 					winningTeam = team
 					if davidAndGoliathMode:
 						adding += "_dVg_"
-					adding += "\n"
-		
-		string = "time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name) \
-					 + "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
-		string += adding
-		
+					
+	if targetsMode:
+		if len(ShootingTarget._reg) == 0 and ShootingTarget.numTargets <= 0:
+			end = True
+			teamsFinals = sorted(teams, key = lambda x: x.points)
+			winningTeam = teamsFinals[-1]
+			adding = "Targets mode"
+	
 	if end:
+		string = "time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name)
+		if mostDamage[1]:
+			string += "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
+		string += adding + "\n"
+	
 		file = open('wormsRecord.txt', 'a')
 		file.write(string)
 		file.close()
 		
 		commentator.que.append((winningTeam.name, ("taem "," won!"), winningTeam.color))
+		print("team", winningTeam.name, "won!")
 		if len(winningTeam.worms) > 0:
 			camTrack = winningTeam.worms[0]
 		nextState = WIN
@@ -4761,7 +4930,7 @@ def checkWinners():
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn, currentWeapon
-	global deploying, sentring, deployPacks, showTarget, switchingWorms
+	global deploying, sentring, deployPacks, showTarget, switchingWorms, raoning
 
 	# reset special effects:
 	global globalGravity
@@ -4803,6 +4972,7 @@ def cycleWorms():
 		deploying = True
 		roundCounter -= 1
 		nextState = WAIT_STABLE
+		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 		for i in range(packMult):
 			w = deployPack(choice([HEALTH_PACK,UTILITY_PACK, WEAPON_PACK]))
 			camTrack = w
@@ -4831,7 +5001,25 @@ def cycleWorms():
 			roundCounter -= 1
 			nextState = WAIT_STABLE
 			return
-			
+
+	# controlling raons:
+	isTherePointing = False
+	if len(Raon._raons) > 0 and not raoning:
+		for raon in Raon._raons:
+			if raon.state == Raon.pointing:
+				isTherePointing = True
+				break
+		if isTherePointing:
+			for raon in Raon._raons:
+				moved = raon.advance()
+				if moved:
+					camTrack = raon
+			raoning = True
+			roundCounter -= 1
+			nextState = WAIT_STABLE
+			return
+		
+	raoning = False
 	deploying = False
 	sentring = False
 	
@@ -4841,11 +5029,15 @@ def cycleWorms():
 				team.points += 1
 				break
 	
-	# update weapons delay
+	# update weapons delay (and targets)
 	if roundCounter % totalTeams == 0:
 		for wRect in wRects:
 			if not wRect[5] == 0:
 				wRect[5] -= 1
+		if targetsMode:
+			ShootingTarget.numTargets -= 1
+			if ShootingTarget.numTargets == 0:
+				commentator.que.append(("", ("final targets round",""), (0,0,0)))
 	
 	# update debries
 	Debrie._debries = []
@@ -4881,10 +5073,15 @@ def cycleWorms():
 		# sort worms by health for drawing purpuses
 		PhysObj._reg.sort(key = lambda worm: worm.health if worm.health else 0)
 		
-		# actual worm switch
-		w = currentTeam.worms.pop(0)
-		
-		currentTeam.worms.append(w)
+		# actual worm switch:
+		switched = False
+		while not switched:
+			w = currentTeam.worms.pop(0)
+			currentTeam.worms.append(w)
+			if w.sleep:
+				w.sleep = False
+				continue
+			switched = True
 	
 		objectUnderControl = w
 		camTrack = objectUnderControl
@@ -5008,7 +5205,7 @@ class Cloud:
 			del self
 	def draw(self):
 		win.blit(imageCloud, (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)))
-		
+
 def cloud_maneger():
 	if len(Cloud._reg) < 8 and randint(0,10) == 1:
 		pos = Vector(choice([camPos.x - Cloud.cWidth - 100, camPos.x + winWidth + 100]), randint(5, mapHeight - 150))
@@ -5122,12 +5319,15 @@ def loadGame():
 			continue
 		if checkingForTeam:
 			pass
-			
+
 def randomStartingWeapons(amount):
+	startingWeapons = ["holy grenade", "gemino mine", "bee hive", "electro boom", "pokeball", "green shell", "guided missile"]
+	if not mapClosed:
+		startingWeapons.append("mine strike")
 	if unlimitedMode: return
 	for i in range(amount):
 		for team in teams:
-			effect = choice(["holy grenade", "gemino mine", "bee hive", "mine strike", "electro boom", "pokeball", "green shell", "guided missile"])
+			effect = choice(startingWeapons)
 			team.weaponCounter[weaponDict[effect]] += 1
 			if randint(0,2) >= 1:
 				effect = choice([MOON_GRAVITY, TELEPORT, JETPACK, AIM_AID, SWITCH_WORMS])
@@ -5251,6 +5451,8 @@ def inUsedList(string):
 			break
 	return used
 
+damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
+
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -5299,10 +5501,19 @@ def stateMachine():
 		if not diggingMatch:
 			placePlants(randint(0,2))
 		
+		# targets:
+		if targetsMode:
+			for i in range(ShootingTarget.numTargets):
+				ShootingTarget()
+		
 		if diggingMatch:
 			placeMines(80)
 			moreDigging()
 			mapClosed = True
+			
+		# give random legendary starting weapons:
+		randomStartingWeapons(1)
+			
 		if davidAndGoliathMode:
 			global initialHealth
 			for team in teams:
@@ -5615,6 +5826,11 @@ if __name__ == "__main__":
 				# testing mainly
 				if state == PLAYER_CONTROL_1:
 					mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+					# for worm in PhysObj._worms:
+						# if dist(mouse, worm.pos) < 10:
+							# print(worm.nameStr, "sleep")
+							# worm.sleep = True
+							# break
 					# p = Path()
 					# print("test")
 					pass
@@ -5967,7 +6183,10 @@ if __name__ == "__main__":
 				win.blit(killList[i], (5, winHeight - 14 - i * 8))
 		
 		# debug:
-		win.blit(myfont.render(str(int(damageThisTurn)), False, HUDColor), ((int(5), int(winHeight-6))))
+		if damageText[0] != damageThisTurn:
+			damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
+		win.blit(damageText[1], ((int(5), int(winHeight-6))))
+		
 		if state == PLACING_WORMS:
 			win.blit(myfont.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
 		
