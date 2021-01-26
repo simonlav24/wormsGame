@@ -28,6 +28,7 @@ game development practice in python for educational purposes and fun. pygame req
 - STICKY BOMB - chargeable, a sticky grenade.
 - GAS GRENADE - chargeable, emits a toxic gas before exploding.
 - ELECTRIC GRENADE - chargeable, electrifying nearby worms. bouncy.
+- RAON LAUNCHER - chargeable, shooting two raons - small proximity mines that moving closer to target every turn.
 
  > Guns
 - SHOTGUN - fires shotgun. 3 rounds.
