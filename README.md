@@ -34,8 +34,7 @@ game development practice in python for educational purposes and fun. pygame req
 - SHOTGUN - fires shotgun. 3 rounds.
 - MINIGUN - fires minigun.
 - GAMMA GUN - fires gamma radiation makes worms sick. can pass through terrain.
-- LONG BOW - shoots arrows. 3 arrows.
-- SLEEPING DART - makes worms sleep. sleeping worms will lose their next turn. 3 darts.
+- LONG BOW - shoots arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
 - LASER GUN - destructive laser destroy destructively every destructive thing on its way.
 - PORTAL GUN - the cake is a deception. obtainable by utility crate.
 
