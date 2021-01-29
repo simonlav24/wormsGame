@@ -165,11 +165,14 @@ def createMapImage(heightNorm = None):
 	mask = pygame.Surface((mapWidth, mapHeight)).convert_alpha() #new
 	
 	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
-	
+	global lstepmax
+	lstepmax = mapWidth//10 + mapWidth//10 + wormsPerTeam * len(teams) + 2
 	for x in range(mapWidth):
 		for y in range(mapHeight):
 			if not mapImage.get_at((x, y)) == (0,0,0):
 				map.set_at((x, y), GRD)
+		if x % 10 == 0:
+			lstepper()#
 
 def createMapDigging():
 	global map, wormCol, extraCol
@@ -193,13 +196,16 @@ def drawLand():
 		win.blit(mask, (-int(camPos.x), -int(camPos.y)))
 
 def renderLand():
+	global lstep
 	ground.fill(SKY)
 	if mapImage:
 		for x in range(0,mapWidth):
 			for y in range(0,mapHeight):
 				if map.get_at((x,y)) == GRD:
 					ground.fill(mapImage.get_at((x,y)), ((x,y), (1, 1)))
-		
+			if x % 10 == 0:
+				lstepper()#
+	
 	else:
 		for x in range(0,mapWidth):
 			for y in range(0,mapHeight):
@@ -269,30 +275,30 @@ class Blast:
 	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
 	def __init__(self, pos, radius, smoke = 30):
 		nonPhys.append(self)
-		self.time = 0
+		self.timeCounter = 0
 		self.pos = pos
 		self.radius = radius
 		self.rad = 0
-		self.time = 0
+		self.timeCounter = 0
 		self.smoke = smoke
 	def step(self):
 		if randint(0,self.smoke) == 0:
 			Smoke(self.pos)
-		self.time += 0.5
-		self.rad = 1.359 * self.time * exp(- 0.5 * self.time) * self.radius
+		self.timeCounter += 0.5
+		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
 		if darkness:
-			color = self._color[int(max(min(self.time, 5), 0))]
+			color = self._color[int(max(min(self.timeCounter, 5), 0))]
 			lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
-		if self.time >= 10:
+		if self.timeCounter >= 10:
 			nonPhys.remove(self)
 			del self
 	def draw(self):
-		# pygame.draw.circle(win, self._color[int(max(min(self.time, 5), 0))], point2world(self.pos), int(self.rad))
-		# pygame.draw.circle(win, self._color[int(max(min(self.time-1,5), 0))], point2world(self.pos), int(self.rad*0.6))
-		# pygame.draw.circle(win, self._color[int(max(min(self.time-2,5), 0))], point2world(self.pos), int(self.rad*0.3))
-		layersCircles[0].append((self._color[int(max(min(self.time, 5), 0))], self.pos, self.rad))
-		layersCircles[1].append((self._color[int(max(min(self.time-1, 5), 0))], self.pos, self.rad*0.6))
-		layersCircles[2].append((self._color[int(max(min(self.time-2, 5), 0))], self.pos, self.rad*0.3))
+		# pygame.draw.circle(win, self._color[int(max(min(self.timeCounter, 5), 0))], point2world(self.pos), int(self.rad))
+		# pygame.draw.circle(win, self._color[int(max(min(self.timeCounter-1,5), 0))], point2world(self.pos), int(self.rad*0.6))
+		# pygame.draw.circle(win, self._color[int(max(min(self.timeCounter-2,5), 0))], point2world(self.pos), int(self.rad*0.3))
+		layersCircles[0].append((self._color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
+		layersCircles[1].append((self._color[int(max(min(self.timeCounter-1, 5), 0))], self.pos, self.rad*0.6))
+		layersCircles[2].append((self._color[int(max(min(self.timeCounter-2, 5), 0))], self.pos, self.rad*0.3))
 
 class Explossion:
 	def __init__(self, pos, radius):	
@@ -300,13 +306,13 @@ class Explossion:
 		self.pos = pos
 		self.radius = radius
 		self.times = radius//5
-		self.time = 0
+		self.timeCounter = 0
 		# for i in range(int(self.times)):
 			# Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7)) 
 	def step(self):
 		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7))
-		self.time += 1
-		if self.time == self.times:
+		self.timeCounter += 1
+		if self.timeCounter == self.times:
 			nonPhys.remove(self)
 			del self
 	def draw(self):
@@ -669,17 +675,17 @@ def whiten(color):
 	return (r,g,b)
 
 ################################################################################ Objects
-time = turnTime
+timeCounter = turnTime
 timeOverall = 0
 def timeStep():
-	global time
-	if time == 0:
-		# time = turnTime
+	global timeCounter
+	if timeCounter == 0:
+		# timeCounter = turnTime
 		timeOnTimer()
-	if not time <= 0:
-		time -= 1
+	if not timeCounter <= 0:
+		timeCounter -= 1
 def timeOnTimer():
-	# onTime time end time
+	# onTime timeCounter end timeCounter
 	global state, nextState
 	if state == PLAYER_CONTROL_1:
 		state = WAIT_STABLE
@@ -695,13 +701,13 @@ def timeOnTimer():
 	if objectUnderControl.parachuting:
 		objectUnderControl.toggleParachute()
 def timeDraw():
-	win.blit(myfont.render(str(time), False, HUDColor) , ((int(10), int(8))))
+	win.blit(myfont.render(str(timeCounter), False, HUDColor) , ((int(10), int(8))))
 def timeReset():
-	global time
-	time = turnTime
+	global timeCounter
+	timeCounter = turnTime
 def timeRemaining(amount):
-	global time
-	time = amount
+	global timeCounter
+	timeCounter = amount
 
 nonPhys = []
 class FloatingText: #pos, text, color
@@ -709,13 +715,13 @@ class FloatingText: #pos, text, color
 		nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.surf = myfont.render(str(text), False, color)
-		self.time = 0
+		self.timeCounter = 0
 		self.phase = uniform(0,2*pi)
 	def step(self):
-		self.time += 1
+		self.timeCounter += 1
 		self.pos.y -= 0.5
 		self.pos.x += 0.25 * sin(0.1 * timeOverall + self.phase)
-		if self.time == 50:
+		if self.timeCounter == 50:
 			nonPhys.remove(self)
 			del self
 	def draw(self):
@@ -1782,12 +1788,12 @@ class Smoke:
 			self.vel = Vector(0,0)
 		self.stable = False
 		self.boomAffected = False
-		self.time = 0
+		self.timeCounter = 0
 	def draw(self):
 		pygame.gfxdraw.filled_circle(win, int(self.pos.x - camPos.x), int(self.pos.y - camPos.y), self.radius, self.color)
 	def step(self):
-		self.time += 1
-		if self.time % 5 == 0:
+		self.timeCounter += 1
+		if self.timeCounter % 5 == 0:
 			self.radius -= 1
 			if self.radius == 0:
 				nonPhys.remove(self)
@@ -2004,15 +2010,15 @@ class SickGas:
 		self.vel = Vector(0,0)
 		self.stable = False
 		self.boomAffected = False
-		self.time = 0
+		self.timeCounter = 0
 		self.sickness = sickness
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
 			return
 		pygame.gfxdraw.filled_circle(win, int(self.pos.x - camPos.x), int(self.pos.y - camPos.y), self.radius, self.color)
 	def step(self):
-		self.time += 1
-		if self.time % 8 == 0:
+		self.timeCounter += 1
+		if self.timeCounter % 8 == 0:
 			self.radius -= 1
 			if self.radius == 0:
 				nonPhys.remove(self)
@@ -2271,7 +2277,7 @@ def fireGammaGun(start, direction):
 	hitted = []
 	normal = Vector(-direction.y, direction.x).normalize()
 	for t in range(5,500):
-		testPos = start + direction * t + normal * 1.5 * sin(t * 0.6)
+		testPos = start + direction * t + normal * 1.5 * sin(t * 0.6) * (t + 1)/70
 		extra.append((testPos.x, testPos.y, (0,255,255), 10))
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
@@ -2280,7 +2286,7 @@ def fireGammaGun(start, direction):
 		for worm in PhysObj._worms:
 			if dist(testPos, worm.pos) < worm.radius and not worm in hitted:
 				worm.damage(int(10/damageMult)+1)
-				if randint(0,50) == 1:
+				if randint(0,20) == 1:
 					worm.sicken(2)
 				else:
 					worm.sicken()
@@ -2398,15 +2404,15 @@ class Plant:
 		self.stable = False
 		self.boomAffected = False
 		self.radius = radius
-		self.time = 0
+		self.timeCounter = 0
 		self.green = 135
 		self.venus = venus
 	def step(self):
 		self.pos += vectorFromAngle(self.angle + uniform(-1,1))
 		if randint(1,100) <= 2 and not self.venus:
 			Plant(self.pos, self.radius, self.angle + choice([pi/3, -pi/3]))
-		self.time += 1
-		if self.time % 10 == 0:
+		self.timeCounter += 1
+		if self.timeCounter % 10 == 0:
 			self.radius -= 1
 		self.green += randint(-5,5)
 		if self.green > 255:
@@ -2787,6 +2793,7 @@ class ElectricGrenade(PhysObj):
 		self.damp = 0.6
 		self.timer = 0
 		self.worms = []
+		self.raons = []
 		self.electrifying = False
 		self.emptyCounter = 0
 		self.lifespan = 300
@@ -2803,10 +2810,14 @@ class ElectricGrenade(PhysObj):
 		if self.electrifying:
 			self.stable = False
 			self.worms = []
+			self.raons = []
 			for worm in PhysObj._worms:
 				if dist(self.pos, worm.pos) < 100:
 					self.worms.append(worm)
-			if len(self.worms) == 0:
+			for raon in Raon._raons:
+				if dist(self.pos, raon.pos) < 100:
+					self.raons.append(raon)
+			if len(self.worms) == 0 and len(self.raons) == 0:
 				self.emptyCounter += 1
 				if self.emptyCounter == 30:
 					self.dead = True
@@ -2819,10 +2830,15 @@ class ElectricGrenade(PhysObj):
 				worm.vel -= Vector(a(self.pos.x - worm.pos.x)*uniform(1.2,2.2), uniform(1.2,3.2))
 			if worm.health <= 0:
 				self.worms.remove(worm)
+		for raon in self.raons:
+			if randint(1,100) < 5:
+				raon.electrified()
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		for worm in self.worms:
 			drawLightning(self.pos, worm.pos)
+		for raon in self.raons:
+			drawLightning(self.pos, raon.pos)
 
 class HomingMissile(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -2952,7 +2968,7 @@ class TimeAgent:
 		self.stable = False
 		self.boomAffected = False
 		self.positions = timeTravelPositions
-		self.time = 0
+		self.timeCounter = 0
 		self.pos = self.positions[0]
 		self.color = timeTravelList["color"]
 		self.health = timeTravelList["health"]
@@ -2974,7 +2990,7 @@ class TimeAgent:
 		if len(self.positions) <= self.stepsForEnergy:
 			self.energy += 0.05
 			
-		self.time += 1
+		self.timeCounter += 1
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos), 3+1)
 		win.blit(self.nameSurf , ((int(self.pos[0]) - int(camPos.x) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(camPos.y) - 21)))
@@ -2995,20 +3011,20 @@ timeTravelPositions = []
 timeTravelList = {}
 timeTravelFire = False
 def timeTravelInitiate():
-	global timeTravel, timeTravelList, time
+	global timeTravel, timeTravelList, timeCounter
 	timeTravel = True
 	timeTravelList = {}
 	timeTravelList["color"] = objectUnderControl.color
 	timeTravelList["name"] = objectUnderControl.name
 	timeTravelList["health"] = objectUnderControl.health
 	timeTravelList["initial pos"] = vectorCopy(objectUnderControl.pos)
-	timeTravelList["time in turn"] = time
+	timeTravelList["timeCounter in turn"] = timeCounter
 	timeTravelList["jet pack"] = jetPackFuel
 def timeTravelRecord():
 	timeTravelPositions.append(objectUnderControl.pos.vec2tup())
 def timeTravelPlay():
-	global timeTravel, time, timeTravelList, jetPackFuel
-	time = timeTravelList["time in turn"]
+	global timeTravel, timeCounter, timeTravelList, jetPackFuel
+	timeCounter = timeTravelList["timeCounter in turn"]
 	timeTravel = False
 	timeTravelList["weapon"] = currentWeapon
 	timeTravelList["weaponOrigin"] = vectorCopy(objectUnderControl.pos)
@@ -3177,6 +3193,7 @@ class Artillery(PhysObj):
 				self.dead = True
 
 class LongBow:
+	_sleep = False #0-regular 1-sleep
 	def __init__(self, pos, direction, sleep=False):
 		PhysObj._reg.append(self)
 		self.pos = vectorCopy(pos)
@@ -4253,7 +4270,7 @@ class Raon(PhysObj):
 		if self.target:
 			self.facing = RIGHT if self.target.pos.x > self.pos.x else LEFT
 		if self.state == Raon.pointing:
-			if dist(self.pos, self.target.pos) > 150:
+			if dist(self.pos, self.target.pos) > 100:
 				self.state = Raon.idle
 				self.target = None
 			if self.proximity():
@@ -4280,7 +4297,7 @@ class Raon(PhysObj):
 			distance = dist(worm.pos, self.pos)
 			if distance < closest[1]:
 				closest = [worm, distance]
-		if closest[1] < 150:
+		if closest[1] < 100:
 			self.target = closest[0]
 			self.state = Raon.pointing
 		else:
@@ -4291,8 +4308,10 @@ class Raon(PhysObj):
 		self.state = Raon.advancing
 		self.timer = 20
 		return True
+	def electrified(self):
+		self.dead = True
+		Raon._raons.remove(self)
 	def draw(self):
-		
 		#pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		pygame.draw.rect(win, self.color, (point2world(self.pos - Vector(self.radius, self.radius)), (self.radius * 2, self.radius * 2)))
 		pygame.draw.line(win, (255,0,0), point2world(self.pos + Vector(self.radius-1, self.radius)), point2world(self.pos + Vector(-self.radius, self.radius)))
@@ -4307,10 +4326,35 @@ class Raon(PhysObj):
 			pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 			win.set_at(point2world(self.pos), (0,0,0))
 
+class cater:
+	def __init__(self, pos):
+		self.pos1 = Vector(pos[0], pos[1])
+		self.radius = 20
+		self.pos2 = Vector(pos[0] + self.radius, pos[1])
+		nonPhys.append(self)
+		self.mode = 1
+		self.angle = 0.1
+	def step(self):
+		if self.mode == 1:
+			direction = self.pos2 - self.pos1
+			direction.rotate(self.angle)
+			self.pos2 = self.pos1 + direction
+			if map.get_at(self.pos2.vec2tupint()) == GRD:
+				self.mode = 2
+		if self.mode == 2:
+			direction = self.pos1 - self.pos2
+			direction.rotate(self.angle)
+			self.pos1 = self.pos2 + direction
+			if map.get_at(self.pos1.vec2tupint()) == GRD:
+				self.mode = 1
+	def draw(self):
+		pygame.draw.circle(win, (0,255,0), point2world(self.pos1), 3)
+		pygame.draw.circle(win, (0,255,0), point2world(self.pos2), 3)
+		
 ################################################################################ Create World
 
 maps = []
-for i in range(1,98 + 1):
+for i in range(1,101 + 1):
 	string = "wormsMaps/wMap" + str(i) + ".png"
 	maps.append((string, 512))
 if True:
@@ -4403,12 +4447,11 @@ if True:
 	weapons.append(("sticky bomb", CHARGABLE, 3, GRENADES, True))
 	weapons.append(("gas grenade", CHARGABLE, 5, GRENADES, True))
 	weapons.append(("electric grenade", CHARGABLE, 3, GRENADES, True))
-	weapons.append(("raon launcher", CHARGABLE, 1, GRENADES, False))
+	weapons.append(("raon launcher", CHARGABLE, 2, GRENADES, False))
 	weapons.append(("shotgun", GUN, 5, GUNS, False))
 	weapons.append(("minigun", GUN, 6, GUNS, False))
 	weapons.append(("gamma gun", GUN, 3, GUNS, False))
 	weapons.append(("long bow", GUN, 3, GUNS, False))
-	weapons.append(("sleeping dart", GUN, 0, GUNS, False))
 	weapons.append(("laser gun", GUN, 3, GUNS, False))
 	weapons.append(("portal gun", GUN, 0, GUNS, False))
 	weapons.append(("petrol bomb", CHARGABLE, 5, FIREY, False))
@@ -4574,7 +4617,7 @@ def fire(weapon = None):
 		decrease = False
 		if state == PLAYER_CONTROL_1:
 			shotCount = 3 # three shots
-		w0 = LongBow(weaponOrigin + weaponDir * 5, weaponDir) # fire
+		w0 = LongBow(weaponOrigin + weaponDir * 5, weaponDir, LongBow._sleep) # fire
 		w0.ignore = objectUnderControl
 		shotCount -= 1
 		if shotCount > 0:
@@ -4650,21 +4693,12 @@ def fire(weapon = None):
 	elif weapon == "ender pearl":
 		w = EndPearl(weaponOrigin, weaponDir, energy)
 		nextState = PLAYER_CONTROL_1
-	elif weapon == "sleeping dart":
-		decrease = False
-		if state == PLAYER_CONTROL_1:
-			shotCount = 3 # three shots
-		w0 = LongBow(weaponOrigin + weaponDir * 5, weaponDir, True) # fire
-		w0.ignore = objectUnderControl
-		shotCount -= 1
-		if shotCount > 0:
-			nextState = FIRE_MULTIPLE
-		if shotCount == 0:
-			decrease = True
-			nextState = PLAYER_CONTROL_2
 	elif weapon == "raon launcher":
 		w = Raon(weaponOrigin, weaponDir, energy * 0.95)
 		w = Raon(weaponOrigin, weaponDir, energy * 1.05)
+		if randint(0, 10) == 0:
+			w = Raon(weaponOrigin, weaponDir, energy * 1.08)
+			w = Raon(weaponOrigin, weaponDir, energy * 0.92)
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -4911,7 +4945,7 @@ def checkWinners():
 			adding = "Targets mode"
 	
 	if end:
-		string = "time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name)
+		string = "timeCounter taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name)
 		if mostDamage[1]:
 			string += "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
 		string += adding + "\n"
@@ -5110,6 +5144,7 @@ def isGroundAround(place, radius = 5):
 	return False
 
 def randomPlacing(wormsPerTeam):
+	global lstep
 	for i in range(wormsPerTeam * len(teams)):
 		if fortsMode:
 			place = giveGoodPlace(i)
@@ -5121,6 +5156,7 @@ def randomPlacing(wormsPerTeam):
 		global teamChoser
 		teams[teamChoser].addWorm(place.vec2tup())
 		teamChoser = (teamChoser + 1) % totalTeams
+		lstepper()#
 	global state
 	state = nextState
 
@@ -5293,7 +5329,7 @@ def saveGame():
 	file.write(str(mostDamage) + "\n")
 	file.write(str(damageThisTurn) + "\n")
 	file.write(str(timeOverall) + "\n")
-	file.write(str(time) + "\n")
+	file.write(str(timeCounter) + "\n")
 	
 	file.close()
 
@@ -5453,6 +5489,20 @@ def inUsedList(string):
 
 damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 
+lstep = 0
+lstepmax = 1
+def lstepper():
+	global lstep
+	lstep += 1
+	# win.fill((0,0,0))
+	# win.blit(loadingSurf, (winWidth/2 - loadingSurf.get_width()/2, winHeight/2 - loadingSurf.get_height()/2))
+	pos = (winWidth/2 - loadingSurf.get_width()/2, winHeight/2 - loadingSurf.get_height()/2)
+	width = loadingSurf.get_width()
+	height = loadingSurf.get_height()
+	pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((lstep/lstepmax)*width, height)))
+	screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
+	pygame.display.update()
+
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -5513,7 +5563,7 @@ def stateMachine():
 			
 		# give random legendary starting weapons:
 		randomStartingWeapons(1)
-			
+		
 		if davidAndGoliathMode:
 			global initialHealth
 			for team in teams:
@@ -5553,7 +5603,6 @@ def stateMachine():
 		
 		objectUnderControl = w
 		camTrack = w
-		
 		timeReset()
 		calculateTeamHealth()
 		nextState = PLAYER_CONTROL_1
@@ -5826,6 +5875,7 @@ if __name__ == "__main__":
 				# testing mainly
 				if state == PLAYER_CONTROL_1:
 					mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+					cater(mouse)
 					# for worm in PhysObj._worms:
 						# if dist(mouse, worm.pos) < 10:
 							# print(worm.nameStr, "sleep")
@@ -5948,6 +5998,12 @@ if __name__ == "__main__":
 							FloatingText(objectUnderControl.pos + Vector(0,-5), "venus fly trap", (20,20,20))
 						else:
 							FloatingText(objectUnderControl.pos + Vector(0,-5), "plant mode", (20,20,20))
+					elif state == PLAYER_CONTROL_1 and currentWeapon == "long bow":
+						LongBow._sleep = not LongBow._sleep
+						if LongBow._sleep:
+							FloatingText(objectUnderControl.pos + Vector(0,-5), "sleeping", (20,20,20))
+						else:
+							FloatingText(objectUnderControl.pos + Vector(0,-5), "regular", (20,20,20))
 					elif state == PLAYER_CONTROL_1 and weapons[weaponDict[currentWeapon]][4]:
 						fuseTime += 30
 						if fuseTime > 120:
@@ -5966,6 +6022,7 @@ if __name__ == "__main__":
 						airStrikeDir *= -1
 					elif (state == PLAYER_CONTROL_1 or state == FIRE_MULTIPLE) and switchingWorms:
 						switchWorms()
+					
 				if event.key == pygame.K_t:
 					# checkPotential(objectUnderControl, 100)
 					# for i in range(2500):
@@ -6192,7 +6249,13 @@ if __name__ == "__main__":
 		
 		if state in [RESET, GENERATE_TERRAIN] or (state in [PLACING_WORMS, CHOOSE_STARTER] and randomPlace):
 			win.fill((0,0,0))
-			win.blit(loadingSurf, (winWidth/2 - loadingSurf.get_width()/2, winHeight/2 - loadingSurf.get_height()/2))
+			pos = (winWidth/2 - loadingSurf.get_width()/2, winHeight/2 - loadingSurf.get_height()/2)
+			win.blit(loadingSurf, pos)
+			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0] + loadingSurf.get_width(), pos[1] + 20))
+			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + loadingSurf.get_height() + 20), (pos[0] + loadingSurf.get_width(), pos[1] + loadingSurf.get_height() + 20))
+			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0], pos[1] + loadingSurf.get_height() + 20))
+			pygame.draw.line(win, (255,255,255), (pos[0] + loadingSurf.get_width(), pos[1] + 20), (pos[0] + loadingSurf.get_width(), pos[1] + loadingSurf.get_height() + 20))
+			pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((lstep/lstepmax)*loadingSurf.get_width(), loadingSurf.get_height())))
 		
 		# reset actions
 		actionMove = False
