@@ -94,6 +94,7 @@ if True:
 	windMult = 1.5
 	radiusMult = 1
 	packMult = 1
+	dampMult = 1.5
 	
 	text = ""
 	HUDColor = BLACK
@@ -103,6 +104,8 @@ webVer = True
 #
 # batarang
 # drone
+
+# bug in venus when ate someone and there is another one right there it coments about him multiple times
 
 ################################################################################ Map
 if True:
@@ -135,6 +138,7 @@ if True:
 	aimAid = False
 	switchingWorms = False
 	timeTravel = False
+	megaTrigger = False
 	jetPackFuel = 100
 
 def createMapImage(heightNorm = None):
@@ -823,13 +827,18 @@ class PhysObj:
 			if not self.bounceBeforeDeath == 1:
 				
 				# damp formula 1 - logarithmic
-				dampening = max(self.damp, self.damp * log(magVel))
+				dampening = max(self.damp, self.damp * log(magVel) if magVel > 0.001 else 1)
 				dampening = min(dampening, min(self.damp * 2, 0.9))
-				# max speed recorded ~ 25
 				newVel = ((response * -2 * fdot) + self.vel) * dampening
+				
+				# legacy formula
+				newVel = ((response * -2 * fdot) + self.vel) * self.damp * dampMult
+				
 				# if newVel.getMag() > magVel:
 					# newVel.setMag(magVel)
+					
 				self.vel = newVel
+				# max speed recorded ~ 25
 			
 			if self.bounceBeforeDeath > 0:
 				self.bounceBeforeDeath -= 1
@@ -903,7 +912,7 @@ class Missile (PhysObj):#1
 		self.bounceBeforeDeath = 1
 		self.windAffected = True
 		self.boomRadius = 28
-		self.megaBoom = False
+		self.megaBoom = False or megaTrigger
 		if randint(0,50) == 1:
 			self.megaBoom = True
 	def deathResponse(self):
@@ -933,7 +942,7 @@ class Grenade (PhysObj):#2
 		self.timer = 0
 	def deathResponse(self):
 		rad = 30
-		if randint(0,50) == 1:
+		if randint(0,50) == 1 or megaTrigger:
 			rad *= 2
 		boom(self.pos, rad)
 	def secondaryStep(self):
@@ -956,7 +965,7 @@ class Mortar (Grenade):#3
 		global camTrack
 		megaBoom = False
 		boom(self.pos, 25)
-		if randint(0,50) == 1:
+		if randint(0,50) == 1 or megaTrigger:
 			megaBoom = True
 		if megaBoom:
 				for j in range(10):
@@ -998,7 +1007,7 @@ class PetrolBomb(PhysObj):#4
 		self.angle -= self.vel.x*4
 	def deathResponse(self):
 		boom(self.pos, 15)
-		if randint(0,50) == 1:
+		if randint(0,50) == 1 or megaTrigger:
 			for i in range(80):
 				s = Fire(self.pos, 5)
 				s.vel = Vector(cos(2*pi*i/80), sin(2*pi*i/80))*uniform(3,4)
@@ -1127,7 +1136,7 @@ class Worm (PhysObj):
 			if not self == objectUnderControl:
 				if not sentring and not raoning and not self in currentTeam.worms:
 					damageThisTurn += dmg
-			if captureTheFlag:
+			if captureTheFlag and damageType != 2:
 				if self.flagHolder:
 					self.team.flagHolder = False
 					self.flagHolder = False
@@ -1159,12 +1168,9 @@ class Worm (PhysObj):
 			pygame.draw.rect(win, (0,0,0), (point2world((self.pos.x - width/2,10)), (width, height)))
 			num = myfont.render(str(int(-self.pos.y)), False, self.team.color)
 			win.blit(num, point2world((self.pos.x - num.get_width()/2, 12)))
-		if self.sleep:
+		if self.sleep and self.alive:
 			if timeOverall % 30 == 0:
 				FloatingText(self.pos, "z", (0,0,0))
-		
-		
-		
 	def __str__(self):
 		return self.nameStr
 	def __repr__(self):
@@ -2224,7 +2230,7 @@ def fireAirstrike(pos):
 
 def fireMineStrike(pos):
 	megaBoom = False
-	if randint(0,50) == 1:
+	if randint(0,50) == 1 or megaTrigger:
 		megaBoom = True
 	global camTrack
 	x = pos[0]
@@ -3150,7 +3156,7 @@ class Artillery(PhysObj):
 		self.bombing = False
 		self.boomAffected = False
 		self.booms = randint(3,5)
-		self.boomCount = 20 if randint(0,50) == 0 else self.booms
+		self.boomCount = 20 if randint(0,50) == 0 or megaTrigger else self.booms
 	def draw(self):
 		surf = pygame.transform.rotate(self.surf, self.angle)
 		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
@@ -3590,8 +3596,19 @@ class Venus:
 		self.p2 = self.pos + self.d2 * self.gap
 		
 		if self.mode == Venus.grow:
+			# check if can eat a worm from here on first round:
+			global roundCounter
+			if roundCounter == 0 and self.scale == 0:
+				pos = self.pos + self.direction * 25
+				for worm in PhysObj._worms:
+					if dist(worm.pos, pos) <= 25:
+						nonPhys.remove(self)
+						Venus._reg.remove(self)
+						return
+			
 			self.scale += 0.1
 			if self.scale >= 1:
+					
 				self.scale = 1
 				self.mode = Venus.hold
 				map.set_at(self.pos.vec2tupint(), GRD)
@@ -3629,7 +3646,7 @@ class Venus:
 				if worm in Debrie._debries or worm in Portal._reg or worm in Flag.flags:
 					continue
 				if dist(worm.pos, pos) <= 25:
-			
+					
 					self.mode = Venus.catch
 					if worm in PhysObj._worms:
 						global damageThisTurn
@@ -3839,6 +3856,8 @@ class PokeBall(PhysObj):
 				PhysObj._worms.remove(self.hold)
 				self.hold.team.worms.remove(self.hold)
 				if self.hold.flagHolder:
+					self.hold.flagHolder = False
+					self.hold.team.flagHolder = False
 					Flag(self.hold.pos)
 				self.name = myfont.render(self.hold.nameStr, False, self.hold.team.color)
 				Commentator.que.append(choice([(self.hold.nameStr, ("",", i choose you"), self.hold.team.color), ("", ("", "gotta catch 'em al"), self.hold.team.color), (self.hold.nameStr, ("", " will help beat the next gym leader"), self.hold.team.color)]))
@@ -4329,6 +4348,8 @@ if True:
 	maps.append(("wormsMaps/wMapbig12.png", 800))
 	maps.append(("wormsMaps/wMapbig13.png", 1000))
 	maps.append(("wormsMaps/wMapbig14.png", 800))
+	maps.append(("wormsMaps/wMapbig15.png", 800))
+	maps.append(("wormsMaps/wMapbig16.png", 2000))
 if webVer:
 	maps = [("wormsMaps/wMapbig1.png", 1000),("wormsMaps/wMap18.png", 512),("wormsMaps/wMap11.png", 512),("wormsMaps/wMap12.png", 512)]
 
@@ -4506,7 +4527,7 @@ def fire(weapon = None):
 		decrease = False
 		if state == PLAYER_CONTROL_1:
 			shotCount = 20
-			if randint(0,50) == 1:
+			if randint(0,50) == 1 or megaTrigger:
 				shotCount = 60
 		
 		fireMiniGun(weaponOrigin, weaponDir)
@@ -4651,7 +4672,7 @@ def fire(weapon = None):
 	elif weapon == "raon launcher":
 		w = Raon(weaponOrigin, weaponDir, energy * 0.95)
 		w = Raon(weaponOrigin, weaponDir, energy * 1.05)
-		if randint(0, 10) == 0:
+		if randint(0, 10) == 0 or megaTrigger:
 			w = Raon(weaponOrigin, weaponDir, energy * 1.08)
 			w = Raon(weaponOrigin, weaponDir, energy * 0.92)
 	
@@ -4926,7 +4947,7 @@ def checkWinners():
 			adding = "Targets mode"
 	
 	if end:
-		string = "timeCounter taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name)
+		string = "time taken: " + '{:6}'.format(str(int(timeOverall/30))) + " winner: " + '{:10}'.format(winningTeam.name)
 		if mostDamage[1]:
 			string += "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
 		string += adding + "\n"
@@ -4954,7 +4975,8 @@ def cycleWorms():
 	global radiusMult
 	damageMult = 0.8
 	radiusMult = 1
-	global aimAid, timeTravel
+	global aimAid, timeTravel, megaTrigger
+	megaTrigger = False
 	aimAid = False
 	if timeTravel: timeTravelReset()
 	if objectUnderControl.jetpacking: objectUnderControl.toggleJetpack()
@@ -5080,7 +5102,7 @@ def cycleWorms():
 	# sick:
 	for worm in PhysObj._worms:
 		if not worm.sick == 0 and worm.health > 5:
-			worm.damage(min(int(5/damageMult)+1, int((worm.health-5)/damageMult) +1))
+			worm.damage(min(int(5/damageMult)+1, int((worm.health-5)/damageMult) +1), 2)
 	damageThisTurn = 0
 	if nextState == PLAYER_CONTROL_1:
 	
@@ -5269,6 +5291,8 @@ def weaponMenuInit():
 		if currentTeam.weaponCounter[i] != 0:
 			secText = str(currentTeam.weaponCounter[i]) if currentTeam.weaponCounter[i] > -1 else ""
 			active = weapons[i][5] == 0
+			if inUsedList(weapons[i][0]):
+				active = False
 			m.addButton(weapons[i][0], secText, weapons[i][3], active, actionWeaponButton)
 	
 	if sum(currentTeam.utilityCounter) == 0:
@@ -5511,6 +5535,9 @@ def cheatActive(code):
 	if code == "gibpetrolcan":
 		mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 		PetrolCan((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+	if code == "megaboom":
+		global megaTrigger
+		megaTrigger = True
 	
 def gameDistable(): 
 	global gameStable, gameStableCounter
@@ -5534,7 +5561,7 @@ def drawUseList():
 def inUsedList(string):
 	used = False
 	for i in useList:
-		if currentWeapon == i[1]:
+		if string == i[1]:
 			used = True
 			break
 	return used
@@ -6016,9 +6043,11 @@ if __name__ == "__main__":
 					# CpuHolder.mode = CpuHolder.CHECK_SURROUNDING
 					pass
 				if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
-					scrollMenu()
+					if len(Menu.menus) > 0:
+						scrollMenu()
 				if event.key == pygame.K_PAGEDOWN or event.key == pygame.K_KP3:
-					scrollMenu(False)
+					if len(Menu.menus) > 0:
+						scrollMenu(False)
 				if event.key == pygame.K_F2:
 					Worm.healthMode = (Worm.healthMode + 1) % 2
 					if Worm.healthMode == 1:
