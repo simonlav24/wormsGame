@@ -100,13 +100,6 @@ if True:
 	HUDColor = BLACK
 webVer = True 
 
-# ideas:
-#
-# batarang
-# drone
-
-# bug in venus when ate someone and there is another one right there it coments about him multiple times
-
 ################################################################################ Map
 if True:
 	mapWidth = int(1024*1.5)
@@ -182,7 +175,7 @@ def createMapDigging():
 def drawLand():
 	win.blit(groundSec, (-int(camPos.x), -int(camPos.y)))
 	win.blit(ground, (-int(camPos.x), -int(camPos.y)))
-	if darkness:
+	if darkness and not state == PLACING_WORMS:
 		mask.fill((30,30,30))
 		if objectUnderControl:
 			pygame.draw.circle(mask, (0,0,0,0), objectUnderControl.pos.vec2tupint(), drakRadius)
@@ -321,6 +314,8 @@ class Explossion:
 		pass
 
 def isVisibleInDarkness(self):
+	if state == PLACING_WORMS:
+		return True
 	if isOnMap(self.pos):
 		if mask.get_at(self.pos.vec2tupint())[3] < 255:
 			return True
@@ -1022,6 +1017,8 @@ class PetrolBomb(PhysObj):#4
 class Worm (PhysObj):
 	healthMode = 0
 	roped = False
+	causeFlew = 0
+	causeVenus = 1
 	def __init__(self, pos, name=None, team=None):
 		self._worms.append(self)
 		self.initialize()
@@ -1175,7 +1172,7 @@ class Worm (PhysObj):
 		return self.nameStr
 	def __repr__(self):
 		return str(self)
-	def dieded(self, flew=False):
+	def dieded(self, cause=-1):
 		global state, nextState, teams, damageThisTurn
 		
 		if timeTravel:
@@ -1194,14 +1191,13 @@ class Worm (PhysObj):
 				string = self.nameStr + " by " + objectUnderControl.nameStr
 				killList.insert(0, (myfont.render(string, False, HUDColor), 0))
 		
-		if flew:
-			self.health = 0
+		self.health = 0
 		
 		# if capture the flag:
 		if self.flagHolder:
 			self.flagHolder = False
 			self.team.flagHolder = False
-			if flew:
+			if cause == Worm.causeFlew:
 				p = deployPack(FLAG_DEPLOY)
 				global camTrack
 				camTrack = p
@@ -1209,28 +1205,29 @@ class Worm (PhysObj):
 				Flag(self.pos)
 		
 		# commentator:
-		if flew:
-			Commentator.que.append((self.nameStr, choice(Commentator.stringsFlw), self.team.color))
-		else:
+		if cause == -1:
 			Commentator.que.append((self.nameStr, choice(Commentator.stringsDmg), self.team.color))
+		elif cause == Worm.causeFlew:
+			Commentator.que.append((self.nameStr, choice(Commentator.stringsFlw), self.team.color))
 		
-		if self in PhysObj._worms:
-			# remove from regs:
-			PhysObj._worms.remove(self)
-			self.team.worms.remove(self)
-			if flew:
-				PhysObj._reg.remove(self)
-			
-			# if under control 
-			if objectUnderControl == self:
-				if state == FIRE_MULTIPLE:
-					if weaponStyle == GUN:
-						self.team.weaponCounter[weaponDict[currentWeapon]] -= 1
-						renderWeaponCount()
-				nextState = PLAYER_CONTROL_2
-				# unclear what will happen if dies in WAIT_STABLE
-				state = nextState
-				timeRemaining(wormDieTime)
+		# if self in PhysObj._worms:
+		
+		# remove from regs:
+		PhysObj._worms.remove(self)
+		self.team.worms.remove(self)
+		if cause == Worm.causeFlew or cause == Worm.causeVenus:
+			PhysObj._reg.remove(self)
+		
+		# if under control 
+		if objectUnderControl == self:
+			if state == FIRE_MULTIPLE:
+				if weaponStyle == GUN:
+					self.team.weaponCounter[weaponDict[currentWeapon]] -= 1
+					renderWeaponCount()
+			nextState = PLAYER_CONTROL_2
+			# unclear what will happen if dies in WAIT_STABLE
+			state = nextState
+			timeRemaining(wormDieTime)
 	def drawHealth(self):
 		if Worm.healthMode == 0:
 			pygame.draw.rect(win, (220,220,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), 20,3))
@@ -1420,7 +1417,7 @@ class Worm (PhysObj):
 		
 		# check if on map:
 		if self.pos.y >= mapHeight:
-			self.dieded(True)
+			self.dieded(Worm.causeFlew)
 		if self.pos.y < 0:
 			self.gravity = DOWN
 		if actionMove:
@@ -3598,7 +3595,7 @@ class Venus:
 		if self.mode == Venus.grow:
 			# check if can eat a worm from here on first round:
 			global roundCounter
-			if roundCounter == 0 and self.scale == 0:
+			if roundCounter == 0 and state in [PLAYER_CONTROL_1, PLACING_WORMS, CHOOSE_STARTER] and self.scale == 0:
 				pos = self.pos + self.direction * 25
 				for worm in PhysObj._worms:
 					if dist(worm.pos, pos) <= 25:
@@ -3650,15 +3647,14 @@ class Venus:
 					self.mode = Venus.catch
 					if worm in PhysObj._worms:
 						global damageThisTurn
-						if not worm == objectUnderControl:
-							if not sentring and not worm in objectUnderControl.team.worms:
-								damageThisTurn += worm.health
-						worm.health = 0
-						worm.dieded()
+						# if not worm == objectUnderControl:
+							# if not sentring and not worm in objectUnderControl.team.worms:
+								# damageThisTurn += worm.health
+						worm.dieded(Worm.causeVenus)
 						Commentator.que.append(choice([("", ("yummy",""), worm.team.color), (worm.nameStr, ("", " was delicious"), worm.team.color), (worm.nameStr, ("", " is good protein"), worm.team.color), (worm.nameStr, ("", " is some serious gourmet s**t"), worm.team.color)]))
 					else:
 						self.explossive = True
-					PhysObj._reg.remove(worm)
+						PhysObj._reg.remove(worm)
 					break
 		elif self.mode == Venus.catch:
 			gameDistable()
@@ -4355,7 +4351,6 @@ if webVer:
 
 def createWorld():
 	global mapClosed
-	# imageFile = ("lastWormsGround.png", 512)
 	if mapChoice == -555:
 		imageChoice = choice(maps)
 	else:
@@ -4796,12 +4791,13 @@ reds = Team(["fix delux r", "vamp b", "birdie", "lordie", "pinkie", "katie", "an
 greens = Team(["blair", "major", "thatcher", "chellenge", "george", "mark", "mercury", "philip"], GREEN, "green")
 yellows = Team(["colan", "GT", "jettets", "chevan", "jonie", "murph", "silvia", "flur"], YELLOW, "yellow")
 
+# choose teams:
 teams = [blues, greens, reds, yellows]
-shuffle(teams)
+
 totalTeams = len(teams)
 
-currentTeam = choice(teams)
-teamChoser = randint(0,3) % totalTeams
+currentTeam = None
+teamChoser = 0
 roundCounter = 0
 mostDamage = (0,None)
 damageThisTurn = 0
@@ -5004,22 +5000,6 @@ def cycleWorms():
 		return
 	roundCounter += 1
 	
-	# deploy pack:
-	if deployPacks and roundCounter % totalTeams == 0 and not deploying:
-		deploying = True
-		roundCounter -= 1
-		nextState = WAIT_STABLE
-		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
-		for i in range(packMult):
-			w = deployPack(choice([HEALTH_PACK,UTILITY_PACK, WEAPON_PACK]))
-			camTrack = w
-		if darkness:
-			for team in teams:
-				team.utilityCounter[utilityDict["flare"]] += 1
-				if team.utilityCounter[utilityDict["flare"]] > 3:
-					team.utilityCounter[utilityDict["flare"]] = 3
-		return
-	
 	# shoot sentries:
 	isThereTargets = False
 	if len(SentryGun._sentries) > 0 and not sentring:
@@ -5054,6 +5034,22 @@ def cycleWorms():
 			roundCounter -= 1
 			nextState = WAIT_STABLE
 			return
+		
+	# deploy pack:
+	if deployPacks and roundCounter % totalTeams == 0 and not deploying:
+		deploying = True
+		roundCounter -= 1
+		nextState = WAIT_STABLE
+		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
+		for i in range(packMult):
+			w = deployPack(choice([HEALTH_PACK,UTILITY_PACK, WEAPON_PACK]))
+			camTrack = w
+		if darkness:
+			for team in teams:
+				team.utilityCounter[utilityDict["flare"]] += 1
+				if team.utilityCounter[utilityDict["flare"]] > 3:
+					team.utilityCounter[utilityDict["flare"]] = 3
+		return
 		
 	raoning = False
 	deploying = False
@@ -5348,7 +5344,7 @@ class Commentator:#(name, strings, color)
 	textSurf = None
 	name = None
 	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed")]
-	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " went to ort braude"), ("", " has divided by zero")]
+	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " has divided by zero")]
 	stringsCrt = [("a jewel from the heavens!", ""), ("its raining crates, halelujah!", ""), (" ","")]
 	def step(self):
 		if self.mode == Commentator.WAIT:
@@ -5605,7 +5601,7 @@ if True:
 	playerControlPlacing = False; playerShootAble = False; gameStableCounter = 0
 
 def stateMachine():
-	global state, nextState, gameStable, playerControl, playerControlPlacing, playerShootAble, playerScrollAble
+	global state, nextState, gameStable, playerControl, playerControlPlacing, playerShootAble, playerScrollAble, currentTeam
 	global objectUnderControl, camTrack, gameStableCounter, shotCount, fireWeapon, currentWeapon, run, mapClosed
 	if state == RESET:
 		gameStable = False
@@ -5623,6 +5619,19 @@ def stateMachine():
 		
 		createWorld()
 		
+		shuffle(teams)
+		currentTeam = teams[0]
+		teamChoser = teams.index(currentTeam)
+		
+		# place stuff:
+		if not diggingMatch:
+			placeMines(randint(2,4))
+		if not randomPlace:
+			placePetrolCan(randint(2,4))
+			# place plants:
+			if not diggingMatch:
+				placePlants(randint(0,2))
+		
 		nextState = PLACING_WORMS
 		state = nextState
 	elif state == PLACING_WORMS: #modes
@@ -5630,52 +5639,53 @@ def stateMachine():
 		playerControl = False
 		playerScrollAble = True
 		
-		nextState = CHOOSE_STARTER
-		# place mines:
-		if not diggingMatch:
-			placeMines(randint(2,4))
 		# place worms:
 		if randomPlace:
 			randomPlacing(wormsPerTeam)
-		placePetrolCan(randint(2,4))
-		# place plants:
-		if not diggingMatch:
-			placePlants(randint(0,2))
+			nextState = CHOOSE_STARTER
 		
-		# targets:
-		if targetsMode:
-			for i in range(ShootingTarget.numTargets):
-				ShootingTarget()
-		
-		if diggingMatch:
-			placeMines(80)
-			moreDigging()
-			mapClosed = True
+		if nextState == CHOOSE_STARTER:
+			if randomPlace:
+				placePetrolCan(randint(2,4))
+				# place plants:
+				if not diggingMatch:
+					placePlants(randint(0,2))
 			
-		# give random legendary starting weapons:
-		randomStartingWeapons(1)
-		
-		if davidAndGoliathMode:
-			global initialHealth
-			for team in teams:
-				length = len(team.worms)
-				for i in range(length):
-					if i == 0:
-						team.worms[i].health = initialHealth + (length - 1) * (initialHealth//2)
-						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
-					else:
-						team.worms[i].health = (initialHealth//2)
-						team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
-			initialHealth = teams[0].worms[0].health
-		if darkness:
-			global HUDColor
-			HUDColor = WHITE
-			for team in teams:
-				team.utilityCounter[utilityDict["flare"]] += 3
-		if randomWeapons:
-			randomWeaponsGive()
-		if captureTheFlag:
-			placeFlag()
+			# targets:
+			if targetsMode:
+				for i in range(ShootingTarget.numTargets):
+					ShootingTarget()
+			
+			if diggingMatch:
+				placeMines(80)
+				moreDigging()
+				mapClosed = True
+				
+			# give random legendary starting weapons:
+			randomStartingWeapons(1)
+			
+			if davidAndGoliathMode:
+				global initialHealth
+				for team in teams:
+					length = len(team.worms)
+					for i in range(length):
+						if i == 0:
+							team.worms[i].health = initialHealth + (length - 1) * (initialHealth//2)
+							team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
+						else:
+							team.worms[i].health = (initialHealth//2)
+							team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
+				initialHealth = teams[0].worms[0].health
+			if darkness:
+				global HUDColor
+				HUDColor = WHITE
+				for team in teams:
+					team.utilityCounter[utilityDict["flare"]] += 3
+			if randomWeapons:
+				randomWeaponsGive()
+			if captureTheFlag:
+				placeFlag()
+			state = nextState
 	elif state == CHOOSE_STARTER:
 		playerControlPlacing = False
 		playerControl = False
@@ -5895,7 +5905,8 @@ if __name__ == "__main__":
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
 				# this is the next state after placing all worms
 				if state == PLACING_WORMS:
-					state = nextState
+					nextState = CHOOSE_STARTER
+					# state = nextState
 					renderWeaponCount()
 				elif state == PLAYER_CONTROL_1:
 					if len(Menu.menus) == 0:
@@ -6037,6 +6048,7 @@ if __name__ == "__main__":
 					# for i in range(2500):
 						# extra.append((randint(0,mapWidth-1), randint(0,mapHeight-1), (255,0,0), 5))
 					# print(len(Flare._flares))
+					print(roundCounter)
 					pass
 				if event.key == pygame.K_y:
 					# objectUnderControl.cpu = not objectUnderControl.cpu
