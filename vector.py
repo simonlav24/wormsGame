@@ -38,7 +38,7 @@ class Vector:
 	def normal(self):
 		return Vector(self.y, -self.x)
 	def __add__(self,vec):
-		return Vector(self.x + vec.x, self.y + vec.y)
+		return Vector(self[0] + vec[0], self[1] + vec[1])
 	def __iadd__(self,vec):
 		self[0] += vec[0]
 		self[1] += vec[1]
@@ -51,6 +51,8 @@ class Vector:
 		return self
 	def __mul__(self,mag):
 		return Vector(self.x*mag,self.y*mag)
+	def __rmul__(self,mag):
+		return self * mag
 	def __imul__(self,mag):
 		self.x *= mag
 		self.y *= mag
@@ -119,6 +121,14 @@ class Vector:
 		y = self.x * math.sin(angle) + self.y * math.cos(angle)
 		self.x = x
 		self.y = y
+	def integer(self):
+		self.x = int(self.x)
+		self.y = int(self.y)
+		return self
+	def __eq__(self, other):
+		return self[0] == other[0] and self[1] == other[1]
+	def __ne__(self, other):
+		return not self.__eq__(other)
 
 def normalize(vec):
 	vecRes = vectorCopy(vec)
