@@ -1208,9 +1208,12 @@ class Worm (PhysObj):
 		if cause == -1:
 			Commentator.que.append((self.nameStr, choice(Commentator.stringsDmg), self.team.color))
 		elif cause == Worm.causeFlew:
-			Commentator.que.append((self.nameStr, choice(Commentator.stringsFlw), self.team.color))
-		
-		# if self in PhysObj._worms:
+			comment = True
+			if not self in currentTeam.worms and currentWeapon == "baseball" and state in [PLAYER_CONTROL_2, WAIT_STABLE]:
+				Commentator.que.append((self.nameStr, Commentator.stringBaseBall, self.team.color))
+				comment = False
+			if comment:
+				Commentator.que.append((self.nameStr, choice(Commentator.stringsFlw), self.team.color))
 		
 		# remove from regs:
 		PhysObj._worms.remove(self)
@@ -5346,6 +5349,7 @@ class Commentator:#(name, strings, color)
 	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed")]
 	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " has divided by zero")]
 	stringsCrt = [("a jewel from the heavens!", ""), ("its raining crates, halelujah!", ""), (" ","")]
+	stringBaseBall = ("", "home run!")
 	def step(self):
 		if self.mode == Commentator.WAIT:
 			if len(self.que) == 0:
