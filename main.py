@@ -45,6 +45,7 @@ if True:
 	GREEN = (0,255,0)
 	BLACK = (0,0,0)
 	WHITE = (255,255,255)
+	GREY = (100,100,100)
 	DOWN = 1
 	UP = -1
 	
@@ -57,9 +58,9 @@ if True:
 	GRENADES = (204, 255, 204)
 	GUNS = (255, 204, 153)
 	FIREY = (255, 204, 204)
-	LEGENDARY = (255, 255, 102)
 	MISC = (224, 224, 235)
 	AIRSTRIKE = (204, 255, 255)
+	LEGENDARY = (255, 255, 102)
 
 # Game parameters
 if True:
@@ -98,6 +99,7 @@ if True:
 	
 	text = ""
 	HUDColor = BLACK
+	switcher = [0]*8
 webVer = True 
 
 ################################################################################ Map
@@ -491,7 +493,7 @@ if True:
 	imageVenus = pygame.image.load("assets/venus.png").convert_alpha()
 	imagePokeball = pygame.image.load("assets/pokeball.png").convert_alpha()
 	imageGreenShell = pygame.image.load("assets/greenShell.png").convert_alpha()
-	imageMjolnir = pygame.image.load("assets/mjolnir.png").convert_alpha()
+	imageEnder = pygame.image.load("assets/ender.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -674,15 +676,14 @@ def whiten(color):
 ################################################################################ Objects
 timeCounter = turnTime
 timeOverall = 0
+timeSurf = (timeCounter, myfont.render(str(timeCounter), False, HUDColor))
 def timeStep():
 	global timeCounter
 	if timeCounter == 0:
-		# timeCounter = turnTime
 		timeOnTimer()
 	if not timeCounter <= 0:
 		timeCounter -= 1
 def timeOnTimer():
-	# onTime timeCounter end timeCounter
 	global state, nextState
 	if state == PLAYER_CONTROL_1:
 		state = WAIT_STABLE
@@ -698,7 +699,10 @@ def timeOnTimer():
 	if objectUnderControl.parachuting:
 		objectUnderControl.toggleParachute()
 def timeDraw():
-	win.blit(myfont.render(str(timeCounter), False, HUDColor) , ((int(10), int(8))))
+	global timeSurf
+	if timeSurf[0] != timeCounter:
+		timeSurf = (timeCounter, myfont.render(str(timeCounter), False, HUDColor))
+	win.blit(timeSurf[1] , ((int(10), int(8))))
 def timeReset():
 	global timeCounter
 	timeCounter = turnTime
@@ -723,13 +727,6 @@ class FloatingText: #pos, text, color
 			del self
 	def draw(self):
 		win.blit(self.surf , (int(self.pos.x - camPos.x - self.surf.get_size()[0]/2), int(self.pos.y - camPos.y)))
-
-Target = Vector(-1,-1)
-showTarget = False
-def drawTarget():
-	if showTarget:
-		pygame.draw.line(win, (180,0,0), point2world((Target.x - 10, Target.y - 8)) , point2world((Target.x + 10, Target.y + 8)), 2)
-		pygame.draw.line(win, (180,0,0), point2world((Target.x + 10, Target.y - 8)) , point2world((Target.x - 10, Target.y + 8)), 2)
 
 class PhysObj:
 	_reg = []
@@ -1049,6 +1046,7 @@ class Worm (PhysObj):
 		self.wormCollider = True
 		self.flagHolder = False
 		self.sleep = False
+		self.holding = 0
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
@@ -2835,6 +2833,8 @@ class ElectricGrenade(PhysObj):
 			drawLightning(self.pos, raon.pos)
 
 class HomingMissile(PhysObj):
+	Target = Vector()
+	showTarget = False
 	def __init__(self, pos, direction, energy):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
@@ -2848,9 +2848,8 @@ class HomingMissile(PhysObj):
 		self.timer = 0
 	def applyForce(self):
 		# gravity:
-		global Target
 		if self.activated:
-			desired = Target - self.pos
+			desired = HomingMissile.Target - self.pos
 			desired.setMag(50)
 			self.acc = desired - self.vel
 			self.acc.limit(1)
@@ -2866,11 +2865,9 @@ class HomingMissile(PhysObj):
 	def limitVel(self):
 		self.vel.limit(15)
 	def outOfMapResponse(self):
-		global showTarget
-		showTarget = False
+		HomingMissile.showTarget = False
 	def collisionRespone(self, ppos):
-		global showTarget
-		showTarget = False
+		HomingMissile.showTarget = False
 		boom(ppos, self.boomRadius)
 	def draw(self):
 		theta = self.vel.getAngle()
@@ -2881,6 +2878,12 @@ class HomingMissile(PhysObj):
 		dir2.setMag((self.radius + 6)/2)
 		a,b = self.pos.x,self.pos.y
 		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
+
+def drawTarget():
+	if HomingMissile.showTarget:
+		target = HomingMissile.Target
+		pygame.draw.line(win, (180,0,0), point2world((target.x - 10, target.y - 8)) , point2world((target.x + 10, target.y + 8)), 2)
+		pygame.draw.line(win, (180,0,0), point2world((target.x + 10, target.y - 8)) , point2world((target.x - 10, target.y + 8)), 2)
 
 class Vortex():
 	vortexRadius = 180
@@ -3867,9 +3870,10 @@ class PokeBall(PhysObj):
 			gameDistable()
 		
 		# print(self.vel.getMag())
-		if self.vel.getMag() < 0.14:
-			self.vel *= 0
-		self.angle -= self.vel.x*4
+		# if self.vel.getMag() < 0.14:
+			# self.vel *= 0
+		if self.vel.getMag() > 0.25:
+			self.angle -= self.vel.x*4
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
 			return
@@ -4079,13 +4083,14 @@ class Flare(PhysObj):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (128, 0, 0)
-		self.damp = 0.5
+		self.damp = 0.4
 		self.surf = pygame.Surface((3, 8)).convert_alpha()
 		self.surf.fill(self.color)
 		self.angle = 0
 		self.lightRadius = 50
 	def secondaryStep(self):
-		self.angle -= self.vel.x*4
+		if self.vel.getMag() > 0.25:
+			self.angle -= self.vel.x*4
 		if randint(0,10) == 1:
 			Blast(self.pos, randint(self.radius,7), 150)
 		if self.lightRadius < 0:
@@ -4134,6 +4139,8 @@ class EndPearl(PhysObj):
 		response.normalize()
 		pos = self.pos + response * (objectUnderControl.radius + 2)
 		objectUnderControl.pos = pos
+	def draw(self):
+		win.blit(imageEnder , point2world(self.pos - tup2vec(imageEnder.get_size())/2))
 
 class Flag(PhysObj):
 	flags = []
@@ -4200,7 +4207,7 @@ class ShootingTarget:
 		pygame.draw.circle(win, RED, point2world(self.pos), int(self.radius - 4))
 		pygame.draw.circle(win, WHITE, point2world(self.pos), int(self.radius - 8))
 
-class Distorter(Grenade):
+class Distorter(Grenade):#########EXPERIMENTAL
 	def deathResponse(self):
 		global ground
 		width = 150
@@ -4325,6 +4332,54 @@ class Raon(PhysObj):
 		if self.state == Raon.idle or self.state == Raon.wait:
 			pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 			win.set_at(point2world(self.pos), (0,0,0))
+
+class Path:#########EXPERIMENTAL
+	spacing = 50
+	def __init__(self, pos):
+		nonPhys.append(self)
+		self.wormPoints = []
+		for worm in PhysObj._worms:
+			self.wormPoints.append(self.pathPoint(worm.pos))
+		self.start = self.pathPoint(pos)
+		self.graph = []
+		for x in range(mapWidth//Path.spacing+1):
+			col = []
+			for y in range(mapHeight//Path.spacing+1):
+				col.append(((Path.spacing*x,Path.spacing*y), "white", None))
+			self.graph.append(col)
+	def changePointByPos(self, pos, value):
+		pass
+	def pathPoint(self, x):
+		return (int(round(x[0]/Path.spacing) * Path.spacing), int(round(x[1]/Path.spacing) * Path.spacing))
+	def posAddend(pos, index):
+		if index == 0:
+			return (pos[0] + Path.spacing, pos[1])
+		elif index == 1:
+			return (pos[0] + Path.spacing, pos[1] + Path.spacing)
+		elif index == 2:
+			return (pos[0], pos[1] + Path.spacing)
+		elif index == 3:
+			return (pos[0] - Path.spacing, pos[1] + Path.spacing)
+		elif index == 4:
+			return (pos[0] - Path.spacing, pos[1])
+		elif index == 5:
+			return (pos[0] - Path.spacing, pos[1] - Path.spacing)
+		elif index == 6:
+			return (pos[0], pos[1] - Path.spacing)
+		elif index == 7:
+			return (pos[0] + Path.spacing, pos[1] - Path.spacing)
+	def runBfs(self):
+		pass
+					
+	def step(self):
+		pass
+	def draw(self):
+		for x in self.graph:
+			for y in x:
+				pygame.draw.circle(win, (0,0,0), point2world(y), 2)
+		for point in self.wormPoints:
+			pygame.draw.circle(win, (255,255,255), point2world(point), 2)
+		pygame.draw.circle(win, (255,255,255), point2world(self.graph[2][3]), 2)
 
 ################################################################################ Create World
 
@@ -4702,7 +4757,7 @@ def fire(weapon = None):
 		addToUseList(currentWeapon)
 
 def fireClickable():
-	global currentWeapon, state
+	global currentWeapon, state, weaponStyle
 	decrease = True
 	if len(Menu.menus) > 0 or inUsedList(currentWeapon) :
 		return
@@ -4736,12 +4791,24 @@ def fireClickable():
 	timeRemaining(retreatTime)
 	state = nextState
 
+bases = []
+scales = []
+
 for i in range(len(weapons)):
 	weaponDict[weapons[i][0]] = i
 	weaponDict[i] = weapons[i][0]
 	if not unlimitedMode: basicSet.append(weapons[i][2])
 	else: basicSet.append(-1)
 	
+	if i != 0:
+		if weapons[i][3] != weapons[i-1][3]:
+			bases.append(i)
+			scales.append(i-(sum(scales) if len(scales) > 0 else 0))
+	else:
+		bases.append(0)
+	if i == len(weapons) - 1:
+		scales.append(i-sum(scales))
+
 utilities = []
 if True:
 	utilities.append(["moon gravity"])
@@ -4816,17 +4883,18 @@ if unlimitedMode:
 def renderWeaponCount(special = False):
 	global currentTeam, currentWeapon, currentWeaponSurf
 	if not special:
-		try:
-			if currentTeam.weaponCounter[weaponDict[currentWeapon]] < 0:
-				currentWeaponSurf = myfont.render(currentWeapon, False, HUDColor)
-			else:
-				currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.weaponCounter[weaponDict[currentWeapon]]), False, HUDColor)
-		except KeyError:
-			currentWeapon = "missile"
-			currentWeaponSurf = myfont.render(currentWeapon, False, HUDColor)
+		
+		color = HUDColor
+		if weapons[weaponDict[currentWeapon]][5] != 0 or inUsedList(currentWeapon):
+			color = GREY
+		
+		if currentTeam.weaponCounter[weaponDict[currentWeapon]] < 0:
+			currentWeaponSurf = myfont.render(currentWeapon, False, color)
+		else:
+			currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.weaponCounter[weaponDict[currentWeapon]]), False, color)
 		
 		if weapons[weaponDict[currentWeapon]][4]:
-			delayAdd = myfont.render("delay: " + str(fuseTime//30), False, HUDColor)
+			delayAdd = myfont.render("delay: " + str(fuseTime//30), False, color)
 			surf = pygame.Surface((currentWeaponSurf.get_width() + delayAdd.get_width() + 10, currentWeaponSurf.get_height()), pygame.SRCALPHA)
 			surf.blit(currentWeaponSurf, (0,0))
 			surf.blit(delayAdd, (currentWeaponSurf.get_width() + 10,0))
@@ -4837,7 +4905,7 @@ def renderWeaponCount(special = False):
 		currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.utilityCounter[utilityDict["teleport"]]), False, HUDColor)
 	if currentWeapon == "flare":
 		currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.utilityCounter[utilityDict["flare"]]), False, HUDColor)
-	
+
 def calculateTeamHealth():
 	global teamsInfo
 	teamsInfo = []
@@ -4965,7 +5033,7 @@ def checkWinners():
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn, currentWeapon
-	global deploying, sentring, deployPacks, showTarget, switchingWorms, raoning
+	global deploying, sentring, deployPacks, switchingWorms, raoning
 
 	# reset special effects:
 	global globalGravity
@@ -5077,7 +5145,7 @@ def cycleWorms():
 	# update debries
 	Debrie._debries = []
 	
-	showTarget = False
+	HomingMissile.showTarget = False
 	# change wind:
 	global wind
 	wind = uniform(-1,1)
@@ -5294,13 +5362,12 @@ def weaponMenuInit():
 				active = False
 			m.addButton(weapons[i][0], secText, weapons[i][3], active, actionWeaponButton)
 	
-	if sum(currentTeam.utilityCounter) == 0:
-		return
-	m2 = Menu((winWidth - 2 * Menu.width - 4 * Menu.border - 1, 0))
-	for i in range(len(utilities)):
-		if currentTeam.utilityCounter[i] != 0:
-			secText = str(currentTeam.utilityCounter[i])
-			m2.addButton(utilities[i][0], secText, WHITE, True, actionUtilityButton)
+	if sum(currentTeam.utilityCounter) != 0:
+		m2 = Menu((winWidth - 2 * Menu.width - 4 * Menu.border - 1, 0))
+		for i in range(len(utilities)):
+			if currentTeam.utilityCounter[i] != 0:
+				secText = str(currentTeam.utilityCounter[i])
+				m2.addButton(utilities[i][0], secText, WHITE, True, actionUtilityButton)
 
 def scrollMenu(up = True):
 	menu = Menu.menus[0]
@@ -5336,6 +5403,7 @@ def cloud_maneger():
 	if len(Cloud._reg) < 8 and randint(0,10) == 1:
 		pos = Vector(choice([camPos.x - Cloud.cWidth - 100, camPos.x + winWidth + 100]), randint(5, mapHeight - 150))
 		Cloud(pos)
+	for cloud in Cloud._reg: cloud.step()
 
 class Commentator:#(name, strings, color)
 	que = []
@@ -5349,7 +5417,7 @@ class Commentator:#(name, strings, color)
 	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed")]
 	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " has divided by zero")]
 	stringsCrt = [("a jewel from the heavens!", ""), ("its raining crates, halelujah!", ""), (" ","")]
-	stringBaseBall = ("", "home run!")
+	stringBaseBall = ("", " home run!")
 	def step(self):
 		if self.mode == Commentator.WAIT:
 			if len(self.que) == 0:
@@ -5544,6 +5612,14 @@ def gameDistable():
 	gameStable = False
 	gameStableCounter = 0
 
+def weaponQuickSwitcher(index):
+	global currentWeapon
+	currentWeapon = weapons[bases[index] + switcher[index]][0]
+	switcher[index] = (switcher[index] + 1) % scales[index]
+	while currentTeam.weaponCounter[bases[index] + switcher[index]] == 0:
+		switcher[index] = (switcher[index] + 1) % scales[index]
+	renderWeaponCount()
+
 killList = []
 useList = []
 def addToUseList(string):
@@ -5590,7 +5666,9 @@ def testerFunc():
 				# print(worm.nameStr, "sleep")
 				# worm.sleep = True
 				# break
-		p = Path(mouse)
+		# p = Path(mouse)
+		# objectUnderControl.holding = 1
+		print(currentWeapon, weaponStyle)
 		# print("test")
 		pass
 
@@ -5794,7 +5872,7 @@ def onKeyPressSpace():
 			energising = True
 			energyLevel = 0
 			fireWeapon = False
-			if currentWeapon == "homing missile" and not showTarget:
+			if currentWeapon == "homing missile" and not HomingMissile.showTarget:
 				energising = False
 
 def onKeyHoldSpace():
@@ -5888,9 +5966,9 @@ if __name__ == "__main__":
 				# CLICKABLE weapon check:
 				if state == PLAYER_CONTROL_1 and weaponStyle == CLICKABLE:
 					fireClickable()
-				if state == PLAYER_CONTROL_1 and currentWeapon == "homing missile":
-					Target.x, Target.y = mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y
-					showTarget = True
+				if state == PLAYER_CONTROL_1 and currentWeapon == "homing missile" and not len(Menu.menus) > 0:
+					HomingMissile.Target.x, HomingMissile.Target.y = mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y
+					HomingMissile.showTarget = True
 				# cliking in menu
 				if len(Menu.menus) > 0:
 					buttonPressed = False
@@ -5905,7 +5983,8 @@ if __name__ == "__main__":
 							Menu.menus[0].destroy()
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)\
 				# testing mainly
-				testerFunc()
+				# testerFunc()
+				pass
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
 				# this is the next state after placing all worms
 				if state == PLACING_WORMS:
@@ -6047,16 +6126,32 @@ if __name__ == "__main__":
 						airStrikeDir *= -1
 					elif (state == PLAYER_CONTROL_1 or state == FIRE_MULTIPLE) and switchingWorms:
 						switchWorms()
+				# if event.key == pygame.K_q:
+					# weaponQuickSwitcher(0)
+				# if event.key == pygame.K_w:
+					# weaponQuickSwitcher(1)
+				# if event.key == pygame.K_e:
+					# weaponQuickSwitcher(2)
+				# if event.key == pygame.K_r:
+					# weaponQuickSwitcher(3)
 				if event.key == pygame.K_t:
+					testerFunc()
+					# weaponQuickSwitcher(4)
+				# if event.key == pygame.K_y:
+					# weaponQuickSwitcher(5)
+				# if event.key == pygame.K_u:
+					# weaponQuickSwitcher(6)
+				# if event.key == pygame.K_i:
+					# weaponQuickSwitcher(7)
+					
+				if event.key == pygame.K_f:
+					testerFunc()
 					# checkPotential(objectUnderControl, 100)
 					# for i in range(2500):
 						# extra.append((randint(0,mapWidth-1), randint(0,mapHeight-1), (255,0,0), 5))
 					# print(len(Flare._flares))
-					print(roundCounter)
-					pass
-				if event.key == pygame.K_y:
-					# objectUnderControl.cpu = not objectUnderControl.cpu
-					# CpuHolder.mode = CpuHolder.CHECK_SURROUNDING
+					# print(roundCounter)
+					
 					pass
 				if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
 					if len(Menu.menus) > 0:
@@ -6198,9 +6293,8 @@ if __name__ == "__main__":
 				gameDistable()
 		for f in nonPhys: f.step()
 		
-		if timeTravel:
-			timeTravelRecord()
-		
+		if timeTravel: timeTravelRecord()
+			
 		# camera for wait to stable:
 		if state == WAIT_STABLE and timeOverall % 20 == 0:
 			for worm in PhysObj._worms:
@@ -6212,12 +6306,12 @@ if __name__ == "__main__":
 		
 		# advance timer
 		timeOverall += 1
-		if timeOverall % 30 == 0:
-			if not state in [PLACING_WORMS]:
-				timeStep()
-				
+		if timeOverall % 30 == 0 and state != PLACING_WORMS: timeStep()
+			
 		cloud_maneger()
-		for cloud in Cloud._reg: cloud.step()
+		
+		# reset actions
+		actionMove = False
 			
 		# draw:
 		win.blit(pygame.transform.scale(imageSky, win.get_rect().size), (0,0))
@@ -6226,11 +6320,12 @@ if __name__ == "__main__":
 		drawBackGround(imageMountain,2)
 		
 		drawLand()
-		wormCol.fill(SKY)##
-		extraCol.fill(SKY)##
+		wormCol.fill(SKY)
+		extraCol.fill(SKY)
 		for p in PhysObj._reg: p.draw()
 		for f in nonPhys: f.draw()
-		drawTarget()
+		if currentWeapon == "homing missile": drawTarget()
+			
 		# draw shooting indicator
 		if objectUnderControl and state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and objectUnderControl.health > 0:
 			objectUnderControl.drawCursor()
@@ -6262,11 +6357,9 @@ if __name__ == "__main__":
 		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: teamHealthDraw()
 		# weapon menu:
 		if len(Menu.menus) > 0:
-			for menu in Menu.menus:
-				menu.step()
-			for menu in Menu.menus:
-				menu.draw()
-		
+			for menu in Menu.menus: menu.step()
+			for menu in Menu.menus: menu.draw()
+				
 		if pointsMode or targetsMode:
 			while len(killList) > 8:
 				killList.pop(-1)
@@ -6274,13 +6367,12 @@ if __name__ == "__main__":
 				win.blit(killList[i][0], (5, winHeight - 14 - i * 8))
 		
 		# debug:
-		if damageText[0] != damageThisTurn:
-			damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
+		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 		win.blit(damageText[1], ((int(5), int(winHeight-6))))
 		
-		if state == PLACING_WORMS:
-			win.blit(myfont.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
+		if state == PLACING_WORMS: win.blit(myfont.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
 		
+		# draw loading screen
 		if state in [RESET, GENERATE_TERRAIN] or (state in [PLACING_WORMS, CHOOSE_STARTER] and randomPlace):
 			win.fill((0,0,0))
 			pos = (winWidth/2 - loadingSurf.get_width()/2, winHeight/2 - loadingSurf.get_height()/2)
@@ -6290,9 +6382,6 @@ if __name__ == "__main__":
 			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0], pos[1] + loadingSurf.get_height() + 20))
 			pygame.draw.line(win, (255,255,255), (pos[0] + loadingSurf.get_width(), pos[1] + 20), (pos[0] + loadingSurf.get_width(), pos[1] + loadingSurf.get_height() + 20))
 			pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((lstep/lstepmax)*loadingSurf.get_width(), loadingSurf.get_height())))
-		
-		# reset actions
-		actionMove = False
 		
 		# screen manegement
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
