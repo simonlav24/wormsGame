@@ -485,16 +485,20 @@ def placeFlag():
 	Flag(place)
 
 extra = [] #posx, posy, color, repeat
-def addExtra(pos, color = (255,255,255), delay = 5):
-	extra.append((pos[0], pos[1], color, delay))
+def addExtra(pos, color = (255,255,255), delay = 5, absolute = False):
+	extra.append((pos[0], pos[1], color, delay, absolute))
 
 def drawExtra():
 	global extra
 	extraNext = []
 	for i in extra:
-		win.fill(i[2], ((int(i[0] - camPos.x), int(i[1] - camPos.y)),(1,1)))
+		# print(i)
+		if not i[4]:
+			win.fill(i[2], (point2world((i[0], i[1])),(1,1)))
+		else:
+			win.fill(i[2], ((i[0], i[1]),(1,1)))
 		if i[3] > 0:
-			extraNext.append((i[0], i[1], i[2], i[3]-1))
+			extraNext.append((i[0], i[1], i[2], i[3]-1, i[4]))
 	extra = extraNext
 
 layersCircles = [[],[],[]]
@@ -1911,7 +1915,7 @@ def fireShotgun(start, direction, power=15):#6
 
 	for t in range(5,500):
 		testPos = start + direction * t
-		extra.append((testPos.x, testPos.y, (255, 204, 102), 3))
+		addExtra(testPos, (255, 204, 102), 3)
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
@@ -2339,7 +2343,7 @@ def fireGammaGun(start, direction):
 	normal = Vector(-direction.y, direction.x).normalize()
 	for t in range(5,500):
 		testPos = start + direction * t + normal * 1.5 * sin(t * 0.6) * (t + 1)/70
-		extra.append((testPos.x, testPos.y, (0,255,255), 10))
+		addExtra(testPos, (0,255,255), 10)
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
@@ -2819,7 +2823,7 @@ class BunkerBuster(PhysObj):
 		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
 	def deathResponse(self):
 		boom(self.pos, 23)
-		
+
 def drawLightning(start, end, color = (153, 255, 255)):
 	halves = int(dist(end, start) / 4)
 	if halves == 0:
@@ -3069,7 +3073,7 @@ class TimeAgent:
 			angle = timeTravelList["weaponDir"].getAngle()
 			pygame.draw.line(win, (0,0,0), (int(cPos[0] - camPos.x), int(cPos[1] - camPos.y)), ((int(cPos[0] + cos(angle) * i - camPos.x), int(cPos[1] + sin(angle) * i - camPos.y))))
 			i += 1
-		
+
 timeTravelPositions = []
 timeTravelList = {}
 timeTravelFire = False
@@ -3508,7 +3512,7 @@ def firePortal(start, direction):
 	steps = 500
 	for t in range(5,steps):
 		testPos = start + direction * t
-		extra.append((testPos.x, testPos.y, (255,255,255), 3))
+		addExtra(testPos, (255,255,255), 3)
 		
 		# missed
 		if t == steps - 1:
@@ -4490,7 +4494,12 @@ class Spear(PhysObj):######EXPERIMENTAL
 		for worm in self.worms:
 			worm.pos = vectorCopy(self.pos)
 			worm.vel *= 0
-		# addExtra(self.pos, BLACK, 10)
+		for target in ShootingTarget._reg:
+			if dist(self.pos + normalize(self.vel) * 8, target.pos) < target.radius + 1:
+				self.boomAffected = False
+				target.explode()
+				return
+					
 	def deathResponse(self):
 		point = self.pos - normalize(self.vel) * 30
 		pygame.draw.line(map, GRD, self.pos, point, self.radius)
@@ -4501,6 +4510,8 @@ class Spear(PhysObj):######EXPERIMENTAL
 		
 		if len(self.worms) > 0:
 			blood(self.pos)
+		if len(self.worms) > 1:
+			Commentator.que.append((objectUnderControl.nameStr, ("", "the impaler!"), objectUnderControl.team.color))
 	def draw(self):
 		point = self.pos - normalize(self.vel) * 30
 		pygame.draw.line(win, self.color, point2world(self.pos), point2world(point), self.radius)
@@ -5035,7 +5046,7 @@ def renderWeaponCount(special = False):
 	if not special:
 		
 		color = HUDColor
-		if weapons[weaponDict[currentWeapon]][5] != 0 or inUsedList(currentWeapon):
+		if currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 or weapons[weaponDict[currentWeapon]][5] != 0 or inUsedList(currentWeapon):
 			color = GREY
 		
 		if currentTeam.weaponCounter[weaponDict[currentWeapon]] < 0:
@@ -5400,17 +5411,18 @@ class Menu:
 		self.buttons = []
 		self.currentHeight = 1
 		self.dims = [0,0]
+		self.scroll = Vector()
 		# print(self.winPos)
 	def updateWinPos(self, pos):
 		self.winPos[0] = pos[0]
 		self.winPos[1] = pos[1]
-	def addString(self, string):
-		self.elements.append(MenuString(string, self.winPos + Vector(Menu.border, self.currentHeight)))
+	def addString(self, string):#### unused and unmaintained
+		self.elements.append(MenuString(string, self.winPos + self.offset + Vector(Menu.border, self.currentHeight)))
 		self.currentHeight += self.elements[-1].height + Menu.border
 		self.dims[0] = max(self.dims[0], self.elements[-1].width + 2 * Menu.border)
 		self.dims[1] = self.currentHeight + Menu.border
 	def addButton(self, text, secText, bColor, active, action):
-		b = Button(text, secText, bColor, self.winPos, Vector(Menu.border, self.currentHeight), active, action)
+		b = Button(text, secText, bColor, self.winPos, Vector(Menu.border, self.currentHeight), active, action, self.scroll)
 		self.elements.append(b)
 		self.buttons.append(b)
 		self.currentHeight += self.elements[-1].height + Menu.border
@@ -5420,7 +5432,7 @@ class Menu:
 		for element in self.elements:
 			element.step()
 	def draw(self):
-		pygame.draw.rect(win, Menu.backColor, (self.winPos, self.dims))
+		pygame.draw.rect(win, Menu.backColor, (self.winPos + self.scroll, self.dims))
 		for e in self.elements:
 			e.draw()
 	def destroy(self):
@@ -5437,7 +5449,7 @@ class MenuString:
 	
 class Button:
 	globalButtonHeight = 8
-	def __init__(self, text, secText, bColor, winPos, offset, active, action):
+	def __init__(self, text, secText, bColor, winPos, offset, active, action, scroll):
 		self.text = text
 		self.selected = False
 		self.secText = secText
@@ -5447,6 +5459,7 @@ class Button:
 		self.height = self.surf.get_height() + Menu.border * 2
 		self.winPos = winPos
 		self.offset = offset
+		self.scroll = scroll
 		self.bColor = bColor
 		self.active = active
 		self.action = action
@@ -5455,14 +5468,15 @@ class Button:
 		self.action(self)
 	def step(self):
 		mousePos = (pygame.mouse.get_pos()[0]/scalingFactor, pygame.mouse.get_pos()[1]/scalingFactor)
-		if mousePos[0] > self.winPos[0] + self.offset[0] and mousePos[0] < self.winPos[0] + self.offset[0] + self.width and mousePos[1] > self.winPos[1] + self.offset[1] and mousePos[1] < self.winPos[1] + self.offset[1] + self.height:
+		
+		if mousePos[0] > self.winPos[0] + self.scroll[0] + self.offset[0] and mousePos[0] < self.winPos[0] + self.scroll[0] + self.offset[0] + self.width and mousePos[1] > self.winPos[1] + self.scroll[1] + self.offset[1] and mousePos[1] < self.winPos[1] + self.scroll[1] + self.offset[1] + self.height:
 			self.selected = True
 		else:
 			self.selected = False
 	def draw(self):
-		pygame.draw.rect(win, RED if self.selected else self.bColor, (self.winPos + self.offset, (self.width, self.height)))
-		win.blit(self.surf, self.winPos + self.offset + Vector(Menu.border,Menu.border))
-		win.blit(self.secSurf, self.winPos + self.offset + Vector(Menu.width - 10, Menu.border))
+		pygame.draw.rect(win, RED if self.selected else self.bColor, (self.winPos + self.scroll + self.offset, (self.width, self.height)))
+		win.blit(self.surf, self.winPos + self.scroll + self.offset + Vector(Menu.border,Menu.border))
+		win.blit(self.secSurf, self.winPos + self.scroll + self.offset + Vector(Menu.width - 10, Menu.border))
 
 def actionWeaponButton(button):
 	global currentWeapon, weaponStyle
@@ -5532,12 +5546,12 @@ def weaponMenuInit():
 def scrollMenu(up = True):
 	menu = Menu.menus[0]
 	if up:
-		if menu.winPos[1] >= 0:
+		if menu.scroll[1] >= 0:
 			return
 	else:
-		if menu.winPos[1] + menu.dims[1] <= winHeight:
+		if menu.scroll[1] + menu.dims[1] <= winHeight:
 			return
-	menu.winPos[1] += Button.globalButtonHeight * 5 if up else -Button.globalButtonHeight * 5
+	menu.scroll[1] += Button.globalButtonHeight * 5 if up else -Button.globalButtonHeight * 5
 
 class Cloud:
 	_reg = []
@@ -6357,13 +6371,13 @@ if __name__ == "__main__":
 		if playerScrollAble and pygame.mouse.get_focused() and not len(Menu.menus) > 0:
 			scroll = Vector()
 			if mousePos[0] < edgeBorder:
-				scroll.x -= mapScrollSpeed
+				scroll.x -= mapScrollSpeed * (2.5 - scalingFactor/2)
 			if mousePos[0] > screenWidth - edgeBorder:
-				scroll.x += mapScrollSpeed
+				scroll.x += mapScrollSpeed * (2.5 - scalingFactor/2)
 			if mousePos[1] < edgeBorder:
-				scroll.y -= mapScrollSpeed
+				scroll.y -= mapScrollSpeed * (2.5 - scalingFactor/2)
 			if mousePos[1] > screenHeight - edgeBorder:
-				scroll.y += mapScrollSpeed
+				scroll.y += mapScrollSpeed * (2.5 - scalingFactor/2)
 			if scroll != Vector():
 				camTrack = Camera(camPos + Vector(winWidth, winHeight)/2 + scroll)
 		
@@ -6487,6 +6501,7 @@ if __name__ == "__main__":
 			for i in range(len(killList)):
 				win.blit(killList[i][0], (5, winHeight - 14 - i * 8))
 		
+		drawExtra()##remove
 		# debug:
 		
 		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
