@@ -97,7 +97,7 @@ if True:
 	davidAndGoliathMode = False
 	randomWeapons = False
 	darkness = False
-	drakRadius = 70
+	lightRadius = 70
 	pointsMode = False
 	useListMode = False
 	captureTheFlag = False
@@ -154,6 +154,7 @@ if True:
 	timeTravel = False
 	megaTrigger = False
 	jetPackFuel = 100
+	fuseTime = fps*2
 
 def createMapImage(heightNorm = None):
 	global mapImage
@@ -181,7 +182,7 @@ def createMapImage(heightNorm = None):
 	lstepmax = mapWidth//10 + wormsPerTeam * len(teams) + 1
 	for x in range(mapWidth):
 		for y in range(mapHeight):
-			if not mapImage.get_at((x, y)) == (0,0,0):
+			if not (mapImage.get_at((x, y)) == (0,0,0) or mapImage.get_at((x, y))[3] < 100):
 				map.set_at((x, y), GRD)
 		if x % 10 == 0:
 			lstepper()
@@ -204,7 +205,7 @@ def drawLand():
 	if darkness and not state == PLACING_WORMS:
 		mask.fill((30,30,30))
 		if objectUnderControl:
-			pygame.draw.circle(mask, (0,0,0,0), objectUnderControl.pos.vec2tupint(), drakRadius)
+			pygame.draw.circle(mask, (0,0,0,0), objectUnderControl.pos.vec2tupint(), lightRadius)
 	
 		global lights
 		for light in lights:
@@ -355,9 +356,18 @@ class Explossion:
 	def draw(self):
 		pass
 
+def mapGetAt(pos):
+	if pos.x >= mapWidth or pos.x < 0 or pos.y >= mapHeight or pos.y < 0:
+		return SKY
+	return map.get_at(pos)
+
 def isVisibleInDarkness(self):
 	if state == PLACING_WORMS:
 		return True
+	if self in PhysObj._worms and objectUnderControl:
+		if dist(self.pos, objectUnderControl.pos) < lightRadius:
+			return True
+	
 	if isOnMap(self.pos):
 		if mask.get_at(self.pos.vec2tupint())[3] < 255:
 			return True
@@ -539,6 +549,7 @@ if True:
 	imageGreenShell = pygame.image.load("assets/greenShell.png").convert_alpha()
 	imageEnder = pygame.image.load("assets/ender.png").convert_alpha()
 	imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
+	imageSnail = pygame.image.load("assets/snail.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -861,13 +872,13 @@ class PhysObj:
 		magVel = self.vel.getMag()
 		
 		if collision:
-			# blood
-			if magVel > 5 and self in PhysObj._worms:
-				blood(self.pos)
 			
 			self.collisionRespone(ppos)
 			if magVel > 5 and self.fallAffected:
 				self.damage(magVel * 1.5 * fallDamageMult, 1)
+				# blood
+				if self in PhysObj._worms:
+					blood(self.pos)
 			self.stable = True
 			
 			response.normalize()
@@ -979,7 +990,7 @@ class Missile (PhysObj):#1
 		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
 	def secondaryStep(self):
 		Blast(self.pos + vectorUnitRandom()*2, randint(5,8))
-fuseTime = fps*2
+
 class Grenade (PhysObj):#2
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -1198,6 +1209,9 @@ class Worm (PhysObj):
 			pygame.draw.circle(wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
 		if darkness and not isVisibleInDarkness(self):
 			return
+		elif self in currentTeam.worms:
+			lights.append((self.pos[0], self.pos[1], lightRadius, (255,255,255,0)))
+			
 		if self.parachuting:
 			win.blit(imageParachute, point2world(self.pos - tup2vec(imageParachute.get_size())//2 + Vector(0,-15)))
 		if self.flagHolder:
@@ -1838,17 +1852,13 @@ class Fire(PhysObj):
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
 			boom(self.pos + Vector(randint(-1,1),randint(-1,1)), 3, False, False, True)
-		# if randint(0,100) == 0 and Smoke.smokeCount < 30:
-			# Smoke(self.pos)
 	def draw(self):
 		radius = 1
 		if self.life > 20:
 			radius += 1
 		if self.life > 10:
 			radius += 1
-		# self.red = self.red
 		self.yellow = int(sin(0.3*timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
-		# print(self.yellow)
 		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - camPos.x), int(self.pos.y - camPos.y)), radius)
 
 class Smoke:
@@ -3121,7 +3131,7 @@ class ChilliPepper(PhysObj):
 		self.surf = pygame.Surface((width, height)).convert_alpha()
 		self.surf.fill((0,0,0,0))
 		pygame.draw.polygon(self.surf, (230, 46, 0), [(0,0), (width-1, 0), (width//2, height)])
-		self.damp = 0.8
+		self.damp = 0.5
 		self.angle = 0
 		self.boomAffected = False
 		self.bounceBeforeDeath = 6
@@ -4281,13 +4291,14 @@ class ShootingTarget:
 class Distorter(Grenade):#########EXPERIMENTAL
 	def deathResponse(self):
 		global ground
-		width = 150
+		width = randint(100, 150)
+		rotMult = uniform(0.05, 0.1)
 		arr = []
 		for x in range(int(self.pos.x) - width//2, int(self.pos.x) + width//2):
 			for y in range(int(self.pos.y) - width//2, int(self.pos.y) + width//2):
 				if dist(Vector(x,y), self.pos) > width//2:
 					continue
-				rot = (dist(Vector(x,y), self.pos) - width//2) * 0.1
+				rot = (dist(Vector(x,y), self.pos) - width//2) * rotMult
 				direction = Vector(x,y) - self.pos
 				direction.rotate(rot)
 				getAt = (self.pos + direction)
@@ -4467,7 +4478,7 @@ def fireFusrodah(start, direction):#########EXPERIMENTAL
 				tagged.append(worm)
 				worm.vel += (direction * 6) + Vector(0, -2)
 
-class Spear(PhysObj):######EXPERIMENTAL
+class Spear(PhysObj):
 	def __init__(self, pos, direction, energy):
 		self.initialize()
 		PhysObj._reg.remove(self)
@@ -4501,6 +4512,7 @@ class Spear(PhysObj):######EXPERIMENTAL
 				return
 					
 	def deathResponse(self):
+		self.pos += self.vel
 		point = self.pos - normalize(self.vel) * 30
 		pygame.draw.line(map, GRD, self.pos, point, self.radius)
 		pygame.draw.polygon(map, GRD, [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
@@ -4511,11 +4523,90 @@ class Spear(PhysObj):######EXPERIMENTAL
 		if len(self.worms) > 0:
 			blood(self.pos)
 		if len(self.worms) > 1:
-			Commentator.que.append((objectUnderControl.nameStr, ("", "the impaler!"), objectUnderControl.team.color))
+			Commentator.que.append((objectUnderControl.nameStr, ("", " the impaler!"), objectUnderControl.team.color))
 	def draw(self):
 		point = self.pos - normalize(self.vel) * 30
 		pygame.draw.line(win, self.color, point2world(self.pos), point2world(point), self.radius)
 		pygame.draw.polygon(win, (230,235,240), [point2world(self.pos + rotateVector(i, self.vel.getAngle())) for i in self.triangle])
+
+class SnailShell(PhysObj):
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 1
+		self.bounceBeforeDeath = 1
+		self.damp = 0.2
+		self.wormCollider = True
+		self.extraCollider = True
+		self.clockwise = objectUnderControl.facing
+		self.timer = 0
+		self.surf = pygame.Surface((6,6), pygame.SRCALPHA)
+		self.surf.blit(imageSnail, (0,0))
+	def collisionRespone(self, ppos):
+		finalPos = vectorCopy(self.pos)
+		finalAnchor = None
+
+		for t in range(50):
+			testPos = self.pos + normalize(self.vel) * t
+			testPos.integer()
+			if mapGetAt(testPos) == GRD:
+				finalAnchor = testPos
+				break
+			else:
+				finalPos = testPos
+
+		if not finalAnchor:
+			print("snail error")
+			return
+
+		global camTrack
+		camTrack = Snail(finalPos, finalAnchor, self.clockwise)
+	def draw(self):
+		self.timer += 1
+		
+		win.blit(pygame.transform.rotate(self.surf, (self.timer % 4) * 90), point2world(self.pos - Vector(3,3)))
+		
+class Snail:
+	around = [Vector(1,0), Vector(1,-1), Vector(0,-1), Vector(-1,-1), Vector(-1,0), Vector(-1,1), Vector(0,1), Vector(1,1)]
+	def __init__(self, pos, anchor, clockwise=RIGHT):
+		nonPhys.append(self)
+		self.pos = pos
+		self.pos.integer()
+		self.clockwise = clockwise
+		self.anchor = anchor
+		self.life = 0
+		self.surf = pygame.Surface((6,6), pygame.SRCALPHA)
+		self.surf.blit(imageSnail, (0,0), ((6,0),(6,6)))
+		if self.clockwise == LEFT:
+			self.surf = pygame.transform.flip(self.surf, True, False)
+	def climb(self):
+		count = 0
+		while True:
+			count += 1
+			if count > 50:
+				print(1/0)
+			revolvment = self.pos - self.anchor
+			index = Snail.around.index(revolvment)
+			candidate = self.anchor + Snail.around[(index + self.clockwise * -1) % 8]
+			if mapGetAt(candidate) == GRD:
+				self.anchor = candidate
+			else:
+				self.pos = candidate
+				break
+	def step(self):
+		self.life += 1
+		for i in range(3):
+				self.climb()
+		for worm in PhysObj._worms:
+			if dist(self.pos, worm.pos) < 3 + worm.radius:
+				nonPhys.remove(self)
+				boom(self.pos, 30)
+				return
+	
+	def draw(self):
+		angle = Snail.around.index(self.anchor - self.pos)//2 * 90 + (90 if self.clockwise == LEFT else 180)
+		win.blit(pygame.transform.rotate(self.surf, angle) , point2world(self.pos - Vector(3,3)))
 
 ################################################################################ Create World
 
@@ -4583,6 +4674,7 @@ if True:
 	parser.add_argument("-warped", "--warped", type=bool, nargs='?', const=True, default=False, help="Activate warped map mode mode.")
 	parser.add_argument("-random", "--random", type=bool, nargs='?', const=True, default=False, help="Activate random worms cycle mode mode.")
 	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
+	parser.add_argument("-u", "--unlimited", type=bool, nargs='?', const=True, default=False, help="Activate unlimited mode")
 	
 	args = parser.parse_args()
 	
@@ -4603,6 +4695,7 @@ if True:
 	warpedMode = args.warped
 	randomCycle = args.random
 	recolorGround = args.recolor_ground
+	unlimitedMode = args.unlimited
 
 # drawHealthBar = False
 # randomPlace = False
@@ -4623,6 +4716,7 @@ if True:
 	weapons.append(["gas grenade", CHARGABLE, 5, GRENADES, True, 0])
 	weapons.append(["electric grenade", CHARGABLE, 3, GRENADES, True, 0])
 	weapons.append(["raon launcher", CHARGABLE, 2, GRENADES, False, 0])
+	weapons.append(["distorter", CHARGABLE, 0, GRENADES, True, 0])
 	weapons.append(["shotgun", GUN, 5, GUNS, False, 0])
 	weapons.append(["minigun", GUN, 6, GUNS, False, 0])
 	weapons.append(["gamma gun", GUN, 3, GUNS, False, 0])
@@ -4636,6 +4730,7 @@ if True:
 	weapons.append(["TNT", PUTABLE, 1, GRENADES, False, 0])
 	weapons.append(["covid 19", PUTABLE, 0, GRENADES, False, 0])
 	weapons.append(["sheep", PUTABLE, 1, GRENADES, False, 0])
+	weapons.append(["snail", CHARGABLE, 1, GRENADES, False, 0])
 	weapons.append(["baseball", PUTABLE, 3, MISC, False, 0])
 	weapons.append(["girder", CLICKABLE, -1, MISC, False, 0])
 	weapons.append(["rope", PUTABLE, 3, MISC, False, 0])
@@ -4874,6 +4969,8 @@ def fire(weapon = None):
 		if randint(0, 10) == 0 or megaTrigger:
 			w = Raon(weaponOrigin, weaponDir, energy * 1.08)
 			w = Raon(weaponOrigin, weaponDir, energy * 0.92)
+	elif weapon == "snail":
+		w = SnailShell(weaponOrigin, weaponDir, energy)
 	elif weapon == "fus ro duh":
 		decrease = False
 		if state == PLAYER_CONTROL_1:
@@ -4898,6 +4995,8 @@ def fire(weapon = None):
 			decrease = True
 			nextState = PLAYER_CONTROL_2
 		avail = False
+	elif weapon == "distorter":
+		w = Distorter(weaponOrigin, weaponDir, energy)
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -4961,10 +5060,10 @@ def fireClickable():
 	timeRemaining(retreatTime)
 	state = nextState
 
-for i in range(len(weapons)):
-	weaponDict[weapons[i][0]] = i
-	weaponDict[i] = weapons[i][0]
-	if not unlimitedMode: basicSet.append(weapons[i][2])
+for i, w in enumerate(weapons):
+	weaponDict[w[0]] = i
+	weaponDict[i] = w[0]
+	if not unlimitedMode: basicSet.append(w[2])
 	else: basicSet.append(-1)
 
 utilities = []
@@ -4982,9 +5081,9 @@ if True:
 	weaponDict["flare"] = -1
 
 utilityDict = {}
-for i in range(len(utilities)):
-	utilityDict[utilities[i][0]] = i
-	utilityDict[i] = utilities[i][0]
+for i , u in enumerate(utilities):
+	utilityDict[u[0]] = i
+	utilityDict[i] = u[0]
 
 ################################################################################ Teams
 class Team:
@@ -5528,20 +5627,20 @@ def weaponMenuInit():
 	count = 0
 	m = Menu((winWidth - Menu.width - 2 * Menu.border, 0))
 	# print("winwidth:", winWidth)
-	for i in range(len(weapons)):
+	for i, w in enumerate(weapons):
 		if currentTeam.weaponCounter[i] != 0:
 			secText = str(currentTeam.weaponCounter[i]) if currentTeam.weaponCounter[i] > -1 else ""
-			active = weapons[i][5] == 0
-			if inUsedList(weapons[i][0]):
+			active = w[5] == 0
+			if inUsedList(w[0]):
 				active = False
-			m.addButton(weapons[i][0], secText, weapons[i][3], active, actionWeaponButton)
+			m.addButton(w[0], secText, w[3], active, actionWeaponButton)
 	
 	if sum(currentTeam.utilityCounter) != 0:
 		m2 = Menu((winWidth - 2 * Menu.width - 4 * Menu.border - 1, 0))
-		for i in range(len(utilities)):
+		for i, u in enumerate(utilities):
 			if currentTeam.utilityCounter[i] != 0:
 				secText = str(currentTeam.utilityCounter[i])
-				m2.addButton(utilities[i][0], secText, WHITE, True, actionUtilityButton)
+				m2.addButton(u[0], secText, WHITE, True, actionUtilityButton)
 
 def scrollMenu(up = True):
 	menu = Menu.menus[0]
@@ -5668,8 +5767,8 @@ def saveGame():
 
 def list2str(_list):
 	string = ""
-	for i in range(len(_list)):
-		string += str(_list[i])
+	for i, item in enumerate(_list):
+		string += str(item)
 		if not i == len(_list)-1:
 			string += " "
 	return string
@@ -5709,12 +5808,12 @@ def randomStartingWeapons(amount):
 
 def randomWeaponsGive():
 	for team in teams:
-		for i in range(len(team.weaponCounter)):
-			if team.weaponCounter[i] == -1:
+		for i, teamCount in enumerate(team.weaponCounter):
+			if teamCount == -1:
 				continue
 			else:
 				if randint(0,1) == 1:
-					team.weaponCounter[i] = randint(0,5)
+					teamCount = randint(0,5)
 
 def suddenDeath():
 	for worm in PhysObj._worms:
@@ -5740,7 +5839,7 @@ def cheatActive(code):
 	if code == "gibguns":
 		unlimitedMode = True
 		for team in teams:
-			for i in range(len(team.weaponCounter)):
+			for i, teamCount in enumerate(team.weaponCounter):
 				team.weaponCounter[i] = -1
 			team.utilityCounter = [99] * len(utilities)
 		for weapon in weapons:
@@ -5795,12 +5894,12 @@ def addToUseList(string):
 		useList.pop(0)
 def drawUseList():
 	space = 0
-	for i in range(len(useList)):
+	for i, usedWeapon in enumerate(useList):
 		if i == 0:
-			win.blit(useList[i][0], (30 + 80 * i,winHeight - 6))
+			win.blit(usedWeapon[0], (30 + 80 * i,winHeight - 6))
 		else:
 			space += useList[i-1][0].get_width() + 10
-			win.blit(useList[i][0], (30 + space, winHeight - 6))
+			win.blit(usedWeapon[0], (30 + space, winHeight - 6))
 def inUsedList(string):
 	used = False
 	for i in useList:
@@ -5824,23 +5923,7 @@ def lstepper():
 	pygame.display.update()
 
 def testerFunc():
-	# print(winWidth, winHeight)
-	# print(scalingFactor)
-	# return
-	# if state == PLAYER_CONTROL_1:
-		# mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-		# Ball(mouse)
-		
-		# for worm in PhysObj._worms:
-			# if dist(mouse, worm.pos) < 10:
-				# print(worm.nameStr, "sleep")
-				# worm.sleep = True
-				# break
-		# p = Path(mouse)
-		# objectUnderControl.holding = 1
-		# print(currentWeapon, weaponStyle)
-		# print("test")
-		pass
+	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 
 ################################################################################ State machine
 if True:
@@ -6257,53 +6340,53 @@ if __name__ == "__main__":
 					if state == PLAYER_CONTROL_1:
 						weaponsSwitch = False
 						if event.key == pygame.K_1:
-							currentWeapon = "missile"
+							keyWeapons = ["missile", "gravity missile", "homing missile"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_2:
-							if currentWeapon == "grenade":
-								currentWeapon = "electric grenade"
-							else:
-								currentWeapon = "grenade"
+							keyWeapons = ["grenade", "sticky bomb", "electric grenade"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_3:
-							currentWeapon = "mortar"
+							keyWeapons = ["mortar", "raon launcher"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_4:
-							currentWeapon = "petrol bomb"
+							keyWeapons = ["petrol bomb", "flame thrower"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_5:
-							currentWeapon = "TNT"
+							keyWeapons = ["TNT", "mine"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_6:
-							if currentWeapon == "shotgun":
-								currentWeapon = "long bow"
-							elif currentWeapon == "long bow":
-								currentWeapon = "laser gun"
-							else:
-								currentWeapon = "shotgun"
+							keyWeapons = ["shotgun", "long bow", "gamma gun", "laser gun"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_7:
-							currentWeapon = "girder"
+							keyWeapons = ["girder", "baseball"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_8:
-							if currentWeapon == "flame thrower":
-								currentWeapon = "bunker buster"
-							else:
-								currentWeapon = "flame thrower"
+							keyWeapons = ["bunker buster"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_9:
-							currentWeapon = "sticky bomb"
+							keyWeapons = ["minigun"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_0:
-							currentWeapon = "minigun"
+							keyWeapons = []
+							for i, w in enumerate(currentTeam.weaponCounter):
+								if w > 0 or w == -1:
+									if weapons[i][3] == LEGENDARY:
+										keyWeapons.append(weaponDict[i])
 							weaponsSwitch = True
 						elif event.key == pygame.K_MINUS:
-							currentWeapon = "rope"
+							keyWeapons = ["rope"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_EQUALS:
-							currentWeapon = "parachute"
+							keyWeapons = ["parachute"]
 							weaponsSwitch = True
 						if weaponsSwitch:
+							if len(keyWeapons) > 0:
+								if currentWeapon in keyWeapons:
+									index = keyWeapons.index(currentWeapon)
+									index = (index + 1) % len(keyWeapons)
+									currentWeapon = keyWeapons[index]
+								else:
+									currentWeapon = keyWeapons[0]
 							weaponStyle = weapons[weaponDict[currentWeapon]][1]
 							renderWeaponCount()
 					# misc
@@ -6498,8 +6581,8 @@ if __name__ == "__main__":
 		if pointsMode or targetsMode:
 			while len(killList) > 8:
 				killList.pop(-1)
-			for i in range(len(killList)):
-				win.blit(killList[i][0], (5, winHeight - 14 - i * 8))
+			for i, killed in enumerate(killList):
+				win.blit(killed[0], (5, winHeight - 14 - i * 8))
 		
 		drawExtra()##remove
 		# debug:
