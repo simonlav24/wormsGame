@@ -16,74 +16,75 @@ game development practice in python for educational purposes and fun. pygame req
 
 # Weapons
 ## Missiles
-- MISSILE - chargeable, shoots a missile, wind sensitive.
-- GRAVITY MISSILE - chargeable, shoots a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
-- BUNKER BUSTER - chargeable, shoots a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
-- HOMING MISSILE - chargeable, mouse click to select target and shoot.
-- ARTILLERY ASSISTANCE - chargeable, throws a flare to mark area for bombing.
+- **MISSILE** - chargeable, shoot a missile, wind sensitive.
+- **GRAVITY MISSILE** - chargeable, shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
+- **BUNKER BUSTER** - chargeable, shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
+- **HOMING MISSILE** - chargeable, mouse click to select target and shoot.
+- **ARTILLERY ASSISTANCE** - chargeable, throw a flare to mark area for bombing.
 
 ## Grenades
-- GRENADE - chargeable, throws a grenade. all grenades delay time can be changed by pressing tab.
-- MORTAR - chargeable, throws a mortar grenade, when exploding it releases 3 missiles.
-- STICKY BOMB - chargeable, a sticky grenade.
-- GAS GRENADE - chargeable, emits a toxic gas before exploding.
-- ELECTRIC GRENADE - chargeable, electrifying nearby worms. bouncy.
-- RAON LAUNCHER - chargeable, shooting two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
+- **GRENADE** - chargeable, throw a grenade. all grenades delay time can be changed by pressing tab.
+- **MORTAR** - chargeable, throw a mortar grenade, when exploding it releases 3 missiles.
+- **STICKY BOMB** - chargeable, a sticky grenade.
+- **GAS GRENADE** - chargeable, emit a toxic gas before exploding.
+- **ELECTRIC GRENADE** - chargeable, electrifying nearby worms. bouncy.
+- **RAON LAUNCHER** - chargeable, shooting two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
 
 ## Guns
-- SHOTGUN - fires shotgun. 3 rounds.
-- MINIGUN - fires minigun.
-- GAMMA GUN - fires gamma radiation makes worms sick. can pass through terrain.
-- LONG BOW - shoots arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
-- SPEAR - throw spear, impale all worms in its way. 2 spears.
-- LASER GUN - destructive laser destroy destructively every destructive thing on its way.
-- PORTAL GUN - the cake is a deception. obtainable by utility crate.
+- **SHOTGUN** - fire shotgun. 3 rounds.
+- **MINIGUN** - fire minigun.
+- **GAMMA GUN** - fire gamma radiation pulse. make worms sick. and mutate venus fly traps. can pass through terrain.
+- **LONG BOW** - shoot arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
+- **SPEAR** - throw spear, impale all worms in its way. 2 spears.
+- **LASER GUN** - destructive laser destroy destructively every thing on its way.
+- **PORTAL GUN** - the cake is a deception. obtainable by utility crate.
 
 ## Fire weapons
-- PETROL BOMB - chargeable, throws a pentrol bomb, explosive fire spreader.
-- FLAME THROWER - it werfs flammen.
+- **PETROL BOMB** - chargeable, throw a petrol bomb, explosive fire spreader.
+- **FLAME THROWER** - it werfs flammen.
 
 ## Place and run\ Traveling
-- MINE - mine.
-- TNT - explosive TNT bomb.
-- COVID19 - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
-- SHEEP - baaaa.
-- BASEBALL - home running worms away.
-- GIRDER - clickable, place a girder. press tab for rotation and scaling.
-- ROPE - swing your way to action.
-- PARACHUTE - glide down safely. wind sensitive.
-- VENUS FLY TRAP - chargeable, throws seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
-- SENTRY GUN - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
-- ENDER PEARL - throw and teleport to where it lands.
+- **MINE** - mine.
+- **TNT** - explosive TNT bomb.
+- **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
+- **SHEEP** - baaaa.
+- **SNAIL** - chargeable, quick  and sticky snail.
+- **BASEBALL** - home running worms away.
+- **GIRDER** - clickable, place a girder. press tab for rotation and scaling.
+- **ROPE** - swing your way to action.
+- **PARACHUTE** - glide down safely. wind sensitive.
+- **VENUS FLY TRAP** - chargeable, throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
+- **SENTRY GUN** - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
+- **ENDER PEARL** - throw and teleport to where it lands.
 
 ## Aerial
-- AIRSTRIKE - clickable, missile strike, wind sensitive.
-- NAPALM STRIKE - clickable, smelly, firey mess. wind sensitive.
-- MINE STRIKE - clickable, mine strike.
+- **AIRSTRIKE** - clickable, missile strike, wind sensitive.
+- **NAPALM STRIKE** - clickable, smelly, firey mess. wind sensitive.
+- **MINE STRIKE** - clickable, mine strike.
 
 ## legen.. darys
  Legendary weapons can be obtained by weapon crates marked with "W".
-- HOLY GRENADE - chargeable, feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
-- BANANA - chargeable, multiplying banana of mass destruction.
-- EARTHQUAKE - quakes the earth.
-- GEMINO MINE - chargeable, throws a mine cursed by the gemino curse.
-- BEE HIVE - chargeable, wakes the bees at impact.
-- VORTEX GRENADE - chargeable, creates a vortex sucking in worms and then repelling them.
-- CHILLI PEPPER - chargeable, red hot chilli pepper.
-- RAGING BULL - moooo bi**h get out the way.
-- ELECTRO BOOM - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
-- POKEBALL - cathes worms. store them until the ball is damaged.
-- GREEN SHELL - actual Koopa Troopa shell
-- GUIDED MISSILE - controllable missile. use RIGHT KEY and LEFT KEY to control.
+- **HOLY GRENADE** - chargeable, feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
+- **BANANA** - chargeable, multiplying banana of mass destruction.
+- **EARTHQUAKE** - quakes the earth.
+- **GEMINO MINE** - chargeable, throw a mine cursed by the gemino curse.
+- **BEE HIVE** - chargeable, wake the bees at impact.
+- **VORTEX GRENADE** - chargeable, create a tear in the space time continuum.
+- **CHILLI PEPPER** - chargeable, red hot chilli pepper.
+- **RAGING BULL** - moooo bi%%h get out the way.
+- **ELECTRO BOOM** - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
+- **POKEBALL** - catch worms. store them until the ball is damaged.
+- **GREEN SHELL** - actual Koopa Troopa shell
+- **GUIDED MISSILE** - controllable missile. use RIGHT KEY and LEFT KEY to control.
 
 # Utilities:
  Utilities can be obtained by utility crates marked with "?".
-- moon gravity - big step for wormanity.
-- double damage - twice as fun.
-- aim aid - laser sight for guns.
-- teleport - activate and click somewhere.
-- switch worms - activate and press tab to switch worms in team.
-- time travel - activate and continue with your turn. shoot a 'chargeable' weapon or 'place and run'. 
-- jet pack - thrust with arrow keys.
-- portal gun - to use in weapons.
-- traveling kit - more ropes and parachutes.
+- **moon gravity** - big step for wormanity.
+- **double damage** - twice as fun.
+- **aim aid** - laser sight for guns.
+- **teleport** - activate and click somewhere.
+- **switch worms** - activate and press tab to switch worms in team.
+- **time travel** - activate and continue with your turn. shoot a 'chargeable' weapon or 'place and run'. 
+- **jet pack** - thrust with arrow keys.
+- **portal gun** - to use in weapons.
+- **traveling kit** - more ropes and parachutes.
