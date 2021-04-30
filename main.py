@@ -116,7 +116,7 @@ if True:
 	
 	text = ""
 	HUDColor = BLACK
-webVer = True 
+webVer = False 
 
 # bugs:
 # points mode ends in tie wont consider the winner with the highest points
@@ -125,7 +125,7 @@ webVer = True
 if True:
 	mapWidth = int(1024*1.5)
 	mapHeight = 512
-	map = pygame.Surface((mapWidth, mapHeight))
+	gameMap = pygame.Surface((mapWidth, mapHeight))
 	wormCol = pygame.Surface((mapWidth, mapHeight))
 	extraCol = pygame.Surface((mapWidth, mapHeight))
 	
@@ -164,11 +164,11 @@ def createMapImage(heightNorm = None):
 		if randint(0,1) == 0:
 			mapImage = pygame.transform.flip(mapImage, True, False)
 	
-	global map, mapWidth, mapHeight, ground, wormCol, extraCol, groundSec
+	global gameMap, mapWidth, mapHeight, ground, wormCol, extraCol, groundSec
 	mapWidth = mapImage.get_width()
 	mapHeight = mapImage.get_height()
-	map = pygame.Surface((mapWidth, mapHeight))
-	map.fill(SKY)
+	gameMap = pygame.Surface((mapWidth, mapHeight))
+	gameMap.fill(SKY)
 	wormCol = pygame.Surface((mapWidth, mapHeight))
 	wormCol.fill(SKY)
 	extraCol = pygame.Surface((mapWidth, mapHeight))
@@ -183,14 +183,14 @@ def createMapImage(heightNorm = None):
 	for x in range(mapWidth):
 		for y in range(mapHeight):
 			if not (mapImage.get_at((x, y)) == (0,0,0) or mapImage.get_at((x, y))[3] < 100):
-				map.set_at((x, y), GRD)
+				gameMap.set_at((x, y), GRD)
 		if x % 10 == 0:
 			lstepper()
 	mapImage.set_colorkey((0,0,0))
 
 def createMapDigging():
-	global map, wormCol, extraCol
-	map.fill(GRD)
+	global gameMap, wormCol, extraCol
+	gameMap.fill(GRD)
 	wormCol.fill(SKY)
 	extraCol.fill(SKY)
 	
@@ -205,6 +205,21 @@ def drawLand():
 	if darkness and not state == PLACING_WORMS:
 		mask.fill((30,30,30))
 		if objectUnderControl:
+			# advanced darkness:
+			# center = objectUnderControl.pos
+			# points = []
+			# for i in range(100):
+				# direction = vectorFromAngle((pi * i)/(100/2))
+				# for t in range(100):
+					# testPos = center + direction * (t*5)
+					# if mapGetAt(testPos) == GRD:
+						# points.append(testPos)
+						# break
+					# if t == 100 - 1:
+						# points.append(testPos)
+						# break
+			# pygame.draw.polygon(mask, (0,0,0,0), points)
+			
 			pygame.draw.circle(mask, (0,0,0,0), objectUnderControl.pos.vec2tupint(), lightRadius)
 	
 		global lights
@@ -227,7 +242,7 @@ def renderLand():
 		groundSec.fill(SKY)
 		for x in range(0,mapWidth):
 			for y in range(0,mapHeight):
-				if map.get_at((x,y)) == GRD:
+				if gameMap.get_at((x,y)) == GRD:
 					ground.fill((randint(80, 120), randint(30, 70), 0), ((x,y), (1, 1)))
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
@@ -251,21 +266,9 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 		Explossion(pos, radius)
 		
 	# draw burn:
-	size = (radius*burnRadius*2+2, radius*burnRadius*2+2)
-	stain = pygame.Surface(size, pygame.SRCALPHA)# the black stain
-	patch = pygame.Surface(size, pygame.SRCALPHA)# map patch
-	grounder = pygame.Surface(size, pygame.SRCALPHA)# ground patch
-	pygame.draw.circle(stain, (0,0,0,randint(100,180)), (radius*burnRadius+2, radius*burnRadius+2), radius * burnRadius+2)
-	grounder.blit(ground, (0,0), (pos - tup2vec(size)/2, size))
-	patch.blit(map, (0,0), (pos - tup2vec(size)/2, size))
-	patch.set_colorkey(GRD)
-	grounder.blit(stain, (0,0))
-	grounder.blit(patch, (0,0))
-	grounder.set_colorkey(SKY)
-	ground.blit(grounder, pos - tup2vec(size)/2)
-
+	stain(pos, imageHole, (int(radius*4),int(radius*4)), True)
 	
-	pygame.draw.circle(map, SKY, pos.vec2tupint(), int(radius))
+	pygame.draw.circle(gameMap, SKY, pos.vec2tupint(), int(radius))
 	pygame.draw.circle(ground, SKY, pos.vec2tupint(), int(radius))
 	if not fire:
 		pygame.draw.circle(groundSec, SKY, pos.vec2tupint(), int(radius * 0.7))
@@ -297,18 +300,20 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 			d = Debrie(pos, radius/5, colors)
 			d.radius = choice([1,2])
 
-def blood(pos):
-	rotatedBlood = pygame.transform.rotate(imageBlood, randint(0, 360))
-	size = rotatedBlood.get_size()
+def stain(pos, surf, size, alphaMore):
+	rotated = pygame.transform.rotate(pygame.transform.scale(surf, size), randint(0, 360))
+	if alphaMore:
+		rotated.set_alpha(randint(100,180))
+	size = rotated.get_size()
 	grounder = pygame.Surface(size, pygame.SRCALPHA)
 	grounder.blit(ground, (0,0), (pos - tup2vec(size)/2, size))
 	patch = pygame.Surface(size, pygame.SRCALPHA)
 	
 	grounder.blit(ground, (0,0), (pos - tup2vec(size)/2, size))
-	patch.blit(map, (0,0), (pos - tup2vec(size)/2, size))
+	patch.blit(gameMap, (0,0), (pos - tup2vec(size)/2, size))
 	patch.set_colorkey(GRD)
 	
-	grounder.blit(rotatedBlood, (0,0))
+	grounder.blit(rotated, (0,0))
 	grounder.blit(patch, (0,0))
 	
 	grounder.set_colorkey(SKY)
@@ -356,10 +361,12 @@ class Explossion:
 	def draw(self):
 		pass
 
-def mapGetAt(pos):
+def mapGetAt(pos, mat=None):
+	if not mat:
+		mat = gameMap
 	if pos.x >= mapWidth or pos.x < 0 or pos.y >= mapHeight or pos.y < 0:
 		return SKY
-	return map.get_at(pos)
+	return mat.get_at((int(pos[0]), int(pos[1])))
 
 def isVisibleInDarkness(self):
 	if state == PLACING_WORMS:
@@ -434,7 +441,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 			if y + i >= mapHeight:
 				goodPlace = False
 				break
-			if map.get_at((place.x, y + i)) == GRD or wormCol.get_at((place.x, y + i)) != (0,0,0) or extraCol.get_at((place.x, y + i)) != (0,0,0):
+			if gameMap.get_at((place.x, y + i)) == GRD or wormCol.get_at((place.x, y + i)) != (0,0,0) or extraCol.get_at((place.x, y + i)) != (0,0,0):
 				y = y + i - 7
 				break
 		if  not goodPlace:
@@ -467,7 +474,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 		
 		# if all conditions are met, make hole and place
 		if isGroundAround(place):
-			pygame.draw.circle(map, SKY, place.vec2tup(), 5)
+			pygame.draw.circle(gameMap, SKY, place.vec2tup(), 5)
 			pygame.draw.circle(ground, SKY, place.vec2tup(), 5)
 	# print(counter)
 	return place
@@ -550,6 +557,7 @@ if True:
 	imageEnder = pygame.image.load("assets/ender.png").convert_alpha()
 	imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
 	imageSnail = pygame.image.load("assets/snail.png").convert_alpha()
+	imageHole = pygame.image.load("assets/hole.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -612,7 +620,7 @@ def checkFreePos(obj, pos, wormcol = False):
 			continue
 		
 		getAt = testPos.vec2tupint()
-		if map.get_at(getAt) == GRD:
+		if gameMap.get_at(getAt) == GRD:
 			return False
 		if extraCol.get_at(getAt) != (0,0,0):
 			return False
@@ -636,7 +644,7 @@ def checkFreePosFallProof(obj, pos):
 			r += pi /8
 			continue
 			
-		if not map.get_at((int(testPos.x), int(testPos.y))) == (0,0,0):
+		if not gameMap.get_at((int(testPos.x), int(testPos.y))) == (0,0,0):
 			return False
 		
 		r += pi /8
@@ -644,7 +652,7 @@ def checkFreePosFallProof(obj, pos):
 	groundUnder = False
 	for i in range(int(obj.radius), 50):
 		# extra.append((pos.x, pos.y + i, (255,255,255), 5))
-		if map.get_at((int(pos.x), int(pos.y + i))) == GRD:
+		if gameMap.get_at((int(pos.x), int(pos.y + i))) == GRD:
 			groundUnder = True
 			break
 	return groundUnder
@@ -659,14 +667,14 @@ def checkPotential(obj, count):
 		pot.append(pos)
 	
 	for i in pot:
-		if map.get_at(i.vec2tupint()) == (0,0,0):
-			while map.get_at(i.vec2tupint()) == (0,0,0):
+		if gameMap.get_at(i.vec2tupint()) == (0,0,0):
+			while gameMap.get_at(i.vec2tupint()) == (0,0,0):
 				if isOnMap((i[0], i[1] + 1)):
 					i.y += 1
 				else:
 					break
 		else:
-			while map.get_at(i.vec2tupint()) == GRD:
+			while gameMap.get_at(i.vec2tupint()) == GRD:
 				if isOnMap((i[0], i[1] - 1)):
 					i.y -= 1
 				else:
@@ -728,6 +736,48 @@ def whiten(color):
 	b = b/5 + 167
 	
 	return (r,g,b)
+
+def getNormal(pos, radius, angle):
+	response = Vector(0,0)
+	collision = False
+	r = angle - pi#- pi/2
+	while r < angle + pi:#+ pi/2:
+		testPos = Vector((radius) * cos(r) + pos.x, (radius) * sin(r) + pos.y)
+		addExtra(testPos, (255, 204, 102), fps*2)
+		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+			# if mapClosed:
+				# response += pos - testPos
+				# print("ad")
+				# collision = True
+				# r += pi /8
+				# continue
+			# else:
+			r += pi /8
+			continue
+		if testPos.y < 0:
+			r += pi /8
+			continue
+		
+		# collission with gameMap:
+		if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			response += pos - testPos
+			print("ad")
+			collision = True
+			r += pi /8; continue
+
+		# else:
+			# if not self.wormCollider and wormCol.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
+				# response += ppos - testPos
+				# collision = True
+			# elif not self.extraCollider and extraCol.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
+				# response += ppos - testPos
+				# collision = True
+		
+		r += pi / 8
+	print("collisiion")
+	if collision:
+		return response
+	return None
 
 ################################################################################ Objects
 timeCounter = turnTime
@@ -853,8 +903,8 @@ class PhysObj:
 				r += pi /8
 				continue
 			
-			# collission with map:
-			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			# collission with gameMap:
+			if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 				collision = True
 				r += pi /8; continue
@@ -878,7 +928,7 @@ class PhysObj:
 				self.damage(magVel * 1.5 * fallDamageMult, 1)
 				# blood
 				if self in PhysObj._worms:
-					blood(self.pos)
+					stain(self.pos, imageBlood, imageBlood.get_size(), False)
 			self.stable = True
 			
 			response.normalize()
@@ -906,7 +956,7 @@ class PhysObj:
 				
 		else:
 			self.pos = ppos
-			# flew out map but not worms !
+			# flew out gameMap but not worms !
 			if self.pos.y > mapHeight and not self in self._worms:
 				self.outOfMapResponse()
 				self._reg.remove(self)
@@ -1451,7 +1501,7 @@ class Worm (PhysObj):
 				testPos = start + direction * i
 				if not isOnMap(testPos):
 					break
-				if map.get_at(testPos.vec2tupint()) == GRD:
+				if gameMap.get_at(testPos.vec2tupint()) == GRD:
 					self.rope[0].append(testPos)
 					self.rope[1] = dist(self.pos, self.rope[0][-1])
 					break
@@ -1463,7 +1513,7 @@ class Worm (PhysObj):
 					testPos = start + direction * i
 					if not isOnMap(testPos):
 						break
-					if map.get_at(testPos.vec2tupint()) == GRD:
+					if gameMap.get_at(testPos.vec2tupint()) == GRD:
 						break
 					if i == count-1:
 						self.rope[1] = dist(self.pos, self.rope[0][-2])
@@ -1494,7 +1544,7 @@ class Worm (PhysObj):
 		if self.health <= 0 and self.alive:
 			self.dieded()
 		
-		# check if on map:
+		# check if on gameMap:
 		if self.pos.y >= mapHeight:
 			self.dieded(Worm.causeFlew)
 		if self.pos.y < 0:
@@ -1717,7 +1767,7 @@ def cpuProccess(self):
 				# print("inside", target[1])
 				posCurrent = CpuHolder.initialPos + target[1] * i + acc * (i*(i+1)/2)
 				extra.append((posCurrent.x, posCurrent.y, (255,255,255), 10))
-				if map.get_at(posCurrent.vec2tupint()) == GRD:
+				if gameMap.get_at(posCurrent.vec2tupint()) == GRD:
 					target[3] = False
 					break
 			
@@ -1932,9 +1982,9 @@ def fireShotgun(start, direction, power=15):#6
 		# hit worms or ground:
 		# hit ground:
 		at = (int(testPos.x), int(testPos.y))
-		if map.get_at(at) == GRD or wormCol.get_at(at) != (0,0,0) or extraCol.get_at(at) != (0,0,0):
+		if gameMap.get_at(at) == GRD or wormCol.get_at(at) != (0,0,0) or extraCol.get_at(at) != (0,0,0):
 			if wormCol.get_at(at) != (0,0,0):
-				blood(testPos)
+				stain(testPos, imageBlood, imageBlood.get_size(), False)
 			boom(testPos, power)
 			break
 
@@ -1947,7 +1997,7 @@ def girder(pos):
 	ground.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
 	surf.fill(GRD)
 	surfMap = pygame.transform.rotate(surf, girderAngle)
-	map.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
+	gameMap.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
 	
 def drawGirderHint():#7
 	surf = pygame.Surface((girderSize, 10)).convert_alpha()
@@ -2269,7 +2319,7 @@ def deployPack(pack):
 				# no ground bellow
 				goodPlace = False
 				continue
-			if map.get_at((x, y + i)) == GRD:
+			if gameMap.get_at((x, y + i)) == GRD:
 				goodPlace = True
 				break
 		# test3 (hopefully always possible)
@@ -2497,7 +2547,7 @@ class Plant:
 			self.green = 255
 		if self.green < 0:
 			self.green = 0
-		pygame.draw.circle(map, GRD, (int(self.pos[0]), int(self.pos[1])), int(self.radius))
+		pygame.draw.circle(gameMap, GRD, (int(self.pos[0]), int(self.pos[1])), int(self.radius))
 		pygame.draw.circle(ground, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), int(self.radius))
 		
 		if self.radius == 0:
@@ -2537,7 +2587,7 @@ class PlantBomb(PhysObj):
 				r += pi /8
 				continue
 			
-			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 			
 			r += pi /8
@@ -2670,7 +2720,7 @@ class Bee:
 			ppos = self.pos + vectorFromAngle(self.angle) * -1
 			self.angle += pi
 		try:
-			if map.get_at((ppos.vec2tupint())) == GRD:
+			if gameMap.get_at((ppos.vec2tupint())) == GRD:
 				ppos = self.pos + vectorFromAngle(self.angle) * -1
 				self.angle += pi
 				if self.target:
@@ -2782,7 +2832,7 @@ class BunkerBuster(PhysObj):
 		
 		checkPos = (self.pos + direction*self.radius).vec2tupint()
 		if not(checkPos[0] >= mapWidth or checkPos[0] < 0 or checkPos[1] >= mapHeight or checkPos[1] < 0):
-			if map.get_at(checkPos) == GRD:
+			if gameMap.get_at(checkPos) == GRD:
 				self.inGround = True
 				self.drillVel = vectorCopy(self.vel)
 		if self.inGround:
@@ -2790,7 +2840,7 @@ class BunkerBuster(PhysObj):
 					
 		checkPos = (self.pos + direction*(self.radius + 2)).vec2tupint()
 		if not(checkPos[0] >= mapWidth or checkPos[0] < 0 or checkPos[1] >= mapHeight or checkPos[1] < 0):
-			if not map.get_at(checkPos) == GRD and self.inGround:
+			if not gameMap.get_at(checkPos) == GRD and self.inGround:
 				self.dead = True
 				
 		if self.timer == fps*2:
@@ -2803,7 +2853,7 @@ class BunkerBuster(PhysObj):
 			boom(self.pos, self.radius, False)
 		self.lineOut((self.lastPos.vec2tupint(), self.pos.vec2tupint()))
 		
-		# flew out map but not worms !
+		# flew out gameMap but not worms !
 		if self.pos.y > mapHeight:
 			self._reg.remove(self)
 			return
@@ -2820,7 +2870,7 @@ class BunkerBuster(PhysObj):
 			self.deathResponse()
 			del self
 	def lineOut(self,line):
-		pygame.draw.line(map, SKY, line[0], line[1], self.radius*2)
+		pygame.draw.line(gameMap, SKY, line[0], line[1], self.radius*2)
 		pygame.draw.line(ground, SKY, line[0], line[1], self.radius*2)
 	def draw(self):
 		theta = self.vel.getAngle()
@@ -3176,7 +3226,7 @@ class Covid19:
 			ppos = self.pos + vectorFromAngle(self.angle) * -1
 			self.angle += pi
 		try:
-			if map.get_at((ppos.vec2tupint())) == GRD:
+			if gameMap.get_at((ppos.vec2tupint())) == GRD:
 				ppos = self.pos + vectorFromAngle(self.angle) * -1
 				self.angle += pi
 				if self.target:
@@ -3299,8 +3349,8 @@ class LongBow:
 				if not isOnMap(testPos.vec2tupint()):
 					PhysObj._reg.remove(self)
 					return
-				# check map collision
-				if map.get_at(testPos.vec2tupint()) == GRD:
+				# check gameMap collision
+				if gameMap.get_at(testPos.vec2tupint()) == GRD:
 					self.stuck = vectorCopy(testPos)
 				# check cans collision:
 				for can in PetrolCan._cans:
@@ -3320,7 +3370,7 @@ class LongBow:
 						camTrack = worm
 						if self.sleep: worm.sleep = True
 						self.destroy()
-						blood(worm.pos)
+						stain(worm.pos, imageBlood, imageBlood.get_size(), False)
 						return
 				# check target collision:
 				for target in ShootingTarget._reg:
@@ -3334,9 +3384,9 @@ class LongBow:
 			
 			points = [(self.pos - self.direction * 10 + i).vec2tupint() for i in self.triangle]
 			pygame.draw.polygon(ground, (230,235,240), points)
-			pygame.draw.polygon(map, GRD, points)
+			pygame.draw.polygon(gameMap, GRD, points)
 			
-			pygame.draw.line(map, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+			pygame.draw.line(gameMap, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
 			pygame.draw.line(ground, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
 			
 			self.destroy()
@@ -3394,7 +3444,7 @@ def shootRope(start, direction):
 		testPos = start + direction * t
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
-		if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+		if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			objectUnderControl.toggleRope(testPos)
 			Worm.roped = True
 			break
@@ -3534,7 +3584,7 @@ def firePortal(start, direction):
 			continue
 
 		# if hits map:
-		if map.get_at(testPos.vec2tupint()) == GRD:
+		if gameMap.get_at(testPos.vec2tupint()) == GRD:
 			
 			response = Vector(0,0)
 			
@@ -3545,7 +3595,7 @@ def firePortal(start, direction):
 				
 				if check.x >= mapWidth or check.y >= mapHeight or check.x < 0 or check.y < 0:
 					continue
-				if map.get_at(check.vec2tupint()) == GRD:
+				if gameMap.get_at(check.vec2tupint()) == GRD:
 					# extra.append((check.x, check.y, (255,255,255), 100))
 					response +=  Vector(8 * cos(ti), 8 * sin(ti))
 			
@@ -3588,7 +3638,7 @@ class Portal:
 		
 		self.posBro = Vector()
 	def step(self):
-		if not map.get_at(self.holdPos.vec2tupint()) == GRD:
+		if not gameMap.get_at(self.holdPos.vec2tupint()) == GRD:
 			PhysObj._reg.remove(self)
 			Portal._reg.remove(self)
 			
@@ -3695,7 +3745,7 @@ class Venus:
 					
 				self.scale = 1
 				self.mode = Venus.hold
-				map.set_at(self.pos.vec2tupint(), GRD)
+				gameMap.set_at(self.pos.vec2tupint(), GRD)
 			gameDistable()
 			return
 		
@@ -3769,7 +3819,7 @@ class Venus:
 		
 		# check if self is destroyed
 		if isOnMap(self.pos.vec2tupint()):
-			if not map.get_at(self.pos.vec2tupint()) == GRD:
+			if not gameMap.get_at(self.pos.vec2tupint()) == GRD:
 				nonPhys.remove(self)
 				Venus._reg.remove(self)
 		else:
@@ -3835,7 +3885,7 @@ class Ball(PhysObj):#########EXPERIMENTAL
 				r += pi /8
 				continue
 			
-			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 				collision = True
 			
@@ -3865,7 +3915,7 @@ class Ball(PhysObj):#########EXPERIMENTAL
 				
 		else:
 			self.pos = ppos
-			# flew out map but not worms !
+			# flew out gameMap but not worms !
 			if self.pos.y > mapHeight and not self in self._worms:
 				self.outOfMapResponse()
 				self._reg.remove(self)
@@ -4081,8 +4131,8 @@ def fireLaser(start, direction, power=15):
 		if hit:
 			break
 		
-		# if hits map:
-		if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+		# if hits gameMap:
+		if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
 			layersCircles[0].append((color, start + direction * 5, 5))
 			layersCircles[0].append((color, testPos, 5))
@@ -4091,7 +4141,7 @@ def fireLaser(start, direction, power=15):
 			for i in square:
 				points.append((testPos + i).vec2tupint())
 			
-			pygame.draw.polygon(map, SKY, points)
+			pygame.draw.polygon(gameMap, SKY, points)
 			pygame.draw.polygon(ground, SKY, points)
 			break
 
@@ -4136,7 +4186,7 @@ class GuidedMissile(PhysObj):
 				r += pi /8
 				continue
 			
-			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				collision = True
 			
 			r += pi /8
@@ -4211,7 +4261,7 @@ class EndPearl(PhysObj):
 				r += pi /8
 				continue
 			
-			if map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 			
 			r += pi /8
@@ -4262,11 +4312,11 @@ class ShootingTarget:
 		ShootingTarget._reg.append(self)
 		self.pos = Vector(randint(10, mapWidth - 10), randint(10, mapHeight - 50))
 		self.radius = 10
-		pygame.draw.circle(map, GRD, self.pos, self.radius)
+		pygame.draw.circle(gameMap, GRD, self.pos, self.radius)
 		self.points = [self.pos + vectorFromAngle((i / 11) * 2 * pi) * (self.radius - 2) for i in range(10)]
 	def step(self):
 		for point in self.points:
-			if map.get_at(point.vec2tupint()) != GRD:
+			if gameMap.get_at(point.vec2tupint()) != GRD:
 				self.explode()
 				return
 	def explode(self):
@@ -4321,9 +4371,9 @@ class Distorter(Grenade):#########EXPERIMENTAL
 					continue
 				color = arr.pop(0)
 				if len(color) == 4 and color[3] == 0:
-					map.set_at((x,y), SKY)
+					gameMap.set_at((x,y), SKY)
 				else:
-					map.set_at((x,y), GRD)
+					gameMap.set_at((x,y), GRD)
 				ground.set_at((x,y), color)
 
 raoning = False
@@ -4514,14 +4564,14 @@ class Spear(PhysObj):
 	def deathResponse(self):
 		self.pos += self.vel
 		point = self.pos - normalize(self.vel) * 30
-		pygame.draw.line(map, GRD, self.pos, point, self.radius)
-		pygame.draw.polygon(map, GRD, [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
+		pygame.draw.line(gameMap, GRD, self.pos, point, self.radius)
+		pygame.draw.polygon(gameMap, GRD, [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
 		
 		pygame.draw.line(ground, self.color, self.pos, point, self.radius)
 		pygame.draw.polygon(ground, (230,235,240), [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
 		
 		if len(self.worms) > 0:
-			blood(self.pos)
+			stain(self.pos, imageBlood, imageBlood.get_size(), False)
 		if len(self.worms) > 1:
 			Commentator.que.append((objectUnderControl.nameStr, ("", " the impaler!"), objectUnderControl.team.color))
 	def draw(self):
@@ -4608,6 +4658,31 @@ class Snail:
 		angle = Snail.around.index(self.anchor - self.pos)//2 * 90 + (90 if self.clockwise == LEFT else 180)
 		win.blit(pygame.transform.rotate(self.surf, angle) , point2world(self.pos - Vector(3,3)))
 
+def fireDeflectLaser(start, direction, power=15):#########EXPERIMENTAL
+	deflects = []
+	power = 500
+	t = 0
+	while True:
+		testPos = start + direction * t
+		
+		addExtra(testPos, (255, 204, 102), fps*2)
+		# hit worms or ground:
+		# hit ground:
+		if mapGetAt(testPos, gameMap) == GRD:# or mapGetAt(testPos, wormCol) != (0,0,0) or mapGetAt(testPos, extraCol) != (0,0,0):
+			# collisiion acurred:
+			# print("c")
+			response = getNormal(testPos, 4, direction)
+			angle = getAngleByTwoVectors(response, direction)
+			
+			t = 0
+			start = vectorCopy(testPos)
+			direction.rotate(pi + 2 * angle)
+			
+		t += 1
+		power -= 1
+		if power == 0:
+			break
+
 ################################################################################ Create World
 
 maps = []
@@ -4664,14 +4739,14 @@ if True:
 	parser.add_argument("-dark", "--darkness", type=bool, nargs='?', const=True, default=False, help="Activate Darkness mode.")
 	parser.add_argument("-pm", "--pack_mult", default=1, help="Number of packs", type=int)
 	parser.add_argument("-wpt", "--worms_per_team", default=8, help="Worms per team", type=int)
-	parser.add_argument("-map", "--map_choice", default="", help="world map", type=str)
+	parser.add_argument("-map", "--map_choice", default="", help="world map choice", type=str)
 	parser.add_argument("-ratio", "--map_ratio", default=-1, help="world map ratio", type=int)
 	parser.add_argument("-points", "--points_mode", type=bool, nargs="?", const=True, default=False, help="Activate Points mode.")
 	parser.add_argument("-used", "--used_list", type=bool, nargs="?", const=True, default=False, help="Activate Used List mode.")
-	parser.add_argument("-closed", "--closed_map", type=bool, nargs="?", const=True, default=False, help="Activate closed map mode.")
+	parser.add_argument("-closed", "--closed_map", type=bool, nargs="?", const=True, default=False, help="Activate closed gameMap mode.")
 	parser.add_argument("-ctf", "--ctf", type=bool, nargs='?', const=True, default=False, help="Activate captureTheFlag mode.")
 	parser.add_argument("-targets", "--targets", type=bool, nargs='?', const=True, default=False, help="Activate shooting targets mode.")
-	parser.add_argument("-warped", "--warped", type=bool, nargs='?', const=True, default=False, help="Activate warped map mode mode.")
+	parser.add_argument("-warped", "--warped", type=bool, nargs='?', const=True, default=False, help="Activate warped gameMap mode mode.")
 	parser.add_argument("-random", "--random", type=bool, nargs='?', const=True, default=False, help="Activate random worms cycle mode mode.")
 	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
 	parser.add_argument("-u", "--unlimited", type=bool, nargs='?', const=True, default=False, help="Activate unlimited mode")
@@ -4723,6 +4798,7 @@ if True:
 	weapons.append(["long bow", GUN, 3, GUNS, False, 0])
 	weapons.append(["spear", CHARGABLE, 2, GUNS, False, 0])
 	weapons.append(["laser gun", GUN, 3, GUNS, False, 0])
+	# weapons.append(["reflector", GUN, -1, GUNS, False, 0])
 	weapons.append(["portal gun", GUN, 0, GUNS, False, 0])
 	weapons.append(["petrol bomb", CHARGABLE, 5, FIREY, False, 0])
 	weapons.append(["flame thrower", PUTABLE, 5, FIREY, False, 0])
@@ -4997,6 +5073,9 @@ def fire(weapon = None):
 		avail = False
 	elif weapon == "distorter":
 		w = Distorter(weaponOrigin, weaponDir, energy)
+	elif weapon == "reflector":
+		fireDeflectLaser(weaponOrigin, weaponDir)
+		nextState = PLAYER_CONTROL_1
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -5472,7 +5551,7 @@ def isGroundAround(place, radius = 5):
 			return False
 		try:
 			at = (int(checkPos.x), int(checkPos.y))
-			if map.get_at(at) == GRD or wormCol.get_at(at) != (0,0,0) or extraCol.get_at(at) != (0,0,0):
+			if gameMap.get_at(at) == GRD or wormCol.get_at(at) != (0,0,0) or extraCol.get_at(at) != (0,0,0):
 				return True
 		except IndexError:
 			print("isGroundAround index error")
@@ -5487,7 +5566,7 @@ def randomPlacing(wormsPerTeam):
 		else:
 			place = giveGoodPlace()
 		if diggingMatch:
-			pygame.draw.circle(map, SKY, place, 35)
+			pygame.draw.circle(gameMap, SKY, place, 35)
 			pygame.draw.circle(ground, SKY, place, 35)
 		global teamChoser
 		teams[teamChoser].addWorm(place.vec2tup())
@@ -5739,9 +5818,9 @@ def saveGame():
 	file.write(str(wind) + "\n")
 	file.write(str(aimAid) + "\n")
 	
-	file.write("map:\n")
+	file.write("gameMap:\n")
 	file.write(str(mapWidth) + " " + str(mapHeight))
-	mapSave = pygame.image.tostring(map, 'RGBA')
+	mapSave = pygame.image.tostring(gameMap, 'RGBA')
 	file.write(str(mapSave) + "\n")
 	groundSave = pygame.image.tostring(ground, 'RGBA')
 	file.write(str(groundSave) + "\n")
@@ -5929,9 +6008,9 @@ def testerFunc():
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
 	PLAYER_CONTROL_2 = 5; WAIT_STABLE = 6; FIRE_MULTIPLE = 7; WIN = 8
-	
 	state, nextState = RESET, RESET
-	loadingSurf = myfontbigger.render("simon's worms Loading", False, WHITE)
+	loadingSurf = myfontbigger.render("Simon's Worms Loading", False, WHITE)
+	pauseSurf = myfontbigger.render("Game Paused", False, WHITE)
 	gameStable = False; playerScrollAble = False; playerControl = False
 	playerControlPlacing = False; playerShootAble = False; gameStableCounter = 0
 
@@ -6361,7 +6440,7 @@ if __name__ == "__main__":
 							keyWeapons = ["girder", "baseball"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_8:
-							keyWeapons = ["bunker buster"]
+							keyWeapons = ["bunker buster", "laser gun", "minigun"]
 							weaponsSwitch = True
 						elif event.key == pygame.K_9:
 							keyWeapons = ["minigun"]
@@ -6447,9 +6526,14 @@ if __name__ == "__main__":
 			if playerShootAble and (keys[pygame.K_SPACE]) and weaponStyle == CHARGABLE and energising:
 				onKeyHoldSpace()
 		
-		if pause: continue
+		if pause:
+			pos = (winWidth/2 - pauseSurf.get_width()/2, winHeight/2 - pauseSurf.get_height()/2)
+			win.blit(pauseSurf, pos)
+			screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
+			pygame.display.update()
+			continue
 
-		# use edge map scroll
+		# use edge gameMap scroll
 		mousePos = pygame.mouse.get_pos()
 		if playerScrollAble and pygame.mouse.get_focused() and not len(Menu.menus) > 0:
 			scroll = Vector()
