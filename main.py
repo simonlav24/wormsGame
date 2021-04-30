@@ -3,6 +3,8 @@ from random import shuffle ,randint, uniform, choice
 from vector import *
 from pygame import gfxdraw
 import pygame
+import argparse
+import xml.etree.ElementTree as ET
 import os
 pygame.init()
 
@@ -116,7 +118,7 @@ if True:
 	
 	text = ""
 	HUDColor = BLACK
-webVer = False 
+webVer = True 
 
 # bugs:
 # points mode ends in tie wont consider the winner with the highest points
@@ -4686,13 +4688,13 @@ def fireDeflectLaser(start, direction, power=15):#########EXPERIMENTAL
 ################################################################################ Create World
 
 maps = []
-
 for imageFile in os.listdir('wormsMaps'):
+	if imageFile[-4:] != ".png":
+		continue
 	string = "wormsMaps/" + imageFile
 	ratio = 512
 	if string.find("big") != -1:
 		ratio = 800
-	
 	if string.find("big1.png") != -1:
 		ratio = 1000
 	elif string.find("big6.png") != -1:
@@ -4702,9 +4704,6 @@ for imageFile in os.listdir('wormsMaps'):
 	elif string.find("big16.png") != -1:
 		ratio = 2000
 	maps.append((string, ratio))
-
-if webVer:
-	maps = [("wormsMaps/wMapbig1.png", 1000),("wormsMaps/wMap18.png", 512),("wormsMaps/wMap11.png", 512),("wormsMaps/wMap12.png", 512)]
 
 def createWorld():
 	global mapClosed
@@ -4728,7 +4727,6 @@ def createWorld():
 	else: mapImage = None; createMapDigging()
 	renderLand()
 
-import argparse
 if True:
 	parser = argparse.ArgumentParser()
 	
@@ -5166,8 +5164,11 @@ for i , u in enumerate(utilities):
 
 ################################################################################ Teams
 class Team:
-	def __init__(self, namesList, color, name = "", cpu = False):
-		self.nameList = namesList
+	def __init__(self, nameList=None, color=(255,0,0), name = "", cpu = False):
+		if nameList:
+			self.nameList = nameList
+		else:
+			self.nameList = []
 		self.color = color
 		self.weaponCounter = basicSet.copy()
 		self.utilityCounter = [0] * len(utilities)
@@ -5195,29 +5196,25 @@ class Team:
 			string += worm.saveStr()
 		return string
 
-blues = Team(["red lion", "commercial", "swan", "brewers", "fred", "sparrow", "eithan", "reed"], BLUE, "blue")
-reds = Team(["fix delux r", "vamp b", "birdie", "lordie", "pinkie", "katie", "angie", "miya"], RED, "red")
-greens = Team(["blair", "major", "thatcher", "chellenge", "george", "mark", "mercury", "philip"], GREEN, "green")
-yellows = Team(["colan", "GT", "jettets", "chevan", "jonie", "murph", "silvia", "flur"], YELLOW, "yellow")
-
-# choose teams:
-teams = [blues, greens, reds, yellows]
+teams = []
+# read teams from xml
+for teamsData in ET.parse('wormsTeams.xml').getroot():
+	newTeam = Team()
+	newTeam.name = teamsData.attrib["name"]
+	newTeam.color = tuple([int(i) for i in teamsData[0].attrib["value"][1:-1].split(",")])
+	for team in teamsData:
+		if team.tag == "worm":
+			newTeam.nameList.append(team.attrib["name"])
+	teams.append(newTeam)
 
 totalTeams = len(teams)
-
 currentTeam = None
 teamChoser = 0
 roundCounter = 0
 mostDamage = (0,None)
 damageThisTurn = 0
-
 nWormsPerTeam = 0
 teamsInfo = []
-if unlimitedMode:
-	for team in teams:
-		team.utilityCounter = [99] * len(utilities)
-	for weapon in weapons:
-		weapon[5] = 0
 
 def renderWeaponCount(special = False):
 	global currentTeam, currentWeapon, currentWeaponSurf
@@ -6057,7 +6054,11 @@ def stateMachine():
 		if randomPlace:
 			randomPlacing(wormsPerTeam)
 			nextState = CHOOSE_STARTER
-		
+		if unlimitedMode:
+			for team in teams:
+				team.utilityCounter = [99] * len(utilities)
+			for weapon in weapons:
+				weapon[5] = 0
 		if nextState == CHOOSE_STARTER:
 			if randomPlace:
 				placePetrolCan(randint(2,4))
@@ -6373,8 +6374,6 @@ if __name__ == "__main__":
 						while len(Menu.menus) > 0:
 							Menu.menus[0].destroy()
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
-				# testing mainly
-				# testerFunc()
 				pass
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
 				# this is the next state after placing all worms
@@ -6689,11 +6688,6 @@ if __name__ == "__main__":
 		
 		# screen manegement
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-		
-		# if objectUnderControl:
-			# pygame.draw.circle(screen, (255,255,255), tup2vec(point2world(objectUnderControl.pos)) * scalingFactor, 10)
-			# print(point2world(objectUnderControl.pos * scalingFactor))
-		
 		pygame.display.update()
 		
 	pygame.quit()
