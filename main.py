@@ -122,6 +122,7 @@ webVer = True
 
 # bugs:
 # points mode ends in tie wont consider the winner with the highest points
+# make a finer getNormal func for venus, with wormCol and extraCol
 
 ################################################################################ Map
 if True:
@@ -148,7 +149,13 @@ if True:
 	currentWeapon = "missile"
 	currentWeaponSurf = myfont.render(currentWeapon, False, HUDColor)
 	weaponStyle = CHARGABLE
-	
+	feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
+			 [(122, 196, 233), (199, 233, 251), (116, 208, 186), (100, 173, 133)],
+			 [(110, 109, 166), (174, 95, 124), (68, 55, 101), (121, 93, 142)],
+			 [(35, 150, 197), (248, 182, 130), (165, 97, 62), (227, 150, 104)],
+			 [(121, 135, 174), (195, 190, 186), (101, 136, 174), (72, 113, 133)],
+			 [(68, 19, 136), (160, 100, 170), (63, 49, 124), (45, 29, 78)] ]
+	feelColor = choice(feels)
 	wind = uniform(-1,1)
 	actionMove = False
 	aimAid = False
@@ -236,10 +243,10 @@ def renderLand():
 	ground.fill(SKY)
 	if mapImage and not recolorGround:
 		ground.blit(mapImage, (0,0))
-		groundSec.fill((91,149,209))
+		groundSec.fill(feelColor[0])
 		mapImage.set_alpha(64)
 		groundSec.blit(mapImage, (0,0))
-		groundSec.set_colorkey((91,149,209))
+		groundSec.set_colorkey(feelColor[0])
 	else:
 		groundSec.fill(SKY)
 		for x in range(0,mapWidth):
@@ -546,9 +553,14 @@ def clamp(value, upper, lower):
 
 # sprites
 if True:
-	imageMountain = pygame.image.load("assets/mountain.png").convert_alpha()
-	imageMountain2 = pygame.image.load("assets/mountain2.png").convert_alpha()
-	imageSky = pygame.transform.scale(pygame.image.load("assets/sky.png"), (winWidth, winHeight))
+	imageMountain = pygame.Surface((180, 110), pygame.SRCALPHA)
+	pygame.draw.polygon(imageMountain, feelColor[3], [(0,55), (90,0), (180,55), (180,110), (0,110)])
+	imageMountain2 = pygame.Surface((180, 150), pygame.SRCALPHA)
+	pygame.draw.polygon(imageMountain2, feelColor[2], [(0,55), (90,0), (180,55), (180,150), (0,150)])
+	colorRect = pygame.Surface((2,2))
+	pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
+	pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
+	imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
 	imageCloud = pygame.image.load("assets/cloud.png").convert_alpha()
 	imageBat = pygame.image.load("assets/bat.png").convert_alpha()
 	imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
@@ -4748,6 +4760,7 @@ if True:
 	parser.add_argument("-random", "--random", type=bool, nargs='?', const=True, default=False, help="Activate random worms cycle mode mode.")
 	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
 	parser.add_argument("-u", "--unlimited", type=bool, nargs='?', const=True, default=False, help="Activate unlimited mode")
+	parser.add_argument("-place", "--place", type=bool, nargs='?', const=False, default=True, help="manually placing worms")
 	
 	args = parser.parse_args()
 	
@@ -4769,9 +4782,9 @@ if True:
 	randomCycle = args.random
 	recolorGround = args.recolor_ground
 	unlimitedMode = args.unlimited
+	randomPlace = args.place
 
 # drawHealthBar = False
-# randomPlace = False
 # moreWindAffected = True
 
 ################################################################################ Weapons setup
@@ -6374,6 +6387,8 @@ if __name__ == "__main__":
 						while len(Menu.menus) > 0:
 							Menu.menus[0].destroy()
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
+				# testing mainly
+				# testerFunc()
 				pass
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
 				# this is the next state after placing all worms
@@ -6688,6 +6703,11 @@ if __name__ == "__main__":
 		
 		# screen manegement
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
+		
+		# if objectUnderControl:
+			# pygame.draw.circle(screen, (255,255,255), tup2vec(point2world(objectUnderControl.pos)) * scalingFactor, 10)
+			# print(point2world(objectUnderControl.pos * scalingFactor))
+		
 		pygame.display.update()
 		
 	pygame.quit()
