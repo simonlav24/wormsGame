@@ -3,6 +3,7 @@ from random import uniform, randint, choice
 import pygame
 import argparse
 import datetime
+import os
 
 parser = argparse.ArgumentParser()
 
@@ -159,6 +160,9 @@ while run:
 	pygame.display.update()
 	
 x = datetime.datetime.now()
+if not os.path.exists("wormsMaps/PerlinMaps"):
+	os.mkdir("wormsMaps/PerlinMaps")
+	
 imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
 pygame.image.save(win, imageString)
 print(imageString)

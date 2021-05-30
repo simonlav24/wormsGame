@@ -72,7 +72,10 @@ while True:
 		image_elem.Update(filename=mapChoice, size=(700,500))
 		
 	if event == "play":
-		string = "worms.py -map " + path2map(mapChoice) + " "
+		if os.path.exists("worms.py"): main = "worms.py"
+		else: main = "main.py"
+
+		string = main + " -map " + path2map(mapChoice) + " "
 		for i, key in enumerate(values):
 			if i < boolParamsLen:
 				if values[key] == True:
