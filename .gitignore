@@ -2,3 +2,5 @@
 /lastWormsGround.png
 *.pyc
 /wormsMaps/PerlinMaps
+/graph.py
+/wormsRecord.xml

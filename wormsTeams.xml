@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <data>
-    <team name="blue">
-        <color value="(0,0,255)"/>
+    <team name="blue" color="(0,0,255)">
         <worm name="red lion"/>
         <worm name="commercial"/>
         <worm name="swan"/>
@@ -11,8 +10,7 @@
         <worm name="eithan"/>
         <worm name="reed"/>
     </team>
-    <team name="red">
-        <color value="(255,0,0)"/>
+    <team name="red" color="(255,0,0)">
         <worm name="fix delux r"/>
         <worm name="vamp b"/>
         <worm name="birdie"/>
@@ -22,8 +20,7 @@
         <worm name="angie"/>
         <worm name="miya"/>
     </team>
-    <team name="green">
-        <color value="(0,255,0)"/>
+    <team name="green" color="(0,255,0)">
         <worm name="blair"/>
         <worm name="major"/>
         <worm name="thatcher"/>
@@ -33,8 +30,7 @@
         <worm name="mercury"/>
         <worm name="philip"/>
     </team>
-    <team name="yellow">
-        <color value="(255,255,0)"/>
+    <team name="yellow" color="(255,255,0)">
         <worm name="colan"/>
         <worm name="GT"/>
         <worm name="jettets"/>

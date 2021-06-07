@@ -97,6 +97,7 @@ if True:
 	randomCycle = False
 	recolorGround = False
 	allowAirStrikes = True
+	drawGroundSec = True
 	
 	# Multipliers
 	damageMult = 0.8
@@ -112,6 +113,15 @@ webVer = False
 
 # bugs:
 # darktree or something simpler
+# bubbles stil causes trouble below y0
+# radio buttons for modes, forts and digging should be options
+# graph win counter as downloadable feature
+# F1 to toast teams points (or team health) and move like menu
+# parameters in launcher dont work
+# a little less bounce on the electric grnade
+
+# checklist:
+# 	winning write correctly on every mode
 
 ################################################################################ Map
 if True:
@@ -199,12 +209,12 @@ def createMapDigging():
 	extraCol.fill(SKY)
 	
 def drawLand():
-	win.blit(groundSec, point2world((0,0)))
+	if drawGroundSec: win.blit(groundSec, point2world((0,0)))
 	win.blit(ground, point2world((0,0)))
 	if warpedMode:
-		win.blit(groundSec, point2world((mapWidth,0)))
+		if drawGroundSec: win.blit(groundSec, point2world((mapWidth,0)))
 		win.blit(ground, point2world((mapWidth,0)))
-		win.blit(groundSec, point2world((-mapWidth,0)))
+		if drawGroundSec: win.blit(groundSec, point2world((-mapWidth,0)))
 		win.blit(ground, point2world((-mapWidth,0)))
 	if darkness and not state == PLACING_WORMS:
 		mask.fill((30,30,30))
@@ -5361,7 +5371,7 @@ teams = []
 for teamsData in ET.parse('wormsTeams.xml').getroot():
 	newTeam = Team()
 	newTeam.name = teamsData.attrib["name"]
-	newTeam.color = tuple([int(i) for i in teamsData[0].attrib["value"][1:-1].split(",")])
+	newTeam.color = tuple([int(i) for i in teamsData.attrib["color"][1:-1].split(",")])
 	for team in teamsData:
 		if team.tag == "worm":
 			newTeam.nameList.append(team.attrib["name"])
@@ -5444,6 +5454,33 @@ def teamHealthDraw():
 				if teams[i].flagHolder:
 					pygame.draw.circle(win, (220,0,0), (int(winWidth-50) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
 
+def addToRecord(dic):
+	keys = ["time", "winner", "mostDamage", "damager", "mode", "points"]
+	if not os.path.exists("wormsRecord.xml"):
+		with open("wormsRecord.xml", "w+") as file:
+			file.write("<data>\n")
+			file.write("<game")
+			for key in keys:
+				if key in dic.keys():
+					file.write(" " + key + '="' + str(dic[key]) + '"')
+			file.write("/>\n</data>")
+			return
+	
+	with open("wormsRecord.xml", "r") as file:
+		contents = file.readlines()
+		index = contents.index("</data>")
+	
+	string = "<game"
+	for key in keys:
+		if key in dic.keys():
+			string += " " + key + '="' + str(dic[key]) + '"'
+	string += "/>\n"
+	contents.insert(index, string)
+	
+	with open("wormsRecord.xml", "w") as file:
+		contents = "".join(contents)
+		file.write(contents)
+
 def checkWinners():
 	global mostDamage, run, camTrack, nextState
 	end = False
@@ -5469,12 +5506,13 @@ def checkWinners():
 	if not end:
 		return False
 	# game end:
-	adding = ""
+	dic = {}
 	winningTeam = None
 		
 	# win bonuse:
 	if captureTheFlag:
-		adding += "CTF mode"
+		dic["mode"] = "CTF"
+		# adding += "CTF mode"
 		pointsGame = True
 		for team in teams:
 			if team.flagHolder:
@@ -5486,13 +5524,15 @@ def checkWinners():
 		pointsGame = True
 		if lastTeam:
 			lastTeam.points += 150 # bonus points
-			adding += "points mode"
+			dic["mode"] = "points"
+			# adding += "points mode"
 			print("[points win, team", team.name, "got 150 bonus points]")
 			
 	elif targetsMode:
 		pointsGame = True
 		currentTeam.points += 3 # bonus points
-		adding += "Targets mode"
+		dic["mode"] = "targets"
+		# adding += "Targets mode"
 		print("[targets win, team", team.name, "got 3 bonus points]")
 	
 	# win points:
@@ -5502,26 +5542,35 @@ def checkWinners():
 		teamsFinals = sorted(teams, key = lambda x: x.points)
 		winningTeam = teamsFinals[-1]
 		print("[most points to team", winningTeam.name, "]")
-		adding += " " + str(winningTeam.points)
+		dic["points"] = str(winningTeam.points)
+		# adding += " " + str(winningTeam.points)
 	# regular win:
 	else:
 		winningTeam = lastTeam
 		print("[last team standing is", winningTeam.name, "]")
 		if davidAndGoliathMode:
-			adding += " dVg "
+			dic["mode"] = "davidVsGoliath"
+			# adding += " dVg "
 	
 	if end:
 		print("[winning team is", winningTeam.name, "]")
 		if winningTeam != None:
 			print("Team", winningTeam.name, "won!")
-			string = "time taken: " + '{:6}'.format(str(int(timeOverall/fps))) + " winner: " + '{:10}'.format(winningTeam.name)
+			dic["time"] = str(timeOverall//fps)
+			dic["winner"] = winningTeam.name
 			if mostDamage[1]:
-				string += "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
-			string += adding + "\n"
+				dic["mostDamage"] = str(int(mostDamage[0]))
+				dic["damager"] = mostDamage[1]
+			# string = "time taken: " + '{:6}'.format(str(int(timeOverall/fps))) + " winner: " + '{:10}'.format(winningTeam.name)
+			# if mostDamage[1]:
+				# string += "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
+			# string += adding + "\n"
 	
-			file = open('wormsRecord.txt', 'a')
-			file.write(string)
-			file.close()
+			addToRecord(dic)
+	
+			# file = open('wormsRecord.txt', 'a')
+			# file.write(string)
+			# file.close()
 		
 			commentator.que.append((winningTeam.name, ("Taem "," won!"), winningTeam.color))
 			if len(winningTeam.worms) > 0:
@@ -5530,90 +5579,6 @@ def checkWinners():
 			commentator.que.append(("", ("Its a"," Tie!"), HUDColor))
 			print("Tie!")
 		
-		nextState = WIN
-		pygame.image.save(ground, "lastWormsGround.png")
-	return end
-
-def checkWinnersOLD():
-	global mostDamage, run, camTrack, nextState
-	count = 0
-	end = False
-	winningTeam = None
-	for team in teams:
-		if len(team.worms) == 0:
-			count += 1
-	if count == totalTeams and not pointsMode:
-		# all dead
-		end = True
-		print("everyone dead")
-		run = False
-		return end
-	elif count == totalTeams - 1:
-		# someone won
-		
-		
-		if captureTheFlag:
-			for team in teams:
-				if team.flagHolder:
-					team.points += 1 + 3 #3 points bonus for surviving team
-					break
-			
-		end = True
-		adding = ""
-					 
-		# won in points mode:
-		if pointsMode:
-			lastTeam = None
-			for team in teams:
-				if not len(team.worms) == 0:
-					lastTeam = team
-			if lastTeam:
-				lastTeam.points += 150
-				# find winners:
-				teamsFinals = sorted(teams, key = lambda x: x.points)
-				winningTeam = teamsFinals[-1]
-			adding += "points: " + str(winningTeam.points)
-		
-		# won in capture the flag mode:
-		elif captureTheFlag:
-			teamsFinals = sorted(teams, key = lambda x: x.points)
-			if teamsFinals[-1].points == teamsFinals[-2].points:
-				# tie. pick one at chance
-				winningTeam = teamsFinals[-1]
-			else:
-				winningTeam = teamsFinals[-1]
-			adding += "CTF mode"
-				
-		# regular win:
-		else:
-			for team in teams:
-				if not len(team.worms) == 0:
-					winningTeam = team
-					if davidAndGoliathMode:
-						adding += "_dVg_"
-					
-	if targetsMode:
-		if len(ShootingTarget._reg) == 0 and ShootingTarget.numTargets <= 0:
-			end = True
-			currentTeam.points += 3
-			teamsFinals = sorted(teams, key = lambda x: x.points)
-			winningTeam = teamsFinals[-1]
-			adding = "Targets mode"
-	
-	if end:
-		string = "time taken: " + '{:6}'.format(str(int(timeOverall/fps))) + " winner: " + '{:10}'.format(winningTeam.name)
-		if mostDamage[1]:
-			string += "most damage: " + '{:6}'.format(int(mostDamage[0])) +" by " + '{:20}'.format(mostDamage[1])
-		string += adding + "\n"
-	
-		file = open('wormsRecord.txt', 'a')
-		file.write(string)
-		file.close()
-		
-		commentator.que.append((winningTeam.name, ("taem "," won!"), winningTeam.color))
-		print("team", winningTeam.name, "won!")
-		if len(winningTeam.worms) > 0:
-			camTrack = winningTeam.worms[0]
 		nextState = WIN
 		pygame.image.save(ground, "lastWormsGround.png")
 	return end
@@ -6239,6 +6204,51 @@ def inUsedList(string):
 			break
 	return used
 
+class Toast:
+	toastCount = 0
+	def __init__(self, surf):
+		self.surf = surf
+		self.time = 0
+		self.pos = Vector(winWidth/2, winHeight)
+		self.state = 0
+		nonPhys.append(self)
+		Toast.toastCount += 1
+	def step(self):
+		if self.state == 0:
+			self.pos.y -= 3
+			if self.pos.y < winHeight - self.surf.get_height():
+				self.state = 1
+		if self.state == 1:
+			self.time += 1
+			if self.time == fps * 2:
+				self.state = 2
+		if self.state == 2:
+			self.pos.y += 3
+			if self.pos.y > winHeight:
+				nonPhys.remove(self)
+				Toast.toastCount -= 1
+	def draw(self):
+		win.blit(self.surf, self.pos)
+		
+def toastInfo():
+	if not (pointsMode or targetsMode or captureTheFlag):
+		return
+	if Toast.toastCount > 0:
+		return
+	toastWidth = 100
+	surfs = []
+	for team in teams:
+		name = myfont.render(team.name, False, team.color)
+		points = myfont.render(str(team.points), False, HUDColor)
+		surfs.append((name, points))
+	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * totalTeams), pygame.SRCALPHA)
+	i = 0
+	for s in surfs:
+		surf.blit(s[0], (0, i))
+		surf.blit(s[1], (toastWidth - s[1].get_width(), i))
+		i += s[0].get_height() + 3
+	Toast(surf)
+
 damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 
 lstep = 0
@@ -6443,6 +6453,7 @@ def stateMachine():
 		gameStableCounter += 1
 		if gameStableCounter == 30*3:
 			run = False
+			os.popen("wormsLauncher.py")
 
 ################################################################################ Keys action
 def onKeyPressRight():
@@ -6749,11 +6760,15 @@ if __name__ == "__main__":
 					if event.key == pygame.K_PAGEDOWN or event.key == pygame.K_KP3:
 						if len(Menu.menus) > 0:
 							scrollMenu(False)
+					if event.key == pygame.K_F1:
+						toastInfo()
 					if event.key == pygame.K_F2:
 						Worm.healthMode = (Worm.healthMode + 1) % 2
 						if Worm.healthMode == 1:
 							for worm in PhysObj._worms:
 								worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
+					if event.key == pygame.K_F3:
+						drawGroundSec = not drawGroundSec
 					if event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
 						scalingFactor = 3
 						if camTrack == None:
