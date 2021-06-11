@@ -38,7 +38,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **SPEAR** - throw spear, impale all worms in its way. 2 spears.
 - **LASER GUN** - destructive laser destroy destructively every thing on its way.
 - **PORTAL GUN** - the cake is a deception. obtainable by utility crate.\
-- **BUBBLE GUN** - shoot bubbles! can carry worms and more.
+- **BUBBLE GUN** - shoot bubbles. can carry worms and more.
 
 ## Fire weapons
 - **PETROL BOMB** - chargeable, throw a petrol bomb, explosive fire spreader.
@@ -75,7 +75,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **RAGING BULL** - moooo bi%%h get out the way.
 - **ELECTRO BOOM** - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
 - **POKEBALL** - catch worms. store them until the ball is damaged.
-- **GREEN SHELL** - actual Koopa Troopa shell
+- **GREEN SHELL** - actual Koopa Troopa shell.
 - **GUIDED MISSILE** - controllable missile. use RIGHT KEY and LEFT KEY to control.
 
 # Utilities:

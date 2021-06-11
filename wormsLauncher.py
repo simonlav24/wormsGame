@@ -7,12 +7,16 @@ import time
 def loadImage(num):
 	return 'wormsMaps/wMap' + str(num) + '.png'
 
+def grabMapsFrom(path, maps):
+	for imageFile in os.listdir(path):
+		if imageFile[-4:] != ".png":
+			continue
+		string = path + "/" + imageFile
+		maps.append(string)
+
 maps = []
-for imageFile in os.listdir('wormsMaps'):
-	if imageFile[-4:] != ".png":
-		continue
-	string = "wormsMaps/" + imageFile
-	maps.append(string)
+grabMapsFrom('wormsMaps', maps)
+grabMapsFrom('wormsMaps/moreMaps', maps)
 
 def randMap():
 	return choice(maps)
@@ -33,17 +37,17 @@ sg.theme('Reddit')   # Add a touch of color
 
 defaults = {"--worms_per_team": 8, "--initial_health": 100, "--pack_mult": 1}
 
-layout =   [[sg.Text("Simon's worms game options")],
-			[sg.Text('Gameplay Mode'), 
+layout =   [[sg.Text("Simon's worms game options", font=('Arial', 10, 'bold'))],
+			[sg.Text('Gameplay Mode', font=('Arial', 10, 'bold')), 
 				sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Capture the flag', key="--ctf"), sg.Checkbox('Points', key="--points_mode"), sg.Checkbox('Targets', key="--targets"), sg.Checkbox('David vs Goliath', key="--dvg"), 
 				sg.Checkbox('Digging', key="--digging")], 
-			[sg.Text('Options'), sg.Checkbox('Used List', key="--used_list"), sg.Checkbox('Warped', key="--warped"), sg.Checkbox('Random', key="--random"), sg.Checkbox('Manual placing', key="--place"), 
+			[sg.Text('Options', font=('Arial', 10, 'bold')), sg.Checkbox('Used List', key="--used_list"), sg.Checkbox('Warped', key="--warped"), sg.Checkbox('Random', key="--random"), sg.Checkbox('Manual placing', key="--place"), 
 				sg.Checkbox('Darkness', key="--darkness"), sg.Checkbox('Closed map', key="--closed_map")],
 			[sg.Spin([i for i in range(1, 9)], size=(6, 1), initial_value=8, key="--worms_per_team"), sg.Text('Worms per team'), 
 				sg.Spin([i for i in range(50,1000,50)], size=(6, 1), initial_value=100, key="--initial_health"), sg.Text('Health'), 
 				sg.Spin([i for i in range(1,11)], size=(6, 1), initial_value=1, key="--pack_mult"), sg.Text('Packs')],
-			[sg.Text("Perlin noise map generator"), sg.Button('Generate', key="generate")],
-			[sg.Text('Game map'), sg.Button('Random', key="random"), sg.Input(key='browse', enable_events=True, visible=False), sg.FileBrowse(target="browse", enable_events=True), sg.Button('Play', key="play")],
+			[sg.Text("Perlin noise map generator", font=('Arial', 10, 'bold')), sg.Button('Generate', key="generate")],
+			[sg.Text('Game map', font=('Arial', 10, 'bold')), sg.Button('Random', key="random"), sg.Input(key='browse', enable_events=True, visible=False), sg.FileBrowse(target="browse", enable_events=True), sg.Button('Play', key="play")],
 			[image_elem], 
 			[sg.Button('Score Record', key="record")]]
 

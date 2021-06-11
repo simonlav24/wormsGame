@@ -255,14 +255,18 @@ def renderLand():
 		groundSec.blit(mapImage, (0,0))
 		groundSec.set_colorkey(feelColor[0])
 	else:
+		for imageFile in os.listdir("assets"):
+			if "pattern" in imageFile:
+				patternFile = imageFile
+
+		img = pygame.image.load("assets/" + patternFile)
+		grassColor = choice([(10, 225, 10), (10,100,10)] + [i[3] for i in feels])
 		
-		img = pygame.image.load("assets/pattern.png")
-		# img = pygame.transform.scale(img, (img.get_width()//2, img.get_height()//2))
 		for x in range(0,mapWidth):
 			for y in range(0,mapHeight):
 				if gameMap.get_at((x,y)) == GRD:
 					ground.set_at((x,y), img.get_at((x % img.get_width(), y % img.get_height())))
-					
+		
 		for x in range(0,mapWidth):
 			for y in range(0,mapHeight):
 				if gameMap.get_at((x,y)) == GRD:
@@ -270,7 +274,7 @@ def renderLand():
 						for i in range(randint(3,5)):
 							if y + i < mapHeight:
 								if gameMap.get_at((x, y + i)) == GRD:
-									ground.set_at((x,y + i), (randint(0, 20),randint(200,255),randint(0, 20)))
+									ground.set_at((x,y + i), [min(abs(i + randint(-30,30)), 255) for i in grassColor])
 								
 		groundSec.fill(feelColor[0])
 		groundCopy = ground.copy()
@@ -4839,52 +4843,6 @@ class Bubble:
 
 ################################################################################ Create World
 
-maps = []
-for imageFile in os.listdir('wormsMaps'):
-	if imageFile[-4:] != ".png":
-		continue
-	string = "wormsMaps/" + imageFile
-	ratio = 512
-	if string.find("big") != -1:
-		ratio = 800
-	if string.find("big1.png") != -1:
-		ratio = 1000
-	elif string.find("big6.png") != -1:
-		ratio = 700
-	elif string.find("big13.png") != -1:
-		ratio = 1000
-	elif string.find("big16.png") != -1:
-		ratio = 2000
-	maps.append((string, ratio))
-
-def createWorld():
-	global mapClosed, recolorGround, mapRatio
-	imageChoice = [None, None]
-	if mapChoice == "":
-		imageChoice = choice(maps)
-	else:
-		if "PerlinMaps" in mapChoice:
-			imageChoice[0] = mapChoice
-			mapRatio = randint(512, 600)
-			recolorGround = True
-		else:
-			for m in maps:
-				if m[0].find(mapChoice) != -1:
-					imageChoice = m
-					break
-	if imageChoice[0] in ["wormsMaps/wMap19.png", "wormsMaps/wMap26.png", "wormsMaps/wMap40.png", "wormsMaps/wMap41.png", "wormsMaps/wMap64.png", "wormsMaps/wMapbig8.png"]:
-		mapClosed = True
-		
-	imageFile, heightNorm = imageChoice
-	if mapRatio != -1:
-		heightNorm = mapRatio
-	
-	global mapImage
-	mapImage = pygame.image.load(imageFile)
-	if not diggingMatch: createMapImage(heightNorm)
-	else: mapImage = None; createMapDigging()
-	renderLand()
-
 if True:
 	parser = argparse.ArgumentParser()
 	
@@ -4929,6 +4887,61 @@ if True:
 	recolorGround = args.recolor_ground
 	unlimitedMode = args.unlimited
 	manualPlace = args.place
+
+def grabMapsFrom(path, maps):
+	if not os.path.exists(path):
+		return
+	for imageFile in os.listdir(path):
+		if imageFile[-4:] != ".png":
+			continue
+		string = path + "/" + imageFile
+		ratio = 512
+		if string.find("big") != -1:
+			ratio = 800
+		if string.find("big1.png") != -1:
+			ratio = 1000
+		elif string.find("big6.png") != -1:
+			ratio = 700
+		elif string.find("big13.png") != -1:
+			ratio = 1000
+		elif string.find("big16.png") != -1:
+			ratio = 2000
+		maps.append((string, ratio))
+
+maps = []
+if not (os.path.exists(mapChoice) or os.path.exists("wormsMaps/" + mapChoice) or os.path.exists("wormsMaps/moreMaps/" + mapChoice)):
+	grabMapsFrom("wormsMaps", maps)
+	grabMapsFrom("wormsMaps/moreMaps", maps)
+
+def createWorld():
+	global mapClosed, recolorGround, mapRatio
+	imageChoice = [None, None]
+	if mapChoice == "":
+		imageChoice = choice(maps)
+	else:
+		if "PerlinMaps" in mapChoice:
+			imageChoice[0] = mapChoice
+			mapRatio = randint(512, 600)
+			recolorGround = True
+		else:
+			for m in maps:
+				if m[0].find(mapChoice) != -1:
+					imageChoice = m
+					break
+	if imageChoice[0] in ["wormsMaps/wMap19.png", "wormsMaps/wMap26.png", "wormsMaps/wMap40.png", "wormsMaps/wMap41.png", "wormsMaps/wMap64.png", "wormsMaps/wMapbig8.png"]:
+		mapClosed = True
+		
+	imageFile, heightNorm = imageChoice
+	if mapRatio != -1:
+		heightNorm = mapRatio
+	
+	global mapImage
+	mapImage = pygame.image.load(imageFile)
+	if not diggingMatch: createMapImage(heightNorm)
+	else: mapImage = None; createMapDigging()
+	renderLand()
+
+
 
 # drawHealthBar = False
 # moreWindAffected = True
