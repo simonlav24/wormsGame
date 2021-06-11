@@ -89,7 +89,7 @@ while True:
 		print(string)
 
 		window.close()
-		os.popen(string)
+		subprocess.Popen(string, shell=True)
 		sys.exit()
 		
 	window.Refresh()

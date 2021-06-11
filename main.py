@@ -6,6 +6,7 @@ import pygame
 import argparse
 import xml.etree.ElementTree as ET
 import os
+import subprocess
 pygame.init()
 
 if True:
@@ -115,10 +116,11 @@ webVer = False
 # darktree or something simpler
 # bubbles stil causes trouble below y0
 # radio buttons for modes, forts and digging should be options
-# graph win counter as downloadable feature
 # F1 to toast teams points (or team health) and move like menu
 # parameters in launcher dont work
 # a little less bounce on the electric grnade
+# fix damager in record xml parser
+# differenct grass and maybe more patterns
 
 # checklist:
 # 	winning write correctly on every mode
@@ -6265,6 +6267,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+	print("s")
 	
 ################################################################################ State machine
 if True:
@@ -6453,7 +6456,7 @@ def stateMachine():
 		gameStableCounter += 1
 		if gameStableCounter == 30*3:
 			run = False
-			os.popen("wormsLauncher.py")
+			subprocess.Popen("wormsLauncher.py", shell=True)
 
 ################################################################################ Keys action
 def onKeyPressRight():
