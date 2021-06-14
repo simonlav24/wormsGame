@@ -47,6 +47,7 @@ def step():
 def draw():
 	for key in teams.keys():
 		graph.drawGraph2(time, teams[key][1], ast.literal_eval(teams[key][0]))
-
+		
+graph.setZoom(25)
 graph.setCam((x, y_average))
 graph.mainLoop(step, draw)

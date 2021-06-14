@@ -132,6 +132,8 @@ class Vector:
 		return not self.__eq__(other)
 	def __neg__(self):
 		return self * -1
+	def __round__(self):
+		return Vector(round(self.x), round(self.y))
 
 def normalize(vec):
 	vecRes = vectorCopy(vec)
