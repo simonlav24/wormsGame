@@ -114,16 +114,8 @@ webVer = False
 
 # bugs:
 # darktree or something simpler
-# bubbles stil causes trouble below y0
-# radio buttons for modes, forts and digging should be options
 # F1 to toast teams points (or team health) and move like menu
-# parameters in launcher dont work
-# a little less bounce on the electric grnade
-# fix damager in record xml parser
-# differenct grass and maybe more patterns
-
-# checklist:
-# 	winning write correctly on every mode
+# maybe more patterns
 
 ################################################################################ Map
 if True:
@@ -1443,7 +1435,8 @@ class Worm (PhysObj):
 		# remove from regs:
 		if self in PhysObj._worms:
 			PhysObj._worms.remove(self)
-		self.team.worms.remove(self)
+		if self in self.team.worms:
+			self.team.worms.remove(self)
 		if cause == Worm.causeFlew or cause == Worm.causeVenus:
 			PhysObj._reg.remove(self)
 		
@@ -3008,7 +3001,7 @@ class ElectricGrenade(PhysObj):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (120, 230, 230)
-		self.damp = 0.55
+		self.damp = 0.525
 		self.timer = 0
 		self.worms = []
 		self.raons = []
@@ -4822,7 +4815,7 @@ class Bubble:
 			self.burst()
 		if self.pos.y < -50:
 			self.burst()
-		if self.pos.y + self.radius <= 0 and mapGetAt((self.pos.x, 0)) == GRD:
+		if self.pos.y - self.radius <= 0 and mapGetAt((self.pos.x, 0)) == GRD:
 			self.burst()
 		if randint(0, 300) == 1:
 			if mapGetAt(self.pos) != GRD:
@@ -4834,6 +4827,8 @@ class Bubble:
 			if self == camTrack:
 				camTrack = self.catch
 		self.catch = None
+		pygame.draw.circle(gameMap, SKY, self.pos, self.radius)
+		pygame.draw.circle(ground, SKY, self.pos, self.radius)
 		if self in nonPhys:
 			nonPhys.remove(self)
 	def draw(self):
@@ -4908,40 +4903,37 @@ def grabMapsFrom(path, maps):
 			ratio = 2000
 		maps.append((string, ratio))
 
-maps = []
-if not (os.path.exists(mapChoice) or os.path.exists("wormsMaps/" + mapChoice) or os.path.exists("wormsMaps/moreMaps/" + mapChoice)):
+def createWorld():
+	# choose map
+	global recolorGround
+	maps = []
 	grabMapsFrom("wormsMaps", maps)
 	grabMapsFrom("wormsMaps/moreMaps", maps)
-
-def createWorld():
-	global mapClosed, recolorGround, mapRatio
-	imageChoice = [None, None]
 	if mapChoice == "":
+		# no map chosed in arguments
 		imageChoice = choice(maps)
 	else:
+		imageChoice = [None, None]
 		if "PerlinMaps" in mapChoice:
 			imageChoice[0] = mapChoice
-			mapRatio = randint(512, 600)
+			imageChoice[1] = randint(512, 600)
 			recolorGround = True
 		else:
 			for m in maps:
 				if m[0].find(mapChoice) != -1:
 					imageChoice = m
 					break
-	if imageChoice[0] in ["wormsMaps/wMap19.png", "wormsMaps/wMap26.png", "wormsMaps/wMap40.png", "wormsMaps/wMap41.png", "wormsMaps/wMap64.png", "wormsMaps/wMapbig8.png"]:
-		mapClosed = True
-		
+	
 	imageFile, heightNorm = imageChoice
 	if mapRatio != -1:
 		heightNorm = mapRatio
 	
 	global mapImage
+
 	mapImage = pygame.image.load(imageFile)
 	if not diggingMatch: createMapImage(heightNorm)
 	else: mapImage = None; createMapDigging()
 	renderLand()
-
-
 
 # drawHealthBar = False
 # moreWindAffected = True
@@ -5401,6 +5393,8 @@ damageThisTurn = 0
 nWormsPerTeam = 0
 teamsInfo = []
 
+################################################################################ more functions
+
 def renderWeaponCount(special = False):
 	global currentTeam, currentWeapon, currentWeaponSurf
 	if not special:
@@ -5824,11 +5818,6 @@ class Menu:
 	def updateWinPos(self, pos):
 		self.winPos[0] = pos[0]
 		self.winPos[1] = pos[1]
-	def addString(self, string):#### unused and unmaintained
-		self.elements.append(MenuString(string, self.winPos + self.offset + Vector(Menu.border, self.currentHeight)))
-		self.currentHeight += self.elements[-1].height + Menu.border
-		self.dims[0] = max(self.dims[0], self.elements[-1].width + 2 * Menu.border)
-		self.dims[1] = self.currentHeight + Menu.border
 	def addButton(self, text, secText, bColor, active, action):
 		b = Button(text, secText, bColor, self.winPos, Vector(Menu.border, self.currentHeight), active, action, self.scroll)
 		self.elements.append(b)
@@ -6220,35 +6209,44 @@ def inUsedList(string):
 	return used
 
 class Toast:
+	_toasts = []
 	toastCount = 0
 	def __init__(self, surf):
+		Toast._toasts.append(self)
 		self.surf = surf
 		self.time = 0
-		self.pos = Vector(winWidth/2, winHeight)
+		self.anchor = Vector(winWidth/2, winHeight)
+		self.pos = Vector()
 		self.state = 0
 		nonPhys.append(self)
 		Toast.toastCount += 1
 	def step(self):
 		if self.state == 0:
 			self.pos.y -= 3
-			if self.pos.y < winHeight - self.surf.get_height():
+			if self.pos.y < -self.surf.get_height():
 				self.state = 1
 		if self.state == 1:
 			self.time += 1
-			if self.time == fps * 2:
+			if self.time == fps * 3:
 				self.state = 2
 		if self.state == 2:
 			self.pos.y += 3
-			if self.pos.y > winHeight:
+			if self.pos.y > 0:
 				nonPhys.remove(self)
+				Toast._toasts.remove(self)
 				Toast.toastCount -= 1
 	def draw(self):
-		win.blit(self.surf, self.pos)
-		
+		win.blit(self.surf, self.anchor + self.pos)
+	def updateWinPos(self, pos):
+		self.anchor[0] = pos[0]
+		self.anchor[1] = pos[1]
 def toastInfo():
 	if not (pointsMode or targetsMode or captureTheFlag):
 		return
 	if Toast.toastCount > 0:
+		Toast._toasts[0].time = 0
+		if Toast._toasts[0].state == 2:
+			Toast._toasts[0].state = 0
 		return
 	toastWidth = 100
 	surfs = []
@@ -6280,7 +6278,6 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	print("s")
 	
 ################################################################################ State machine
 if True:
@@ -6866,6 +6863,8 @@ if __name__ == "__main__":
 			Menu.menus[0].updateWinPos((winWidth - Menu.width - 2 * Menu.border, 0))
 			if len(Menu.menus) > 1:
 				Menu.menus[1].updateWinPos((winWidth - 2 * Menu.width - 4 * Menu.border - 1, 0))
+		if len(Toast._toasts) > 0:
+			Toast._toasts[0].updateWinPos((winWidth/2, winHeight))
 		
 		# constraints:
 		if camPos.y < 0: camPos.y = 0

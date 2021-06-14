@@ -31,19 +31,20 @@ def parseRecord():
 	
 
 mapChoice = randMap()
-image_elem = sg.Image(key="image", filename=mapChoice, size=(700,500))
+image_elem = sg.Image(key="image", filename=mapChoice, size=(600,400))
 
 sg.theme('Reddit')   # Add a touch of color
 
 defaults = {"--worms_per_team": 8, "--initial_health": 100, "--pack_mult": 1}
 
-layout =   [[sg.Text("Simon's worms game options", font=('Arial', 10, 'bold'))],
-			[sg.Text('Gameplay Mode', font=('Arial', 10, 'bold')), 
-				sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Capture the flag', key="--ctf"), sg.Checkbox('Points', key="--points_mode"), sg.Checkbox('Targets', key="--targets"), sg.Checkbox('David vs Goliath', key="--dvg"), 
-				sg.Checkbox('Digging', key="--digging")], 
+layout =   [[sg.Text("Simon's worms game launcher", font=('Arial', 10, 'bold'))],
+			[sg.Text('Gameplay Mode', font=('Arial', 10, 'bold')),
+				sg.Radio('David vs Goliath', "RADIO1", key="--dvg"), sg.Radio('Points', "RADIO1", key="--points_mode"),
+				sg.Radio('Targets', "RADIO1", key="--targets"), sg.Radio('Capture the flag', "RADIO1", key="--ctf")],
 			[sg.Text('Options', font=('Arial', 10, 'bold')), sg.Checkbox('Used List', key="--used_list"), sg.Checkbox('Warped', key="--warped"), sg.Checkbox('Random', key="--random"), sg.Checkbox('Manual placing', key="--place"), 
-				sg.Checkbox('Darkness', key="--darkness"), sg.Checkbox('Closed map', key="--closed_map")],
-			[sg.Spin([i for i in range(1, 9)], size=(6, 1), initial_value=8, key="--worms_per_team"), sg.Text('Worms per team'), 
+				sg.Checkbox('Darkness', key="--darkness")], 
+			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging")],
+			[sg.Text('             '), sg.Spin([i for i in range(1, 9)], size=(6, 1), initial_value=8, key="--worms_per_team"), sg.Text('Worms per team'), 
 				sg.Spin([i for i in range(50,1000,50)], size=(6, 1), initial_value=100, key="--initial_health"), sg.Text('Health'), 
 				sg.Spin([i for i in range(1,11)], size=(6, 1), initial_value=1, key="--pack_mult"), sg.Text('Packs')],
 			[sg.Text("Perlin noise map generator", font=('Arial', 10, 'bold')), sg.Button('Generate', key="generate")],
@@ -62,15 +63,15 @@ while True:
 	
 	if event == "random":
 		mapChoice = randMap()
-		image_elem.Update(filename=mapChoice, size=(700,500))
+		image_elem.Update(filename=mapChoice, size=(600,400))
 	
 	if event == "browse":
 		mapChoice = values["browse"]
-		image_elem.Update(filename=mapChoice, size=(700,500))
+		image_elem.Update(filename=mapChoice, size=(600,400))
 	
 	if event == "generate":
 		mapChoice = subprocess.check_output("python ./perlinNoise.py -d").decode('utf-8')[:-2]
-		image_elem.Update(filename=mapChoice, size=(700,500))
+		image_elem.Update(filename=mapChoice, size=(600,400))
 		
 	if event == "record":
 		parseRecord()

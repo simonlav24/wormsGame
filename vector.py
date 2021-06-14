@@ -121,6 +121,7 @@ class Vector:
 		y = self.x * math.sin(angle) + self.y * math.cos(angle)
 		self.x = x
 		self.y = y
+		return self
 	def integer(self):
 		self.x = int(self.x)
 		self.y = int(self.y)
@@ -129,6 +130,8 @@ class Vector:
 		return self[0] == other[0] and self[1] == other[1]
 	def __ne__(self, other):
 		return not self.__eq__(other)
+	def __neg__(self):
+		return self * -1
 
 def normalize(vec):
 	vecRes = vectorCopy(vec)
