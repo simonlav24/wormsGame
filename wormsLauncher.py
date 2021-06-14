@@ -16,7 +16,8 @@ def grabMapsFrom(path, maps):
 
 maps = []
 grabMapsFrom('wormsMaps', maps)
-grabMapsFrom('wormsMaps/moreMaps', maps)
+if os.path.exists('wormsMaps/moreMaps'):
+	grabMapsFrom('wormsMaps/moreMaps', maps)
 
 def randMap():
 	return choice(maps)
