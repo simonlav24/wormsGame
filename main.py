@@ -78,6 +78,7 @@ if True:
 	edgeBorder = 65
 	mapScrollSpeed = 35
 	initialHealth = 100
+	jetPackFuel = 100
 	deployPacks = True
 	diggingMatch = False
 	manualPlace = False
@@ -114,7 +115,6 @@ webVer = False
 
 # bugs:
 # darktree or something simpler
-# F1 to toast teams points (or team health) and move like menu
 # maybe more patterns
 
 ################################################################################ Map
@@ -161,7 +161,6 @@ if True:
 	switchingWorms = False
 	timeTravel = False
 	megaTrigger = False
-	jetPackFuel = 100
 	fuseTime = fps*2
 
 def createMapImage(heightNorm = None):
@@ -4901,6 +4900,7 @@ def grabMapsFrom(path, maps):
 			ratio = 1000
 		elif string.find("big16.png") != -1:
 			ratio = 2000
+		string = os.path.abspath(string)
 		maps.append((string, ratio))
 
 def createWorld():
@@ -4923,7 +4923,10 @@ def createWorld():
 				if m[0].find(mapChoice) != -1:
 					imageChoice = m
 					break
-	
+			if imageChoice[0] == None:
+				imageChoice[0] = mapChoice
+				imageChoice[1] = randint(512, 600)
+			
 	imageFile, heightNorm = imageChoice
 	if mapRatio != -1:
 		heightNorm = mapRatio
