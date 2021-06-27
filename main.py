@@ -664,7 +664,7 @@ def drawBackGround(surf, parallax):
 	times = winWidth//width + 2
 	for i in range(times):
 		x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
-		y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y))/parallax)
+		y =  int(mapHeight - height - Water.level) - int(camPos.y) - int((int(mapHeight - Water.level - winHeight) - int(camPos.y))/parallax)
 		win.blit(surf, (x, y))
 
 def point2world(point):
@@ -5841,14 +5841,15 @@ class Menu:
 	def destroy(self):
 		Menu.menus.remove(self)
 
-waterAmp = 5
+waterAmp = 2
 class Water:
 	level = initialWaterLevel
-	surf = pygame.Surface((200, waterAmp * 2 + 6), pygame.SRCALPHA)
 	def __init__(self):
 		self.points = [Vector(i * 20, 3 + waterAmp + waterAmp * (-1)**i) for i in range(-1,12)]
-		self.phase = [sin(timeOverall/(3)) for i in range(-1,11)]
 		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
+		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+		
+		self.surf = pygame.Surface((200, waterAmp * 2 + 6), pygame.SRCALPHA)
 	def getSplinePoint(self, t):
 		p1 = int(t) + 1
 		p2 = p1 + 1
@@ -5874,11 +5875,11 @@ class Water:
 		for t in range(0,(len(self.points) - 3) * 20):
 			point = self.getSplinePoint(t / 20)
 			# print(point)
-			pygame.draw.circle(Water.surf,  (255,255,255), (int(point[0]), int(point[1])), 1)
+			pygame.draw.circle(self.surf,  (255,255,255), (int(point[0]), int(point[1])), 1)
 		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 	
 		# pygame.gfxdraw.bezier(Water.surf, self.points, 100, (0,0,255))
-	def draw(self):
+	def draw(self, offsetY=0):
 		# win.blit(Water.surf, (0,0))
 		# drawBackGround(Water.surf, 1)
 		
@@ -5890,10 +5891,12 @@ class Water:
 			x = int(-camPos.x) + int(int(offset) * width + i * width)
 			# y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y)))
 			# y =  int(mapHeight - Water.level) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y)))
-			y =  int(mapHeight - Water.level - 3 - waterAmp) - int(camPos.y)
-			win.blit(Water.surf, (x, y))
-		
+			y =  int(mapHeight - Water.level - 3 - waterAmp - offsetY) - int(camPos.y)
+			win.blit(self.surf, (x, y))
+
+waterb1 = Water()
 water = Water()
+watera1 = Water()
 
 class MenuString:
 	def __init__(self, string, winPos):
@@ -6963,7 +6966,7 @@ if __name__ == "__main__":
 		timeOverall += 1
 		if timeOverall % fps == 0 and state != PLACING_WORMS: timeStep()
 		
-		water.step()
+		water.step(); watera1.step(); waterb1.step()
 		cloud_maneger()
 		
 		# reset actions
@@ -6976,8 +6979,9 @@ if __name__ == "__main__":
 		drawBackGround(imageMountain2,4)
 		drawBackGround(imageMountain,2)
 		
+		waterb1.draw(10)
 		drawLand()
-		water.draw()
+		water.draw(), watera1.draw(-10)
 		wormCol.fill(SKY)
 		extraCol.fill(SKY)
 		for p in PhysObj._reg: p.draw()
