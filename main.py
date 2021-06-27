@@ -100,7 +100,7 @@ if True:
 	recolorGround = False
 	allowAirStrikes = True
 	drawGroundSec = True
-	waterLevel = 20
+	initialWaterLevel = 50
 	
 	# Multipliers
 	damageMult = 0.8
@@ -176,14 +176,14 @@ def createMapImage(heightNorm = None):
 	
 	global gameMap, mapWidth, mapHeight, ground, wormCol, extraCol, groundSec
 	mapWidth = mapImage.get_width()
-	mapHeight = mapImage.get_height()
+	mapHeight = mapImage.get_height() + initialWaterLevel
 	gameMap = pygame.Surface((mapWidth, mapHeight))
 	gameMap.fill(SKY)
 	wormCol = pygame.Surface((mapWidth, mapHeight))
 	wormCol.fill(SKY)
 	extraCol = pygame.Surface((mapWidth, mapHeight))
 	extraCol.fill(SKY)
-	global mask
+	global mask # for darkness
 	mask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 	
 	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
@@ -191,7 +191,7 @@ def createMapImage(heightNorm = None):
 	global lstepmax
 	lstepmax = mapWidth//10 + wormsPerTeam * len(teams) + 1
 	for x in range(mapWidth):
-		for y in range(mapHeight):
+		for y in range(mapHeight - initialWaterLevel):
 			if not (mapImage.get_at((x, y)) == (0,0,0) or mapImage.get_at((x, y))[3] < 100):
 				gameMap.set_at((x, y), GRD)
 		if x % 10 == 0:
@@ -1051,7 +1051,7 @@ class PhysObj:
 		else:
 			self.pos = ppos
 			# flew out gameMap but not worms !
-			if self.pos.y > mapHeight and not self in self._worms:
+			if self.pos.y > mapHeight - initialWaterLevel and not self in self._worms:
 				self.outOfMapResponse()
 				self._reg.remove(self)
 				return
@@ -1655,7 +1655,7 @@ class Worm (PhysObj):
 			self.dieded()
 		
 		# check if on gameMap:
-		if self.pos.y >= mapHeight:
+		if self.pos.y >= mapHeight - initialWaterLevel:
 			self.dieded(Worm.causeFlew)
 		if self.pos.y < 0:
 			self.gravity = DOWN
@@ -5840,7 +5840,61 @@ class Menu:
 			e.draw()
 	def destroy(self):
 		Menu.menus.remove(self)
+
+waterAmp = 5
+class Water:
+	level = initialWaterLevel
+	surf = pygame.Surface((200, waterAmp * 2 + 6), pygame.SRCALPHA)
+	def __init__(self):
+		self.points = [Vector(i * 20, 3 + waterAmp + waterAmp * (-1)**i) for i in range(-1,12)]
+		self.phase = [sin(timeOverall/(3)) for i in range(-1,11)]
+		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
+	def getSplinePoint(self, t):
+		p1 = int(t) + 1
+		p2 = p1 + 1
+		p3 = p2 + 1
+		p0 = p1 - 1
+			
+		t = t - int(t)
+		tt = t * t
+		ttt = t * tt
+		q1 = -ttt + 2 * tt - t
+		q2 = 3 * ttt - 5 * tt + 2
+		q3 = -3 * ttt + 4 * tt + t
+		q4 = ttt - tt
+		# print(len(self.points), "ps:", p0, p1, p2, p3, "t:", t)
+		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
+		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
+		
+		return (tx, ty)
+	def step(self):
+		self.surf.fill((0,0,0,0))
+		self.points = [Vector(i * 20, 3 + waterAmp + self.phase[i % 10] * waterAmp * (-1)**i) for i in range(-1,12)]
+		# pygame.draw.circle(Water.surf,  (255,255,0), (5, 5), 1)
+		for t in range(0,(len(self.points) - 3) * 20):
+			point = self.getSplinePoint(t / 20)
+			# print(point)
+			pygame.draw.circle(Water.surf,  (255,255,255), (int(point[0]), int(point[1])), 1)
+		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 	
+		# pygame.gfxdraw.bezier(Water.surf, self.points, 100, (0,0,255))
+	def draw(self):
+		# win.blit(Water.surf, (0,0))
+		# drawBackGround(Water.surf, 1)
+		
+		width = 200
+		height = 10
+		offset = (camPos.x)//width
+		times = winWidth//width + 2
+		for i in range(times):
+			x = int(-camPos.x) + int(int(offset) * width + i * width)
+			# y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y)))
+			# y =  int(mapHeight - Water.level) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y)))
+			y =  int(mapHeight - Water.level - 3 - waterAmp) - int(camPos.y)
+			win.blit(Water.surf, (x, y))
+		
+water = Water()
+
 class MenuString:
 	def __init__(self, string, winPos):
 		self.winPos = winPos
@@ -6851,7 +6905,7 @@ if __name__ == "__main__":
 		### winHeight = int(720 / scalingFactor)
 		# with smooth transition:
 		winWidth += (1280 / scalingFactor - winWidth) * 0.2
-		winHeight += (720 / scalingFactor - winHeight) * 0.2
+		winHeight += (720 / scalingFactor - (winHeight)) * 0.2
 		winWidth = int(winWidth)
 		winHeight = int(winHeight)
 			
@@ -6908,7 +6962,8 @@ if __name__ == "__main__":
 		# advance timer
 		timeOverall += 1
 		if timeOverall % fps == 0 and state != PLACING_WORMS: timeStep()
-			
+		
+		water.step()
 		cloud_maneger()
 		
 		# reset actions
@@ -6922,6 +6977,7 @@ if __name__ == "__main__":
 		drawBackGround(imageMountain,2)
 		
 		drawLand()
+		water.draw()
 		wormCol.fill(SKY)
 		extraCol.fill(SKY)
 		for p in PhysObj._reg: p.draw()
