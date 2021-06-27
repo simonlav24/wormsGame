@@ -37,8 +37,8 @@ game development practice in python for educational purposes and fun. pygame req
 - **LONG BOW** - shoot arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
 - **SPEAR** - throw spear, impale all worms in its way. 2 spears.
 - **LASER GUN** - destructive laser destroy destructively every thing on its way.
-- **PORTAL GUN** - the cake is a deception. obtainable by utility crate.\
-- **BUBBLE GUN** - shoot bubbles. can carry worms and more.
+- **PORTAL GUN** - the cake is a deception. obtainable by utility crate.
+- **BUBBLE GUN** - shoot bubbles that captures worms and more.
 
 ## Fire weapons
 - **PETROL BOMB** - chargeable, throw a petrol bomb, explosive fire spreader.
@@ -63,7 +63,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **NAPALM STRIKE** - clickable, smelly, firey mess. wind sensitive.
 - **MINE STRIKE** - clickable, mine strike.
 
-## legen.. darys
+## Legen.. darys
  Legendary weapons can be obtained by weapon crates marked with "W".
 - **HOLY GRENADE** - chargeable, feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
 - **BANANA** - chargeable, multiplying banana of mass destruction.

@@ -1,10 +1,8 @@
 import PySimpleGUI as sg
-import os, sys
-import subprocess
+import os, sys, subprocess
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 from random import choice
-import time
 
 def loadImage(num):
 	return 'wormsMaps/wMap' + str(num) + '.png'
@@ -30,6 +28,9 @@ def path2map(path):
 	return path.split("/")[-1]
 
 def parseRecord():
+	if not os.path.exists("wormsRecord.xml"):
+		sg.popup('no record yet')
+		return
 	os.popen("wormsWinCounter.py")
 
 def saveTeam(values):
@@ -42,7 +43,6 @@ def saveTeam(values):
 		for w in range(8):
 			wormKey = "worm" + str(t) + str(w)
 			worm = ET.SubElement(team, "worm", name=values[wormKey])
-
 
 	pretty = xml.dom.minidom.parseString(ET.tostring(data, encoding='unicode')).toprettyxml(indent='    ')
 	if os.path.exists("wormsTeamsOld.xml"):
@@ -57,7 +57,7 @@ fnt_bold = ('Arial', 10, 'bold')
 mapChoice = randMap()
 image_elem = sg.Image(key="image", filename=mapChoice, size=(600,400))
 
-sg.theme('Reddit')   # Add a touch of color
+sg.theme('Reddit')
 
 defaults = {"--worms_per_team": 8, "--initial_health": 100, "--pack_mult": 1, "-ratio": ""}
 
@@ -75,7 +75,7 @@ tab1_layout =   [[sg.Text("Simon's worms game launcher", font=fnt_bold)],
 			[sg.Text('Game map', font=fnt_bold), sg.Button('Random', key="random"), sg.Input(key='browse', enable_events=True, visible=False), sg.FileBrowse(target="browse", enable_events=True), sg.Button('Play', key="play"),
 				sg.Checkbox('Ground color', key="-rg"), sg.Input("", key="-ratio", size=(6,1)), sg.Text('Custom ratio')],
 			[image_elem], 
-			[sg.Button('Score Record', key="record")]]
+			[sg.Button('Score Record', key="record"), sg.Button('About', key="about")]]
 
 # parse teams
 tab2_layout = [[]]
@@ -97,6 +97,13 @@ layout = [[sg.TabGroup([[sg.Tab('Gameplay', tab1_layout), sg.Tab('Team edit', ta
 # Create the Window
 window = sg.Window('Worms Launcher', layout, grab_anywhere=True)
 
+# popup winners
+if len(sys.argv) > 1 and os.path.exists('wormsRecord.xml'):
+	winners = ET.parse('wormsRecord.xml').getroot()
+	sg.popup('Team ' + winners[-1].attrib["winner"] + " won!",
+		'Most damage: ' + winners[-1].attrib["mostDamage"] + " by " + winners[-1].attrib["damager"], title="Worms game results")
+	popupWin = False
+	
 
 while True:
 	event, values = window.read()
@@ -120,7 +127,10 @@ while True:
 		
 	if event == "save_team":
 		saveTeam(values)
-		
+	
+	if event == "about":
+		sg.popup('This game was developed by Simon Labunsky', 'For educational purposes and fun', 'Enjoy', title="About")
+	
 	if event == "play":
 		starter = ""
 		if os.path.exists("main.py"):
@@ -142,6 +152,7 @@ while True:
 		sys.exit()
 		
 	window.Refresh()
+	
 	
 window.close()
 

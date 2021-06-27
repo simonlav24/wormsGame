@@ -100,6 +100,7 @@ if True:
 	recolorGround = False
 	allowAirStrikes = True
 	drawGroundSec = True
+	waterLevel = 20
 	
 	# Multipliers
 	damageMult = 0.8
@@ -116,6 +117,8 @@ webVer = False
 # bugs:
 # darktree or something simpler
 # maybe more patterns
+# bubbles above y = 0 can enter ground
+# try water again?
 
 ################################################################################ Map
 if True:
@@ -6469,7 +6472,7 @@ def stateMachine():
 		gameStableCounter += 1
 		if gameStableCounter == 30*3:
 			run = False
-			subprocess.Popen("wormsLauncher.py", shell=True)
+			subprocess.Popen("wormsLauncher.py -popwin", shell=True)
 
 ################################################################################ Keys action
 def onKeyPressRight():
