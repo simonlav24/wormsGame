@@ -101,6 +101,8 @@ if True:
 	allowAirStrikes = True
 	drawGroundSec = True
 	initialWaterLevel = 50
+	waterRise = False
+	waterRising = False
 	
 	# Multipliers
 	damageMult = 0.8
@@ -118,7 +120,9 @@ webVer = False
 # darktree or something simpler
 # maybe more patterns
 # bubbles above y = 0 can enter ground
-# try water again?
+# water splash (debrie)
+# water bounce
+# fix water + closed
 
 ################################################################################ Map
 if True:
@@ -1050,11 +1054,12 @@ class PhysObj:
 				
 		else:
 			self.pos = ppos
-			# flew out gameMap but not worms !
-			if self.pos.y > mapHeight - initialWaterLevel and not self in self._worms:
-				self.outOfMapResponse()
-				self._reg.remove(self)
-				return
+			
+		# flew out gameMap but not worms !
+		if self.pos.y > mapHeight - Water.level and not self in self._worms:
+			self.outOfMapResponse()
+			self._reg.remove(self)
+			return
 		
 		if magVel < 0.1: # creates a double jump problem
 			self.stable = True
@@ -1343,7 +1348,7 @@ class Worm (PhysObj):
 				self.healthStr = myfont.render(str(self.health), False, self.team.color)
 			global damageThisTurn
 			if not self == objectUnderControl:
-				if not sentring and not raoning and not self in currentTeam.worms:
+				if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
 					damageThisTurn += dmg
 			if captureTheFlag and damageType != 2:
 				if self.flagHolder:
@@ -1403,7 +1408,7 @@ class Worm (PhysObj):
 		self.name = myfont.render(self.nameStr, False, whiten(self.team.color))
 
 		# insert to kill list:
-		if not sentring and not raoning and not self in currentTeam.worms:
+		if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
 			damageThisTurn += self.health
 			currentTeam.killCount += 1
 			if pointsMode:
@@ -1655,7 +1660,7 @@ class Worm (PhysObj):
 			self.dieded()
 		
 		# check if on gameMap:
-		if self.pos.y >= mapHeight - initialWaterLevel:
+		if self.pos.y >= mapHeight - Water.level:
 			self.dieded(Worm.causeFlew)
 		if self.pos.y < 0:
 			self.gravity = DOWN
@@ -2423,7 +2428,7 @@ def deployPack(pack):
 		
 		# test2
 		for i in range(mapHeight):
-			if y + i >= mapHeight:
+			if y + i >= mapHeight - Water.level:
 				# no ground bellow
 				goodPlace = False
 				continue
@@ -5600,7 +5605,7 @@ def checkWinners():
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn, currentWeapon
-	global deploying, sentring, deployPacks, switchingWorms, raoning
+	global deploying, sentring, deployPacks, switchingWorms, raoning, waterRising
 
 	# reset special effects:
 	global globalGravity
@@ -5688,7 +5693,15 @@ def cycleWorms():
 				if team.utilityCounter[utilityDict["flare"]] > 3:
 					team.utilityCounter[utilityDict["flare"]] = 3
 		return
-		
+	
+	if waterRise and not waterRising:
+		water.rise(20)
+		nextState = WAIT_STABLE
+		roundCounter -= 1
+		waterRising = True
+		return
+	
+	waterRising = False
 	raoning = False
 	deploying = False
 	sentring = False
@@ -5844,12 +5857,16 @@ class Menu:
 waterAmp = 2
 class Water:
 	level = initialWaterLevel
+	quiet = 0
+	rising = 1
 	def __init__(self):
 		self.points = [Vector(i * 20, 3 + waterAmp + waterAmp * (-1)**i) for i in range(-1,12)]
 		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
 		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 		
 		self.surf = pygame.Surface((200, waterAmp * 2 + 6), pygame.SRCALPHA)
+		self.state = Water.quiet
+		self.amount = 0
 	def getSplinePoint(self, t):
 		p1 = int(t) + 1
 		p2 = p1 + 1
@@ -5868,16 +5885,30 @@ class Water:
 		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
 		
 		return (tx, ty)
+	
+	def rise(self, amount):
+		self.amount = amount
+		self.state = Water.rising
+	
 	def step(self):
 		self.surf.fill((0,0,0,0))
 		self.points = [Vector(i * 20, 3 + waterAmp + self.phase[i % 10] * waterAmp * (-1)**i) for i in range(-1,12)]
 		# pygame.draw.circle(Water.surf,  (255,255,0), (5, 5), 1)
+		pygame.draw.polygon(self.surf, (100,100,255), self.points + [(200, waterAmp * 2 + 6), (0, waterAmp * 2 + 6)])
 		for t in range(0,(len(self.points) - 3) * 20):
 			point = self.getSplinePoint(t / 20)
 			# print(point)
 			pygame.draw.circle(self.surf,  (255,255,255), (int(point[0]), int(point[1])), 1)
+		
 		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 	
+		if self.state == Water.rising:
+			gameDistable()
+			Water.level += 1
+			self.amount -= 1
+			if self.amount <= 0:
+				self.amount = 0
+				self.state = Water.quiet
 		# pygame.gfxdraw.bezier(Water.surf, self.points, 100, (0,0,255))
 	def draw(self, offsetY=0):
 		# win.blit(Water.surf, (0,0))
@@ -5893,6 +5924,8 @@ class Water:
 			# y =  int(mapHeight - Water.level) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y)))
 			y =  int(mapHeight - Water.level - 3 - waterAmp - offsetY) - int(camPos.y)
 			win.blit(self.surf, (x, y))
+		
+		pygame.draw.rect(win, (100,100,255), ((0,y + height), (winWidth, Water.level)))
 
 waterb1 = Water()
 water = Water()
@@ -6179,6 +6212,7 @@ def randomWeaponsGive():
 					teamCount = randint(0,5)
 
 def suddenDeath():
+	Commentator.que.append(("", ("", "sudden death!"), HUDColor))
 	for worm in PhysObj._worms:
 		worm.sicken()
 		if not worm.health == 1:
@@ -6243,6 +6277,10 @@ def cheatActive(code):
 	if code == "megaboom":
 		global megaTrigger
 		megaTrigger = True
+	if code == "tsunami":
+		global waterRise
+		waterRise = True
+		Commentator.que.append(("", ("", "water rising!"), HUDColor))
 	
 def gameDistable(): 
 	global gameStable, gameStableCounter
@@ -6824,6 +6862,11 @@ if __name__ == "__main__":
 							weaponStyle = weapons[weaponDict[currentWeapon]][1]
 							renderWeaponCount()
 					# misc
+					if event.key == pygame.K_w:
+						water.rise(10)
+					if event.key == pygame.K_s:
+						Water.level -= 1
+					
 					if event.key == pygame.K_p:
 						pause = not pause
 					if event.key == pygame.K_TAB:
@@ -6979,9 +7022,9 @@ if __name__ == "__main__":
 		drawBackGround(imageMountain2,4)
 		drawBackGround(imageMountain,2)
 		
-		waterb1.draw(10)
+		waterb1.draw(12)
 		drawLand()
-		water.draw(), watera1.draw(-10)
+		water.draw(2), watera1.draw(-8)
 		wormCol.fill(SKY)
 		extraCol.fill(SKY)
 		for p in PhysObj._reg: p.draw()
