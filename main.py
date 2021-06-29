@@ -66,6 +66,9 @@ if True:
 	MISC = (224, 224, 235)
 	AIRSTRIKE = (204, 255, 255)
 	LEGENDARY = (255, 255, 102)
+	
+	PLAGUE = 0
+	TSUNAMI = 1
 
 # Game parameters
 if True:
@@ -103,6 +106,8 @@ if True:
 	initialWaterLevel = 50
 	waterRise = False
 	waterRising = False
+	roundsTillSuddenDeath = -1
+	suddenDeathStyle = []
 	
 	# Multipliers
 	damageMult = 0.8
@@ -123,6 +128,7 @@ webVer = False
 # water splash (debrie)
 # water bounce
 # fix water + closed
+# electricity and turtle shells
 
 ################################################################################ Map
 if True:
@@ -149,6 +155,7 @@ if True:
 	currentWeapon = "missile"
 	currentWeaponSurf = myfont.render(currentWeapon, False, HUDColor)
 	weaponStyle = CHARGABLE
+	# color feel 0:up 1:down 2:mountfar 3:mountclose
 	feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
 			 [(122, 196, 233), (199, 233, 251), (116, 208, 186), (100, 173, 133)],
 			 [(110, 109, 166), (174, 95, 124), (68, 55, 101), (121, 93, 142)],
@@ -831,16 +838,8 @@ def getClosestPosAvail(obj):
 				return None
 	return checkPos
 
-def whiten(color):
-	r = color[0]
-	g = color[1]
-	b = color[2]
-	
-	r = r/5 + 167
-	g = g/5 + 167
-	b = b/5 + 167
-	
-	return (r,g,b)
+def grayen(color):
+	return tuple(i//5 + 167 for i in color)
 
 def getNormal(pos, vel, radius, wormCollision, extraCollision):
 	# colission with world:
@@ -1405,7 +1404,7 @@ class Worm (PhysObj):
 		
 		self.alive = False
 		self.color = (167,167,167)
-		self.name = myfont.render(self.nameStr, False, whiten(self.team.color))
+		self.name = myfont.render(self.nameStr, False, grayen(self.team.color))
 
 		# insert to kill list:
 		if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
@@ -3921,6 +3920,9 @@ class Venus:
 		else:
 			nonPhys.remove(self)
 			Venus._reg.remove(self)
+		if self.pos.y >= mapHeight - Water.level:
+			nonPhys.remove(self)
+			Venus._reg.remove(self)
 	def draw(self):
 		
 		if self.scale < 1: image = pygame.transform.scale(imageVenus, (tup2vec(imageVenus.get_size()) * self.scale).vec2tupint())
@@ -4867,6 +4869,9 @@ if True:
 	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
 	parser.add_argument("-u", "--unlimited", type=bool, nargs='?', const=True, default=False, help="Activate unlimited mode")
 	parser.add_argument("-place", "--place", type=bool, nargs='?', const=True, default=False, help="manually placing worms")
+	parser.add_argument("-sd", "--sudden_death", default=-1, help="rounds untill sudden death", type=int)
+	parser.add_argument("-sdt", "--sudden_death_tsunami", type=bool, nargs='?', const=True, default=False, help="tsunami sudden death style")
+	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
 	
 	args = parser.parse_args()
 	
@@ -4889,6 +4894,11 @@ if True:
 	recolorGround = args.recolor_ground
 	unlimitedMode = args.unlimited
 	manualPlace = args.place
+	roundsTillSuddenDeath = args.sudden_death
+	if args.sudden_death_tsunami:
+		suddenDeathStyle.append(TSUNAMI)
+	if args.sudden_death_plague:
+		suddenDeathStyle.append(PLAGUE)
 
 def grabMapsFrom(path, maps):
 	if not os.path.exists(path):
@@ -5605,7 +5615,7 @@ def checkWinners():
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn, currentWeapon
-	global deploying, sentring, deployPacks, switchingWorms, raoning, waterRising
+	global deploying, sentring, deployPacks, switchingWorms, raoning, waterRising, roundsTillSuddenDeath
 
 	# reset special effects:
 	global globalGravity
@@ -5694,6 +5704,7 @@ def cycleWorms():
 					team.utilityCounter[utilityDict["flare"]] = 3
 		return
 	
+	# rise water:
 	if waterRise and not waterRising:
 		water.rise(20)
 		nextState = WAIT_STABLE
@@ -5705,6 +5716,11 @@ def cycleWorms():
 	raoning = False
 	deploying = False
 	sentring = False
+	
+	if roundCounter % totalTeams == 0:
+		roundsTillSuddenDeath -= 1
+		if roundsTillSuddenDeath == 0:
+			suddenDeath()
 	
 	if captureTheFlag:
 		for team in teams:
@@ -5855,6 +5871,9 @@ class Menu:
 		Menu.menus.remove(self)
 
 waterAmp = 2
+waterColor = [((feelColor[0][0] + feelColor[1][0])//2, (feelColor[0][1] + feelColor[1][1])//2, (feelColor[0][2] + feelColor[1][2])//2)]
+waterColor.append(tuple(min(int(waterColor[0][i] * 1.5), 255) for i in range(3)))
+
 class Water:
 	level = initialWaterLevel
 	quiet = 0
@@ -5894,11 +5913,11 @@ class Water:
 		self.surf.fill((0,0,0,0))
 		self.points = [Vector(i * 20, 3 + waterAmp + self.phase[i % 10] * waterAmp * (-1)**i) for i in range(-1,12)]
 		# pygame.draw.circle(Water.surf,  (255,255,0), (5, 5), 1)
-		pygame.draw.polygon(self.surf, (100,100,255), self.points + [(200, waterAmp * 2 + 6), (0, waterAmp * 2 + 6)])
+		pygame.draw.polygon(self.surf, waterColor[0], self.points + [(200, waterAmp * 2 + 6), (0, waterAmp * 2 + 6)])
 		for t in range(0,(len(self.points) - 3) * 20):
 			point = self.getSplinePoint(t / 20)
 			# print(point)
-			pygame.draw.circle(self.surf,  (255,255,255), (int(point[0]), int(point[1])), 1)
+			pygame.draw.circle(self.surf,  waterColor[1], (int(point[0]), int(point[1])), 1)
 		
 		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 	
@@ -5925,7 +5944,7 @@ class Water:
 			y =  int(mapHeight - Water.level - 3 - waterAmp - offsetY) - int(camPos.y)
 			win.blit(self.surf, (x, y))
 		
-		pygame.draw.rect(win, (100,100,255), ((0,y + height), (winWidth, Water.level)))
+		pygame.draw.rect(win, waterColor[0], ((0,y + height), (winWidth, Water.level)))
 
 waterb1 = Water()
 water = Water()
@@ -6212,12 +6231,22 @@ def randomWeaponsGive():
 					teamCount = randint(0,5)
 
 def suddenDeath():
-	Commentator.que.append(("", ("", "sudden death!"), HUDColor))
-	for worm in PhysObj._worms:
-		worm.sicken()
-		if not worm.health == 1:
-			worm.health = worm.health // 2
-
+	global suddenDeathStyle
+	string = "Sudden Death!"
+	if len(suddenDeathStyle) == 0:
+		suddenDeathStyle += [PLAGUE, TSUNAMI]
+	if PLAGUE in suddenDeathStyle:
+		string += " plague!"
+		for worm in PhysObj._worms:
+			worm.sicken()
+			if not worm.health == 1:
+				worm.health = worm.health // 2
+	if TSUNAMI in suddenDeathStyle:
+		string += " water rise!"
+		global waterRise
+		waterRise = True
+	Commentator.que.append(("", ("", string), HUDColor))
+	
 def moreDigging():
 	for team in teams:
 		team.weaponCounter[weaponDict["minigun"]] += 5
