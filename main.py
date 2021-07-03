@@ -128,7 +128,6 @@ webVer = False
 # water splash (debrie)
 # water bounce
 # fix water + closed
-# electricity and turtle shells
 
 ################################################################################ Map
 if True:
@@ -718,7 +717,7 @@ def checkFreePos(obj, pos, wormcol = False):
 	r = 0
 	while r < 2 * pi:
 		testPos = Vector((obj.radius) * cos(r) + pos.x, (obj.radius) * sin(r) + pos.y)
-		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+		if testPos.x >= mapWidth or testPos.y >= mapHeight - Water.level or testPos.x < 0:
 			if mapClosed:
 				return False
 			else:
@@ -746,7 +745,7 @@ def checkFreePosFallProof(obj, pos):
 	r = 0
 	while r < 2 * pi:
 		testPos = Vector((obj.radius) * cos(r) + pos.x, (obj.radius) * sin(r) + pos.y)
-		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+		if testPos.x >= mapWidth or testPos.y >= mapHeight - Water.level or testPos.x < 0:
 			if mapClosed:
 				return False
 			else:
@@ -848,7 +847,7 @@ def getNormal(pos, vel, radius, wormCollision, extraCollision):
 	r = angle - pi
 	while r < angle + pi:
 		testPos = Vector((radius) * cos(r) + pos.x, (radius) * sin(r) + pos.y)
-		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+		if testPos.x >= mapWidth or testPos.y >= mapHeight - Water.level or testPos.x < 0:
 			if mapClosed:
 				response += pos - testPos
 				r += pi /8
@@ -981,7 +980,7 @@ class PhysObj:
 		r = angle - pi
 		while r < angle + pi:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+			if testPos.x >= mapWidth or testPos.y >= mapHeight - Water.level or testPos.x < 0:
 				if mapClosed:
 					response += ppos - testPos
 					collision = True
@@ -2980,6 +2979,9 @@ class BunkerBuster(PhysObj):
 		boom(self.pos, 23)
 
 def drawLightning(start, end, color = (153, 255, 255)):
+	radius = end.radius
+	end = end.pos
+	start = start.pos
 	halves = int(dist(end, start) / 4)
 	if halves == 0:
 		halves = 1
@@ -2996,7 +2998,7 @@ def drawLightning(start, end, color = (153, 255, 255)):
 		pygame.draw.lines(win, color, False, points, 2)
 	else:
 		pygame.draw.lines(win, color, False, [point2world(start), point2world(end)], 2)
-	pygame.draw.circle(win, color, (int(end.x) - int(camPos.x), int(end.y) - int(camPos.y)), int(PhysObj._worms[0].radius) + 3)
+	pygame.draw.circle(win, color, point2world(end), int(radius) + 3)
 
 class ElectricGrenade(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -3011,6 +3013,7 @@ class ElectricGrenade(PhysObj):
 		self.timer = 0
 		self.worms = []
 		self.raons = []
+		self.shells = []
 		self.electrifying = False
 		self.emptyCounter = 0
 		self.lifespan = 300
@@ -3028,12 +3031,16 @@ class ElectricGrenade(PhysObj):
 			self.stable = False
 			self.worms = []
 			self.raons = []
+			self.shells = []
 			for worm in PhysObj._worms:
 				if dist(self.pos, worm.pos) < 100:
 					self.worms.append(worm)
 			for raon in Raon._raons:
 				if dist(self.pos, raon.pos) < 100:
 					self.raons.append(raon)
+			for shell in GreenShell._shells:
+				if dist(self.pos, shell.pos) < 100:
+					self.shells.append(shell)
 			if len(self.worms) == 0 and len(self.raons) == 0:
 				self.emptyCounter += 1
 				if self.emptyCounter == fps:
@@ -3050,12 +3057,21 @@ class ElectricGrenade(PhysObj):
 		for raon in self.raons:
 			if randint(1,100) < 5:
 				raon.electrified()
+		for shell in self.shells:
+			if randint(1,100) < 5:
+				if shell.speed < 3:
+					shell.facing = LEFT if self.pos.x > shell.pos.x else RIGHT
+				shell.speed = 3
+				shell.timer = 0
+			
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		for worm in self.worms:
-			drawLightning(self.pos, worm.pos)
+			drawLightning(self, worm)
 		for raon in self.raons:
-			drawLightning(self.pos, raon.pos)
+			drawLightning(self, raon)
+		for shell in self.shells:
+			drawLightning(self, shell)
 
 class HomingMissile(PhysObj):
 	Target = Vector()
@@ -3658,10 +3674,10 @@ class ElectroBoom(PhysObj):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		
 		for worm in self.worms:
-			drawLightning(self.pos, worm.pos)
+			drawLightning(self, worm)
 		for net in self.network:
 			for worm in net[1]:
-				drawLightning(net[0].pos, worm.pos)
+				drawLightning(net[0], worm)
 
 def firePortal(start, direction):
 	steps = 500
@@ -4110,13 +4126,15 @@ class PokeBall(PhysObj):
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 		
 		if self.timer >= fuseTime and self.timer < fuseTime + fps*2 and self.hold:
-			drawLightning(self.pos, self.hold.pos, (255, 255, 204))
+			drawLightning(self, self.hold, (255, 255, 204))
 		if self.name:
 			win.blit(self.name , point2world(self.pos + Vector(-self.name.get_width()/2, -21)))
 	
 class GreenShell(PhysObj):
+	_shells = []
 	def __init__(self, pos):
 		self.ignore = []
+		GreenShell._shells.append(self)
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(0,-0.5)
@@ -4128,6 +4146,9 @@ class GreenShell(PhysObj):
 		self.ignore = []
 		self.speed = 3
 		self.wormCollider = True
+	def outOfMapResponse(self):
+		self.dead = True
+		GreenShell._shells.remove(self)
 	def secondaryStep(self):
 		self.timer += 1
 			
@@ -4272,7 +4293,7 @@ class GuidedMissile(PhysObj):
 		collision = False
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + self.pos.x, (self.radius) * sin(r) + self.pos.y)
-			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+			if testPos.x >= mapWidth or testPos.y >= mapHeight - Water.level or testPos.x < 0:
 				if mapClosed:
 					collision = True
 					r += pi /8
@@ -4347,7 +4368,7 @@ class EndPearl(PhysObj):
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0:
+			if testPos.x >= mapWidth or testPos.y >= mapHeight - Water.level or testPos.x < 0:
 				if mapClosed:
 					response += ppos - testPos
 					r += pi /8
@@ -4757,31 +4778,6 @@ class Snail:
 		angle = Snail.around.index(self.anchor - self.pos)//2 * 90 + (90 if self.clockwise == LEFT else 180)
 		win.blit(pygame.transform.rotate(self.surf, angle) , point2world(self.pos - Vector(3,3)))
 
-def fireDeflectLaser(start, direction, power=15):#########EXPERIMENTAL
-	deflects = []
-	power = 500
-	t = 0
-	while True:
-		testPos = start + direction * t
-		
-		addExtra(testPos, (255, 204, 102), fps*2)
-		# hit worms or ground:
-		# hit ground:
-		if mapGetAt(testPos, gameMap) == GRD:# or mapGetAt(testPos, wormCol) != (0,0,0) or mapGetAt(testPos, extraCol) != (0,0,0):
-			# collisiion acurred:
-			# print("c")
-			response = getNormal(testPos, 4, direction)
-			angle = getAngleByTwoVectors(response, direction)
-			
-			t = 0
-			start = vectorCopy(testPos)
-			direction.rotate(pi + 2 * angle)
-			
-		t += 1
-		power -= 1
-		if power == 0:
-			break
-
 class Bubble:
 	cought = []
 	# to do: dont pick up fire and debrie, portal 
@@ -4820,7 +4816,7 @@ class Bubble:
 		else:
 			self.catch.pos = self.pos
 			self.catch.vel *= 0
-		if mapClosed and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= mapWidth):
+		if mapClosed and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= mapWidth - Water.level):
 			self.burst()
 		if self.pos.y < -50:
 			self.burst()
@@ -5641,7 +5637,10 @@ def cycleWorms():
 	if damageThisTurn > mostDamage[0]:
 		mostDamage = (damageThisTurn, objectUnderControl.nameStr)	
 	if damageThisTurn > int(initialHealth * 2.5):
-		Commentator.que.append((objectUnderControl.nameStr, choice([("awesome shot ", "!"), ("", " is on fire!"), ("", " shows no mercy")]), objectUnderControl.team.color))
+		if damageThisTurn == 300:
+			Commentator.que.append((objectUnderControl.nameStr, ("THIS IS ", "!"), objectUnderControl.team.color))
+		else:
+			Commentator.que.append((objectUnderControl.nameStr, choice([("awesome shot ", "!"), ("", " is on fire!"), ("", " shows no mercy")]), objectUnderControl.team.color))
 	elif damageThisTurn > int(initialHealth * 1.5):
 		Commentator.que.append((objectUnderControl.nameStr, choice([("good shot ", "!"), ("nicely done ","")]), objectUnderControl.team.color))
 	
@@ -6408,6 +6407,8 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+	for shell in GreenShell._shells:
+		print(shell.speed)
 	
 ################################################################################ State machine
 if True:
