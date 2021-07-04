@@ -63,14 +63,17 @@ defaults = {"--worms_per_team": 8, "--initial_health": 100, "--pack_mult": 1, "-
 
 tab1_layout =   [[sg.Text("Simon's worms game launcher", font=fnt_bold)],
 			[sg.Text('Gameplay Mode', font=fnt_bold),
-				sg.Radio('David vs Goliath', "RADIO1", key="--dvg"), sg.Radio('Points', "RADIO1", key="--points_mode"),
+				sg.Radio('Battle', "RADIO1", key="battle", default=True), sg.Radio('Points', "RADIO1", key="--points_mode"),
 				sg.Radio('Targets', "RADIO1", key="--targets"), sg.Radio('Capture the flag', "RADIO1", key="--ctf")],
+			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="--term"), sg.Radio('David vs Goliath', "RADIO1", key="--dvg")],
 			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Used List', key="--used_list"), sg.Checkbox('Warped', key="--warped"), sg.Checkbox('Random', key="--random"), sg.Checkbox('Manual placing', key="--place"), 
 				sg.Checkbox('Darkness', key="--darkness")], 
 			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging")],
 			[sg.Text('             '), sg.Spin([i for i in range(1, 9)], size=(6, 1), initial_value=8, key="--worms_per_team"), sg.Text('Worms per team'), 
 				sg.Spin([i for i in range(50,1000,50)], size=(6, 1), initial_value=100, key="--initial_health"), sg.Text('Health'), 
 				sg.Spin([i for i in range(1,11)], size=(6, 1), initial_value=1, key="--pack_mult"), sg.Text('Packs')],
+			[sg.Text('            '), sg.Checkbox('Sudden death after', key='suddenDeath', enable_events=True), sg.Spin([i for i in range(0,50,1)], size=(6, 1), initial_value=12, key="suddenDeathRounds", disabled=True), 
+				sg.Text('rounds'), sg.Checkbox('Water level rising', key='tsunami', disabled=True), sg.Checkbox('plague', key='plague', disabled=True)],
 			[sg.Text("Perlin noise map generator", font=fnt_bold), sg.Button('Generate', key="generate")],
 			[sg.Text('Game map', font=fnt_bold), sg.Button('Random', key="random"), sg.Input(key='browse', enable_events=True, visible=False), sg.FileBrowse(target="browse", enable_events=True), sg.Button('Play', key="play"),
 				sg.Checkbox('Ground color', key="-rg"), sg.Input("", key="-ratio", size=(6,1)), sg.Text('Custom ratio')],
@@ -110,6 +113,11 @@ while True:
 	if event == sg.WIN_CLOSED or event == 'Cancel': # if user closes window or clicks cancel
 		break
 	
+	if event == "suddenDeath":
+		window.FindElement('suddenDeathRounds').Update(disabled = not values["suddenDeath"])
+		window.FindElement('tsunami').Update(disabled = not values["suddenDeath"])
+		window.FindElement('plague').Update(disabled = not values["suddenDeath"])
+	
 	if event == "random":
 		mapChoice = randMap()
 		image_elem.Update(filename=mapChoice, size=(600,400))
@@ -140,12 +148,20 @@ while True:
 		string = starter + " -map " + path2map(mapChoice) + " "
 		
 		for key in values.keys():
+			if key in ["suddenDeath", "suddenDeathRounds", "tsunami", "plague", "battle"]:
+				continue
 			if key in defaults.keys():
 				if values[key] != defaults[key]:
 					string += key + " " + str(values[key]) + " "
 			elif values[key] == True:
 				string += key + " "
-		print(string)
+		if values["suddenDeath"]:
+			string += " --sudden_death " + str(values["suddenDeathRounds"])
+			if values["tsunami"]:	
+				string += " --sudden_death_tsunami"
+			if values["plague"]:	
+				string += " --sudden_death_plague"
+		
 
 		window.close()
 		subprocess.Popen(string, shell=True)
