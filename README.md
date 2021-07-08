@@ -24,7 +24,7 @@ game development practice in python for educational purposes and fun. pygame req
 
 ## Grenades
 - **GRENADE** - chargeable, throw a grenade. all grenades delay time can be changed by pressing tab.
-- **MORTAR** - chargeable, throw a mortar grenade, when exploding it releases 3 missiles.
+- **MORTAR** - chargeable, throw a mortar grenade. release cluster on explosion.
 - **STICKY BOMB** - chargeable, a sticky grenade.
 - **GAS GRENADE** - chargeable, emit a toxic gas before exploding.
 - **ELECTRIC GRENADE** - chargeable, electrifying nearby worms. bouncy.
@@ -33,7 +33,7 @@ game development practice in python for educational purposes and fun. pygame req
 ## Guns
 - **SHOTGUN** - fire shotgun. 3 rounds.
 - **MINIGUN** - fire minigun.
-- **GAMMA GUN** - fire gamma radiation pulse. make worms sick. and mutate venus fly traps. can pass through terrain.
+- **GAMMA GUN** - fire gamma radiation pulse. make worms sick and mutate venus fly traps. can pass through terrain.
 - **LONG BOW** - shoot arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
 - **SPEAR** - throw spear, impale all worms in its way. 2 spears.
 - **LASER GUN** - destructive laser destroy destructively every thing on its way.
@@ -63,7 +63,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **NAPALM STRIKE** - clickable, smelly, firey mess. wind sensitive.
 - **MINE STRIKE** - clickable, mine strike.
 
-## Legen.. darys
+## Super weapons
  Legendary weapons can be obtained by weapon crates marked with "W".
 - **HOLY GRENADE** - chargeable, feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
 - **BANANA** - chargeable, multiplying banana of mass destruction.
@@ -89,3 +89,24 @@ game development practice in python for educational purposes and fun. pygame req
 - **jet pack** - thrust with arrow keys.
 - **portal gun** - to use in weapons.
 - **traveling kit** - more ropes and parachutes.
+
+## Game modes
+
+- Battle - last team standing wins.
+- Points - damage = points. The team with the most points wins.
+- Targets - shoot targets to get points. The team with the most points wins.
+- Capture the flag - the team that holds the flag at the end of the turn wins a point. The team with the most points wins.
+- Terminator - each turn you have a targeted worm. Hitting the target = 1 point. Terminating the target = 2 points.
+- David vs Goliath - starter worm receives 50% of all teammate's health.
+
+## Options
+
+- Cooldown - weapons have a cooldown for 4 turns.
+- Warped - horizontal map warp. *experimental*
+- Random - complete random worm choosing.
+- Manual placing - place worms manually.
+- Darkness - dark game mode. use flares to illuminate areas near you.
+- Closed map - square map bounding.
+- Forts - teams spawn in cluster.
+- Digging - worms are underground. dig your way around. recommended with darkness.
+

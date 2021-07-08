@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import os, sys, subprocess
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
-from random import choice
+from random import choice, randint
 
 def loadImage(num):
 	return 'wormsMaps/wMap' + str(num) + '.png'
@@ -66,7 +66,7 @@ tab1_layout =   [[sg.Text("Simon's worms game launcher", font=fnt_bold)],
 				sg.Radio('Battle', "RADIO1", key="battle", default=True), sg.Radio('Points', "RADIO1", key="--points_mode"),
 				sg.Radio('Targets', "RADIO1", key="--targets"), sg.Radio('Capture the flag', "RADIO1", key="--ctf")],
 			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="--term"), sg.Radio('David vs Goliath', "RADIO1", key="--dvg")],
-			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Used List', key="--used_list"), sg.Checkbox('Warped', key="--warped"), sg.Checkbox('Random', key="--random"), sg.Checkbox('Manual placing', key="--place"), 
+			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Cooldown', key="--used_list"), sg.Checkbox('Warped', key="--warped"), sg.Checkbox('Random', key="--random"), sg.Checkbox('Manual placing', key="--place"), 
 				sg.Checkbox('Darkness', key="--darkness")], 
 			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging")],
 			[sg.Text('             '), sg.Spin([i for i in range(1, 9)], size=(6, 1), initial_value=8, key="--worms_per_team"), sg.Text('Worms per team'), 
@@ -156,12 +156,14 @@ while True:
 			elif values[key] == True:
 				string += key + " "
 		if values["suddenDeath"]:
-			string += " --sudden_death " + str(values["suddenDeathRounds"])
+			suddenDeathRounds = values["suddenDeathRounds"]
+			if suddenDeathRounds == 0:
+				suddenDeathRounds = randint(2, 14)
+			string += " --sudden_death " + str(suddenDeathRounds)
 			if values["tsunami"]:	
 				string += " --sudden_death_tsunami"
 			if values["plague"]:	
 				string += " --sudden_death_plague"
-		
 
 		window.close()
 		subprocess.Popen(string, shell=True)

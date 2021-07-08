@@ -1058,6 +1058,10 @@ class PhysObj:
 			
 		# flew out gameMap but not worms !
 		if self.pos.y > mapHeight - Water.level and not self in self._worms:
+			angle = self.vel.getAngle()
+			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
+				if self.vel.getMag() > 7:
+					print("bounce")
 			self.outOfMapResponse()
 			self._reg.remove(self)
 			return
@@ -1360,7 +1364,6 @@ class Worm (PhysObj):
 			if terminatorMode and victim == self and not terminatorHit:
 				currentTeam.points += 1
 				terminatorHit = True
-			
 	def draw(self):
 		if not self is objectUnderControl and self.alive:
 			pygame.draw.circle(wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
@@ -1460,9 +1463,13 @@ class Worm (PhysObj):
 					self.team.weaponCounter[weaponDict[currentWeapon]] -= 1
 					renderWeaponCount()
 			nextState = PLAYER_CONTROL_2
-			# unclear what will happen if dies in WAIT_STABLE
 			state = nextState
 			timeRemaining(wormDieTime)
+		if terminatorMode and self == victim:
+			currentTeam.points += 1
+			if not terminatorHit:
+				currentTeam.points += 1
+		
 	def drawHealth(self):
 		if Worm.healthMode == 0:
 			pygame.draw.rect(win, (220,220,220),(point2world(self.pos - Vector(10,15)),( 20,3)))
@@ -6246,7 +6253,8 @@ def suddenDeath():
 		string += " water rise!"
 		global waterRise
 		waterRise = True
-	Commentator.que.append(("", ("", string), HUDColor))
+	text = myfontbigger.render("sudden death", False, (220,0,0))
+	Toast(pygame.transform.scale(text, tup2vec(text.get_size()) * 2), Toast.middle)
 	
 def moreDigging():
 	for team in teams:
@@ -6342,30 +6350,46 @@ def inUsedList(string):
 class Toast:
 	_toasts = []
 	toastCount = 0
-	def __init__(self, surf):
+	bottom = 0
+	middle = 1
+	def __init__(self, surf, mode=0):
 		Toast._toasts.append(self)
 		self.surf = surf
 		self.time = 0
-		self.anchor = Vector(winWidth/2, winHeight)
+		self.mode = mode
+		if self.mode == Toast.bottom:
+			self.anchor = Vector(winWidth/2, winHeight)
+		else:
+			self.anchor = Vector(winWidth//2, winHeight//2) - tup2vec(self.surf.get_size())/2
 		self.pos = Vector()
 		self.state = 0
 		nonPhys.append(self)
 		Toast.toastCount += 1
+		
 	def step(self):
-		if self.state == 0:
-			self.pos.y -= 3
-			if self.pos.y < -self.surf.get_height():
-				self.state = 1
-		if self.state == 1:
+		if self.mode == Toast.bottom:
+			if self.state == 0:
+				self.pos.y -= 3
+				if self.pos.y < -self.surf.get_height():
+					self.state = 1
+			if self.state == 1:
+				self.time += 1
+				if self.time == fps * 3:
+					self.state = 2
+			if self.state == 2:
+				self.pos.y += 3
+				if self.pos.y > 0:
+					nonPhys.remove(self)
+					Toast._toasts.remove(self)
+					Toast.toastCount -= 1
+		elif self.mode == Toast.middle:
 			self.time += 1
 			if self.time == fps * 3:
-				self.state = 2
-		if self.state == 2:
-			self.pos.y += 3
-			if self.pos.y > 0:
 				nonPhys.remove(self)
 				Toast._toasts.remove(self)
 				Toast.toastCount -= 1
+			self.pos = uniform(0,2) * vectorUnitRandom()
+				
 	def draw(self):
 		win.blit(self.surf, self.anchor + self.pos)
 	def updateWinPos(self, pos):
@@ -6413,7 +6437,7 @@ def pos2corner(source, dest, border = 20):
 	intersection[0] = min(max(intersection[0], border), winWidth - border)
 	intersection[1] = min(max(intersection[1], border), winHeight - border)
 		
-	return intersection 
+	return intersection + normalize(direction) * 4 * sin(timeOverall / 5)
 	
 def drawDirInd(pos):
 	border = 20
@@ -6433,7 +6457,6 @@ def drawDirInd(pos):
 	
 	pygame.draw.polygon(win, (255,0,0), [intersection + i for i in points])
 	
-
 lstep = 0
 lstepmax = 1
 def lstepper():
@@ -6448,8 +6471,6 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	for shell in GreenShell._shells:
-		print(shell.speed)
 	
 ################################################################################ State machine
 if True:
@@ -7042,8 +7063,12 @@ if __name__ == "__main__":
 			if len(Menu.menus) > 1:
 				Menu.menus[1].updateWinPos((winWidth - 2 * Menu.width - 4 * Menu.border - 1, 0))
 		if len(Toast._toasts) > 0:
-			Toast._toasts[0].updateWinPos((winWidth/2, winHeight))
-		
+			for t in Toast._toasts:
+				if t.mode == Toast.bottom:
+					t.updateWinPos((winWidth/2, winHeight))
+				elif t.mode == Toast.middle:
+					t.updateWinPos(Vector(winWidth/2, winHeight/2) - tup2vec(t.surf.get_size())/2)
+					
 		# constraints:
 		if camPos.y < 0: camPos.y = 0
 		if camPos.y >= mapHeight - winHeight: camPos.y = mapHeight - winHeight
@@ -7102,12 +7127,8 @@ if __name__ == "__main__":
 		for p in PhysObj._reg: p.draw()
 		for f in nonPhys: f.draw()
 		if currentWeapon == "homing missile" and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
-		if targetsMode and objectUnderControl:
-			for target in ShootingTarget._reg:
-				drawDirInd(target.pos)
 		if terminatorMode and victim and victim.alive:
 			drawTarget(victim.pos)
-			drawDirInd(victim.pos)
 			
 		# draw shooting indicator
 		if objectUnderControl and state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and objectUnderControl.health > 0:
@@ -7126,7 +7147,6 @@ if __name__ == "__main__":
 		drawExtra()
 		drawLayers()
 		
-		
 		# HUD
 		drawWindIndicator()
 		timeDraw()
@@ -7139,6 +7159,12 @@ if __name__ == "__main__":
 		if useListMode: drawUseList()
 		
 		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: teamHealthDraw()
+		if terminatorMode and victim and victim.alive:
+			drawDirInd(victim.pos)
+		if targetsMode and objectUnderControl:
+			for target in ShootingTarget._reg:
+				drawDirInd(target.pos)
+		
 		# weapon menu:
 		if len(Menu.menus) > 0:
 			for menu in Menu.menus: menu.step()
