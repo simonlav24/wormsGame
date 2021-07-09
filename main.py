@@ -130,6 +130,7 @@ webVer = False
 # bubbles above y = 0 can enter ground
 # water splash (debrie)
 # water bounce
+# health not definitive in 0 health
 
 ################################################################################ Map
 if True:
@@ -362,10 +363,11 @@ def stain(pos, surf, size, alphaMore):
 	ground.blit(grounder, pos - tup2vec(size)/2)
 
 def splash(pos, vel):
-	for i in range(10):
+	for i in range(10 + int(vel.getMag())):
 		d = Debrie(Vector(pos.x, mapHeight - Water.level - 3), 10, [waterColor[1]])
 		d.vel = vectorUnitRandom()
 		d.vel.y = uniform(-1,0) * vel.getMag()
+		d.vel.x *= vel.getMag() * 0.17
 		d.radius = choice([2,1])
 
 class Blast:
@@ -682,7 +684,7 @@ def drawBackGround(surf, parallax):
 	times = winWidth//width + 2
 	for i in range(times):
 		x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
-		y =  int(mapHeight - height - Water.level) - int(camPos.y) - int((int(mapHeight - Water.level - winHeight) - int(camPos.y))/parallax)
+		y = int(mapHeight - Water.level - height) - int(camPos.y) + int((mapHeight - Water.level - winHeight - int(camPos.y))/(parallax*1.5)) + 20 - parallax * 3
 		win.blit(surf, (x, y))
 
 def point2world(point):
@@ -5000,9 +5002,9 @@ if True:
 	weapons.append(["raon launcher", CHARGABLE, 2, GRENADES, False, 0])
 	weapons.append(["distorter", CHARGABLE, 0, GRENADES, True, 0])
 	weapons.append(["shotgun", GUN, 5, GUNS, False, 0])
-	weapons.append(["minigun", GUN, 6, GUNS, False, 0])
-	weapons.append(["gamma gun", GUN, 3, GUNS, False, 0])
 	weapons.append(["long bow", GUN, 3, GUNS, False, 0])
+	weapons.append(["minigun", GUN, 5, GUNS, False, 0])
+	weapons.append(["gamma gun", GUN, 3, GUNS, False, 0])
 	weapons.append(["spear", CHARGABLE, 2, GUNS, False, 0])
 	weapons.append(["laser gun", GUN, 3, GUNS, False, 0])
 	weapons.append(["portal gun", GUN, 0, GUNS, False, 0])
@@ -5024,7 +5026,7 @@ if True:
 	weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
 	weapons.append(["airstrike", CLICKABLE, 1, AIRSTRIKE, False, 8])
 	weapons.append(["napalm strike", CLICKABLE, 1, AIRSTRIKE, False, 8])
-	weapons.append(["mine strike", CLICKABLE, 0, AIRSTRIKE, False, 8])
+	weapons.append(["mine strike", CLICKABLE, 0, AIRSTRIKE, False, 1])
 	weapons.append(["holy grenade", CHARGABLE, 0, LEGENDARY, True, 1])
 	weapons.append(["banana", CHARGABLE, 0, LEGENDARY, True, 1])
 	weapons.append(["earthquake", PUTABLE, 0, LEGENDARY, False, 1])
@@ -5493,6 +5495,8 @@ class HealthBar:
 			
 			# animate health bar
 			self.teamHealthMod[i] += (self.teamHealthAct[i] - self.teamHealthMod[i]) * 0.1
+			if int(self.teamHealthMod[i]) == self.teamHealthAct[i]:
+				self.teamHealthMod[i] = self.teamHealthAct[i]
 	def draw(self):
 		if not HealthBar.drawBar: return
 		maxPoints = sum(i.points for i in teams)
@@ -5738,7 +5742,7 @@ def cycleWorms():
 	
 	# rise water:
 	if waterRise and not waterRising:
-		water.rise(20)
+		water.riseAll(20)
 		nextState = WAIT_STABLE
 		roundCounter -= 1
 		waterRising = True
@@ -5943,13 +5947,14 @@ class Water:
 	def rise(self, amount):
 		self.amount = amount
 		self.state = Water.rising
+	def riseAll(self, amount):
+		self.rise(amount)
 	def step(self):
 		self.surf.fill((0,0,0,0))
 		self.points = [Vector(i * 20, 3 + waterAmp + self.phase[i % 10] * waterAmp * (-1)**i) for i in range(-1,12)]
 		pygame.draw.polygon(self.surf, waterColor[0], self.points + [(200, waterAmp * 2 + 6), (0, waterAmp * 2 + 6)])
 		for t in range(0,(len(self.points) - 3) * 20):
 			point = self.getSplinePoint(t / 20)
-			# print(point)
 			pygame.draw.circle(self.surf,  waterColor[1], (int(point[0]), int(point[1])), 1)
 		
 		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
@@ -5962,24 +5967,19 @@ class Water:
 				self.amount = 0
 				self.state = Water.quiet
 	def draw(self, offsetY=0):
-		# win.blit(Water.surf, (0,0))
-		# drawBackGround(Water.surf, 1)
-		
+
 		width = 200
 		height = 10
 		offset = (camPos.x)//width
 		times = winWidth//width + 2
 		for i in range(times):
 			x = int(-camPos.x) + int(int(offset) * width + i * width)
-			# y =  int(mapHeight - height) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y)))
-			# y =  int(mapHeight - Water.level) - int(camPos.y) - int((int(mapHeight - winHeight) - int(camPos.y)))
 			y =  int(mapHeight - Water.level - 3 - waterAmp - offsetY) - int(camPos.y)
 			win.blit(self.surf, (x, y))
 		
 		pygame.draw.rect(win, waterColor[0], ((0,y + height), (winWidth, Water.level)))
 	def createLayers(self):
-		for i in range(2):
-			Water.layersA.append(Water())
+		Water.layersA.append(Water())
 		Water.layersB.append(Water())
 	def stepAll(self):
 		for w in Water.layersA:
@@ -5999,6 +5999,7 @@ class Water:
 				offset -= 10
 
 water = Water()
+Water.layersA.append(water)
 water.createLayers()
 
 class MenuString:
@@ -6502,7 +6503,6 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
