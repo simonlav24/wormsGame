@@ -127,10 +127,6 @@ webVer = False
 # bugs:
 # darktree or something simpler
 # maybe more patterns
-# bubbles above y = 0 can enter ground
-# water splash (debrie)
-# water bounce
-# health not definitive in 0 health
 
 ################################################################################ Map
 if True:
@@ -364,7 +360,7 @@ def stain(pos, surf, size, alphaMore):
 
 def splash(pos, vel):
 	for i in range(10 + int(vel.getMag())):
-		d = Debrie(Vector(pos.x, mapHeight - Water.level - 3), 10, [waterColor[1]])
+		d = Debrie(Vector(pos.x, mapHeight - Water.level - 3), 10, [waterColor[1]], 1)
 		d.vel = vectorUnitRandom()
 		d.vel.y = uniform(-1,0) * vel.getMag()
 		d.vel.x *= vel.getMag() * 0.17
@@ -684,7 +680,7 @@ def drawBackGround(surf, parallax):
 	times = winWidth//width + 2
 	for i in range(times):
 		x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
-		y = int(mapHeight - Water.level - height) - int(camPos.y) + int((mapHeight - Water.level - winHeight - int(camPos.y))/(parallax*1.5)) + 20 - parallax * 3
+		y = int(mapHeight - initialWaterLevel - height) - int(camPos.y) + int((mapHeight - initialWaterLevel - winHeight - int(camPos.y))/(parallax*1.5)) + 20 - parallax * 3
 		win.blit(surf, (x, y))
 
 def point2world(point):
@@ -1065,16 +1061,18 @@ class PhysObj:
 			
 		# flew out gameMap but not worms !
 		if self.pos.y > mapHeight - Water.level and not self in self._worms:
+			if self not in Debrie._debries:
+				splash(self.pos, self.vel)
 			angle = self.vel.getAngle()
 			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
 				if self.vel.getMag() > 7:
-					pass
-					# print("bounce")
-			self.outOfMapResponse()
-			self._reg.remove(self)
-			if self not in Debrie._debries:
-				splash(self.pos, self.vel)
-			return
+					self.pos.y = mapHeight - Water.level - 1
+					self.vel.y *= -1
+					self.vel.x *= 0.8
+			else:
+				self.outOfMapResponse()
+				self._reg.remove(self)
+				return
 		
 		if magVel < 0.1: # creates a double jump problem
 			self.stable = True
@@ -1089,6 +1087,8 @@ class PhysObj:
 		# gravity:
 		self.acc.y += globalGravity
 		if self.windAffected:
+			if self.pos.x < - 3 * mapWidth or self.pos.x > 4 * mapWidth:
+				return
 			self.acc.x += wind * 0.1 * windMult
 	def deathResponse(self):
 		pass
@@ -1107,14 +1107,14 @@ class PhysObj:
 
 class Debrie (PhysObj):
 	_debries = []
-	def __init__(self, pos, blast, colors):
+	def __init__(self, pos, blast, colors, bounces=2):
 		Debrie._debries.append(self)
 		self.initialize()
 		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
 		self.pos = Vector(pos[0],pos[1])
 		
 		self.boomAffected = False
-		self.bounceBeforeDeath = 2
+		self.bounceBeforeDeath = bounces
 		self.color = choice(colors)
 		self.radius = 1
 		self.damp = 0.5
@@ -1451,7 +1451,6 @@ class Worm (PhysObj):
 		if cause == -1:
 			Commentator.que.append((self.nameStr, choice(Commentator.stringsDmg), self.team.color))
 		elif cause == Worm.causeFlew:
-			splash(self.pos, self.vel)
 			comment = True
 			if not self in currentTeam.worms and currentWeapon == "baseball" and state in [PLAYER_CONTROL_2, WAIT_STABLE]:
 				Commentator.que.append((self.nameStr, Commentator.stringBaseBall, self.team.color))
@@ -1480,6 +1479,8 @@ class Worm (PhysObj):
 			currentTeam.points += 1
 			if not terminatorHit:
 				currentTeam.points += 1
+			if state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
+				pickVictim()
 		
 	def drawHealth(self):
 		if Worm.healthMode == 0:
@@ -1684,8 +1685,16 @@ class Worm (PhysObj):
 			self.dieded()
 		
 		# check if on gameMap:
-		if self.pos.y >= mapHeight - Water.level:
-			self.dieded(Worm.causeFlew)
+		if self.pos.y > mapHeight - Water.level:
+			splash(self.pos, self.vel)
+			angle = self.vel.getAngle()
+			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
+				if self.vel.getMag() > 7:
+					self.pos.y = mapHeight - Water.level - 1
+					self.vel.y *= -1
+					self.vel.x *= 0.7
+			else:
+				self.dieded(Worm.causeFlew)
 		if self.pos.y < 0:
 			self.gravity = DOWN
 		if actionMove:
@@ -4816,7 +4825,7 @@ class Bubble:
 		self.vel = Vector(direction[0], direction[1]).rotate(uniform(-0.1, 0.1)) * energy * 5
 		self.radius = 1
 		self.grow = randint(7, 13)
-		self.color = (255,255,255,100)
+		self.color = (220,220,220)
 		self.catch = None
 	def applyForce(self):
 		self.acc.y -= globalGravity * 0.3
@@ -4846,6 +4855,8 @@ class Bubble:
 			self.catch.vel *= 0
 		if mapClosed and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= mapWidth - Water.level):
 			self.burst()
+		if self.pos.y < 0 and (mapGetAt((self.pos.x + self.radius, 0)) == GRD or mapGetAt((self.pos.x - self.radius, 0)) == GRD):
+			self.burst()
 		if self.pos.y < -50:
 			self.burst()
 		if self.pos.y - self.radius <= 0 and mapGetAt((self.pos.x, 0)) == GRD:
@@ -4864,10 +4875,13 @@ class Bubble:
 		pygame.draw.circle(ground, SKY, self.pos, self.radius)
 		if self in nonPhys:
 			nonPhys.remove(self)
+		for i in range(min(int(self.radius), 8)):
+			d = Debrie(self.pos, self.radius/5, [self.color], 1)
+			d.radius = 1
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
 			return
-		pygame.gfxdraw.filled_circle(win, *point2world(self.pos), self.radius, self.color)
+		pygame.gfxdraw.circle(win, *point2world(self.pos), self.radius, self.color)
 
 ################################################################################ Create World
 
@@ -6401,7 +6415,6 @@ class Toast:
 			self.anchor = Vector(winWidth//2, winHeight//2) - tup2vec(self.surf.get_size())/2
 		self.pos = Vector()
 		self.state = 0
-		nonPhys.append(self)
 		Toast.toastCount += 1
 		
 	def step(self):
@@ -6417,18 +6430,17 @@ class Toast:
 			if self.state == 2:
 				self.pos.y += 3
 				if self.pos.y > 0:
-					nonPhys.remove(self)
 					Toast._toasts.remove(self)
 					Toast.toastCount -= 1
 		elif self.mode == Toast.middle:
 			self.time += 1
 			if self.time == fps * 3:
-				nonPhys.remove(self)
 				Toast._toasts.remove(self)
 				Toast.toastCount -= 1
 			self.pos = uniform(0,2) * vectorUnitRandom()
 				
 	def draw(self):
+		pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
 		win.blit(self.surf, self.anchor + self.pos)
 	def updateWinPos(self, pos):
 		self.anchor[0] = pos[0]
@@ -6503,6 +6515,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+	water.riseAll(20)
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -6854,7 +6867,7 @@ if webVer:
 ################################################################################ Main Loop
 
 if __name__ == "__main__":
-
+	# pygame.mouse.set_visible(False)
 	run = True
 	pause = False
 	while run:
@@ -7067,10 +7080,6 @@ if __name__ == "__main__":
 				camTrack = Camera(camPos + Vector(winWidth, winHeight)/2 + scroll)
 		
 		# handle scale:
-		# actual scale target:
-		### winWidth = int(1280 / scalingFactor)
-		### winHeight = int(720 / scalingFactor)
-		# with smooth transition:
 		winWidth += (1280 / scalingFactor - winWidth) * 0.2
 		winHeight += (720 / scalingFactor - (winHeight)) * 0.2
 		winWidth = int(winWidth)
@@ -7118,6 +7127,7 @@ if __name__ == "__main__":
 			if not p.stable:
 				gameDistable()
 		for f in nonPhys: f.step()
+		for t in Toast._toasts: t.step()
 		
 		if timeTravel: timeTravelRecord()
 			
@@ -7149,11 +7159,13 @@ if __name__ == "__main__":
 		
 		water.drawLayers(UP)
 		drawLand()
-		water.drawLayers(DOWN)
 		wormCol.fill(SKY)
 		extraCol.fill(SKY)
 		for p in PhysObj._reg: p.draw()
 		for f in nonPhys: f.draw()
+		water.drawLayers(DOWN)
+		for t in Toast._toasts: t.draw()
+		
 		if currentWeapon == "homing missile" and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
 		if terminatorMode and victim and victim.alive:
 			drawTarget(victim.pos)
@@ -7205,13 +7217,16 @@ if __name__ == "__main__":
 			for i, killed in enumerate(killList):
 				win.blit(killed[0], (5, winHeight - 14 - i * 8))
 		
-		drawExtra()##remove
+		drawExtra()
 		# debug:
 		
 		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 		win.blit(damageText[1], ((int(5), int(winHeight-6))))
 		
 		if state == PLACING_WORMS: win.blit(myfont.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
+		
+		# win.blit(airStrikeSpr, tup2vec(mousePos)/scalingFactor)
+		# pygame.draw.circle(win, (255,0,0), mousePos, 10)
 		
 		# draw loading screen
 		if state in [RESET, GENERATE_TERRAIN] or (state in [PLACING_WORMS, CHOOSE_STARTER] and not manualPlace):
