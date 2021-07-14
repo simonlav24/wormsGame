@@ -149,8 +149,8 @@ def vectorFromAngle(angle, mag = 1):
 	return Vector(mag * math.cos(angle), mag * math.sin(angle))
 
 def rotateVector(vec, angle):
-	x = vec.x * math.cos(angle) - vec.y * math.sin(angle)
-	y = vec.x * math.sin(angle) + vec.y * math.cos(angle)
+	x = vec[0] * math.cos(angle) - vec[1] * math.sin(angle)
+	y = vec[0] * math.sin(angle) + vec[1] * math.cos(angle)
 	return Vector(x, y)
 
 def dotProduct(vec1, vec2):

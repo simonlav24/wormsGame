@@ -66,9 +66,9 @@ tab1_layout =   [[sg.Text("Simon's worms game launcher", font=fnt_bold)],
 				sg.Radio('Battle', "RADIO1", key="battle", default=True), sg.Radio('Points', "RADIO1", key="--points_mode"),
 				sg.Radio('Targets', "RADIO1", key="--targets"), sg.Radio('Capture the flag', "RADIO1", key="--ctf")],
 			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="--term"), sg.Radio('David vs Goliath', "RADIO1", key="--dvg")],
-			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Cooldown', key="--used_list"), sg.Checkbox('Warped', key="--warped"), sg.Checkbox('Random', key="--random"), sg.Checkbox('Manual placing', key="--place"), 
-				sg.Checkbox('Darkness', key="--darkness")], 
-			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging")],
+			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Cooldown', key="--used_list"), sg.Checkbox('Warped', key="--warped"),sg.Text('Random'), sg.Combo(['Teams', 'Worms'], key='--random'), sg.Checkbox('Manual placing', key="--place"), 
+				], 
+			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging"), sg.Checkbox('Darkness', key="--darkness")],
 			[sg.Text('             '), sg.Spin([i for i in range(1, 9)], size=(6, 1), initial_value=8, key="--worms_per_team"), sg.Text('Worms per team'), 
 				sg.Spin([i for i in range(50,1000,50)], size=(6, 1), initial_value=100, key="--initial_health"), sg.Text('Health'), 
 				sg.Spin([i for i in range(1,11)], size=(6, 1), initial_value=1, key="--pack_mult"), sg.Text('Packs')],
@@ -148,6 +148,12 @@ while True:
 		string = starter + " -map " + path2map(mapChoice) + " "
 		
 		for key in values.keys():
+			if key == "--random":
+				if values["--random"] == "Teams":
+					string += " " + key + " 1"
+				elif values["--random"] == "Worms":
+					string += " " + key + " 2 "
+				continue
 			if key in ["suddenDeath", "suddenDeathRounds", "tsunami", "plague", "battle"]:
 				continue
 			if key in defaults.keys():

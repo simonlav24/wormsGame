@@ -88,7 +88,7 @@ if True:
 	drawHealthBar = True
 	mapClosed = False
 	unlimitedMode = False
-	moreWindAffected = False
+	moreWindAffected = 0
 	fortsMode = False
 	davidAndGoliathMode = False
 	randomWeapons = False
@@ -99,7 +99,7 @@ if True:
 	captureTheFlag = False
 	targetsMode = False
 	warpedMode = False
-	randomCycle = False
+	randomCycle = 0
 	recolorGround = False
 	allowAirStrikes = True
 	drawGroundSec = True
@@ -124,9 +124,13 @@ if True:
 	HUDColor = BLACK
 webVer = False 
 
-# bugs:
+# bugs & improvements:
 # darktree or something simpler
-# maybe more patterns
+# acid viel:
+#	small explossion and green acid devours the ground and spreads randomly
+#
+# convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
+
 
 ################################################################################ Map
 if True:
@@ -138,7 +142,7 @@ if True:
 	
 	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 	groundSec = pygame.Surface((mapWidth, mapHeight)).convert_alpha()#KILL
-	mask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()# for darkness
+	darkMask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()# for darkness
 	lights = []
 	
 	camPos = Vector(0,0)
@@ -192,8 +196,8 @@ def createMapImage(heightNorm = None):
 	wormCol.fill(SKY)
 	extraCol = pygame.Surface((mapWidth, mapHeight))
 	extraCol.fill(SKY)
-	global mask # for darkness
-	mask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
+	global darkMask # for darkness
+	darkMask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 	
 	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 	groundSec = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
@@ -222,31 +226,32 @@ def drawLand():
 		if drawGroundSec: win.blit(groundSec, point2world((-mapWidth,0)))
 		win.blit(ground, point2world((-mapWidth,0)))
 	if darkness and not state == PLACING_WORMS:
-		mask.fill((30,30,30))
+		darkMask.fill((30,30,30))
 		if objectUnderControl:
 			# advanced darkness:
-			# center = objectUnderControl.pos
-			# points = []
-			# for i in range(100):
-				# direction = vectorFromAngle((pi * i)/(100/2))
-				# for t in range(100):
-					# testPos = center + direction * (t*5)
-					# if mapGetAt(testPos) == GRD:
-						# points.append(testPos)
-						# break
-					# if t == 100 - 1:
-						# points.append(testPos)
-						# break
-			# pygame.draw.polygon(mask, (0,0,0,0), points)
-			
-			pygame.draw.circle(mask, (0,0,0,0), objectUnderControl.pos.vec2tupint(), lightRadius)
+			if False:
+				center = objectUnderControl.pos
+				points = []
+				for i in range(100):
+					direction = vectorFromAngle((pi * i)/(100/2))
+					for t in range(100):
+						testPos = center + direction * (t*5)
+						if mapGetAt(testPos) == GRD:
+							points.append(testPos)
+							break
+						if t == 100 - 1:
+							points.append(testPos)
+							break
+				pygame.draw.polygon(darkMask, (0,0,0,0), points)
+			else:
+				pygame.draw.circle(darkMask, (0,0,0,0), objectUnderControl.pos.vec2tupint(), lightRadius)
 	
 		global lights
 		for light in lights:
-			pygame.draw.circle(mask, light[3], (int(light[0]), int(light[1])), int(light[2]))
+			pygame.draw.circle(darkMask, light[3], (int(light[0]), int(light[1])), int(light[2]))
 		lights = []
 	
-		win.blit(mask, (-int(camPos.x), -int(camPos.y)))
+		win.blit(darkMask, (-int(camPos.x), -int(camPos.y)))
 
 def renderLand():
 	ground.fill(SKY)
@@ -423,7 +428,7 @@ def isVisibleInDarkness(self):
 			return True
 	
 	if isOnMap(self.pos):
-		if mask.get_at(self.pos.vec2tupint())[3] < 255:
+		if darkMask.get_at(self.pos.vec2tupint())[3] < 255:
 			return True
 	return False
 
@@ -1086,10 +1091,10 @@ class PhysObj:
 	def applyForce(self):
 		# gravity:
 		self.acc.y += globalGravity
-		if self.windAffected:
+		if self.windAffected > 0:
 			if self.pos.x < - 3 * mapWidth or self.pos.x > 4 * mapWidth:
 				return
-			self.acc.x += wind * 0.1 * windMult
+			self.acc.x += wind * 0.1 * windMult * self.windAffected
 	def deathResponse(self):
 		pass
 	def secondaryStep(self):
@@ -1134,7 +1139,7 @@ class Missile (PhysObj):#1
 		self.radius = 2
 		self.color = (255,255,0)
 		self.bounceBeforeDeath = 1
-		self.windAffected = True
+		self.windAffected = 1
 		self.boomRadius = 28
 		self.megaBoom = False or megaTrigger
 		if randint(0,50) == 1:
@@ -1196,7 +1201,7 @@ class Mortar (Grenade):#3
 					k = Missile(self.pos, (uniform(-0.5,0.5),uniform(-0.7,-0.1)), 0.5)
 					k.vel.x += self.vel.x * 0.5
 					k.vel.y += self.vel.y * 0.5
-					k.windAffected = False
+					k.windAffected = 0
 					k.boomAffected = False
 					k.color = (0,50,0)
 					k.radius = 1.5
@@ -1208,7 +1213,7 @@ class Mortar (Grenade):#3
 			m.megaBoom = False
 			m.vel.x += self.vel.x * 0.5
 			m.vel.y += self.vel.y * 0.5
-			m.windAffected = False
+			m.windAffected = 0
 			m.boomAffected = False
 			m.color = (0,50,0)
 			m.radius = 1.5
@@ -2026,7 +2031,7 @@ class Fire(PhysObj):
 		self.yellow = 106
 		self.phase = uniform(0,2)
 		self.radius = 2
-		self.windAffected = True
+		self.windAffected = 1
 		self.life = randint(50,70)
 		self.fallen = False
 		self.delay = delay
@@ -2241,7 +2246,7 @@ class Mine(PhysObj):
 		self.alive = delay == 0
 		self.timer = delay
 		self.exploseTime = randint(5, 100)
-		self.windAffected = False
+		self.windAffected = 0
 	def secondaryStep(self):
 		if not self.alive:
 			self.timer -= 1
@@ -2358,7 +2363,7 @@ class HealthPack(PetrolCan):
 		self.damp = 0.01
 		self.health = 5
 		self.fallAffected = False
-		self.windAffected = False
+		self.windAffected = 0
 		#Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
@@ -2395,7 +2400,7 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.damp = 0.01
 		self.health = 5
 		self.fallAffected = False
-		self.windAffected = False
+		self.windAffected = 0
 		self.box = choice(["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel", "jet pack", "portal gun", "travel kit", "ender pearls"])
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
@@ -2429,7 +2434,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.damp = 0.01
 		self.health = 5
 		self.fallAffected = False
-		self.windAffected = False
+		self.windAffected = 0
 		weaponsInBox = ["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "raging bull", "electro boom", "pokeball", "green shell", "guided missile"]
 		if allowAirStrikes:
 			weaponsInBox .append("mine strike")
@@ -2753,8 +2758,8 @@ class SentryGun(PhysObj):
 		self.angle = 0
 		self.angle2for = uniform(0, 2*pi)
 		self.surf = imageTurret.copy()
+		self.electrified = False
 		pygame.draw.circle(self.surf, self.teamColor, tup2vec(self.surf.get_size())//2, 2)
-		
 	def fire(self):
 		self.firing = True
 	def engage(self):
@@ -2790,6 +2795,11 @@ class SentryGun(PhysObj):
 					self.target = None
 					if self.timesFired == 0:
 						self.health = 0
+		
+		if self.electrified:
+			if timeOverall % 2 == 0:
+				self.angle = uniform(0,2*pi)
+				fireMiniGun(self.pos, vectorFromAngle(self.angle))
 		
 		self.angle += (self.angle2for - self.angle)*0.2
 		if not self.target and timeOverall % (fps*2) == 0:
@@ -3053,12 +3063,15 @@ class ElectricGrenade(PhysObj):
 		self.worms = []
 		self.raons = []
 		self.shells = []
+		self.sentries = []
 		self.electrifying = False
 		self.emptyCounter = 0
 		self.lifespan = 300
 	def deathResponse(self):
 		rad = 20
 		boom(self.pos, rad)
+		for sentry in self.sentries:
+			sentry.electrified = False
 	def secondaryStep(self):
 		self.stable = False
 		self.timer += 1
@@ -3080,6 +3093,13 @@ class ElectricGrenade(PhysObj):
 			for shell in GreenShell._shells:
 				if dist(self.pos, shell.pos) < 100:
 					self.shells.append(shell)
+			for sentry in SentryGun._sentries:
+				if dist(self.pos, sentry.pos) < 100:
+					sentry.electrified = True
+					if sentry not in self.sentries:
+						self.sentries.append(sentry)
+				else:
+					sentry.electrified = False
 			if len(self.worms) == 0 and len(self.raons) == 0:
 				self.emptyCounter += 1
 				if self.emptyCounter == fps:
@@ -3102,7 +3122,6 @@ class ElectricGrenade(PhysObj):
 					shell.facing = LEFT if self.pos.x > shell.pos.x else RIGHT
 				shell.speed = 3
 				shell.timer = 0
-			
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		for worm in self.worms:
@@ -3111,6 +3130,9 @@ class ElectricGrenade(PhysObj):
 			drawLightning(self, raon)
 		for shell in self.shells:
 			drawLightning(self, shell)
+		for sentry in self.sentries:
+			if sentry.electrified:
+				drawLightning(self, sentry)
 
 class HomingMissile(PhysObj):
 	Target = Vector()
@@ -3122,7 +3144,7 @@ class HomingMissile(PhysObj):
 		self.radius = 2
 		self.color = (0, 51, 204)
 		self.bounceBeforeDeath = 1
-		self.windAffected = True
+		self.windAffected = 1
 		self.boomRadius = 30
 		self.activated = False
 		self.timer = 0
@@ -3458,7 +3480,7 @@ class Artillery(PhysObj):
 			self.timer += 1
 			if self.timer % 10 == 0:
 				m = Missile((self.pos[0] + randint(-20,20), 0),(0,0),0 )
-				m.windAffected = False
+				m.windAffected = 0
 				m.boomAffected = False
 				m.megaBoom = False
 				if self.boomCount == self.booms:
@@ -3558,7 +3580,7 @@ class Sheep(PhysObj):
 		self.damp = 0.2
 		self.timer = 0
 		self.facing = RIGHT
-		self.windAffected = False
+		self.windAffected = 0
 	def secondaryStep(self):
 		self.timer += 1
 		self.stable = False
@@ -3613,7 +3635,7 @@ class Armageddon:
 			for i in range(randint(1,2)):
 				x = randint(-100, mapWidth + 100)
 				m = Missile((x, -10), Vector(randint(-10,10), 5).normalize(), 1)
-				m.windAffected = False
+				m.windAffected = 0
 				m.boomRadius = 40
 	def draw(self):
 		pass
@@ -4245,7 +4267,7 @@ class GreenShell(PhysObj):
 			index = 0	
 		win.blit(imageGreenShell, point2world(self.pos - Vector(16,16)/2), ((index*16, 0), (16,16)))
 
-def fireLaser(start, direction, power=15):
+def fireLaser(start, direction):
 	hit = False
 	color = (254, 153, 35)
 	square = [Vector(1,5), Vector(1,-5), Vector(-10,-5), Vector(-10,5)]
@@ -4787,11 +4809,7 @@ class Snail:
 		if self.clockwise == LEFT:
 			self.surf = pygame.transform.flip(self.surf, True, False)
 	def climb(self):
-		count = 0
 		while True:
-			count += 1
-			if count > 50:
-				print(1/0)
 			revolvment = self.pos - self.anchor
 			index = Snail.around.index(revolvment)
 			candidate = self.anchor + Snail.around[(index + self.clockwise * -1) % 8]
@@ -4883,6 +4901,63 @@ class Bubble:
 			return
 		pygame.gfxdraw.circle(win, *point2world(self.pos), self.radius, self.color)
 
+class Acid(PhysObj):
+	def __init__(self, pos, vel):
+		self.initialize()
+		self.pos = vectorCopy(pos)
+		self.vel = vectorCopy(vel)
+		self.life = randint(70, 170)
+		self.radius = 2
+		self.damp = 0
+		self.windAffected = 0.5
+		self.inGround = False
+		self.wormCollider = True
+		self.color = (200,255,200)
+		self.damageCooldown = 0
+	def collisionRespone(self, ppos):
+		self.inGround = True
+	def secondaryStep(self):
+		if self.inGround:
+			pygame.draw.circle(gameMap, SKY, self.pos + Vector(0, 1), self.radius + 2)
+			pygame.draw.circle(ground, SKY, self.pos + Vector(0, 1), self.radius + 2)
+			self.pos.x += choice([LEFT, RIGHT])
+		self.life -= 1
+		if self.life == 50:
+			self.radius -= 1
+		if self.life <= 0:
+			self.dead = True
+			
+		if self.damageCooldown != 0:
+			self.damageCooldown -= 1
+		else:
+			for worm in PhysObj._worms:
+				if squareCollision(self.pos, worm.pos, self.radius, worm.radius):
+					worm.damage(randint(0,3))
+					self.damageCooldown = 15
+		self.inGround = False
+	def draw(self):
+		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius)
+
+class AcidBottle(PetrolBomb):
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 2
+		self.color = (200,255,200)
+		self.bounceBeforeDeath = 1
+		self.damp = 0.5
+		self.bottle = [(1,2), (1,6), (-1,6), (-1,2), (-3,-2), (3,-2)]
+		self.angle = 0
+	def secondaryStep(self):
+		self.angle += self.vel.x*4
+	def deathResponse(self):
+		boom(self.pos, 10)
+		for i in range(40):
+			s = Acid(self.pos, Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2))
+	def draw(self):
+		poly = [point2world(self.pos + rotateVector(i, radians(self.angle))) for i in self.bottle]
+		pygame.draw.polygon(win, self.color, poly)
 ################################################################################ Create World
 
 if True:
@@ -4903,7 +4978,7 @@ if True:
 	parser.add_argument("-ctf", "--ctf", type=bool, nargs='?', const=True, default=False, help="Activate captureTheFlag mode")
 	parser.add_argument("-targets", "--targets", type=bool, nargs='?', const=True, default=False, help="Activate shooting targets mode")
 	parser.add_argument("-warped", "--warped", type=bool, nargs='?', const=True, default=False, help="Activate warped gameMap mode")
-	parser.add_argument("-random", "--random", type=bool, nargs='?', const=True, default=False, help="Activate random worms cycle mode")
+	parser.add_argument("-random", "--random", default=0, help="Activate random worms cycle mode", type=int)
 	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
 	parser.add_argument("-u", "--unlimited", type=bool, nargs='?', const=True, default=False, help="Activate unlimited mode")
 	parser.add_argument("-place", "--place", type=bool, nargs='?', const=True, default=False, help="manually placing worms")
@@ -4997,7 +5072,6 @@ def createWorld():
 	renderLand()
 
 # drawHealthBar = False
-# moreWindAffected = True
 
 ################################################################################ Weapons setup
 
@@ -5038,6 +5112,7 @@ if True:
 	weapons.append(["sentry turret", PUTABLE, 0, MISC, False, 0])
 	weapons.append(["ender pearl", CHARGABLE, 0, MISC, False, 0])
 	weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
+	weapons.append(["acid bottle", CHARGABLE, 1, MISC, False, 0])
 	weapons.append(["airstrike", CLICKABLE, 1, AIRSTRIKE, False, 8])
 	weapons.append(["napalm strike", CLICKABLE, 1, AIRSTRIKE, False, 8])
 	weapons.append(["mine strike", CLICKABLE, 0, AIRSTRIKE, False, 1])
@@ -5312,6 +5387,8 @@ def fire(weapon = None):
 			nextState = PLAYER_CONTROL_2
 			camTrack = u
 			decrease = True
+	elif weapon == "acid bottle":
+		w = AcidBottle(weaponOrigin, weaponDir, energy)
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -5457,15 +5534,16 @@ shuffle(teams)
 def renderWeaponCount(special = False):
 	global currentTeam, currentWeapon, currentWeaponSurf
 	if not special:
-		
 		color = HUDColor
 		if currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 or weapons[weaponDict[currentWeapon]][5] != 0 or inUsedList(currentWeapon):
 			color = GREY
-		
+		weaponStr = currentWeapon
 		if currentTeam.weaponCounter[weaponDict[currentWeapon]] < 0:
-			currentWeaponSurf = myfont.render(currentWeapon, False, color)
+			currentWeaponSurf = myfont.render(weaponStr, False, color)
 		else:
-			currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.weaponCounter[weaponDict[currentWeapon]]), False, color)
+			if weaponStr == "bunker buster":
+				weaponStr += " (drill)" if BunkerBuster.mode else " (rocket)"
+			currentWeaponSurf = myfont.render(weaponStr + " " + str(currentTeam.weaponCounter[weaponDict[currentWeapon]]), False, color)
 		
 		if weapons[weaponDict[currentWeapon]][4]:
 			delayAdd = myfont.render("delay: " + str(fuseTime//fps), False, color)
@@ -5837,10 +5915,12 @@ def cycleWorms():
 				continue
 			switched = True
 			
-		if randomCycle:
+		if randomCycle == 1:
 			currentTeam = choice(teams)
 			while not len(currentTeam.worms) > 0:
 				currentTeam = choice(teams)
+			w = choice(currentTeam.worms)
+		if randomCycle == 2:
 			w = choice(currentTeam.worms)
 	
 		objectUnderControl = w
@@ -5886,6 +5966,9 @@ def randomPlacing(wormsPerTeam):
 	global state
 	state = nextState
 
+def squareCollision(pos1, pos2, rad1, rad2):
+	return True if pos1.x < pos2.x + rad2*2 and pos1.x + rad1*2 > pos2.x and pos1.y < pos2.y + rad2*2 and pos1.y + rad1*2 > pos2.y else False
+
 class Menu:
 	menus = []
 	border = 1
@@ -5923,7 +6006,7 @@ class Menu:
 		Menu.menus.remove(self)
 
 waterAmp = 2
-waterColor = [((feelColor[0][0] + feelColor[1][0])//2, (feelColor[0][1] + feelColor[1][1])//2, (feelColor[0][2] + feelColor[1][2])//2)]
+waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
 waterColor.append(tuple(min(int(waterColor[0][i] * 1.5), 255) for i in range(3)))
 
 class Water:
@@ -6515,7 +6598,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	water.riseAll(20)
+
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -6650,7 +6733,6 @@ def stateMachine():
 		healthBar.calculateInit()
 		
 		if randomCycle:
-			currentTeam = choice(teams)
 			w = choice(currentTeam.worms)
 		
 		objectUnderControl = w
@@ -6801,6 +6883,7 @@ def onKeyPressTab():
 			FloatingText(objectUnderControl.pos + Vector(0,-5), "drill mode", (20,20,20))
 		else:
 			FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
+		renderWeaponCount()
 	elif currentWeapon == "venus fly trap":
 		PlantBomb.venus = not PlantBomb.venus
 		if PlantBomb.venus:

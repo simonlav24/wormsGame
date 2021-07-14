@@ -1,4 +1,4 @@
-# WormsGame
+# Worms Game
 ![Alt text](wormsShoot.png?raw=true "Worms")
 game development practice in python for educational purposes and fun. pygame required.
 
@@ -44,12 +44,16 @@ game development practice in python for educational purposes and fun. pygame req
 - **PETROL BOMB** - chargeable, throw a petrol bomb, explosive fire spreader.
 - **FLAME THROWER** - it werfs flammen.
 
-## Place and run\ Traveling
+## Place and run
+
 - **MINE** - mine.
 - **TNT** - explosive TNT bomb.
 - **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
 - **SHEEP** - baaaa.
 - **SNAIL** - chargeable, quick  and sticky snail.
+
+## Misc
+
 - **BASEBALL** - home running worms away.
 - **GIRDER** - clickable, place a girder. press tab for rotation and scaling.
 - **ROPE** - swing your way to action.
@@ -57,6 +61,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **VENUS FLY TRAP** - chargeable, throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
 - **SENTRY GUN** - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
 - **ENDER PEARL** - throw and teleport to where it lands.
+- **ACID BOTTLE** - throw a bottle of hydrofluoric acid that corrode the earth and is deadly to worms.
 
 ## Aerial
 - **AIRSTRIKE** - clickable, missile strike, wind sensitive.
@@ -103,10 +108,10 @@ game development practice in python for educational purposes and fun. pygame req
 
 - Cooldown - weapons have a cooldown for 4 turns.
 - Warped - horizontal map warp. *experimental*
-- Random - complete random worm choosing.
+- Random - the worm of the next turn is randomly picked. "Teams" means completely random worm and team. "Worms" means random worm but team cycle regularly.
 - Manual placing - place worms manually.
 - Darkness - dark game mode. use flares to illuminate areas near you.
-- Closed map - square map bounding.
-- Forts - teams spawn in cluster.
+- Closed map - cant exit the map bounding box.
+- Forts - teammates spawn in cluster.
 - Digging - worms are underground. dig your way around. recommended with darkness.
 
