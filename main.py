@@ -122,7 +122,6 @@ if True:
 	
 	text = ""
 	HUDColor = BLACK
-webVer = False 
 
 # bugs & improvements:
 # darktree or something simpler
@@ -130,7 +129,6 @@ webVer = False
 #	small explossion and green acid devours the ground and spreads randomly
 #
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
-
 
 ################################################################################ Map
 if True:
@@ -196,7 +194,7 @@ def createMapImage(heightNorm = None):
 	wormCol.fill(SKY)
 	extraCol = pygame.Surface((mapWidth, mapHeight))
 	extraCol.fill(SKY)
-	global darkMask # for darkness
+	global darkMask
 	darkMask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 	
 	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
@@ -1486,7 +1484,6 @@ class Worm (PhysObj):
 				currentTeam.points += 1
 			if state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
 				pickVictim()
-		
 	def drawHealth(self):
 		if Worm.healthMode == 0:
 			pygame.draw.rect(win, (220,220,220),(point2world(self.pos - Vector(10,15)),( 20,3)))
@@ -2020,11 +2017,9 @@ class CpuProbe:
 ##########################</CPU>
 
 class Fire(PhysObj):
-	# _fires = []
 	def __init__(self, pos, delay = 0):
 		self.initialize()
 		Debrie._debries.append(self)
-		# Fire._fires.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.damp = 0
 		self.red = 255
@@ -2050,7 +2045,6 @@ class Fire(PhysObj):
 			lights.append((self.pos[0], self.pos[1], 20, (0,0,0,0)))
 		if self.life == 0:
 			self._reg.remove(self)
-			# Fire._fires.remove(self)
 			del self
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
@@ -4958,6 +4952,67 @@ class AcidBottle(PetrolBomb):
 	def draw(self):
 		poly = [point2world(self.pos + rotateVector(i, radians(self.angle))) for i in self.bottle]
 		pygame.draw.polygon(win, self.color, poly)
+
+class seeker:#########EXPERIMENTAL
+	def __init__(self, pos):
+		nonPhys.append(self)
+		self.pos = vectorCopy(pos)
+		self.vel = Vector()
+		self.acc = Vector()
+		self.maxSpeed = 5
+		self.maxForce = 1
+		self.color = (255,100,0)
+		self.triangle = [(0,-2), (0,2), (7,0)]
+		self.avoid = []
+		for i in range(10000):
+			pos = Vector(randint(0, mapWidth-1), randint(0, mapHeight-1))
+			if mapGetAt(pos) == GRD:
+				self.avoid.append(pos)
+	def step(self):
+		mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+		
+		getForce = self.seek(mouse)
+		avoidForce = Vector()
+		
+		for i in self.avoid:
+			if dist(self.pos, i) < 50:
+				avoidForce += self.flee(i)
+		
+		force = avoidForce + getForce
+		self.applyForce(force)
+		
+		
+		
+		self.vel += self.acc
+		self.vel.limit(self.maxSpeed)
+		self.pos += self.vel
+		
+	def applyForce(self, force):
+		force.limit(self.maxForce)
+		self.acc = vectorCopy(force)
+	def flee(self, target):
+		return self.seek(target) * -1
+	def seek(self, target, arrival=False):
+		force = tup2vec(target) - self.pos
+		desiredSpeed = self.maxSpeed
+		if arrival:
+			slowRadius = 50
+			distance = force.getMag()
+			if (distance < slowRadius):
+				desiredSpeed = smap(distance, 0, slowRadius, 0, self.maxSpeed)
+				force.setMag(desiredSpeed)
+		force.setMag(desiredSpeed)
+		force -= self.vel
+		force.limit(self.maxForce)
+		return force
+	def draw(self):
+		shape = []
+		for i in self.triangle:
+			shape.append(point2world(self.pos + tup2vec(i).rotate(self.vel.getAngle())))
+		pygame.draw.polygon(win, self.color, shape)
+		for i in self.avoid:
+			pygame.draw.circle(win, (0,0,0), point2world(i), 6)
+
 ################################################################################ Create World
 
 if True:
@@ -5103,7 +5158,7 @@ if True:
 	weapons.append(["TNT", PUTABLE, 1, GRENADES, False, 0])
 	weapons.append(["covid 19", PUTABLE, 0, GRENADES, False, 0])
 	weapons.append(["sheep", PUTABLE, 1, GRENADES, False, 0])
-	weapons.append(["snail", CHARGABLE, 1, GRENADES, False, 0])
+	weapons.append(["snail", CHARGABLE, 2, GRENADES, False, 0])
 	weapons.append(["baseball", PUTABLE, 3, MISC, False, 0])
 	weapons.append(["girder", CLICKABLE, -1, MISC, False, 0])
 	weapons.append(["rope", PUTABLE, 3, MISC, False, 0])
@@ -5688,16 +5743,19 @@ def checkWinners():
 		if lastTeam:
 			lastTeam.points += 150 # bonus points
 			dic["mode"] = "points"
-			print("[points win, team", team.name, "got 150 bonus points]")
+			print("[points win, team", lastTeam.name, "got 150 bonus points]")
 			
 	elif targetsMode:
 		pointsGame = True
 		currentTeam.points += 3 # bonus points
 		dic["mode"] = "targets"
-		print("[targets win, team", team.name, "got 3 bonus points]")
+		print("[targets win, team", currentTeam.name, "got 3 bonus points]")
 	
 	elif terminatorMode:
 		pointsGame = True
+		if lastTeam:
+			lastTeam.points += 3 # bonus points
+			print("[team", lastTeam.name, "got 3 bonus points]")
 		dic["mode"] = "terminator"
 	
 	# win points:
@@ -6005,100 +6063,6 @@ class Menu:
 	def destroy(self):
 		Menu.menus.remove(self)
 
-waterAmp = 2
-waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
-waterColor.append(tuple(min(int(waterColor[0][i] * 1.5), 255) for i in range(3)))
-
-class Water:
-	level = initialWaterLevel
-	quiet = 0
-	rising = 1
-	layersA = []
-	layersB = []
-	def __init__(self):
-		self.points = [Vector(i * 20, 3 + waterAmp + waterAmp * (-1)**i) for i in range(-1,12)]
-		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
-		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-		
-		self.surf = pygame.Surface((200, waterAmp * 2 + 6), pygame.SRCALPHA)
-		self.state = Water.quiet
-		self.amount = 0
-	def getSplinePoint(self, t):
-		p1 = int(t) + 1
-		p2 = p1 + 1
-		p3 = p2 + 1
-		p0 = p1 - 1
-			
-		t = t - int(t)
-		tt = t * t
-		ttt = t * tt
-		q1 = -ttt + 2 * tt - t
-		q2 = 3 * ttt - 5 * tt + 2
-		q3 = -3 * ttt + 4 * tt + t
-		q4 = ttt - tt
-		# print(len(self.points), "ps:", p0, p1, p2, p3, "t:", t)
-		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
-		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
-		
-		return (tx, ty)
-	def rise(self, amount):
-		self.amount = amount
-		self.state = Water.rising
-	def riseAll(self, amount):
-		self.rise(amount)
-	def step(self):
-		self.surf.fill((0,0,0,0))
-		self.points = [Vector(i * 20, 3 + waterAmp + self.phase[i % 10] * waterAmp * (-1)**i) for i in range(-1,12)]
-		pygame.draw.polygon(self.surf, waterColor[0], self.points + [(200, waterAmp * 2 + 6), (0, waterAmp * 2 + 6)])
-		for t in range(0,(len(self.points) - 3) * 20):
-			point = self.getSplinePoint(t / 20)
-			pygame.draw.circle(self.surf,  waterColor[1], (int(point[0]), int(point[1])), 1)
-		
-		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-	
-		if self.state == Water.rising:
-			gameDistable()
-			Water.level += 1
-			self.amount -= 1
-			if self.amount <= 0:
-				self.amount = 0
-				self.state = Water.quiet
-	def draw(self, offsetY=0):
-
-		width = 200
-		height = 10
-		offset = (camPos.x)//width
-		times = winWidth//width + 2
-		for i in range(times):
-			x = int(-camPos.x) + int(int(offset) * width + i * width)
-			y =  int(mapHeight - Water.level - 3 - waterAmp - offsetY) - int(camPos.y)
-			win.blit(self.surf, (x, y))
-		
-		pygame.draw.rect(win, waterColor[0], ((0,y + height), (winWidth, Water.level)))
-	def createLayers(self):
-		Water.layersA.append(Water())
-		Water.layersB.append(Water())
-	def stepAll(self):
-		for w in Water.layersA:
-			w.step()
-		for w in Water.layersB:
-			w.step()
-	def drawLayers(self, layer):
-		if layer == DOWN:
-			offset = 2
-			for w in Water.layersA:
-				w.draw(offset)
-				offset -= 10
-		else:
-			offset = 12
-			for w in Water.layersB:
-				w.draw(offset)
-				offset -= 10
-
-water = Water()
-Water.layersA.append(water)
-water.createLayers()
-
 class MenuString:
 	def __init__(self, string, winPos):
 		self.winPos = winPos
@@ -6213,6 +6177,100 @@ def scrollMenu(up = True):
 		if menu.scroll[1] + menu.dims[1] <= winHeight:
 			return
 	menu.scroll[1] += Button.globalButtonHeight * 5 if up else -Button.globalButtonHeight * 5
+
+waterAmp = 2
+waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
+waterColor.append(tuple(min(int(waterColor[0][i] * 1.5), 255) for i in range(3)))
+
+class Water:
+	level = initialWaterLevel
+	quiet = 0
+	rising = 1
+	layersA = []
+	layersB = []
+	def __init__(self):
+		self.points = [Vector(i * 20, 3 + waterAmp + waterAmp * (-1)**i) for i in range(-1,12)]
+		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
+		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+		
+		self.surf = pygame.Surface((200, waterAmp * 2 + 6), pygame.SRCALPHA)
+		self.state = Water.quiet
+		self.amount = 0
+	def getSplinePoint(self, t):
+		p1 = int(t) + 1
+		p2 = p1 + 1
+		p3 = p2 + 1
+		p0 = p1 - 1
+			
+		t = t - int(t)
+		tt = t * t
+		ttt = t * tt
+		q1 = -ttt + 2 * tt - t
+		q2 = 3 * ttt - 5 * tt + 2
+		q3 = -3 * ttt + 4 * tt + t
+		q4 = ttt - tt
+		# print(len(self.points), "ps:", p0, p1, p2, p3, "t:", t)
+		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
+		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
+		
+		return (tx, ty)
+	def rise(self, amount):
+		self.amount = amount
+		self.state = Water.rising
+	def riseAll(self, amount):
+		self.rise(amount)
+	def step(self):
+		self.surf.fill((0,0,0,0))
+		self.points = [Vector(i * 20, 3 + waterAmp + self.phase[i % 10] * waterAmp * (-1)**i) for i in range(-1,12)]
+		pygame.draw.polygon(self.surf, waterColor[0], self.points + [(200, waterAmp * 2 + 6), (0, waterAmp * 2 + 6)])
+		for t in range(0,(len(self.points) - 3) * 20):
+			point = self.getSplinePoint(t / 20)
+			pygame.draw.circle(self.surf,  waterColor[1], (int(point[0]), int(point[1])), 1)
+		
+		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+	
+		if self.state == Water.rising:
+			gameDistable()
+			Water.level += 1
+			self.amount -= 1
+			if self.amount <= 0:
+				self.amount = 0
+				self.state = Water.quiet
+	def draw(self, offsetY=0):
+
+		width = 200
+		height = 10
+		offset = (camPos.x)//width
+		times = winWidth//width + 2
+		for i in range(times):
+			x = int(-camPos.x) + int(int(offset) * width + i * width)
+			y =  int(mapHeight - Water.level - 3 - waterAmp - offsetY) - int(camPos.y)
+			win.blit(self.surf, (x, y))
+		
+		pygame.draw.rect(win, waterColor[0], ((0,y + height), (winWidth, Water.level)))
+	def createLayers(self):
+		Water.layersA.append(Water())
+		Water.layersB.append(Water())
+	def stepAll(self):
+		for w in Water.layersA:
+			w.step()
+		for w in Water.layersB:
+			w.step()
+	def drawLayers(self, layer):
+		if layer == DOWN:
+			offset = 2
+			for w in Water.layersA:
+				w.draw(offset)
+				offset -= 10
+		else:
+			offset = 12
+			for w in Water.layersB:
+				w.draw(offset)
+				offset -= 10
+
+water = Water()
+Water.layersA.append(water)
+water.createLayers()
 
 class Cloud:
 	_reg = []
@@ -6523,7 +6581,8 @@ class Toast:
 			self.pos = uniform(0,2) * vectorUnitRandom()
 				
 	def draw(self):
-		pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
+		if self.mode == Toast.bottom:
+			pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
 		win.blit(self.surf, self.anchor + self.pos)
 	def updateWinPos(self, pos):
 		self.anchor[0] = pos[0]
@@ -6598,7 +6657,6 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -6944,7 +7002,7 @@ def makeRandomTeams(teamQuantity, wormsPerTeam, names):
 
 namesCustom = ["eithan", "almog", "berry", "simon", "dor", "evgeny", "ted", "shahaf", "nakar", "dan", "yoni", "asi"]
 namesCustom2 = ["Cenzor", "aliza", "naomi", "phathi", "yohai", "yulia", "rom", "lidia", "acasha", "ziv", "mario", "hagar"]
-if webVer:
+if False:
 	makeRandomTeams(4, 4, namesCustom + namesCustom2)
 
 ################################################################################ Main Loop
