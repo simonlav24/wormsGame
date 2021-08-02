@@ -124,11 +124,9 @@ if True:
 	HUDColor = BLACK
 
 # bugs & improvements:
-# darktree or something simpler
-# acid viel:
-#	small explossion and green acid devours the ground and spreads randomly
-#
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
+# bungee using spring dynamics
+# arena hold position game mode: get points by the amount of worms on the arena
 
 ################################################################################ Map
 if True:
@@ -1358,7 +1356,7 @@ class Worm (PhysObj):
 			if dmg > self.health:
 				dmg = self.health
 			
-			FloatingText(self.pos.vec2tup(), str(dmg))
+			if dmg != 0: FloatingText(self.pos.vec2tup(), str(dmg))
 			self.health -= dmg
 			if self.health < 0:
 				self.health = 0
@@ -1376,6 +1374,7 @@ class Worm (PhysObj):
 			global terminatorHit
 			if terminatorMode and victim == self and not terminatorHit:
 				currentTeam.points += 1
+				addToKillList()
 				terminatorHit = True
 	def draw(self):
 		if not self is objectUnderControl and self.alive:
@@ -1480,8 +1479,10 @@ class Worm (PhysObj):
 			timeRemaining(wormDieTime)
 		if terminatorMode and self == victim:
 			currentTeam.points += 1
+			addToKillList()
 			if not terminatorHit:
 				currentTeam.points += 1
+				addToKillList()
 			if state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
 				pickVictim()
 	def drawHealth(self):
@@ -3510,12 +3511,6 @@ class LongBow:
 			for t in range(iterations):
 				value = t/iterations
 				testPos = (self.pos * value) + (ppos * (1-value))
-				if not isOnMap(testPos.vec2tupint()):
-					PhysObj._reg.remove(self)
-					return
-				# check gameMap collision
-				if gameMap.get_at(testPos.vec2tupint()) == GRD:
-					self.stuck = vectorCopy(testPos)
 				# check cans collision:
 				for can in PetrolCan._cans:
 					if dist(testPos, can.pos) < can.radius + 1:
@@ -3542,6 +3537,12 @@ class LongBow:
 						target.explode()
 						self.destroy()
 						return
+				# check gameMap collision
+				if not isOnMap(testPos.vec2tupint()):
+					PhysObj._reg.remove(self)
+					return
+				if gameMap.get_at(testPos.vec2tupint()) == GRD:
+					self.stuck = vectorCopy(testPos)
 			self.pos = ppos
 		if self.stuck:
 			self.pos = self.stuck
@@ -4499,12 +4500,7 @@ class ShootingTarget:
 		if len(ShootingTarget._reg) < ShootingTarget.numTargets:
 			ShootingTarget()
 		# add to kill list(surf, name, amount):
-		amount = 1
-		if len(killList) > 0 and killList[0][1] == objectUnderControl.nameStr:
-			amount += killList[0][2]
-			killList.pop(0)
-		string = objectUnderControl.nameStr + ": " + str(amount)
-		killList.insert(0, (myfont.render(string, False, HUDColor), objectUnderControl.nameStr, amount))
+		addToKillList()
 	def draw(self):
 		pygame.draw.circle(win, WHITE, point2world(self.pos), int(self.radius))
 		pygame.draw.circle(win, RED, point2world(self.pos), int(self.radius - 4))
@@ -4953,40 +4949,69 @@ class AcidBottle(PetrolBomb):
 		poly = [point2world(self.pos + rotateVector(i, radians(self.angle))) for i in self.bottle]
 		pygame.draw.polygon(win, self.color, poly)
 
-class seeker:#########EXPERIMENTAL
-	def __init__(self, pos):
+class Seeker:#########EXPERIMENTAL
+	def __init__(self, pos, direction, energy):
 		nonPhys.append(self)
 		self.pos = vectorCopy(pos)
-		self.vel = Vector()
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.acc = Vector()
 		self.maxSpeed = 5
 		self.maxForce = 1
 		self.color = (255,100,0)
 		self.triangle = [(0,-2), (0,2), (7,0)]
 		self.avoid = []
-		for i in range(10000):
-			pos = Vector(randint(0, mapWidth-1), randint(0, mapHeight-1))
-			if mapGetAt(pos) == GRD:
-				self.avoid.append(pos)
+		self.target = HomingMissile.Target
+		self.radius = 6
+		self.timer = 15 * fps
+		# for i in range(10000):
+			# pos = Vector(randint(0, mapWidth-1), randint(0, mapHeight-1))
+			# if mapGetAt(pos) == GRD:
+				# self.avoid.append(pos)
 	def step(self):
-		mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-		
-		getForce = self.seek(mouse)
+		self.timer -= 1
+		if self.timer == 0:
+			self.deathResponse()
+		gameDistable()
+		getForce = self.seek(self.target)
 		avoidForce = Vector()
-		
+		distance = dist(self.pos, self.target)
+		if distance > 30:
+			self.avoid = []
+			visibility = int(0.1 * distance + 10)
+			for i in range(20):
+				direction = vectorFromAngle((i / 20) * 2 * pi)
+				for j in range(visibility):
+					testPos = self.pos + direction * j
+					if mapGetAt(testPos) == GRD:
+						self.avoid.append(testPos)
+		else:
+			if mapGetAt(self.pos) == GRD:
+				self.deathResponse()
+				return
+			
+		if distance < 8:
+			self.deathResponse()
+			return
+			
 		for i in self.avoid:
-			if dist(self.pos, i) < 50:
-				avoidForce += self.flee(i)
+			# if dist(self.pos, i) < 50:
+			avoidForce += self.flee(i)
 		
 		force = avoidForce + getForce
 		self.applyForce(force)
 		
-		
-		
 		self.vel += self.acc
 		self.vel.limit(self.maxSpeed)
-		self.pos += self.vel
 		
+		ppos = self.pos + self.vel
+		if mapGetAt(ppos) == GRD:
+			self.vel *= -1
+		
+		self.pos = ppos
+	def deathResponse(self):
+		boom(self.pos, 30)
+		nonPhys.remove(self)
+		HomingMissile.showTarget = False
 	def applyForce(self, force):
 		force.limit(self.maxForce)
 		self.acc = vectorCopy(force)
@@ -5010,8 +5035,8 @@ class seeker:#########EXPERIMENTAL
 		for i in self.triangle:
 			shape.append(point2world(self.pos + tup2vec(i).rotate(self.vel.getAngle())))
 		pygame.draw.polygon(win, self.color, shape)
-		for i in self.avoid:
-			pygame.draw.circle(win, (0,0,0), point2world(i), 6)
+		# for i in self.avoid:
+			# pygame.draw.circle(win, (0,0,0), point2world(i), 6)
 
 ################################################################################ Create World
 
@@ -5136,6 +5161,7 @@ if True:
 	weapons.append(["gravity missile", CHARGABLE, 5, MISSILES, False, 0])
 	weapons.append(["bunker buster", CHARGABLE, 2, MISSILES, False, 0])
 	weapons.append(["homing missile", CHARGABLE, 2, MISSILES, False, 0])
+	weapons.append(["seeker", CHARGABLE, 1, MISSILES, False, 0])
 	weapons.append(["artillery assist", CHARGABLE, 1, MISSILES, False, 0])
 	weapons.append(["grenade", CHARGABLE, 5, GRENADES, True, 0])
 	weapons.append(["mortar", CHARGABLE, 3, GRENADES, True, 0])
@@ -5444,6 +5470,8 @@ def fire(weapon = None):
 			decrease = True
 	elif weapon == "acid bottle":
 		w = AcidBottle(weaponOrigin, weaponDir, energy)
+	elif weapon == "seeker":
+		w = Seeker(weaponOrigin, weaponDir, energy)
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -6524,6 +6552,14 @@ def addToUseList(string):
 	useList.append([myfont.render(string, False, HUDColor), string])
 	if len(useList) > 4:
 		useList.pop(0)
+def addToKillList():
+	"""add to kill list if points"""
+	amount = 1
+	if len(killList) > 0 and killList[0][1] == objectUnderControl.nameStr:
+		amount += killList[0][2]
+		killList.pop(0)
+	string = objectUnderControl.nameStr + ": " + str(amount)
+	killList.insert(0, (myfont.render(string, False, HUDColor), objectUnderControl.nameStr, amount))
 def drawUseList():
 	space = 0
 	for i, usedWeapon in enumerate(useList):
@@ -6619,6 +6655,9 @@ def pickVictim():
 		if w in currentTeam.worms:
 			continue
 		worms.append(w)
+	if len(worms) == 0:
+		victim = None
+		return
 	victim = choice(worms)
 	Commentator.que.append((victim.nameStr, choice([("", " is marked for death"), ("kill ", "!"), ("", " is the weakest link"), ("your target: ", "")]), victim.team.color))
 
@@ -6657,6 +6696,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+	seeker(mouse)
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -6884,7 +6924,7 @@ def onKeyPressSpace():
 			energising = True
 			energyLevel = 0
 			fireWeapon = False
-			if currentWeapon == "homing missile" and not HomingMissile.showTarget:
+			if currentWeapon in ["homing missile", "seeker"] and not HomingMissile.showTarget:
 				energising = False
 
 def onKeyHoldSpace():
@@ -7030,7 +7070,7 @@ if __name__ == "__main__":
 				# CLICKABLE weapon check:
 				if state == PLAYER_CONTROL_1 and weaponStyle == CLICKABLE:
 					fireClickable()
-				if state == PLAYER_CONTROL_1 and currentWeapon == "homing missile" and not len(Menu.menus) > 0:
+				if state == PLAYER_CONTROL_1 and currentWeapon in ["homing missile", "seeker"] and not len(Menu.menus) > 0:
 					HomingMissile.Target.x, HomingMissile.Target.y = mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y
 					HomingMissile.showTarget = True
 				# cliking in menu
@@ -7307,7 +7347,7 @@ if __name__ == "__main__":
 		water.drawLayers(DOWN)
 		for t in Toast._toasts: t.draw()
 		
-		if currentWeapon == "homing missile" and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
+		if currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
 		if terminatorMode and victim and victim.alive:
 			drawTarget(victim.pos)
 			
@@ -7352,7 +7392,7 @@ if __name__ == "__main__":
 			for menu in Menu.menus: menu.step()
 			for menu in Menu.menus: menu.draw()
 				
-		if pointsMode or targetsMode:
+		if pointsMode or targetsMode or terminatorMode:
 			while len(killList) > 8:
 				killList.pop(-1)
 			for i, killed in enumerate(killList):

@@ -150,7 +150,7 @@ while True:
 		for key in values.keys():
 			if key == "--random":
 				if values["--random"] == "Teams":
-					string += " " + key + " 1"
+					string += " " + key + " 1 "
 				elif values["--random"] == "Worms":
 					string += " " + key + " 2 "
 				continue
@@ -172,6 +172,7 @@ while True:
 				string += " --sudden_death_plague"
 
 		window.close()
+		# print(string)
 		subprocess.Popen(string, shell=True)
 		sys.exit()
 		
