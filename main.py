@@ -377,6 +377,7 @@ class Blast:
 		self.rad = 0
 		self.timeCounter = 0
 		self.smoke = smoke
+		self.rand = vectorUnitRandom() * randint(1, int(self.radius / 2))
 	def step(self):
 		if randint(0,self.smoke) == 0:
 			Smoke(self.pos)
@@ -390,9 +391,29 @@ class Blast:
 			del self
 	def draw(self):
 		layersCircles[0].append((self._color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
-		layersCircles[1].append((self._color[int(max(min(self.timeCounter-1, 5), 0))], self.pos, self.rad*0.6))
-		layersCircles[2].append((self._color[int(max(min(self.timeCounter-2, 5), 0))], self.pos, self.rad*0.3))
+		layersCircles[1].append((self._color[int(max(min(self.timeCounter-1, 5), 0))], self.pos + self.rand, self.rad*0.6))
+		layersCircles[2].append((self._color[int(max(min(self.timeCounter-2, 5), 0))], self.pos + self.rand, self.rad*0.3))
 
+class FireBlast():
+	_color = [(255, 222, 3), (242, 74, 1), (255, 109, 10), (254, 153, 35)]
+	def __init__(self, pos, radius):
+		self.pos = vectorCopy(pos) + vectorUnitRandom() * randint(1, 5)
+		self.radius = radius
+		nonPhys.append(self)
+		self.color = choice(self._color)
+	def step(self):
+		self.pos.y -= 2 - 0.4 * self.radius
+		self.pos.x += wind
+		if randint(0, 10) < 3:
+			self.radius -= 1
+		if self.radius < 0:
+			nonPhys.remove(self)
+			del self
+	def draw(self):
+		if self.radius == 0:
+			win.set_at(point2world(self.pos), self.color)
+		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius)
+		
 class Explossion:
 	def __init__(self, pos, radius):	
 		nonPhys.append(self)
@@ -1505,7 +1526,8 @@ class Worm (PhysObj):
 	def secondaryStep(self):
 		global state, nextState
 		if objectUnderControl == self and playerControl and self.alive:
-			self.damp = 0.1
+			if not self.rope: self.damp = 0.1
+			else: self.damp = 0.5
 		
 			if keys[pygame.K_UP]:# or joystick.get_axis(1) < -0.5:
 				self.shootAcc = -0.04
@@ -2037,8 +2059,10 @@ class Fire(PhysObj):
 		self.fallen = True
 	def secondaryStep(self):
 		self.stable = False
-		if randint(0,10) == 1:
-			Blast(self.pos + vectorUnitRandom(), randint(self.radius,7), 150)
+		if randint(0,10) < 3:
+			FireBlast(self.pos + vectorUnitRandom(), randint(self.radius,4))
+		if randint(0,50) < 1:
+			Smoke(self.pos)
 		self.timer += 1
 		if self.fallen:
 			self.life -= 1
@@ -2600,7 +2624,7 @@ class Banana(Grenade):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (255, 204, 0)
-		self.damp = 0.6
+		self.damp = 0.5
 		self.timer = 0
 		self.surf = myfontbigger.render("(", False, self.color)
 		self.angle = 0
@@ -2906,7 +2930,7 @@ class BeeHive(PhysObj):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 3
 		self.color = (255, 204, 0)
-		self.damp = 0.5
+		self.damp = 0.4
 		self.unload = False
 		self.beeCount = 50
 		
@@ -4926,7 +4950,7 @@ class Acid(PhysObj):
 					self.damageCooldown = 15
 		self.inGround = False
 	def draw(self):
-		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius)
+		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius+1)
 
 class AcidBottle(PetrolBomb):
 	def __init__(self, pos, direction, energy):
@@ -5031,12 +5055,12 @@ class Seeker:#########EXPERIMENTAL
 		force.limit(self.maxForce)
 		return force
 	def draw(self):
+		# for i in self.avoid:
+			# pygame.draw.circle(win, (0,0,0), point2world(i), 6)
 		shape = []
 		for i in self.triangle:
 			shape.append(point2world(self.pos + tup2vec(i).rotate(self.vel.getAngle())))
 		pygame.draw.polygon(win, self.color, shape)
-		# for i in self.avoid:
-			# pygame.draw.circle(win, (0,0,0), point2world(i), 6)
 
 ################################################################################ Create World
 
@@ -5150,8 +5174,6 @@ def createWorld():
 	if not diggingMatch: createMapImage(heightNorm)
 	else: mapImage = None; createMapDigging()
 	renderLand()
-
-# drawHealthBar = False
 
 ################################################################################ Weapons setup
 
@@ -6696,7 +6718,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	seeker(mouse)
+	Explossion(mouse, randint(10, 30))
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
