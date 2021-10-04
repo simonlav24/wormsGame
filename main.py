@@ -124,6 +124,7 @@ if True:
 	HUDColor = BLACK
 
 # bugs & improvements:
+# chum and seagulls
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
 # arena hold position game mode: get points by the amount of worms on the arena
@@ -694,6 +695,7 @@ if True:
 	imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
 	imageSnail = pygame.image.load("assets/snail.png").convert_alpha()
 	imageHole = pygame.image.load("assets/hole.png").convert_alpha()
+	imageSeagull = pygame.image.load("assets/seagull.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -3964,8 +3966,8 @@ class Venus:
 						closest = worm
 				if closest:
 					self.desired = (closest.pos - self.pos).getAngle()
-						
-			for worm in PhysObj._reg:
+			listToCheck = PhysObj._reg + Seagull._reg
+			for worm in listToCheck:
 				if worm in Debrie._debries or worm in Portal._reg or worm in Flag.flags:
 					continue
 				if dist(worm.pos, pos) <= 25:
@@ -3980,7 +3982,10 @@ class Venus:
 						Commentator.que.append(choice([("", ("yummy",""), worm.team.color), (worm.nameStr, ("", " was delicious"), worm.team.color), (worm.nameStr, ("", " is good protein"), worm.team.color), (worm.nameStr, ("", " is some serious gourmet s**t"), worm.team.color)]))
 					else:
 						self.explossive = True
-						PhysObj._reg.remove(worm)
+						if worm in PhysObj._reg:
+							PhysObj._reg.remove(worm)
+						if worm in Seagull._reg:
+							worm.removeFromGame()
 					break
 		elif self.mode == Venus.catch:
 			gameDistable()
@@ -4982,15 +4987,11 @@ class Seeker:#########EXPERIMENTAL
 		self.maxSpeed = 5
 		self.maxForce = 1
 		self.color = (255,100,0)
-		self.triangle = [(0,-2), (0,2), (7,0)]
 		self.avoid = []
-		self.target = HomingMissile.Target
 		self.radius = 6
 		self.timer = 15 * fps
-		# for i in range(10000):
-			# pos = Vector(randint(0, mapWidth-1), randint(0, mapHeight-1))
-			# if mapGetAt(pos) == GRD:
-				# self.avoid.append(pos)
+		self.triangle = [(0,-2), (0,2), (7,0)]
+		self.target = HomingMissile.Target
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
@@ -5032,6 +5033,9 @@ class Seeker:#########EXPERIMENTAL
 			self.vel *= -1
 		
 		self.pos = ppos
+		self.secondaryStep()
+	def secondaryStep(self):
+		pass
 	def deathResponse(self):
 		boom(self.pos, 30)
 		nonPhys.remove(self)
@@ -5061,6 +5065,87 @@ class Seeker:#########EXPERIMENTAL
 		for i in self.triangle:
 			shape.append(point2world(self.pos + tup2vec(i).rotate(self.vel.getAngle())))
 		pygame.draw.polygon(win, self.color, shape)
+
+class Seagull(Seeker):
+	_reg = []
+	def __init__(self, pos, direction, energy):
+		nonPhys.append(self)
+		Seagull._reg.append(self)
+		self.pos = vectorCopy(pos)
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.acc = Vector()
+		self.maxSpeed = 5
+		self.maxForce = 1
+		self.color = (255,100,0)
+		self.avoid = []
+		self.radius = 6
+		self.timer = 15 * fps
+		self.target = Vector()
+		self.chum = None
+	def deathResponse(self):
+		boom(self.pos, 30)
+		self.removeFromGame()
+	def removeFromGame(self):
+		Seagull._reg.remove(self)
+		nonPhys.remove(self)
+		self.chum.dead = True
+	def secondaryStep(self):
+		self.target = self.chum.pos
+	def draw(self):
+		global timeOverall
+		dir = self.vel.x > 0
+		width = 16
+		height = 13
+		frame = timeOverall//2 % 3
+		win.blit(pygame.transform.flip(imageSeagull, dir, False), point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)) )
+
+class Chum(Grenade):
+	_chums = []
+	def __init__(self, pos, direction, energy, radius=0):
+		Chum._chums.append(self)
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = radius
+		if radius == 0:
+			self.radius = randint(1,3)
+		self.color = (255, 102, 102)
+		self.bounceBeforeDeath = -1
+		self.damp = 0.5
+		self.sticked = False
+		self.stick = None
+		self.timer = 0
+		self.alarm = randint(0,3) * fps
+		self.ticking = False
+		self.summoned = False
+		self.boomAffected = False
+	def collisionRespone(self, ppos):
+		if not self.summoned:
+				self.ticking = True
+				self.summoned = True
+		if not self.sticked:
+			self.sticked = True
+			self.stick = vectorCopy((self.pos + ppos)/2)
+			gameMap.set_at(self.stick.integer(), GRD)
+	def deathResponse(self):
+		Chum._chums.remove(self)
+		if self.stick:
+			gameMap.set_at(self.stick.integer(), SKY)
+	def secondaryStep(self):
+		# self.stable = False
+		if self.ticking:
+			if self.timer == self.alarm:
+				s = Seagull(Vector(self.pos.x + randint(-100,100), -10), Vector(randint(-100,100), 0), 1)
+				s.target = self.pos
+				s.chum = self
+			self.timer += 1
+		if self.stick:
+			self.pos = self.stick
+			if mapGetAt(self.stick) != GRD:
+				self.sticked = False
+				self.stick = None
+	def draw(self):
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 
 ################################################################################ Create World
 
@@ -5207,6 +5292,7 @@ if True:
 	weapons.append(["covid 19", PUTABLE, 0, GRENADES, False, 0])
 	weapons.append(["sheep", PUTABLE, 1, GRENADES, False, 0])
 	weapons.append(["snail", CHARGABLE, 2, GRENADES, False, 0])
+	weapons.append(["chum bucket", CHARGABLE, 1, GRENADES, False, 0])
 	weapons.append(["baseball", PUTABLE, 3, MISC, False, 0])
 	weapons.append(["girder", CLICKABLE, -1, MISC, False, 0])
 	weapons.append(["rope", PUTABLE, 3, MISC, False, 0])
@@ -5494,6 +5580,13 @@ def fire(weapon = None):
 		w = AcidBottle(weaponOrigin, weaponDir, energy)
 	elif weapon == "seeker":
 		w = Seeker(weaponOrigin, weaponDir, energy)
+	elif weapon == "chum bucket":
+		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
+		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 2)
+		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 3)
+		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
+		w = Chum(weaponOrigin, weaponDir, energy)
+		
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -6718,7 +6811,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	Explossion(mouse, randint(10, 30))
+	Seagull(mouse, Vector(), 1)
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
