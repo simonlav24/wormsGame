@@ -50,7 +50,8 @@ game development practice in python for educational purposes and fun. pygame req
 - **TNT** - explosive TNT bomb.
 - **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
 - **SHEEP** - baaaa.
-- **SNAIL** - chargeable, quick  and sticky snail.
+- **SNAIL** - chargeable, quick and sticky snail.
+- **CHUM BUCKET** - chargeable, throw chum. attracts seagulls.
 
 ## Misc
 
