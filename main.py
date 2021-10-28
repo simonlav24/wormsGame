@@ -111,6 +111,7 @@ if True:
 	terminatorMode = False
 	victim = None
 	terminatorHit = False
+	arenaMode = False
 	
 	# Multipliers
 	damageMult = 0.8
@@ -124,7 +125,7 @@ if True:
 	HUDColor = BLACK
 
 # bugs & improvements:
-# chum and seagulls
+# chum and seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
 # arena hold position game mode: get points by the amount of worms on the arena
@@ -1410,8 +1411,16 @@ class Worm (PhysObj):
 		if self.flagHolder:
 			pygame.draw.line(win, (51, 51, 0), point2world(self.pos), point2world(self.pos + Vector(0, -3 * self.radius)))
 			pygame.draw.rect(win, (220,0,0), (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
+		# draw worm sprite
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
-		win.blit(self.name , ((int(self.pos.x) - int(camPos.x) - int(self.name.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 21)))
+		# draw name
+		nameHeight = -21
+		namePos = Vector(self.pos.x - self.name.get_width()/2, max(self.pos.y + nameHeight, 10))
+		win.blit(self.name , point2world(namePos))
+		if self.alive and self.pos.y < 0:
+			num = myfont.render(str(int(-self.pos.y)), False, self.team.color)
+			win.blit(num, point2world(namePos + Vector(self.name.get_width() + 2,0)))
+		
 		if warpedMode:
 			pygame.draw.circle(win, self.color, point2world(self.pos + Vector(mapWidth)), int(self.radius)+1)
 			pygame.draw.circle(win, self.color, point2world(self.pos + Vector(-mapWidth)), int(self.radius)+1)
@@ -1427,12 +1436,6 @@ class Worm (PhysObj):
 			cpuDraw()
 		if self.alive and drawHealthBar:
 			self.drawHealth()
-		if self.alive and self.pos.y < 0:
-			width = 25
-			height = 10
-			pygame.draw.rect(win, (0,0,0), (point2world((self.pos.x - width/2,10)), (width, height)))
-			num = myfont.render(str(int(-self.pos.y)), False, self.team.color)
-			win.blit(num, point2world((self.pos.x - num.get_width()/2, 12)))
 		if self.sleep and self.alive:
 			if timeOverall % fps == 0:
 				FloatingText(self.pos, "z", (0,0,0))
@@ -1509,22 +1512,23 @@ class Worm (PhysObj):
 			if state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
 				pickVictim()
 	def drawHealth(self):
+		healthHeight = -15
 		if Worm.healthMode == 0:
-			pygame.draw.rect(win, (220,220,220),(point2world(self.pos - Vector(10,15)),( 20,3)))
-			
 			value = 20 * min(self.health/initialHealth, 1)
 			if value < 1:
 				value = 1
-			pygame.draw.rect(win, (0,220,0),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -15 -int(camPos.y), int(value),3))
+			pygame.draw.rect(win, (220,220,220),(point2world(self.pos + Vector(-10, healthHeight)),(20,3)))
+			pygame.draw.rect(win, (0,220,0),(point2world(self.pos + Vector(-10, healthHeight)), (int(value),3)))
 		else:
-			win.blit(self.healthStr , ((int(self.pos.x) - int(camPos.x) - int(self.healthStr.get_size()[0]/2)), (int(self.pos.y) - int(camPos.y) - 15)))
+			win.blit(self.healthStr , point2world(self.pos + Vector(-self.healthStr.get_width()/2, healthHeight)))
 		# draw jetpack fuel
 		if self.jetpacking:
-			pygame.draw.rect(win, (220,220,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -25 -int(camPos.y), 20,3))
 			value = 20 * (jetPackFuel/100)
 			if value < 1:
 				value = 1
-			pygame.draw.rect(win, (0,0,220),(int(self.pos.x) -10 -int(camPos.x), int(self.pos.y) -25 -int(camPos.y), int(value),3))
+			pygame.draw.rect(win, (220,220,220),(point2world(self.pos + Vector(-10, -25)), (20,3)))
+			pygame.draw.rect(win, (0,0,220),(point2world(self.pos + Vector(-10, -25)), (int(value),3)))
+
 	def secondaryStep(self):
 		global state, nextState
 		if objectUnderControl == self and playerControl and self.alive:
@@ -5035,7 +5039,7 @@ class Seeker:#########EXPERIMENTAL
 		self.pos = ppos
 		self.secondaryStep()
 	def secondaryStep(self):
-		pass
+		Blast(self.pos + vectorUnitRandom()*2, randint(5,8), 30, 3)
 	def deathResponse(self):
 		boom(self.pos, 30)
 		nonPhys.remove(self)
@@ -5149,6 +5153,7 @@ class Chum(Grenade):
 
 ################################################################################ Create World
 
+# parse arguments
 if True:
 	parser = argparse.ArgumentParser()
 	
@@ -5175,6 +5180,7 @@ if True:
 	parser.add_argument("-sdt", "--sudden_death_tsunami", type=bool, nargs='?', const=True, default=False, help="tsunami sudden death style")
 	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
 	parser.add_argument("-term", "--terminator_mode", type=bool, nargs='?', const=True, default=False, help="Activate terminator mode")
+	parser.add_argument("-are", "--arena_mode", type=bool, nargs='?', const=True, default=False, help="Activate arena mode")
 	
 	args = parser.parse_args()
 	
@@ -5203,6 +5209,7 @@ if True:
 	if args.sudden_death_plague:
 		suddenDeathStyle.append(PLAGUE)
 	terminatorMode = args.terminator_mode
+	arenaMode = args.arena_mode
 	
 def grabMapsFrom(path, maps):
 	if not os.path.exists(path):
@@ -5758,7 +5765,7 @@ def renderWeaponCount(special = False):
 
 class HealthBar:
 	drawBar = True
-	drawPoints = False
+	drawPoints = True
 	width = 40
 	def __init__(self):
 		self.mode = 0
@@ -5767,8 +5774,10 @@ class HealthBar:
 		self.maxHealth = 0
 		if diggingMatch:
 			HealthBar.drawBar = False
-		if pointsMode or captureTheFlag or targetsMode or terminatorMode:
-			HealthBar.drawPoints = True
+		# trying always draw points:
+		# if pointsMode or captureTheFlag or targetsMode or terminatorMode or arenaMode:
+			# HealthBar.drawPoints = True
+		
 
 	def calculateInit(self):
 		self.maxHealth = nWormsPerTeam * initialHealth
@@ -5776,7 +5785,6 @@ class HealthBar:
 			self.maxHealth = int(initialHealth/(1+0.5*(nWormsPerTeam - 1))) * nWormsPerTeam
 		for i, team in enumerate(teams):
 			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
-		# print(self.maxHealth, nWormsPerTeam, initialHealth)
 
 	def step(self):
 		for i, team in enumerate(teams):
@@ -5900,6 +5908,12 @@ def checkWinners():
 			lastTeam.points += 3 # bonus points
 			print("[team", lastTeam.name, "got 3 bonus points]")
 		dic["mode"] = "terminator"
+	
+	elif arenaMode:
+		pointsGame = True
+		if lastTeam:
+			pass
+		dic["mode"] = "arena"
 	
 	# win points:
 	if pointsGame:
@@ -6099,6 +6113,9 @@ def cycleWorms():
 	
 	if terminatorMode:
 		pickVictim()
+	
+	if arenaMode:
+		arena.wormsCheck()
 	
 	damageThisTurn = 0
 	if nextState == PLAYER_CONTROL_1:
@@ -6796,7 +6813,26 @@ def drawDirInd(pos):
 		point.rotate(angle)
 	
 	pygame.draw.polygon(win, (255,0,0), [intersection + i + normalize(direction) * 4 * sin(timeOverall / 5) for i in points])
-	
+
+class Arena:
+	def __init__(self):
+		self.size = Vector(200, 15)
+		self.pos = Vector(mapWidth, mapHeight)//2 - self.size//2
+	def step(self):
+		pass
+	def draw(self):
+		pygame.draw.rect(gameMap, GRD,(self.pos, self.size))
+		pygame.draw.rect(ground, (102, 102, 153), (self.pos, self.size))
+	def wormsCheck(self):
+		for worm in PhysObj._worms:
+			checkPos = worm.pos + Vector(0, worm.radius * 2)
+			addExtra(checkPos, (255,255,255), 3)
+			if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and checkPos.y > self.pos.y and checkPos.y < self.pos.y + self.size.y:
+				worm.team.points += 1
+				print(worm.nameStr, "+1 for team", worm.team.name)
+				
+arena = None
+
 lstep = 0
 lstepmax = 1
 def lstepper():
@@ -6811,7 +6847,6 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	Seagull(mouse, Vector(), 1)
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -6926,6 +6961,9 @@ def stateMachine():
 				randomWeaponsGive()
 			if captureTheFlag:
 				placeFlag()
+			if arenaMode:
+				global arena
+				arena = Arena()
 			state = nextState
 	elif state == CHOOSE_STARTER:
 		playerControlPlacing = False
@@ -7443,6 +7481,8 @@ if __name__ == "__main__":
 		water.stepAll()
 		cloudManager()
 		
+		if arena: arena.step()
+		
 		# reset actions
 		actionMove = False
 			
@@ -7463,8 +7503,8 @@ if __name__ == "__main__":
 		for t in Toast._toasts: t.draw()
 		
 		if currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
-		if terminatorMode and victim and victim.alive:
-			drawTarget(victim.pos)
+		if terminatorMode and victim and victim.alive: drawTarget(victim.pos)
+		if arena: arena.draw()
 			
 		# draw shooting indicator
 		if objectUnderControl and state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and objectUnderControl.health > 0:
@@ -7493,7 +7533,7 @@ if __name__ == "__main__":
 				mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 				win.blit(pygame.transform.flip(airStrikeSpr, False if airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(airStrikeSpr.get_size())/2))
 		if useListMode: drawUseList()
-		
+		# draw health bar
 		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: healthBar.step()
 		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: healthBar.draw() # teamHealthDraw()
 		if terminatorMode and victim and victim.alive:
@@ -7506,7 +7546,7 @@ if __name__ == "__main__":
 		if len(Menu.menus) > 0:
 			for menu in Menu.menus: menu.step()
 			for menu in Menu.menus: menu.draw()
-				
+		# draw kill list
 		if pointsMode or targetsMode or terminatorMode:
 			while len(killList) > 8:
 				killList.pop(-1)
@@ -7543,4 +7583,3 @@ if __name__ == "__main__":
 		pygame.display.update()
 		
 	pygame.quit()
-

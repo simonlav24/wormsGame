@@ -20,7 +20,6 @@ game development practice in python for educational purposes and fun. pygame req
 - **GRAVITY MISSILE** - chargeable, shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
 - **BUNKER BUSTER** - chargeable, shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
 - **HOMING MISSILE** - chargeable, mouse click to select target and shoot.
-- **ARTILLERY ASSISTANCE** - chargeable, throw a flare to mark area for bombing.
 
 ## Grenades
 - **GRENADE** - chargeable, throw a grenade. all grenades delay time can be changed by pressing tab.
@@ -51,7 +50,6 @@ game development practice in python for educational purposes and fun. pygame req
 - **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
 - **SHEEP** - baaaa.
 - **SNAIL** - chargeable, quick and sticky snail.
-- **CHUM BUCKET** - chargeable, throw chum. attracts seagulls.
 
 ## Misc
 
@@ -65,6 +63,8 @@ game development practice in python for educational purposes and fun. pygame req
 - **ACID BOTTLE** - throw a bottle of hydrofluoric acid that corrode the earth and is deadly to worms.
 
 ## Aerial
+- **ARTILLERY ASSISTANCE** - chargeable, throw a flare to mark area for bombing.
+- **CHUM BUCKET** - chargeable, throw chum. attracts seagulls. *experimental*
 - **AIRSTRIKE** - clickable, missile strike, wind sensitive.
 - **NAPALM STRIKE** - clickable, smelly, firey mess. wind sensitive.
 - **MINE STRIKE** - clickable, mine strike.
@@ -104,6 +104,7 @@ game development practice in python for educational purposes and fun. pygame req
 - Capture the flag - the team that holds the flag at the end of the turn wins a point. The team with the most points wins.
 - Terminator - each turn you have a targeted worm. Hitting the target = 1 point. Terminating the target = 2 points.
 - David vs Goliath - starter worm receives 50% of all teammate's health.
+- Arena - worms get points for standing on top of the arena at the end of each turn. The team with the most points wins.
 
 ## Options
 
