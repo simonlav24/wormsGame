@@ -18,11 +18,8 @@ if True:
 	myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
 	
 	scalingFactor = 3
-	scalling = 3
 	winWidth = int(1280 / scalingFactor)
 	winHeight = int(720 / scalingFactor)
-	# winWidth = int(640 / scalingFactor)
-	# winHeight = int(480 / scalingFactor)
 	win = pygame.Surface((winWidth, winHeight))
 	
 	screenWidth = int(winWidth * scalingFactor)
@@ -69,8 +66,16 @@ if True:
 	
 	PLAGUE = 0
 	TSUNAMI = 1
+	
+	BATTLE = 0
+	DAVID_AND_GOLIATH = 1
+	POINTS = 2
+	TARGETS = 3
+	CAPTURE_THE_FLAG = 4
+	TERMINATOR = 5
+	ARENA = 6
 
-# Game parameters
+# Game settings
 if True:
 	turnTime = 45
 	retreatTime = 5
@@ -80,8 +85,20 @@ if True:
 	globalGravity = 0.2
 	edgeBorder = 65
 	mapScrollSpeed = 35
-	initialHealth = 100
 	jetPackFuel = 100
+	lightRadius = 70
+	initialWaterLevel = 50
+	damageMult = 0.8
+	fallDamageMult = 1
+	windMult = 1.5
+	radiusMult = 1
+	packMult = 1
+	dampMult = 1.5
+
+# Game parameters
+if True:
+	initialHealth = 100
+	gameMode = BATTLE
 	deployPacks = True
 	diggingMatch = False
 	manualPlace = False
@@ -90,45 +107,27 @@ if True:
 	unlimitedMode = False
 	moreWindAffected = 0
 	fortsMode = False
-	davidAndGoliathMode = False
 	randomWeapons = False
 	darkness = False
-	lightRadius = 70
-	pointsMode = False
 	useListMode = False
-	captureTheFlag = False
-	targetsMode = False
 	warpedMode = False
 	randomCycle = 0
 	recolorGround = False
 	allowAirStrikes = True
 	drawGroundSec = True
-	initialWaterLevel = 50
 	waterRise = False
 	waterRising = False
 	roundsTillSuddenDeath = -1
 	suddenDeathStyle = []
-	terminatorMode = False
 	victim = None
 	terminatorHit = False
-	arenaMode = False
-	
-	# Multipliers
-	damageMult = 0.8
-	fallDamageMult = 1
-	windMult = 1.5
-	radiusMult = 1
-	packMult = 1
-	dampMult = 1.5
-	
-	text = ""
+	cheatCode = ""
 	HUDColor = BLACK
 
 # bugs & improvements:
 # chum and seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
-# arena hold position game mode: get points by the amount of worms on the arena
 
 ################################################################################ Map
 if True:
@@ -547,7 +546,6 @@ def giveGoodPlace(div = 0, girderPlace = True):
 		if isGroundAround(place):
 			pygame.draw.circle(gameMap, SKY, place.vec2tup(), 5)
 			pygame.draw.circle(ground, SKY, place.vec2tup(), 5)
-	# print(counter)
 	return place
 
 def placePetrolCan(quantity = 1):
@@ -580,7 +578,6 @@ def drawExtra():
 	global extra
 	extraNext = []
 	for i in extra:
-		# print(i)
 		if not i[4]:
 			win.fill(i[2], (point2world((i[0], i[1])),(1,1)))
 		else:
@@ -1390,13 +1387,13 @@ class Worm (PhysObj):
 			if not self == objectUnderControl:
 				if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
 					damageThisTurn += dmg
-			if captureTheFlag and damageType != 2:
+			if gameMode == CAPTURE_THE_FLAG and damageType != 2:
 				if self.flagHolder:
 					self.team.flagHolder = False
 					self.flagHolder = False
 					Flag(self.pos)
 			global terminatorHit
-			if terminatorMode and victim == self and not terminatorHit:
+			if gameMode == TERMINATOR and victim == self and not terminatorHit:
 				currentTeam.points += 1
 				addToKillList()
 				terminatorHit = True
@@ -1458,7 +1455,7 @@ class Worm (PhysObj):
 		if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
 			damageThisTurn += self.health
 			currentTeam.killCount += 1
-			if pointsMode:
+			if gameMode == POINTS:
 				string = self.nameStr + " by " + objectUnderControl.nameStr
 				killList.insert(0, (myfont.render(string, False, HUDColor), 0))
 		
@@ -1503,7 +1500,7 @@ class Worm (PhysObj):
 			nextState = PLAYER_CONTROL_2
 			state = nextState
 			timeRemaining(wormDieTime)
-		if terminatorMode and self == victim:
+		if gameMode == TERMINATOR and self == victim:
 			currentTeam.points += 1
 			addToKillList()
 			if not terminatorHit:
@@ -4201,9 +4198,6 @@ class PokeBall(PhysObj):
 		if self.timer <= fuseTime + fps*2 + fps/2:
 			gameDistable()
 		
-		# print(self.vel.getMag())
-		# if self.vel.getMag() < 0.14:
-			# self.vel *= 0
 		if self.vel.getMag() > 0.25:
 			self.angle -= self.vel.x*4
 	def draw(self):
@@ -4302,7 +4296,6 @@ def fireLaser(start, direction):
 	for i in square:
 		i.rotate(direction.getAngle())
 	
-	# print(square)
 	for t in range(5,500):
 		testPos = start + direction * t
 		# extra.append((testPos.x, testPos.y, (255,0,0), 3))
@@ -4501,7 +4494,6 @@ class Flag(PhysObj):
 				del self
 				return
 	def outOfMapResponse(self):
-		# print("im out")
 		Flag.flags.remove(self)
 		p = deployPack(FLAG_DEPLOY)
 		global camTrack
@@ -5158,19 +5150,16 @@ if True:
 	parser = argparse.ArgumentParser()
 	
 	parser.add_argument("-f", "--forts", type=bool, nargs='?', const=True, default=False, help="Activate forts mode")
-	parser.add_argument("-dvg", "--dvg", type=bool, nargs='?', const=True, default=False, help="Activate DvG mode")
 	parser.add_argument("-ih", "--initial_health", default=100, help="Initial health", type=int)
+	parser.add_argument("-gm", "--game_mode", default=0, help="Game Mode", type=int)
 	parser.add_argument("-dig", "--digging", type=bool, nargs='?', const=True, default=False, help="Activate Digging mode")
 	parser.add_argument("-dark", "--darkness", type=bool, nargs='?', const=True, default=False, help="Activate Darkness mode")
 	parser.add_argument("-pm", "--pack_mult", default=1, help="Number of packs", type=int)
 	parser.add_argument("-wpt", "--worms_per_team", default=8, help="Worms per team", type=int)
 	parser.add_argument("-map", "--map_choice", default="", help="world map choice", type=str)
 	parser.add_argument("-ratio", "--map_ratio", default=-1, help="world map ratio", type=int)
-	parser.add_argument("-points", "--points_mode", type=bool, nargs="?", const=True, default=False, help="Activate Points mode")
 	parser.add_argument("-used", "--used_list", type=bool, nargs="?", const=True, default=False, help="Activate Used List mode")
 	parser.add_argument("-closed", "--closed_map", type=bool, nargs="?", const=True, default=False, help="Activate closed gameMap mode")
-	parser.add_argument("-ctf", "--ctf", type=bool, nargs='?', const=True, default=False, help="Activate captureTheFlag mode")
-	parser.add_argument("-targets", "--targets", type=bool, nargs='?', const=True, default=False, help="Activate shooting targets mode")
 	parser.add_argument("-warped", "--warped", type=bool, nargs='?', const=True, default=False, help="Activate warped gameMap mode")
 	parser.add_argument("-random", "--random", default=0, help="Activate random worms cycle mode", type=int)
 	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
@@ -5179,12 +5168,10 @@ if True:
 	parser.add_argument("-sd", "--sudden_death", default=-1, help="rounds untill sudden death", type=int)
 	parser.add_argument("-sdt", "--sudden_death_tsunami", type=bool, nargs='?', const=True, default=False, help="tsunami sudden death style")
 	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
-	parser.add_argument("-term", "--terminator_mode", type=bool, nargs='?', const=True, default=False, help="Activate terminator mode")
-	parser.add_argument("-are", "--arena_mode", type=bool, nargs='?', const=True, default=False, help="Activate arena mode")
 	
 	args = parser.parse_args()
 	
-	davidAndGoliathMode = args.dvg
+	gameMode = args.game_mode
 	fortsMode = args.forts
 	initialHealth = args.initial_health
 	diggingMatch = args.digging
@@ -5193,11 +5180,8 @@ if True:
 	wormsPerTeam = args.worms_per_team
 	mapChoice = args.map_choice
 	mapRatio = args.map_ratio
-	pointsMode = args.points_mode
 	useListMode = args.used_list
 	mapClosed = args.closed_map
-	captureTheFlag = args.ctf
-	targetsMode = args.targets 
 	warpedMode = args.warped
 	randomCycle = args.random
 	recolorGround = args.recolor_ground
@@ -5208,8 +5192,6 @@ if True:
 		suddenDeathStyle.append(TSUNAMI)
 	if args.sudden_death_plague:
 		suddenDeathStyle.append(PLAGUE)
-	terminatorMode = args.terminator_mode
-	arenaMode = args.arena_mode
 	
 def grabMapsFrom(path, maps):
 	if not os.path.exists(path):
@@ -5774,14 +5756,10 @@ class HealthBar:
 		self.maxHealth = 0
 		if diggingMatch:
 			HealthBar.drawBar = False
-		# trying always draw points:
-		# if pointsMode or captureTheFlag or targetsMode or terminatorMode or arenaMode:
-			# HealthBar.drawPoints = True
-		
 
 	def calculateInit(self):
 		self.maxHealth = nWormsPerTeam * initialHealth
-		if davidAndGoliathMode:
+		if gameMode == DAVID_AND_GOLIATH:
 			self.maxHealth = int(initialHealth/(1+0.5*(nWormsPerTeam - 1))) * nWormsPerTeam
 		for i, team in enumerate(teams):
 			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
@@ -5819,7 +5797,7 @@ class HealthBar:
 				value = 1
 			if not value == 0:
 				pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
-			if captureTheFlag:
+			if gameMode == CAPTURE_THE_FLAG:
 				if teams[i].flagHolder:
 					pygame.draw.circle(win, (220,0,0), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
 healthBar = HealthBar()
@@ -5870,7 +5848,7 @@ def checkWinners():
 		# no team remains
 		end = True
 	
-	if targetsMode and len(ShootingTarget._reg) == 0 and ShootingTarget.numTargets <= 0:
+	if gameMode == TARGETS and len(ShootingTarget._reg) == 0 and ShootingTarget.numTargets <= 0:
 		end = True
 	
 	if not end:
@@ -5880,7 +5858,7 @@ def checkWinners():
 	winningTeam = None
 		
 	# win bonuse:
-	if captureTheFlag:
+	if gameMode == CAPTURE_THE_FLAG:
 		dic["mode"] = "CTF"
 		pointsGame = True
 		for team in teams:
@@ -5889,27 +5867,27 @@ def checkWinners():
 				print("[ctf win, team", team.name, "got 3 bonus points]")
 				break
 		
-	elif pointsMode:
+	elif gameMode == POINTS:
 		pointsGame = True
 		if lastTeam:
 			lastTeam.points += 150 # bonus points
 			dic["mode"] = "points"
 			print("[points win, team", lastTeam.name, "got 150 bonus points]")
 			
-	elif targetsMode:
+	elif gameMode == TARGETS:
 		pointsGame = True
 		currentTeam.points += 3 # bonus points
 		dic["mode"] = "targets"
 		print("[targets win, team", currentTeam.name, "got 3 bonus points]")
 	
-	elif terminatorMode:
+	elif gameMode == TERMINATOR:
 		pointsGame = True
 		if lastTeam:
 			lastTeam.points += 3 # bonus points
 			print("[team", lastTeam.name, "got 3 bonus points]")
 		dic["mode"] = "terminator"
 	
-	elif arenaMode:
+	elif gameMode == ARENA:
 		pointsGame = True
 		if lastTeam:
 			pass
@@ -5927,7 +5905,7 @@ def checkWinners():
 	else:
 		winningTeam = lastTeam
 		print("[last team standing is", winningTeam.name, "]")
-		if davidAndGoliathMode:
+		if gameMode == DAVID_AND_GOLIATH:
 			dic["mode"] = "davidVsGoliath"
 	
 	if end:
@@ -5989,7 +5967,7 @@ def cycleWorms():
 		Commentator.que.append((objectUnderControl.nameStr, choice([("good shot ", "!"), ("nicely done ","")]), objectUnderControl.team.color))
 	
 	currentTeam.damage += damageThisTurn
-	if pointsMode:
+	if gameMode == POINTS:
 		currentTeam.points = currentTeam.damage + 50 * currentTeam.killCount
 	damageThisTurn = 0
 	if checkWinners():
@@ -6065,7 +6043,7 @@ def cycleWorms():
 		if roundsTillSuddenDeath == 0:
 			suddenDeath()
 	
-	if captureTheFlag:
+	if gameMode == CAPTURE_THE_FLAG:
 		for team in teams:
 			if team.flagHolder:
 				team.points += 1
@@ -6076,7 +6054,7 @@ def cycleWorms():
 		for weapon in weapons:
 			if not weapon[5] == 0:
 				weapon[5] -= 1
-		if targetsMode:
+		if gameMode == TARGETS:
 			ShootingTarget.numTargets -= 1
 			if ShootingTarget.numTargets == 0:
 				commentator.que.append(("", ("final targets round",""), (0,0,0)))
@@ -6111,10 +6089,10 @@ def cycleWorms():
 		index = (index + 1) % totalTeams
 		currentTeam = teams[index]
 	
-	if terminatorMode:
+	if gameMode == TERMINATOR:
 		pickVictim()
 	
-	if arenaMode:
+	if gameMode == ARENA:
 		arena.wormsCheck()
 	
 	damageThisTurn = 0
@@ -6202,7 +6180,6 @@ class Menu:
 		self.currentHeight = 1
 		self.dims = [0,0]
 		self.scroll = Vector()
-		# print(self.winPos)
 	def updateWinPos(self, pos):
 		self.winPos[0] = pos[0]
 		self.winPos[1] = pos[1]
@@ -6248,7 +6225,6 @@ class Button:
 		self.bColor = bColor
 		self.active = active
 		self.action = action
-		# print(self.winPos, self.offset)
 	def activate(self):
 		self.action(self)
 	def step(self):
@@ -6312,7 +6288,6 @@ def actionUtilityButton(button):
 def weaponMenuInit():
 	count = 0
 	m = Menu((winWidth - Menu.width - 2 * Menu.border, 0))
-	# print("winwidth:", winWidth)
 	for i, w in enumerate(weapons):
 		if currentTeam.weaponCounter[i] != 0:
 			secText = str(currentTeam.weaponCounter[i]) if currentTeam.weaponCounter[i] > -1 else ""
@@ -6369,7 +6344,6 @@ class Water:
 		q2 = 3 * ttt - 5 * tt + 2
 		q3 = -3 * ttt + 4 * tt + t
 		q4 = ttt - tt
-		# print(len(self.points), "ps:", p0, p1, p2, p3, "t:", t)
 		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
 		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
 		
@@ -6756,7 +6730,7 @@ class Toast:
 		self.anchor[0] = pos[0]
 		self.anchor[1] = pos[1]
 def toastInfo():
-	if not (pointsMode or targetsMode or captureTheFlag or terminatorMode):
+	if gameMode < POINTS:
 		return
 	if Toast.toastCount > 0:
 		Toast._toasts[0].time = 0
@@ -6829,8 +6803,6 @@ class Arena:
 			addExtra(checkPos, (255,255,255), 3)
 			if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and checkPos.y > self.pos.y and checkPos.y < self.pos.y + self.size.y:
 				worm.team.points += 1
-				print(worm.nameStr, "+1 for team", worm.team.name)
-				
 arena = None
 
 lstep = 0
@@ -6924,7 +6896,7 @@ def stateMachine():
 					placePlants(randint(0,2))
 			
 			# targets:
-			if targetsMode:
+			if gameMode == TARGETS:
 				for i in range(ShootingTarget.numTargets):
 					ShootingTarget()
 			
@@ -6940,7 +6912,7 @@ def stateMachine():
 			# give random legendary starting weapons:
 			randomStartingWeapons(1)
 			
-			if davidAndGoliathMode:
+			if gameMode == DAVID_AND_GOLIATH:
 				global initialHealth
 				for team in teams:
 					length = len(team.worms)
@@ -6959,9 +6931,9 @@ def stateMachine():
 					team.utilityCounter[utilityDict["flare"]] += 3
 			if randomWeapons:
 				randomWeaponsGive()
-			if captureTheFlag:
+			if gameMode == CAPTURE_THE_FLAG:
 				placeFlag()
-			if arenaMode:
+			if gameMode == ARENA:
 				global arena
 				arena = Arena()
 			state = nextState
@@ -6987,7 +6959,7 @@ def stateMachine():
 			w = choice(currentTeam.worms)
 		
 		objectUnderControl = w
-		if terminatorMode: pickVictim()
+		if gameMode == TERMINATOR: pickVictim()
 		camTrack = w
 		timeReset()
 		# healthBar.calculateTeamHealth()# calculateTeamHealth()
@@ -7362,10 +7334,10 @@ if __name__ == "__main__":
 							camTrack = objectUnderControl
 					# if event.key == pygame.K_n:
 						# pygame.image.save(win, "wormshoot" + str(timeOverall) + ".png")	
-					text += event.unicode
+					cheatCode += event.unicode
 					if event.key == pygame.K_EQUALS:
-						cheatActive(text)
-						text = ""
+						cheatActive(cheatCode)
+						cheatCode = ""
 			if event.type == pygame.JOYBUTTONDOWN:
 				if objectUnderControl and playerControl:
 						if joystick.get_button(JOYSTICK_FOUR):
@@ -7503,7 +7475,7 @@ if __name__ == "__main__":
 		for t in Toast._toasts: t.draw()
 		
 		if currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
-		if terminatorMode and victim and victim.alive: drawTarget(victim.pos)
+		if gameMode == TERMINATOR and victim and victim.alive: drawTarget(victim.pos)
 		if arena: arena.draw()
 			
 		# draw shooting indicator
@@ -7536,9 +7508,9 @@ if __name__ == "__main__":
 		# draw health bar
 		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: healthBar.step()
 		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: healthBar.draw() # teamHealthDraw()
-		if terminatorMode and victim and victim.alive:
+		if gameMode == TERMINATOR and victim and victim.alive:
 			drawDirInd(victim.pos)
-		if targetsMode and objectUnderControl:
+		if gameMode == TARGETS and objectUnderControl:
 			for target in ShootingTarget._reg:
 				drawDirInd(target.pos)
 		
@@ -7547,7 +7519,7 @@ if __name__ == "__main__":
 			for menu in Menu.menus: menu.step()
 			for menu in Menu.menus: menu.draw()
 		# draw kill list
-		if pointsMode or targetsMode or terminatorMode:
+		if gameMode in [POINTS, TARGETS, TERMINATOR]:
 			while len(killList) > 8:
 				killList.pop(-1)
 			for i, killed in enumerate(killList):
@@ -7555,14 +7527,10 @@ if __name__ == "__main__":
 		
 		drawExtra()
 		# debug:
-		
 		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 		win.blit(damageText[1], ((int(5), int(winHeight-6))))
 		
 		if state == PLACING_WORMS: win.blit(myfont.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
-		
-		# win.blit(airStrikeSpr, tup2vec(mousePos)/scalingFactor)
-		# pygame.draw.circle(win, (255,0,0), mousePos, 10)
 		
 		# draw loading screen
 		if state in [RESET, GENERATE_TERRAIN] or (state in [PLACING_WORMS, CHOOSE_STARTER] and not manualPlace):
@@ -7577,8 +7545,6 @@ if __name__ == "__main__":
 		
 		# screen manegement
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-		
-		# if objectUnderControl:
 		
 		pygame.display.update()
 		

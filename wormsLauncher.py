@@ -63,9 +63,9 @@ defaults = {"--worms_per_team": 8, "--initial_health": 100, "--pack_mult": 1, "-
 
 tab1_layout =   [[sg.Text("Simon's worms game launcher", font=fnt_bold)],
 			[sg.Text('Gameplay Mode', font=fnt_bold),
-				sg.Radio('Battle', "RADIO1", key="battle", default=True), sg.Radio('Points', "RADIO1", key="--points_mode"),
-				sg.Radio('Targets', "RADIO1", key="--targets"), sg.Radio('Capture the flag', "RADIO1", key="--ctf")],
-			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="--term"), sg.Radio('David vs Goliath', "RADIO1", key="--dvg"), sg.Radio('Arena', "RADIO1", key="--are")],
+				sg.Radio('Battle', "RADIO1", key="battleMode", default=True), sg.Radio('Points', "RADIO1", key="pointsMode2"),
+				sg.Radio('Targets', "RADIO1", key="targetsMode3"), sg.Radio('Capture the flag', "RADIO1", key="captureTheFlagMode4")],
+			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="terminatorMode5"), sg.Radio('David vs Goliath', "RADIO1", key="davidVGoliathMode1"), sg.Radio('Arena', "RADIO1", key="arenaMode6")],
 			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Cooldown', key="--used_list"), sg.Checkbox('Warped', key="--warped"),sg.Text('Random'), sg.Combo(['Teams', 'Worms'], key='--random'), sg.Checkbox('Manual placing', key="--place"), 
 				], 
 			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging"), sg.Checkbox('Darkness', key="--darkness")],
@@ -148,13 +148,17 @@ while True:
 		string = starter + " -map " + path2map(mapChoice) + " "
 		
 		for key in values.keys():
+			
 			if key == "--random":
 				if values["--random"] == "Teams":
 					string += " " + key + " 1 "
 				elif values["--random"] == "Worms":
 					string += " " + key + " 2 "
 				continue
-			if key in ["suddenDeath", "suddenDeathRounds", "tsunami", "plague", "battle"]:
+			if key in ["suddenDeath", "suddenDeathRounds", "tsunami", "plague", "battleMode"]:
+				continue
+			if "Mode" in str(key) and values[key]:
+				string += "--game_mode " + key[-1] + " "
 				continue
 			if key in defaults.keys():
 				if values[key] != defaults[key]:
