@@ -66,14 +66,14 @@ tab1_layout =   [[sg.Text("Simon's worms game launcher", font=fnt_bold)],
 				sg.Radio('Battle', "RADIO1", key="battleMode", default=True), sg.Radio('Points', "RADIO1", key="pointsMode2"),
 				sg.Radio('Targets', "RADIO1", key="targetsMode3"), sg.Radio('Capture the flag', "RADIO1", key="captureTheFlagMode4")],
 			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="terminatorMode5"), sg.Radio('David vs Goliath', "RADIO1", key="davidVGoliathMode1"), sg.Radio('Arena', "RADIO1", key="arenaMode6")],
-			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Cooldown', key="--used_list"), sg.Checkbox('Warped', key="--warped"),sg.Text('Random'), sg.Combo(['Teams', 'Worms'], key='--random'), sg.Checkbox('Manual placing', key="--place"), 
+			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Cooldown', key="--used_list"), sg.Checkbox('Warped', key="--warped"),sg.Text('Random'), sg.Combo(['Complete', 'In Team'], key='--random'), sg.Checkbox('Manual placing', key="--place"), 
 				], 
 			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging"), sg.Checkbox('Darkness', key="--darkness")],
 			[sg.Text('             '), sg.Spin([i for i in range(1, 9)], size=(6, 1), initial_value=8, key="--worms_per_team"), sg.Text('Worms per team'), 
 				sg.Spin([i for i in range(50,1000,50)], size=(6, 1), initial_value=100, key="--initial_health"), sg.Text('Health'), 
 				sg.Spin([i for i in range(1,11)], size=(6, 1), initial_value=1, key="--pack_mult"), sg.Text('Packs')],
 			[sg.Text('            '), sg.Checkbox('Sudden death after', key='suddenDeath', enable_events=True, default=True), sg.Spin([i for i in range(0,50,1)], size=(6, 1), initial_value=12, key="suddenDeathRounds", disabled=False), 
-				sg.Text('rounds'), sg.Checkbox('Water level rising', key='tsunami', disabled=False), sg.Checkbox('plague', key='plague', disabled=False)],
+				sg.Text('rounds'), sg.Checkbox('Water level rising', key='tsunami', disabled=False), sg.Checkbox('Plague', key='plague', disabled=False)],
 			[sg.Text("Perlin noise map generator", font=fnt_bold), sg.Button('Generate', key="generate")],
 			[sg.Text('Game map', font=fnt_bold), sg.Button('Random', key="random"), sg.Input(key='browse', enable_events=True, visible=False), sg.FileBrowse(target="browse", enable_events=True), sg.Button('Play', key="play"),
 				sg.Checkbox('Ground color', key="-rg"), sg.Input("", key="-ratio", size=(6,1)), sg.Text('Custom ratio')],
@@ -150,9 +150,9 @@ while True:
 		for key in values.keys():
 			
 			if key == "--random":
-				if values["--random"] == "Teams":
+				if values["--random"] == "Complete":
 					string += " " + key + " 1 "
-				elif values["--random"] == "Worms":
+				elif values["--random"] == "In Team":
 					string += " " + key + " 2 "
 				continue
 			if key in ["suddenDeath", "suddenDeathRounds", "tsunami", "plague", "battleMode"]:

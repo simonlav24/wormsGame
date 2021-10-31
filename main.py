@@ -112,7 +112,6 @@ if True:
 	useListMode = False
 	warpedMode = False
 	randomCycle = 0
-	recolorGround = False
 	allowAirStrikes = True
 	drawGroundSec = True
 	waterRise = False
@@ -128,18 +127,19 @@ if True:
 # chum and seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
+# underwater mode
 
 ################################################################################ Map
 if True:
-	mapWidth = int(1024*1.5)
-	mapHeight = 512
-	gameMap = pygame.Surface((mapWidth, mapHeight))
-	wormCol = pygame.Surface((mapWidth, mapHeight))
-	extraCol = pygame.Surface((mapWidth, mapHeight))
-	
-	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
-	groundSec = pygame.Surface((mapWidth, mapHeight)).convert_alpha()#KILL
-	darkMask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()# for darkness
+	gameMap = None
+	ground = None
+	wormCol = None
+	extraCol = None
+	groundSec = None
+	darkMask = None
+
+	mapWidth = 0
+	mapHeight = 0
 	lights = []
 	
 	camPos = Vector(0,0)
@@ -176,28 +176,144 @@ if True:
 	megaTrigger = False
 	fuseTime = fps*2
 
-def createMapImage(heightNorm = None):
-	global mapImage
-	if heightNorm:
-		ratio = mapImage.get_width() / mapImage.get_height()
-		mapImage = pygame.transform.scale(mapImage, (int(heightNorm * ratio), heightNorm))
-		if randint(0,1) == 0:
-			mapImage = pygame.transform.flip(mapImage, True, False)
+# parse arguments
+if True:
+	parser = argparse.ArgumentParser()
 	
-	global gameMap, mapWidth, mapHeight, ground, wormCol, extraCol, groundSec
-	mapWidth = mapImage.get_width()
-	mapHeight = mapImage.get_height() + initialWaterLevel
+	parser.add_argument("-f", "--forts", type=bool, nargs='?', const=True, default=False, help="Activate forts mode")
+	parser.add_argument("-ih", "--initial_health", default=100, help="Initial health", type=int)
+	parser.add_argument("-gm", "--game_mode", default=0, help="Game Mode", type=int)
+	parser.add_argument("-dig", "--digging", type=bool, nargs='?', const=True, default=False, help="Activate Digging mode")
+	parser.add_argument("-dark", "--darkness", type=bool, nargs='?', const=True, default=False, help="Activate Darkness mode")
+	parser.add_argument("-pm", "--pack_mult", default=1, help="Number of packs", type=int)
+	parser.add_argument("-wpt", "--worms_per_team", default=8, help="Worms per team", type=int)
+	parser.add_argument("-map", "--map_choice", default="", help="world map choice", type=str)
+	parser.add_argument("-ratio", "--map_ratio", default=-1, help="world map ratio", type=int)
+	parser.add_argument("-used", "--used_list", type=bool, nargs="?", const=True, default=False, help="Activate Used List mode")
+	parser.add_argument("-closed", "--closed_map", type=bool, nargs="?", const=True, default=False, help="Activate closed gameMap mode")
+	parser.add_argument("-warped", "--warped", type=bool, nargs='?', const=True, default=False, help="Activate warped gameMap mode")
+	parser.add_argument("-random", "--random", default=0, help="Activate random worms cycle mode", type=int)
+	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
+	parser.add_argument("-u", "--unlimited", type=bool, nargs='?', const=True, default=False, help="Activate unlimited mode")
+	parser.add_argument("-place", "--place", type=bool, nargs='?', const=True, default=False, help="manually placing worms")
+	parser.add_argument("-sd", "--sudden_death", default=-1, help="rounds untill sudden death", type=int)
+	parser.add_argument("-sdt", "--sudden_death_tsunami", type=bool, nargs='?', const=True, default=False, help="tsunami sudden death style")
+	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
+	args = parser.parse_args()
+	
+	gameMode = args.game_mode
+	fortsMode = args.forts
+	initialHealth = args.initial_health
+	diggingMatch = args.digging
+	darkness = args.darkness
+	packMult = args.pack_mult
+	wormsPerTeam = args.worms_per_team
+	useListMode = args.used_list
+	mapClosed = args.closed_map
+	warpedMode = args.warped
+	randomCycle = args.random
+	unlimitedMode = args.unlimited
+	manualPlace = args.place
+	roundsTillSuddenDeath = args.sudden_death
+	if args.sudden_death_tsunami:
+		suddenDeathStyle.append(TSUNAMI)
+	if args.sudden_death_plague:
+		suddenDeathStyle.append(PLAGUE)
+	
+def grabMapsFrom(path):
+	if not os.path.exists(path):
+		return
+	maps = []
+	for imageFile in os.listdir(path):
+		if imageFile[-4:] != ".png":
+			continue
+		string = path + "/" + imageFile
+		ratio = 512
+		if string.find("big") != -1:
+			ratio = 800
+		if string.find("big1.png") != -1:
+			ratio = 1000
+		elif string.find("big6.png") != -1:
+			ratio = 700
+		elif string.find("big13.png") != -1:
+			ratio = 1000
+		elif string.find("big16.png") != -1:
+			ratio = 2000
+		string = os.path.abspath(string)
+		maps.append((string, ratio))
+	return maps
+
+def createWorld():
+	# choose map
+	maps = []
+	maps += grabMapsFrom("wormsMaps")
+	maps += grabMapsFrom("wormsMaps/moreMaps")
+	
+	if args.map_choice == "":
+		# no map chosed in arguments pick one at random
+		imageChoice = choice(maps)
+	else:
+		imageChoice = [None, None]
+		for m in maps:
+			if args.map_choice in m[0]:
+				imageChoice = m
+				break
+		# if not found, then custom map
+		if imageChoice[0] == None:
+			imageChoice[0] = args.map_choice
+			imageChoice[1] = randint(512, 600)
+		# if perlin map, recolor ground
+		if "PerlinMaps" in args.map_choice:
+			args.recolor_ground = True
+		
+	if args.map_ratio != -1:
+		imageChoice[1] = args.map_ratio
+	
+	createMap(imageChoice)
+	renderLand()
+
+def createMapSurfaces(dims):
+	"""
+	create all map related surfaces
+	"""
+	global gameMap, mapWidth, mapHeight, ground, wormCol, extraCol, groundSec, darkMask
+	mapWidth, mapHeight = dims
 	gameMap = pygame.Surface((mapWidth, mapHeight))
 	gameMap.fill(SKY)
 	wormCol = pygame.Surface((mapWidth, mapHeight))
 	wormCol.fill(SKY)
 	extraCol = pygame.Surface((mapWidth, mapHeight))
 	extraCol.fill(SKY)
-	global darkMask
-	darkMask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
-	
+
 	ground = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 	groundSec = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
+	if darkness:
+		darkMask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
+
+def createMap(imageChoice):
+	"""
+	create and initialize all map related surfaces
+	"""	
+	if diggingMatch:
+		createMapSurfaces((int(1024 * 1.5), 512))
+		gameMap.fill(GRD)
+		return
+
+	# load map
+	global mapImage
+	mapImage = pygame.image.load(imageChoice[0])
+	
+	# flip for diversity
+	if randint(0,1) == 0:
+		mapImage = pygame.transform.flip(mapImage, True, False)
+	
+	# rescale based on ratio
+	ratio = mapImage.get_width() / mapImage.get_height()
+	mapImage = pygame.transform.scale(mapImage, (int(imageChoice[1] * ratio), imageChoice[1]))
+		
+	createMapSurfaces((mapImage.get_width(), mapImage.get_height() + initialWaterLevel))
+	
+	# fill gameMap
 	global lstepmax
 	lstepmax = mapWidth//10 + wormsPerTeam * len(teams) + 1
 	for x in range(mapWidth):
@@ -208,13 +324,42 @@ def createMapImage(heightNorm = None):
 			lstepper()
 	mapImage.set_colorkey((0,0,0))
 
-def createMapDigging():
-	global gameMap, wormCol, extraCol
-	gameMap.fill(GRD)
-	wormCol.fill(SKY)
-	extraCol.fill(SKY)
-	
+def renderLand():
+	ground.fill(SKY)
+	if diggingMatch or args.recolor_ground:
+		patternImage = pygame.image.load("assets/pattern.png")
+		grassColor = choice([(10, 225, 10), (10,100,10)] + [i[3] for i in feels])
+		
+		for x in range(0,mapWidth):
+			for y in range(0,mapHeight):
+				if gameMap.get_at((x,y)) == GRD:
+					ground.set_at((x,y), patternImage.get_at((x % patternImage.get_width(), y % patternImage.get_height())))
+		
+		for x in range(0,mapWidth):
+			for y in range(0,mapHeight):
+				if gameMap.get_at((x,y)) == GRD:
+					if y > 0 and gameMap.get_at((x,y - 1)) != GRD:
+						for i in range(randint(3,5)):
+							if y + i < mapHeight:
+								if gameMap.get_at((x, y + i)) == GRD:
+									ground.set_at((x,y + i), [min(abs(i + randint(-30,30)), 255) for i in grassColor])
+								
+		groundSec.fill(feelColor[0])
+		groundCopy = ground.copy()
+		groundCopy.set_alpha(64)
+		groundSec.blit(groundCopy, (0,0))
+		groundSec.set_colorkey(feelColor[0])
+		return
+		
+	ground.blit(mapImage, (0,0))
+	groundSec.fill(feelColor[0])
+	mapImage.set_alpha(64)
+	groundSec.blit(mapImage, (0,0))
+	groundSec.set_colorkey(feelColor[0])
+
 def drawLand():
+	if mapWidth == 0:
+		return
 	if drawGroundSec: win.blit(groundSec, point2world((0,0)))
 	win.blit(ground, point2world((0,0)))
 	if warpedMode:
@@ -249,42 +394,9 @@ def drawLand():
 		lights = []
 	
 		win.blit(darkMask, (-int(camPos.x), -int(camPos.y)))
-
-def renderLand():
-	ground.fill(SKY)
-	if mapImage and not recolorGround:
-		ground.blit(mapImage, (0,0))
-		groundSec.fill(feelColor[0])
-		mapImage.set_alpha(64)
-		groundSec.blit(mapImage, (0,0))
-		groundSec.set_colorkey(feelColor[0])
-	else:
-		for imageFile in os.listdir("assets"):
-			if "pattern" in imageFile:
-				patternFile = imageFile
-
-		img = pygame.image.load("assets/" + patternFile)
-		grassColor = choice([(10, 225, 10), (10,100,10)] + [i[3] for i in feels])
 		
-		for x in range(0,mapWidth):
-			for y in range(0,mapHeight):
-				if gameMap.get_at((x,y)) == GRD:
-					ground.set_at((x,y), img.get_at((x % img.get_width(), y % img.get_height())))
-		
-		for x in range(0,mapWidth):
-			for y in range(0,mapHeight):
-				if gameMap.get_at((x,y)) == GRD:
-					if y > 0 and gameMap.get_at((x,y - 1)) != GRD:
-						for i in range(randint(3,5)):
-							if y + i < mapHeight:
-								if gameMap.get_at((x, y + i)) == GRD:
-									ground.set_at((x,y + i), [min(abs(i + randint(-30,30)), 255) for i in grassColor])
-								
-		groundSec.fill(feelColor[0])
-		groundCopy = ground.copy()
-		groundCopy.set_alpha(64)
-		groundSec.blit(groundCopy, (0,0))
-		groundSec.set_colorkey(feelColor[0])
+	wormCol.fill(SKY)
+	extraCol.fill(SKY)
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
 	global camTrack
@@ -414,7 +526,7 @@ class FireBlast():
 		if self.radius == 0:
 			win.set_at(point2world(self.pos), self.color)
 		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius)
-		
+
 class Explossion:
 	def __init__(self, pos, radius):	
 		nonPhys.append(self)
@@ -682,7 +794,7 @@ if True:
 	colorRect = pygame.Surface((2,2))
 	pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
 	pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
-	imageSky = pygame.transform.smoothscale(colorRect, (winWidth, mapHeight))
+	imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
 	imageBat = pygame.image.load("assets/bat.png").convert_alpha()
 	imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
 	imageParachute = pygame.image.load("assets/parachute.png").convert_alpha()
@@ -5143,112 +5255,6 @@ class Chum(Grenade):
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 
-################################################################################ Create World
-
-# parse arguments
-if True:
-	parser = argparse.ArgumentParser()
-	
-	parser.add_argument("-f", "--forts", type=bool, nargs='?', const=True, default=False, help="Activate forts mode")
-	parser.add_argument("-ih", "--initial_health", default=100, help="Initial health", type=int)
-	parser.add_argument("-gm", "--game_mode", default=0, help="Game Mode", type=int)
-	parser.add_argument("-dig", "--digging", type=bool, nargs='?', const=True, default=False, help="Activate Digging mode")
-	parser.add_argument("-dark", "--darkness", type=bool, nargs='?', const=True, default=False, help="Activate Darkness mode")
-	parser.add_argument("-pm", "--pack_mult", default=1, help="Number of packs", type=int)
-	parser.add_argument("-wpt", "--worms_per_team", default=8, help="Worms per team", type=int)
-	parser.add_argument("-map", "--map_choice", default="", help="world map choice", type=str)
-	parser.add_argument("-ratio", "--map_ratio", default=-1, help="world map ratio", type=int)
-	parser.add_argument("-used", "--used_list", type=bool, nargs="?", const=True, default=False, help="Activate Used List mode")
-	parser.add_argument("-closed", "--closed_map", type=bool, nargs="?", const=True, default=False, help="Activate closed gameMap mode")
-	parser.add_argument("-warped", "--warped", type=bool, nargs='?', const=True, default=False, help="Activate warped gameMap mode")
-	parser.add_argument("-random", "--random", default=0, help="Activate random worms cycle mode", type=int)
-	parser.add_argument("-rg", "--recolor_ground", type=bool, nargs='?', const=True, default=False, help="color ground in digging color")
-	parser.add_argument("-u", "--unlimited", type=bool, nargs='?', const=True, default=False, help="Activate unlimited mode")
-	parser.add_argument("-place", "--place", type=bool, nargs='?', const=True, default=False, help="manually placing worms")
-	parser.add_argument("-sd", "--sudden_death", default=-1, help="rounds untill sudden death", type=int)
-	parser.add_argument("-sdt", "--sudden_death_tsunami", type=bool, nargs='?', const=True, default=False, help="tsunami sudden death style")
-	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
-	
-	args = parser.parse_args()
-	
-	gameMode = args.game_mode
-	fortsMode = args.forts
-	initialHealth = args.initial_health
-	diggingMatch = args.digging
-	darkness = args.darkness
-	packMult = args.pack_mult
-	wormsPerTeam = args.worms_per_team
-	mapChoice = args.map_choice
-	mapRatio = args.map_ratio
-	useListMode = args.used_list
-	mapClosed = args.closed_map
-	warpedMode = args.warped
-	randomCycle = args.random
-	recolorGround = args.recolor_ground
-	unlimitedMode = args.unlimited
-	manualPlace = args.place
-	roundsTillSuddenDeath = args.sudden_death
-	if args.sudden_death_tsunami:
-		suddenDeathStyle.append(TSUNAMI)
-	if args.sudden_death_plague:
-		suddenDeathStyle.append(PLAGUE)
-	
-def grabMapsFrom(path, maps):
-	if not os.path.exists(path):
-		return
-	for imageFile in os.listdir(path):
-		if imageFile[-4:] != ".png":
-			continue
-		string = path + "/" + imageFile
-		ratio = 512
-		if string.find("big") != -1:
-			ratio = 800
-		if string.find("big1.png") != -1:
-			ratio = 1000
-		elif string.find("big6.png") != -1:
-			ratio = 700
-		elif string.find("big13.png") != -1:
-			ratio = 1000
-		elif string.find("big16.png") != -1:
-			ratio = 2000
-		string = os.path.abspath(string)
-		maps.append((string, ratio))
-
-def createWorld():
-	# choose map
-	global recolorGround
-	maps = []
-	grabMapsFrom("wormsMaps", maps)
-	grabMapsFrom("wormsMaps/moreMaps", maps)
-	if mapChoice == "":
-		# no map chosed in arguments
-		imageChoice = choice(maps)
-	else:
-		imageChoice = [None, None]
-		if "PerlinMaps" in mapChoice:
-			imageChoice[0] = mapChoice
-			imageChoice[1] = randint(512, 600)
-			recolorGround = True
-		else:
-			for m in maps:
-				if m[0].find(mapChoice) != -1:
-					imageChoice = m
-					break
-			if imageChoice[0] == None:
-				imageChoice[0] = mapChoice
-				imageChoice[1] = randint(512, 600)
-			
-	imageFile, heightNorm = imageChoice
-	if mapRatio != -1:
-		heightNorm = mapRatio
-	
-	global mapImage
-
-	mapImage = pygame.image.load(imageFile)
-	if not diggingMatch: createMapImage(heightNorm)
-	else: mapImage = None; createMapDigging()
-	renderLand()
-
 ################################################################################ Weapons setup
 
 weapons = []
@@ -5258,7 +5264,6 @@ if True:
 	weapons.append(["bunker buster", CHARGABLE, 2, MISSILES, False, 0])
 	weapons.append(["homing missile", CHARGABLE, 2, MISSILES, False, 0])
 	weapons.append(["seeker", CHARGABLE, 1, MISSILES, False, 0])
-	weapons.append(["artillery assist", CHARGABLE, 1, MISSILES, False, 0])
 	weapons.append(["grenade", CHARGABLE, 5, GRENADES, True, 0])
 	weapons.append(["mortar", CHARGABLE, 3, GRENADES, True, 0])
 	weapons.append(["sticky bomb", CHARGABLE, 3, GRENADES, True, 0])
@@ -5281,7 +5286,6 @@ if True:
 	weapons.append(["covid 19", PUTABLE, 0, GRENADES, False, 0])
 	weapons.append(["sheep", PUTABLE, 1, GRENADES, False, 0])
 	weapons.append(["snail", CHARGABLE, 2, GRENADES, False, 0])
-	weapons.append(["chum bucket", CHARGABLE, 1, GRENADES, False, 0])
 	weapons.append(["baseball", PUTABLE, 3, MISC, False, 0])
 	weapons.append(["girder", CLICKABLE, -1, MISC, False, 0])
 	weapons.append(["rope", PUTABLE, 3, MISC, False, 0])
@@ -5291,6 +5295,8 @@ if True:
 	weapons.append(["ender pearl", CHARGABLE, 0, MISC, False, 0])
 	weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
 	weapons.append(["acid bottle", CHARGABLE, 1, MISC, False, 0])
+	weapons.append(["artillery assist", CHARGABLE, 1, AIRSTRIKE, False, 0])
+	weapons.append(["chum bucket", CHARGABLE, 1, AIRSTRIKE, False, 0])
 	weapons.append(["airstrike", CLICKABLE, 1, AIRSTRIKE, False, 8])
 	weapons.append(["napalm strike", CLICKABLE, 1, AIRSTRIKE, False, 8])
 	weapons.append(["mine strike", CLICKABLE, 0, AIRSTRIKE, False, 1])
@@ -6429,6 +6435,8 @@ class Cloud:
 		win.blit(self.surf, point2world(self.pos))
 
 def cloudManager():
+	if mapHeight == 0:
+		return
 	if len(Cloud._reg) < 8 and randint(0,10) == 1:
 		pos = Vector(choice([camPos.x - Cloud.cWidth - 100, camPos.x + winWidth + 100]), randint(5, mapHeight - 150))
 		Cloud(pos)
@@ -6847,10 +6855,8 @@ def stateMachine():
 		playerScrollAble = False
 		
 		createWorld()
-		
 		currentTeam = teams[0]
 		teamChoser = teams.index(currentTeam)
-		
 		# place stuff:
 		if not diggingMatch:
 			placeMines(randint(2,4))
@@ -6859,6 +6865,7 @@ def stateMachine():
 			# place plants:
 			if not diggingMatch:
 				placePlants(randint(0,2))
+		
 		
 		# check for sky opening
 		closedSkyCounter = 0
@@ -7467,8 +7474,8 @@ if __name__ == "__main__":
 		
 		water.drawLayers(UP)
 		drawLand()
-		wormCol.fill(SKY)
-		extraCol.fill(SKY)
+		# wormCol.fill(SKY)
+		# extraCol.fill(SKY)
 		for p in PhysObj._reg: p.draw()
 		for f in nonPhys: f.draw()
 		water.drawLayers(DOWN)

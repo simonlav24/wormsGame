@@ -110,7 +110,7 @@ game development practice in python for educational purposes and fun. pygame req
 
 - Cooldown - weapons have a cooldown for 4 turns.
 - Warped - horizontal map warp. *experimental*
-- Random - the worm of the next turn is randomly picked. "Teams" means completely random worm and team. "Worms" means random worm but team cycle regularly.
+- Random - the worm of the next turn is randomly picked. "Complete" means completely random worm and team. "In Team" means random worm but team cycle regularly.
 - Manual placing - place worms manually.
 - Darkness - dark game mode. use flares to illuminate areas near you.
 - Closed map - cant exit the map bounding box.
