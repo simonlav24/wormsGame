@@ -1408,7 +1408,6 @@ class Worm (PhysObj):
 		self.jetpacking = False
 		self.rope = None #[pos, radius]
 		self.parachuting = False
-		self.cpu = False
 		self.wormCollider = True
 		self.flagHolder = False
 		self.sleep = False
@@ -1540,9 +1539,6 @@ class Worm (PhysObj):
 			rope = [point2world(x) for x in self.rope[0]]
 			rope.append(point2world(self.pos))
 			pygame.draw.lines(win, (250,250,0), False, rope)
-		if self.cpu:
-			pygame.draw.circle(win, (200,0,0), point2world(self.pos + Vector(0,-5)), 2)
-			cpuDraw()
 		if self.alive and drawHealthBar:
 			self.drawHealth()
 		if self.sleep and self.alive:
@@ -1637,7 +1633,6 @@ class Worm (PhysObj):
 				value = 1
 			pygame.draw.rect(win, (220,220,220),(point2world(self.pos + Vector(-10, -25)), (20,3)))
 			pygame.draw.rect(win, (0,0,220),(point2world(self.pos + Vector(-10, -25)), (int(value),3)))
-
 	def secondaryStep(self):
 		global state, nextState
 		if objectUnderControl == self and playerControl and self.alive:
@@ -1655,81 +1650,7 @@ class Worm (PhysObj):
 			self.damp = 0.2
 			self.shootAcc = 0
 			self.shootVel = 0
-		
-		## CPU
-		if state == PLAYER_CONTROL_1 and objectUnderControl == self and playerControl and self.cpu:
-			CpuHolder.team = self.team
-					
-			if CpuHolder.mode == CpuHolder.CHECK_SURROUNDING:
-				CpuHolder.targetMove = cpuTakeALook(self)
-				if CpuHolder.targetMove:
-					print("desided to move, worm:", CpuHolder.closeToWorm, "petrol:", CpuHolder.closeToPetrol)
-					CpuHolder.mode = CpuHolder.MOVE
-					
-				else:
-					CpuHolder.mode = CpuHolder.DUMMY
-					print("desided to stay")
-			
-			if CpuHolder.mode == CpuHolder.MOVE:
-				moved = cpuMove(self, CpuHolder.targetMove)
-				if not moved:
-					CpuHolder.mode = CpuHolder.CHECK_SURROUNDING
-				
-			if CpuHolder.mode == CpuHolder.DUMMY:
-				print("gathering shot info")
-				cpuGather()
-			
-			cpuProccess(self)
-			
-			if CpuHolder.mode == CpuHolder.READY:
-				global energyLevel
-				direction = CpuHolder.direction
-				energy = CpuHolder.energy
-			
-				# calculate needed facing
-				if not CpuHolder.checkList["facing"]:
-					if direction.x >= 0:
-						onKeyPressRight()
-					else:
-						onKeyPressLeft()
-					CpuHolder.checkList["facing"] = True
-				
-				# calculate needed shootAngle
-				if CpuHolder.checkList["facing"] and not CpuHolder.checkList["angle"]:
-					needed = direction
-					current = vectorFromAngle(self.shootAngle)
-					current.x = needed.x
-					if needed.y > current.y:
-						# down
-						self.shootAcc = 0.04
-					else:
-						self.shootAcc = -0.04
-					if needed.y - 0.04 < current.y and current.y < needed.y + 0.04:
-						# print("mine:", self.shootAngle, "needed:", direction.getAngle(), "facing:", self.facing)
-						# if self.facing == RIGHT:
-							# self.shootAngle = direction.getAngle()
-						# else:
-							# self.shootAngle = direction.getAngle() + 2*pi
-						# print("correction: mine:", self.shootAngle, "needed:", direction.getAngle(), "facing:", self.facing)
-						CpuHolder.checkList["angle"] = True
-						
-				if CpuHolder.checkList["facing"] and CpuHolder.checkList["angle"] and not CpuHolder.checkList["pressed"]:
-					onKeyPressSpace()
-					CpuHolder.checkList["pressed"] = True
-				
-				if CpuHolder.checkList["facing"] and CpuHolder.checkList["angle"] and CpuHolder.checkList["pressed"] and not CpuHolder.checkList["hold"]:
-					onKeyHoldSpace()
-					if energyLevel >= CpuHolder.energy:			
-						CpuHolder.checkList["hold"] = True
-				if CpuHolder.checkList["facing"] and CpuHolder.checkList["angle"] and CpuHolder.checkList["pressed"] and CpuHolder.checkList["hold"] and not CpuHolder.checkList["release"]:
-					onKeyReleaseSpace()
-					energyLevel = CpuHolder.energy
-					CpuHolder.checkList["release"] = True
-					CpuHolder.mode = CpuHolder.DUMMY
-					
-			if CpuHolder.mode == CpuHolder.STUCK:
-				pass
-		
+
 		## jetpacking
 		if self.jetpacking and not state == WAIT_STABLE and objectUnderControl == self:
 			self.vel.limit(5)
@@ -1850,309 +1771,6 @@ class Worm (PhysObj):
 		string += str(self.sick) + "\n"
 		string += str(self.gravity) + "\n"
 		return string
-
-##########################<CPU>
-class CpuHolder:
-	index = 0
-	
-	DUMMY = 0 #nothing to do
-	RESET = 1 #ready to calculate shot from 0
-	CHECK = 2 #check worms
-	CALCULATE = 3 #calculate shot
-	CHECK_PATH = 4 #check if shot hits ground
-	READY = 5 #ready to shoot
-	STUCK = 6 #cant shoot
-	TRYAGAIN = 7 #try again with longer shot
-	SETTLE = 10 #ready to calculate shot
-	
-	CHECK_SURROUNDING = 8 #check personal area to see if need to move
-	MOVE = 9
-	
-	long = 0
-	
-	team = None
-	
-	mode = CHECK_SURROUNDING
-	targets = []
-	velCount = 0
-
-	initialPos = None
-	direction = None
-	energy = None
-	
-	checkList = {"facing":False, "angle":False, "pressed":False, "hold":False, "release":False}
-	weaponsCheckList = {"missile":False, "grenade":False}
-	weapons = ["missile", "grenade"]
-	weapon = None
-	
-	closeToWorm = None
-	closeToPetrol = None
-	
-	potRight = []
-	potLeft = []
-	
-	targetMove = None
-
-def cpuPotential(self):
-	walkLeft = 0
-	walkRight = 0
-	if CpuHolder.closeToWorm:
-		directionToWorm = CpuHolder.closeToWorm.pos - self.pos
-		if directionToWorm.x > 0: #worm is to the right
-			walkLeft += 1
-		else:
-			walkRight += 1
-	if CpuHolder.closeToPetrol:
-		directionToPetrol = CpuHolder.closeToPetrol.pos - self.pos
-		if directionToPetrol.x > 0: #worm is to the right
-			walkLeft += 1
-		else:
-			walkRight += 1
-	
-	if walkLeft == 0 and walkRight == 0:
-		return None
-	
-	if walkRight > walkLeft:
-		return CpuHolder.potRight[-1]
-	else:
-		return CpuHolder.potLeft[-1]
-		
-def cpuMove(self, posToMove):
-	if (posToMove - self.pos).x > 0:
-		onKeyPressRight()
-	else:
-		onKeyPressLeft()
-	
-	if dist(self.pos, posToMove) > 5:
-		return moveFallProof(self)
-	else:
-		CpuHolder.closeToWorm = None
-		CpuHolder.closeToPetrol = None
-		CpuHolder.targetMove = None
-		return False
-
-def cpuTakeALook(self):
-	# if too close to same\other worms\petrol can
-	for worm in PhysObj._worms:
-		if worm == self:
-			continue
-		if dist(self.pos, worm.pos) < 30:
-			CpuHolder.closeToWorm = worm
-	for can in PetrolCan._cans:
-		if dist(self.pos, can.pos) < 30:
-			CpuHolder.closeToPetrol = can
-	
-	# check potentials:
-	onKeyPressRight()
-	CpuHolder.potRight = checkPotential(self, 50)
-	onKeyPressLeft()
-	CpuHolder.potLeft = checkPotential(self, 50)
-	
-	if CpuHolder.closeToWorm or CpuHolder.closeToPetrol:
-		return cpuPotential(self)
-
-def cpuLonger():
-	CpuHolder.long += 1
-	if CpuHolder.long == 5:
-		CpuHolder.mode = CpuHolder.STUCK
-	else:
-		print("cant find path, checking long = ", CpuHolder.long)
-		CpuHolder.mode = CpuHolder.TRYAGAIN
-
-def cpuGather():
-	if CpuHolder.mode == CpuHolder.DUMMY:
-		CpuHolder.long = 0
-		CpuHolder.mode = CpuHolder.RESET
-
-def cpuProccess(self):
-	# print(CpuHolder.mode)
-	if CpuHolder.mode == CpuHolder.RESET:
-		CpuHolder.targets = []
-		CpuHolder.direction = None
-		CpuHolder.energy = None
-		CpuHolder.index = 0
-		CpuHolder.velCount = 0
-		CpuHolder.mode = CpuHolder.CHECK
-		CpuHolder.checkList = {"facing":False, "angle":False, "pressed":False, "hold":False, "release":False}
-		CpuHolder.weaponsCheckList = {"missile":False, "grenade":False}
-		CpuHolder.long = 0
-		CpuHolder.weapon = None
-	
-	if CpuHolder.mode == CpuHolder.TRYAGAIN:
-		CpuHolder.targets = []
-		CpuHolder.direction = None
-		CpuHolder.energy = None
-		CpuHolder.index = 0
-		CpuHolder.velCount = 0
-		CpuHolder.mode = CpuHolder.CHECK
-		CpuHolder.checkList = {"facing":False, "angle":False, "pressed":False, "hold":False, "release":False}
-	
-	elif CpuHolder.mode == CpuHolder.CHECK:
-		# print("check")
-		worm2check = PhysObj._worms[CpuHolder.index]
-		if not worm2check.team == CpuHolder.team:
-			distance = dist(worm2check.pos, self.pos)
-			if distance < 400:
-				# if too close than ignore
-				if not distance < 50:
-					CpuHolder.targets.append([worm2check, None, 0, False]) # 0:target, 1:velInitial, 2:steps, 3:good_path
-		
-		CpuHolder.index += 1
-		if CpuHolder.index == len(PhysObj._worms):
-			CpuHolder.index = 0
-			CpuHolder.mode = CpuHolder.CALCULATE
-			if len(CpuHolder.targets) == 0:
-				print("cant find worms")
-				CpuHolder.mode = CpuHolder.STUCK
-			
-	elif CpuHolder.mode == CpuHolder.CALCULATE:
-		worm2check = CpuHolder.targets[CpuHolder.index][0]
-		# print("calculate", worm2check)
-		posFinal = worm2check.pos + Vector(0, worm2check.radius)
-		CpuHolder.initialPos = self.pos
-		# missile acc
-		if currentWeapon == "missile":
-			acc = Vector(wind * 0.1 * windMult, globalGravity)
-		else:
-			acc = Vector(0, globalGravity)
-
-		rang = (CpuHolder.long * 30, CpuHolder.long * 30 + 30)
-		
-		for i in range(rang[0], rang[1]):
-			velInitial = (posFinal - CpuHolder.initialPos - acc * (i*(i+1)/2) )/i
-			if velInitial.getMag() <= 10:
-				# print("found")
-				CpuHolder.targets[CpuHolder.index][1] = velInitial
-				CpuHolder.targets[CpuHolder.index][2] = i
-				CpuHolder.velCount += 1
-				break
-		
-		# if we find velocity then velocity is inserted to target
-		# if not velocity is None
-		
-		CpuHolder.index += 1
-		if CpuHolder.index == len(CpuHolder.targets):
-			CpuHolder.index = 0
-			CpuHolder.mode = CpuHolder.CHECK_PATH
-			if CpuHolder.velCount == 0:
-				print("cant find vel")
-				cpuLonger()
-	
-	elif CpuHolder.mode == CpuHolder.CHECK_PATH:
-		# print("check path")
-		# print(CpuHolder.targets)
-		target = CpuHolder.targets[CpuHolder.index]
-		
-		if currentWeapon == "missile":
-			acc = Vector(wind * 0.1 * windMult, globalGravity)
-		else:
-			acc = Vector(0, globalGravity)
-		
-		if target[1]: # if has velocity
-			# print("has velocity,", target)
-			target[3] = True
-			for i in range(target[2]):
-				# print("inside", target[1])
-				posCurrent = CpuHolder.initialPos + target[1] * i + acc * (i*(i+1)/2)
-				extra.append((posCurrent.x, posCurrent.y, (255,255,255), 10))
-				if gameMap.get_at(posCurrent.vec2tupint()) == GRD:
-					target[3] = False
-					break
-			
-		
-		CpuHolder.index += 1
-		if CpuHolder.index == len(CpuHolder.targets):
-			CpuHolder.index = 0
-			
-			# pick currect fuseTime:
-			global fuseTime
-			fuseTime = CpuHolder.long * 30 + 30
-			
-			
-			# pick first to fire:
-			picked = False
-			
-			pick = 1
-			
-			# pick from strongest team:
-			if pick == 1:
-				strongestTeamIndex = teamsInfo.index(max(teamsInfo))
-				# print(strongestTeamIndex)
-				for tar in CpuHolder.targets:
-					if tar[3] and tar[0].team == teams[strongestTeamIndex]:
-						print("choosed", tar[0].nameStr, "by strongest team")
-						picked = True
-						CpuHolder.direction = normalize(tar[1])
-						CpuHolder.energy = tar[1].getMag()/10
-						break
-					
-					
-			# pick first in order, defult:
-			if not picked:
-				for tar in CpuHolder.targets:
-					if tar[3]:
-						picked = True
-						CpuHolder.direction = normalize(tar[1])
-						CpuHolder.energy = tar[1].getMag()/10
-						break
-					
-			if picked:
-				CpuHolder.mode = CpuHolder.READY
-			else:
-				cpuLonger()
-
-def cpuDraw():
-	for target in CpuHolder.targets:
-		pygame.draw.circle(win, (255,255,255), point2world(target[0].pos + Vector(0, -10)), 3)
-	if CpuHolder.initialPos and CpuHolder.direction:
-		pygame.draw.line(win, (255,255,255), point2world(CpuHolder.initialPos), point2world(CpuHolder.initialPos + CpuHolder.direction * 10))
-
-def cpuUpdateCycle():
-	if CpuHolder.mode == CpuHolder.STUCK:
-		CpuHolder.mode = CpuHolder.CHECK_SURROUNDING
-
-class CPU:#redundent
-	only = None
-	def __init__(self, pos):
-		CPU.only = self
-		self.pos = pos
-		nonPhys.append(self)
-		CpuHolder.initialPos = self.pos
-		
-		self.data = None
-		
-		self.firing = False
-	def step(self):
-		cpuProccess(self)
-		if CpuHolder.mode == CpuHolder.READY:
-			CpuHolder.mode = CpuHolder.DUMMY
-			# self.fireAnim()
-			self.data = (CpuHolder.direction, CpuHolder.energy)
-	def fireAnim(self):
-		Missile(self.pos, CpuHolder.direction, CpuHolder.energy)
-	def draw(self):
-		pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
-		for target in CpuHolder.targets:
-			pygame.draw.circle(win, (255,255,255), point2world(target[0].pos + Vector(0, -10)), 3)
-	def changePos(self, pos):
-		self.pos = pos
-		CpuHolder.initialPos = self.pos
-	def gather(self):
-		CpuHolder.long = 0
-		CpuHolder.mode = CpuHolder.RESET
-
-class CpuProbe:
-	def __init__(self, pos, facing):
-		nonPhys.append(self)
-		self.radius = 3.5
-		self.pos = pos
-		self.facing = facing
-	def step(self):
-		if actionMove:
-			moveFallProof(self)
-	def draw(self):
-		pygame.draw.circle(win, (255,255,255), point2world(self.pos), int(self.radius)+1, 1)
-##########################</CPU>
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
@@ -5327,9 +4945,6 @@ def fire(weapon = None):
 		#weaponOrigin += weaponDir * (objectUnderControl.radius + 3)
 		energy = energyLevel
 		# cheating
-		if objectUnderControl.cpu:
-			energy = CpuHolder.energy
-			weaponDir = CpuHolder.direction
 		
 	if timeTravelFire:
 		decrease = False
@@ -5670,7 +5285,7 @@ for i , u in enumerate(utilities):
 
 ################################################################################ Teams
 class Team:
-	def __init__(self, nameList=None, color=(255,0,0), name = "", cpu = False):
+	def __init__(self, nameList=None, color=(255,0,0), name = ""):
 		if nameList:
 			self.nameList = nameList
 		else:
@@ -5680,7 +5295,6 @@ class Team:
 		self.utilityCounter = [0] * len(utilities)
 		self.worms = []
 		self.name = name
-		self.cpu = cpu
 		self.damage = 0
 		self.killCount = 0
 		self.points = 0
@@ -5691,7 +5305,6 @@ class Team:
 		if len(self.nameList) > 0:
 			w = Worm(pos, self.nameList.pop(0), self)
 			self.worms.append(w)
-			w.cpu = self.cpu
 	def saveStr(self):
 		string = ""
 		string += "color" + list2str(self.color) + "\n"
@@ -5958,9 +5571,6 @@ def cycleWorms():
 		objectUnderControl.team.weaponCounter[weaponDict["rope"]] -= 1
 		Worm.roped = False
 	
-	# update cpu:
-	#cpuUpdateCycle()
-	
 	# update damage:
 	if damageThisTurn > mostDamage[0]:
 		mostDamage = (damageThisTurn, objectUnderControl.nameStr)	
@@ -6170,6 +5780,8 @@ def randomPlacing(wormsPerTeam):
 
 def squareCollision(pos1, pos2, rad1, rad2):
 	return True if pos1.x < pos2.x + rad2*2 and pos1.x + rad1*2 > pos2.x and pos1.y < pos2.y + rad2*2 and pos1.y + rad1*2 > pos2.y else False
+
+################################################################################ Gui
 
 class Menu:
 	menus = []
