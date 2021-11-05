@@ -5364,63 +5364,6 @@ def renderWeaponCount(special = False):
 	if currentWeapon == "flare":
 		currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.utilityCounter[utilityDict["flare"]]), False, HUDColor)
 
-class HealthBar:
-	drawBar = True
-	drawPoints = True
-	width = 40
-	def __init__(self):
-		self.mode = 0
-		self.teamHealthMod = [0] * totalTeams
-		self.teamHealthAct = [0] * totalTeams
-		self.maxHealth = 0
-		if diggingMatch:
-			HealthBar.drawBar = False
-
-	def calculateInit(self):
-		self.maxHealth = nWormsPerTeam * initialHealth
-		if gameMode == DAVID_AND_GOLIATH:
-			self.maxHealth = int(initialHealth/(1+0.5*(nWormsPerTeam - 1))) * nWormsPerTeam
-		for i, team in enumerate(teams):
-			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
-
-	def step(self):
-		for i, team in enumerate(teams):
-			# calculate teamhealth
-			self.teamHealthAct[i] = sum(worm.health for worm in team.worms)
-			
-			# animate health bar
-			self.teamHealthMod[i] += (self.teamHealthAct[i] - self.teamHealthMod[i]) * 0.1
-			if int(self.teamHealthMod[i]) == self.teamHealthAct[i]:
-				self.teamHealthMod[i] = self.teamHealthAct[i]
-	def draw(self):
-		if not HealthBar.drawBar: return
-		maxPoints = sum(i.points for i in teams)
-		
-		for i, team in enumerate(teams):
-			pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, HealthBar.width, 2))
-			
-			# health:
-			value = min(self.teamHealthMod[i] / self.maxHealth, 1) * HealthBar.width
-			if value < 1 and value > 0:
-				value = 1
-			if not value <= 0:
-				pygame.draw.rect(win, teams[i].color, (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
-			
-			# points:
-			if not HealthBar.drawPoints:
-				continue
-			if maxPoints == 0:
-				continue
-			value = (teams[i].points / maxPoints) * HealthBar.width
-			if value < 1 and value > 0:
-				value = 1
-			if not value == 0:
-				pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
-			if gameMode == CAPTURE_THE_FLAG:
-				if teams[i].flagHolder:
-					pygame.draw.circle(win, (220,0,0), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
-healthBar = HealthBar()
-
 def addToRecord(dic):
 	keys = ["time", "winner", "mostDamage", "damager", "mode", "points"]
 	if not os.path.exists("wormsRecord.xml"):
@@ -5709,7 +5652,7 @@ def cycleWorms():
 		pickVictim()
 	
 	if gameMode == ARENA:
-		arena.wormsCheck()
+		Arena.arena.wormsCheck()
 	
 	damageThisTurn = 0
 	if nextState == PLAYER_CONTROL_1:
@@ -5783,89 +5726,147 @@ def squareCollision(pos1, pos2, rad1, rad2):
 
 ################################################################################ Gui
 
+class HealthBar:
+	healthBar = None
+	drawBar = True
+	drawPoints = True
+	width = 40
+	def __init__(self):
+		self.mode = 0
+		self.teamHealthMod = [0] * totalTeams
+		self.teamHealthAct = [0] * totalTeams
+		self.maxHealth = 0
+		if diggingMatch:
+			HealthBar.drawBar = False
+
+	def calculateInit(self):
+		self.maxHealth = nWormsPerTeam * initialHealth
+		if gameMode == DAVID_AND_GOLIATH:
+			self.maxHealth = int(initialHealth/(1+0.5*(nWormsPerTeam - 1))) * nWormsPerTeam
+		for i, team in enumerate(teams):
+			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
+
+	def step(self):
+		for i, team in enumerate(teams):
+			# calculate teamhealth
+			self.teamHealthAct[i] = sum(worm.health for worm in team.worms)
+			
+			# animate health bar
+			self.teamHealthMod[i] += (self.teamHealthAct[i] - self.teamHealthMod[i]) * 0.1
+			if int(self.teamHealthMod[i]) == self.teamHealthAct[i]:
+				self.teamHealthMod[i] = self.teamHealthAct[i]
+	def draw(self):
+		if not HealthBar.drawBar: return
+		maxPoints = sum(i.points for i in teams)
+		
+		for i, team in enumerate(teams):
+			pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, HealthBar.width, 2))
+			
+			# health:
+			value = min(self.teamHealthMod[i] / self.maxHealth, 1) * HealthBar.width
+			if value < 1 and value > 0:
+				value = 1
+			if not value <= 0:
+				pygame.draw.rect(win, teams[i].color, (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
+			
+			# points:
+			if not HealthBar.drawPoints:
+				continue
+			if maxPoints == 0:
+				continue
+			value = (teams[i].points / maxPoints) * HealthBar.width
+			if value < 1 and value > 0:
+				value = 1
+			if not value == 0:
+				pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
+			if gameMode == CAPTURE_THE_FLAG:
+				if teams[i].flagHolder:
+					pygame.draw.circle(win, (220,0,0), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
+
 class Menu:
-	menus = []
 	border = 1
+	event = None
 	textColor = BLACK
 	TextColorInnactive = (170,170,170)
-	backColor = BLACK
-	width = 100
-	def __init__(self, winPos):
-		Menu.menus.append(self)
-		self.winPos = vectorCopy(winPos)
+	menus = []
+	def __init__(self):
+		self.pos = Vector()
+		self.size = Vector(100, 0)
 		self.elements = []
-		self.buttons = []
-		self.currentHeight = 1
-		self.dims = [0,0]
-		self.scroll = Vector()
-	def updateWinPos(self, pos):
-		self.winPos[0] = pos[0]
-		self.winPos[1] = pos[1]
-	def addButton(self, text, secText, bColor, active, action):
-		b = Button(text, secText, bColor, self.winPos, Vector(Menu.border, self.currentHeight), active, action, self.scroll)
-		self.elements.append(b)
-		self.buttons.append(b)
-		self.currentHeight += self.elements[-1].height + Menu.border
-		self.dims[0] = max(self.dims[0], self.elements[-1].width + 2 * Menu.border)
-		self.dims[1] = self.currentHeight
+	def updatePosX(self, pos, absolute=True):
+		offset = pos
+		if absolute:
+			offset = pos - self.pos.x
+		self.pos.x += offset
+		for e in self.elements:
+			e.pos.x += offset
+	def updatePosY(self, pos, absolute=True):
+		offset = pos
+		if absolute:
+			offset = pos - self.pos.y
+		self.pos.y += offset
+		for e in self.elements:
+			e.pos.y += offset
 	def step(self):
-		for element in self.elements:
-			element.step()
+		for e in self.elements:
+			e.step()
+	def addButton(self, text, secText, key, bgColor, active=True):
+		b = Button(text, key, bgColor)
+		b.pos = self.pos + Vector(0, self.size.y)
+		b.active = active
+		b.secText = secText
+		b.setSurf(b.text)
+		self.size.y += b.size.y
+		self.elements.append(b)
+		return b
 	def draw(self):
-		pygame.draw.rect(win, Menu.backColor, (self.winPos + self.scroll, self.dims))
+		pygame.draw.rect(win, BLACK, (self.pos - Vector(Menu.border, Menu.border), self.size + Vector(Menu.border * 2, Menu.border)))
 		for e in self.elements:
 			e.draw()
-	def destroy(self):
-		Menu.menus.remove(self)
 
-class MenuString:
-	def __init__(self, string, winPos):
-		self.winPos = winPos
-		self.surf = myfont.render(string, False, BLACK)
-		self.width = self.surf.get_width()
-		self.height = self.surf.get_height()
-	def draw(self):
-		win.blit(self.surf, self.winPos)
-	
 class Button:
-	globalButtonHeight = 8
-	def __init__(self, text, secText, bColor, winPos, offset, active, action, scroll):
+	def __init__(self, text, key, bgColor):
+		self.pos = Vector()
+		self.size = Vector(100, 10)
+		self.key = key
 		self.text = text
+		self.secText = None
+		self.bgColor = bgColor
+		self.active = True
 		self.selected = False
-		self.secText = secText
-		self.surf = myfont.render(text, False, Menu.textColor if active else Menu.TextColorInnactive)
-		self.secSurf = myfont.render(secText, False, Menu.textColor if active else Menu.TextColorInnactive)
-		self.width = Menu.width + Menu.border * 2
-		self.height = self.surf.get_height() + Menu.border * 2
-		self.winPos = winPos
-		self.offset = offset
-		self.scroll = scroll
-		self.bColor = bColor
-		self.active = active
-		self.action = action
-	def activate(self):
-		self.action(self)
+		self.surf = None
+		self.secSurf = None
+	def setSurf(self, text):
+		color = Menu.textColor if self.active else Menu.TextColorInnactive
+		self.surf = myfont.render(text, False, color)
+		if self.secText:
+			self.secSurf = myfont.render(self.secText, False, color)
+		self.size.y = self.surf.get_height() + 3 * Menu.border
 	def step(self):
+		if not self.active:
+			return
 		mousePos = (pygame.mouse.get_pos()[0]/scalingFactor, pygame.mouse.get_pos()[1]/scalingFactor)
-		
-		if mousePos[0] > self.winPos[0] + self.scroll[0] + self.offset[0] and mousePos[0] < self.winPos[0] + self.scroll[0] + self.offset[0] + self.width and mousePos[1] > self.winPos[1] + self.scroll[1] + self.offset[1] and mousePos[1] < self.winPos[1] + self.scroll[1] + self.offset[1] + self.height:
+		if mousePos[0] > self.pos[0] and mousePos[0] < self.pos[0] + self.size[0] and mousePos[1] > self.pos[1] and mousePos[1] < self.pos[1] + self.size[1]:
 			self.selected = True
+			Menu.event = self.key
 		else:
 			self.selected = False
 	def draw(self):
-		pygame.draw.rect(win, RED if self.selected else self.bColor, (self.winPos + self.scroll + self.offset, (self.width, self.height)))
-		win.blit(self.surf, self.winPos + self.scroll + self.offset + Vector(Menu.border,Menu.border))
-		win.blit(self.secSurf, self.winPos + self.scroll + self.offset + Vector(Menu.width - 10, Menu.border))
+		color = RED if self.selected else self.bgColor
+		rect = (self.pos, self.size - Vector(0, 1 * Menu.border))
+		pygame.draw.rect(win, color, rect)
+		win.blit(self.surf, self.pos + Vector(Menu.border, Menu.border))
+		if self.secSurf:
+			win.blit(self.secSurf, self.pos + Vector(self.size.x - self.secSurf.get_width() - 3, Menu.border))
 
-def actionWeaponButton(button):
+def actionWeaponButton(weapon):
 	global currentWeapon, weaponStyle
-	currentWeapon = weapons[weaponDict[button.text]][0]
+	currentWeapon = weapon
 	renderWeaponCount()
 	weaponStyle = weapons[weaponDict[currentWeapon]][1]
 
-def actionUtilityButton(button):
+def actionUtilityButton(utility):
 	global currentWeapon, weaponStyle
-	utility = button.text
 	decrease = True
 	
 	if utility == "moon gravity":
@@ -5904,32 +5905,39 @@ def actionUtilityButton(button):
 		currentTeam.utilityCounter[utilityDict[utility]] -= 1
 
 def weaponMenuInit():
-	count = 0
-	m = Menu((winWidth - Menu.width - 2 * Menu.border, 0))
+	weaponsMenu = Menu()
+	weaponsMenu.pos = Vector(winWidth - 100 - Menu.border, 1)
 	for i, w in enumerate(weapons):
 		if currentTeam.weaponCounter[i] != 0:
 			secText = str(currentTeam.weaponCounter[i]) if currentTeam.weaponCounter[i] > -1 else ""
 			active = w[5] == 0
 			if inUsedList(w[0]):
 				active = False
-			m.addButton(w[0], secText, w[3], active, actionWeaponButton)
+			newButton = weaponsMenu.addButton(w[0], secText, w[0], w[3], active)
+			newButton.active = active
+	Menu.menus.append(weaponsMenu)
+
+	if sum(currentTeam.utilityCounter) == 0:
+		return
 	
-	if sum(currentTeam.utilityCounter) != 0:
-		m2 = Menu((winWidth - 2 * Menu.width - 4 * Menu.border - 1, 0))
-		for i, u in enumerate(utilities):
-			if currentTeam.utilityCounter[i] != 0:
-				secText = str(currentTeam.utilityCounter[i])
-				m2.addButton(u[0], secText, WHITE, True, actionUtilityButton)
+	utilityMenu = Menu()
+	utilityMenu.pos = Vector(winWidth - 2 * 100 - 1 * Menu.border - 1, 1)
+	for i, u in enumerate(utilities):
+		if currentTeam.utilityCounter[i] != 0:
+			secText = str(currentTeam.utilityCounter[i])
+			newButton = utilityMenu.addButton(u[0], secText, u[0], WHITE)
+	Menu.menus.append(utilityMenu)
 
 def scrollMenu(up = True):
 	menu = Menu.menus[0]
-	if up:
-		if menu.scroll[1] >= 0:
-			return
+	if up: 
+		menu.updatePosY((menu.elements[0].size.y + 0 * Menu.border) * 5, False)
 	else:
-		if menu.scroll[1] + menu.dims[1] <= winHeight:
+		if menu.pos.y + menu.size.y <= winHeight:
 			return
-	menu.scroll[1] += Button.globalButtonHeight * 5 if up else -Button.globalButtonHeight * 5
+		menu.updatePosY(-(menu.elements[0].size.y + 0 * Menu.border) * 5, False)
+	if menu.pos.y >= 1:
+		menu.updatePosY(1, True)
 
 waterAmp = 2
 waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
@@ -6020,10 +6028,6 @@ class Water:
 				w.draw(offset)
 				offset -= 10
 
-water = Water()
-Water.layersA.append(water)
-water.createLayers()
-
 class Cloud:
 	_reg = []
 	cWidth = 170
@@ -6096,7 +6100,97 @@ class Commentator:#(name, strings, color)
 			self.timer -= 1
 			if self.timer == 0:
 				self.mode = Commentator.WAIT
-commentator = Commentator()
+
+class Camera:
+	def __init__(self, pos):
+		self.pos = pos
+
+class Toast:
+	_toasts = []
+	toastCount = 0
+	bottom = 0
+	middle = 1
+	def __init__(self, surf, mode=0):
+		Toast._toasts.append(self)
+		self.surf = surf
+		self.time = 0
+		self.mode = mode
+		if self.mode == Toast.bottom:
+			self.anchor = Vector(winWidth/2, winHeight)
+		else:
+			self.anchor = Vector(winWidth//2, winHeight//2) - tup2vec(self.surf.get_size())/2
+		self.pos = Vector()
+		self.state = 0
+		Toast.toastCount += 1
+		
+	def step(self):
+		if self.mode == Toast.bottom:
+			if self.state == 0:
+				self.pos.y -= 3
+				if self.pos.y < -self.surf.get_height():
+					self.state = 1
+			if self.state == 1:
+				self.time += 1
+				if self.time == fps * 3:
+					self.state = 2
+			if self.state == 2:
+				self.pos.y += 3
+				if self.pos.y > 0:
+					Toast._toasts.remove(self)
+					Toast.toastCount -= 1
+		elif self.mode == Toast.middle:
+			self.time += 1
+			if self.time == fps * 3:
+				Toast._toasts.remove(self)
+				Toast.toastCount -= 1
+			self.pos = uniform(0,2) * vectorUnitRandom()
+				
+	def draw(self):
+		if self.mode == Toast.bottom:
+			pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
+		win.blit(self.surf, self.anchor + self.pos)
+	def updateWinPos(self, pos):
+		self.anchor[0] = pos[0]
+		self.anchor[1] = pos[1]
+
+def toastInfo():
+	if gameMode < POINTS:
+		return
+	if Toast.toastCount > 0:
+		Toast._toasts[0].time = 0
+		if Toast._toasts[0].state == 2:
+			Toast._toasts[0].state = 0
+		return
+	toastWidth = 100
+	surfs = []
+	for team in teams:
+		name = myfont.render(team.name, False, team.color)
+		points = myfont.render(str(team.points), False, HUDColor)
+		surfs.append((name, points))
+	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * totalTeams), pygame.SRCALPHA)
+	i = 0
+	for s in surfs:
+		surf.blit(s[0], (0, i))
+		surf.blit(s[1], (toastWidth - s[1].get_width(), i))
+		i += s[0].get_height() + 3
+	Toast(surf)
+
+class Arena:
+	arena = None
+	def __init__(self):
+		self.size = Vector(200, 15)
+		self.pos = Vector(mapWidth, mapHeight)//2 - self.size//2
+	def step(self):
+		pass
+	def draw(self):
+		pygame.draw.rect(gameMap, GRD,(self.pos, self.size))
+		pygame.draw.rect(ground, (102, 102, 153), (self.pos, self.size))
+	def wormsCheck(self):
+		for worm in PhysObj._worms:
+			checkPos = worm.pos + Vector(0, worm.radius * 2)
+			addExtra(checkPos, (255,255,255), 3)
+			if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and checkPos.y > self.pos.y and checkPos.y < self.pos.y + self.size.y:
+				worm.team.points += 1
 
 def saveGame():
 	file = open("wormsSave.txt", 'w')
@@ -6212,10 +6306,6 @@ def suddenDeath():
 def isOnMap(vec):
 	return not (vec[0] < 0 or vec[0] >= mapWidth or vec[1] < 0 or vec[1] >= mapHeight)
 
-class Camera:
-	def __init__(self, pos):
-		self.pos = pos
-
 def cheatActive(code):
 	code = code[:-1]
 	if code == "gibguns":
@@ -6278,6 +6368,7 @@ def addToUseList(string):
 	useList.append([myfont.render(string, False, HUDColor), string])
 	if len(useList) > 4:
 		useList.pop(0)
+
 def addToKillList():
 	"""add to kill list if points"""
 	amount = 1
@@ -6286,6 +6377,7 @@ def addToKillList():
 		killList.pop(0)
 	string = objectUnderControl.nameStr + ": " + str(amount)
 	killList.insert(0, (myfont.render(string, False, HUDColor), objectUnderControl.nameStr, amount))
+
 def drawUseList():
 	space = 0
 	for i, usedWeapon in enumerate(useList):
@@ -6294,6 +6386,7 @@ def drawUseList():
 		else:
 			space += useList[i-1][0].get_width() + 10
 			win.blit(usedWeapon[0], (30 + space, winHeight - 6))
+
 def inUsedList(string):
 	used = False
 	for i in useList:
@@ -6301,77 +6394,6 @@ def inUsedList(string):
 			used = True
 			break
 	return used
-
-class Toast:
-	_toasts = []
-	toastCount = 0
-	bottom = 0
-	middle = 1
-	def __init__(self, surf, mode=0):
-		Toast._toasts.append(self)
-		self.surf = surf
-		self.time = 0
-		self.mode = mode
-		if self.mode == Toast.bottom:
-			self.anchor = Vector(winWidth/2, winHeight)
-		else:
-			self.anchor = Vector(winWidth//2, winHeight//2) - tup2vec(self.surf.get_size())/2
-		self.pos = Vector()
-		self.state = 0
-		Toast.toastCount += 1
-		
-	def step(self):
-		if self.mode == Toast.bottom:
-			if self.state == 0:
-				self.pos.y -= 3
-				if self.pos.y < -self.surf.get_height():
-					self.state = 1
-			if self.state == 1:
-				self.time += 1
-				if self.time == fps * 3:
-					self.state = 2
-			if self.state == 2:
-				self.pos.y += 3
-				if self.pos.y > 0:
-					Toast._toasts.remove(self)
-					Toast.toastCount -= 1
-		elif self.mode == Toast.middle:
-			self.time += 1
-			if self.time == fps * 3:
-				Toast._toasts.remove(self)
-				Toast.toastCount -= 1
-			self.pos = uniform(0,2) * vectorUnitRandom()
-				
-	def draw(self):
-		if self.mode == Toast.bottom:
-			pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
-		win.blit(self.surf, self.anchor + self.pos)
-	def updateWinPos(self, pos):
-		self.anchor[0] = pos[0]
-		self.anchor[1] = pos[1]
-def toastInfo():
-	if gameMode < POINTS:
-		return
-	if Toast.toastCount > 0:
-		Toast._toasts[0].time = 0
-		if Toast._toasts[0].state == 2:
-			Toast._toasts[0].state = 0
-		return
-	toastWidth = 100
-	surfs = []
-	for team in teams:
-		name = myfont.render(team.name, False, team.color)
-		points = myfont.render(str(team.points), False, HUDColor)
-		surfs.append((name, points))
-	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * totalTeams), pygame.SRCALPHA)
-	i = 0
-	for s in surfs:
-		surf.blit(s[0], (0, i))
-		surf.blit(s[1], (toastWidth - s[1].get_width(), i))
-		i += s[0].get_height() + 3
-	Toast(surf)
-
-damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 
 def pickVictim():
 	global victim, terminatorHit
@@ -6408,23 +6430,6 @@ def drawDirInd(pos):
 	
 	pygame.draw.polygon(win, (255,0,0), [intersection + i + normalize(direction) * 4 * sin(timeOverall / 5) for i in points])
 
-class Arena:
-	def __init__(self):
-		self.size = Vector(200, 15)
-		self.pos = Vector(mapWidth, mapHeight)//2 - self.size//2
-	def step(self):
-		pass
-	def draw(self):
-		pygame.draw.rect(gameMap, GRD,(self.pos, self.size))
-		pygame.draw.rect(ground, (102, 102, 153), (self.pos, self.size))
-	def wormsCheck(self):
-		for worm in PhysObj._worms:
-			checkPos = worm.pos + Vector(0, worm.radius * 2)
-			addExtra(checkPos, (255,255,255), 3)
-			if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and checkPos.y > self.pos.y and checkPos.y < self.pos.y + self.size.y:
-				worm.team.points += 1
-arena = None
-
 lstep = 0
 lstepmax = 1
 def lstepper():
@@ -6439,6 +6444,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -6553,8 +6559,7 @@ def stateMachine():
 			if gameMode == CAPTURE_THE_FLAG:
 				placeFlag()
 			if gameMode == ARENA:
-				global arena
-				arena = Arena()
+				Arena.arena = Arena()
 			state = nextState
 	elif state == CHOOSE_STARTER:
 		playerControlPlacing = False
@@ -6572,7 +6577,7 @@ def stateMachine():
 				nWormsPerTeam = len(team)
 		
 		# health calc:
-		healthBar.calculateInit()
+		HealthBar.healthBar.calculateInit()
 		
 		if randomCycle:
 			w = choice(currentTeam.worms)
@@ -6581,7 +6586,7 @@ def stateMachine():
 		if gameMode == TERMINATOR: pickVictim()
 		camTrack = w
 		timeReset()
-		# healthBar.calculateTeamHealth()# calculateTeamHealth()
+
 		nextState = PLAYER_CONTROL_1
 		state = nextState
 	elif state == PLAYER_CONTROL_1:
@@ -6613,7 +6618,6 @@ def stateMachine():
 			if gameStableCounter == 10:
 				# next turn
 				gameStableCounter = 0
-				#healthBar.calculateTeamHealth()# calculateTeamHealth()
 				timeReset()
 				cycleWorms()
 				renderWeaponCount()
@@ -6767,6 +6771,12 @@ def onKeyPressEnter():
 		objectUnderControl.stable = False
 
 ################################################################################ Setup
+HealthBar.healthBar = HealthBar()
+damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
+commentator = Commentator()
+water = Water()
+Water.layersA.append(water)
+water.createLayers()
 
 def makeRandomTeams(teamQuantity, wormsPerTeam, names):
 	global teams, totalTeams, currentTeam, teamChoser
@@ -6818,17 +6828,12 @@ if __name__ == "__main__":
 					HomingMissile.Target.x, HomingMissile.Target.y = mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y
 					HomingMissile.showTarget = True
 				# cliking in menu
-				if len(Menu.menus) > 0:
-					buttonPressed = False
-					for menu in Menu.menus:
-						for button in menu.buttons:
-							if button.selected and button.active:
-								button.activate()
-								buttonPressed = True
-								break
-					if buttonPressed:
-						while len(Menu.menus) > 0:
-							Menu.menus[0].destroy()
+				if Menu.event:
+					Menu.menus = []
+					if Menu.event in [w[0] for w in weapons]:
+						actionWeaponButton(Menu.event)
+					elif Menu.event in [u[0] for u in utilities]:
+						actionUtilityButton(Menu.event)
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
 				# testing mainly
 				# testerFunc()
@@ -6843,9 +6848,7 @@ if __name__ == "__main__":
 					if len(Menu.menus) == 0:
 						weaponMenuInit()
 					else:
-						while len(Menu.menus) > 0:
-							Menu.menus[0].destroy()
-						
+						Menu.menus.clear()
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down
 				if len(Menu.menus) > 0:
 					scrollMenu()
@@ -7019,18 +7022,6 @@ if __name__ == "__main__":
 			# with smooth transition:
 			camPos += ((camTrack.pos - Vector(int(1280 / scalingFactor), int(720 / scalingFactor))/2) - camPos) * 0.2
 		
-		# move menus
-		if len(Menu.menus) > 0:
-			Menu.menus[0].updateWinPos((winWidth - Menu.width - 2 * Menu.border, 0))
-			if len(Menu.menus) > 1:
-				Menu.menus[1].updateWinPos((winWidth - 2 * Menu.width - 4 * Menu.border - 1, 0))
-		if len(Toast._toasts) > 0:
-			for t in Toast._toasts:
-				if t.mode == Toast.bottom:
-					t.updateWinPos((winWidth/2, winHeight))
-				elif t.mode == Toast.middle:
-					t.updateWinPos(Vector(winWidth/2, winHeight/2) - tup2vec(t.surf.get_size())/2)
-					
 		# constraints:
 		if camPos.y < 0: camPos.y = 0
 		if camPos.y >= mapHeight - winHeight: camPos.y = mapHeight - winHeight
@@ -7072,7 +7063,7 @@ if __name__ == "__main__":
 		water.stepAll()
 		cloudManager()
 		
-		if arena: arena.step()
+		if Arena.arena: Arena.arena.step()
 		
 		# reset actions
 		actionMove = False
@@ -7095,7 +7086,7 @@ if __name__ == "__main__":
 		
 		if currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
 		if gameMode == TERMINATOR and victim and victim.alive: drawTarget(victim.pos)
-		if arena: arena.draw()
+		if Arena.arena: Arena.arena.draw()
 			
 		# draw shooting indicator
 		if objectUnderControl and state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and objectUnderControl.health > 0:
@@ -7125,8 +7116,8 @@ if __name__ == "__main__":
 				win.blit(pygame.transform.flip(airStrikeSpr, False if airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(airStrikeSpr.get_size())/2))
 		if useListMode: drawUseList()
 		# draw health bar
-		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: healthBar.step()
-		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: healthBar.draw() # teamHealthDraw()
+		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: HealthBar.healthBar.step()
+		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: HealthBar.healthBar.draw() # teamHealthDraw()
 		if gameMode == TERMINATOR and victim and victim.alive:
 			drawDirInd(victim.pos)
 		if gameMode == TARGETS and objectUnderControl:
@@ -7134,6 +7125,19 @@ if __name__ == "__main__":
 				drawDirInd(target.pos)
 		
 		# weapon menu:
+		# move menus
+		if len(Menu.menus) > 0:
+			Menu.menus[0].updatePosX(winWidth - 100 - Menu.border)
+			if len(Menu.menus) > 1:
+				Menu.menus[1].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
+		if len(Toast._toasts) > 0:
+			for t in Toast._toasts:
+				if t.mode == Toast.bottom:
+					t.updateWinPos((winWidth/2, winHeight))
+				elif t.mode == Toast.middle:
+					t.updateWinPos(Vector(winWidth/2, winHeight/2) - tup2vec(t.surf.get_size())/2)
+		# step menus
+		Menu.event = None
 		if len(Menu.menus) > 0:
 			for menu in Menu.menus: menu.step()
 			for menu in Menu.menus: menu.draw()
