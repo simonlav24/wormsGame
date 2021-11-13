@@ -38,6 +38,11 @@ if True:
 	PUTABLE = 1
 	CLICKABLE = 2
 	GUN = 3
+	UTILITY = 4
+	
+	WEAPONS = 0
+	UTILITIES = 1
+	ARTIFACTS = 2
 	
 	RIGHT = 1
 	LEFT = -1
@@ -1527,9 +1532,9 @@ class Worm (PhysObj):
 			pygame.draw.rect(win, (220,0,0), (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
 			
 		# draw artifact
-		if self is objectUnderControl and len(self.team.artifacts) > 0 and holdArtifact:
-			if self.team.artifacts[0] == MJOLNIR:
-				win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
+		# if self is objectUnderControl and len(self.team.artifacts) > 0 and holdArtifact:
+			# if self.team.artifacts[0] == MJOLNIR:
+				# win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
 			
 		# draw worm sprite
 		win.blit(self.surf, point2world(self.pos - self.radius * Vector(1,1)))
@@ -4982,64 +4987,113 @@ class MjolnirReturn:
 
 ################################################################################ Weapons setup
 
-weapons = []
-if True:
-	weapons.append(["missile", CHARGABLE, -1, MISSILES, False, 0])
-	weapons.append(["gravity missile", CHARGABLE, 5, MISSILES, False, 0])
-	weapons.append(["bunker buster", CHARGABLE, 2, MISSILES, False, 0])
-	weapons.append(["homing missile", CHARGABLE, 2, MISSILES, False, 0])
-	weapons.append(["seeker", CHARGABLE, 1, MISSILES, False, 0])
-	weapons.append(["grenade", CHARGABLE, 5, GRENADES, True, 0])
-	weapons.append(["mortar", CHARGABLE, 3, GRENADES, True, 0])
-	weapons.append(["sticky bomb", CHARGABLE, 3, GRENADES, True, 0])
-	weapons.append(["gas grenade", CHARGABLE, 5, GRENADES, True, 0])
-	weapons.append(["electric grenade", CHARGABLE, 3, GRENADES, True, 0])
-	weapons.append(["raon launcher", CHARGABLE, 2, GRENADES, False, 0])
-	weapons.append(["distorter", CHARGABLE, 0, GRENADES, True, 0])
-	weapons.append(["shotgun", GUN, 5, GUNS, False, 0])
-	weapons.append(["long bow", GUN, 3, GUNS, False, 0])
-	weapons.append(["minigun", GUN, 5, GUNS, False, 0])
-	weapons.append(["gamma gun", GUN, 3, GUNS, False, 0])
-	weapons.append(["spear", CHARGABLE, 2, GUNS, False, 0])
-	weapons.append(["laser gun", GUN, 3, GUNS, False, 0])
-	weapons.append(["portal gun", GUN, 0, GUNS, False, 0])
-	weapons.append(["bubble gun", GUN, 1, GUNS, False, 2])
-	weapons.append(["petrol bomb", CHARGABLE, 5, FIREY, False, 0])
-	weapons.append(["flame thrower", PUTABLE, 5, FIREY, False, 0])
-	weapons.append(["mine", PUTABLE, 5, GRENADES, False, 0])
-	weapons.append(["TNT", PUTABLE, 1, GRENADES, False, 0])
-	weapons.append(["covid 19", PUTABLE, 0, GRENADES, False, 0])
-	weapons.append(["sheep", PUTABLE, 1, GRENADES, False, 0])
-	weapons.append(["snail", CHARGABLE, 2, GRENADES, False, 0])
-	weapons.append(["baseball", PUTABLE, 3, MISC, False, 0])
-	weapons.append(["girder", CLICKABLE, -1, MISC, False, 0])
-	weapons.append(["rope", PUTABLE, 3, MISC, False, 0])
-	weapons.append(["parachute", PUTABLE, 3, MISC, False, 0])
-	weapons.append(["venus fly trap", CHARGABLE, 1, MISC, False, 0])
-	weapons.append(["sentry turret", PUTABLE, 0, MISC, False, 0])
-	weapons.append(["ender pearl", CHARGABLE, 0, MISC, False, 0])
-	weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
-	weapons.append(["acid bottle", CHARGABLE, 1, MISC, False, 0])
-	weapons.append(["artillery assist", CHARGABLE, 1, AIRSTRIKE, False, 0])
-	weapons.append(["chum bucket", CHARGABLE, 1, AIRSTRIKE, False, 0])
-	weapons.append(["airstrike", CLICKABLE, 1, AIRSTRIKE, False, 8])
-	weapons.append(["napalm strike", CLICKABLE, 1, AIRSTRIKE, False, 8])
-	weapons.append(["mine strike", CLICKABLE, 0, AIRSTRIKE, False, 1])
-	weapons.append(["holy grenade", CHARGABLE, 0, LEGENDARY, True, 1])
-	weapons.append(["banana", CHARGABLE, 0, LEGENDARY, True, 1])
-	weapons.append(["earthquake", PUTABLE, 0, LEGENDARY, False, 1])
-	weapons.append(["gemino mine", CHARGABLE, 0, LEGENDARY, False, 1])
-	weapons.append(["bee hive", CHARGABLE, 0, LEGENDARY, False, 1])
-	weapons.append(["vortex grenade", CHARGABLE, 0, LEGENDARY, True, 1])
-	weapons.append(["chilli pepper", CHARGABLE, 0, LEGENDARY, False, 1])
-	weapons.append(["raging bull", PUTABLE, 0, LEGENDARY, False, 1])
-	weapons.append(["electro boom", CHARGABLE, 0, LEGENDARY, True, 1])
-	weapons.append(["pokeball", CHARGABLE, 0, LEGENDARY, True, 1])
-	weapons.append(["green shell", PUTABLE, 0, LEGENDARY, False, 1])
-	weapons.append(["guided missile", PUTABLE, 0, LEGENDARY, False, 1])
+class WeaponManager:
+	def __init__(self):
+		self.weapons = []
+		self.weapons.append(["missile", CHARGABLE, -1, MISSILES, False, 0])
+		self.weapons.append(["gravity missile", CHARGABLE, 5, MISSILES, False, 0])
+		self.weapons.append(["bunker buster", CHARGABLE, 2, MISSILES, False, 0])
+		self.weapons.append(["homing missile", CHARGABLE, 2, MISSILES, False, 0])
+		self.weapons.append(["seeker", CHARGABLE, 1, MISSILES, False, 0])
+		self.weapons.append(["grenade", CHARGABLE, 5, GRENADES, True, 0])
+		self.weapons.append(["mortar", CHARGABLE, 3, GRENADES, True, 0])
+		self.weapons.append(["sticky bomb", CHARGABLE, 3, GRENADES, True, 0])
+		self.weapons.append(["gas grenade", CHARGABLE, 5, GRENADES, True, 0])
+		self.weapons.append(["electric grenade", CHARGABLE, 3, GRENADES, True, 0])
+		self.weapons.append(["raon launcher", CHARGABLE, 2, GRENADES, False, 0])
+		self.weapons.append(["distorter", CHARGABLE, 0, GRENADES, True, 0])
+		self.weapons.append(["shotgun", GUN, 5, GUNS, False, 0])
+		self.weapons.append(["long bow", GUN, 3, GUNS, False, 0])
+		self.weapons.append(["minigun", GUN, 5, GUNS, False, 0])
+		self.weapons.append(["gamma gun", GUN, 3, GUNS, False, 0])
+		self.weapons.append(["spear", CHARGABLE, 2, GUNS, False, 0])
+		self.weapons.append(["laser gun", GUN, 3, GUNS, False, 0])
+		self.weapons.append(["portal gun", GUN, 0, GUNS, False, 0])
+		self.weapons.append(["bubble gun", GUN, 1, GUNS, False, 2])
+		self.weapons.append(["petrol bomb", CHARGABLE, 5, FIREY, False, 0])
+		self.weapons.append(["flame thrower", PUTABLE, 5, FIREY, False, 0])
+		self.weapons.append(["mine", PUTABLE, 5, GRENADES, False, 0])
+		self.weapons.append(["TNT", PUTABLE, 1, GRENADES, False, 0])
+		self.weapons.append(["covid 19", PUTABLE, 0, GRENADES, False, 0])
+		self.weapons.append(["sheep", PUTABLE, 1, GRENADES, False, 0])
+		self.weapons.append(["snail", CHARGABLE, 2, GRENADES, False, 0])
+		self.weapons.append(["baseball", PUTABLE, 3, MISC, False, 0])
+		self.weapons.append(["girder", CLICKABLE, -1, MISC, False, 0])
+		self.weapons.append(["rope", PUTABLE, 3, MISC, False, 0])
+		self.weapons.append(["parachute", PUTABLE, 3, MISC, False, 0])
+		self.weapons.append(["venus fly trap", CHARGABLE, 1, MISC, False, 0])
+		self.weapons.append(["sentry turret", PUTABLE, 0, MISC, False, 0])
+		self.weapons.append(["ender pearl", CHARGABLE, 0, MISC, False, 0])
+		self.weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
+		self.weapons.append(["acid bottle", CHARGABLE, 1, MISC, False, 0])
+		self.weapons.append(["artillery assist", CHARGABLE, 1, AIRSTRIKE, False, 0])
+		self.weapons.append(["chum bucket", CHARGABLE, 1, AIRSTRIKE, False, 0])
+		self.weapons.append(["airstrike", CLICKABLE, 1, AIRSTRIKE, False, 8])
+		self.weapons.append(["napalm strike", CLICKABLE, 1, AIRSTRIKE, False, 8])
+		self.weapons.append(["mine strike", CLICKABLE, 0, AIRSTRIKE, False, 1])
+		self.weapons.append(["holy grenade", CHARGABLE, 0, LEGENDARY, True, 1])
+		self.weapons.append(["banana", CHARGABLE, 0, LEGENDARY, True, 1])
+		self.weapons.append(["earthquake", PUTABLE, 0, LEGENDARY, False, 1])
+		self.weapons.append(["gemino mine", CHARGABLE, 0, LEGENDARY, False, 1])
+		self.weapons.append(["bee hive", CHARGABLE, 0, LEGENDARY, False, 1])
+		self.weapons.append(["vortex grenade", CHARGABLE, 0, LEGENDARY, True, 1])
+		self.weapons.append(["chilli pepper", CHARGABLE, 0, LEGENDARY, False, 1])
+		self.weapons.append(["raging bull", PUTABLE, 0, LEGENDARY, False, 1])
+		self.weapons.append(["electro boom", CHARGABLE, 0, LEGENDARY, True, 1])
+		self.weapons.append(["pokeball", CHARGABLE, 0, LEGENDARY, True, 1])
+		self.weapons.append(["green shell", PUTABLE, 0, LEGENDARY, False, 1])
+		self.weapons.append(["guided missile", PUTABLE, 0, LEGENDARY, False, 1])
+		
+		self.weaponCount = len(weapons)
+		
+		self.weapons.append(["moon gravity", UTILITY, 0, WHITE, False, 0])
+		self.weapons.append(["double damage", UTILITY, 0, WHITE, False, 0])
+		self.weapons.append(["aim aid", UTILITY, 0, WHITE, False, 0])
+		self.weapons.append(["teleport", CLICKABLE, 0, WHITE, False, 0])
+		self.weapons.append(["switch worms", UTILITY, 0, WHITE, False, 0])
+		self.weapons.append(["time travel", UTILITY, 0, WHITE, False, 0])
+		self.weapons.append(["jet pack", UTILITY, 0, WHITE, False, 0])
+		self.weapons.append(["flare", CHARGABLE, 0, WHITE, False, 0])
+		
+		self.utilityCount = len(weapons) - weaponCount
+		
+		self.weapons.append(["hammer strike", PUTABLE, 0, LEGENDARY, False, 0])
+		self.weapons.append(["hammer throw", CHARGABLE, 0, LEGENDARY, False, 0])
+		self.weapons.append(["fly through", GUN, 0, LEGENDARY, False, 0])
+		
+		self.artifactCount = len(weapons) - weaponCount - utilityCount
 
-weaponDict = {}
-basicSet = []
+		self.weaponDict = {}
+		self.basicSet = []
+		for i, w in enumerate(weapons):
+			self.weaponDict[w[0]] = i
+			self.weaponDict[i] = w[0]
+			if not unlimitedMode: self.basicSet.append(w[2])
+			else: self.basicSet.append(-1)
+			
+		self.currentWeapon = self.weapons[0][0]
+	
+	def getStyle(self, string):
+		return self.weapons[self.weaponDict[string]][1]
+	def getCurrentStyle(self):
+		return self.weapons[self.weaponDict[self.currentWeapon]][1]
+	def getFused(self, string):
+		return self.weapons[self.weaponDict[string]][4]
+	def getBackColor(self, string):
+		return self.weapons[self.weaponDict[string]][3]
+	def getCategory(self, string):
+		index = self.weaponDict[string]
+		if index < self.weaponCount:
+			return WEAPONS
+		elif index < self.utilityCount:
+			return UTILITIES
+		else:
+			return ARTIFACTS
+			
+	def switchWeapon(self, string):
+		pass
+
+weaponMan = WeaponManager()
 
 def fire(weapon = None):
 	global decrease, shotCount, nextState, state, camTrack, fireWeapon, energyLevel, energising, timeTravelFire, currentWeapon
@@ -5340,7 +5394,7 @@ def fire(weapon = None):
 		addToUseList(currentWeapon)
 
 def fireClickable():
-	global currentWeapon, state, weaponStyle
+	global currentWeapon, state
 	decrease = True
 	if len(Menu.menus) > 0 or inUsedList(currentWeapon):
 		return
@@ -5349,8 +5403,7 @@ def fireClickable():
 		girder((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 	elif currentWeapon == "teleport":
 		currentTeam.utilityCounter[utilityDict["teleport"]] -= 1
-		currentWeapon = "missile"
-		weaponStyle = weapons[weaponDict[currentWeapon]][1]
+		weaponMan.switchWeapon("missile")
 		objectUnderControl.pos = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 		timeRemaining(retreatTime)
 		state = nextState
@@ -5372,44 +5425,38 @@ def fireClickable():
 	timeRemaining(retreatTime)
 	state = nextState
 
-for i, w in enumerate(weapons):
-	weaponDict[w[0]] = i
-	weaponDict[i] = w[0]
-	if not unlimitedMode: basicSet.append(w[2])
-	else: basicSet.append(-1)
-
-utilities = []
-if True:
-	utilities.append(["moon gravity"])
-	utilities.append(["double damage"])
-	utilities.append(["aim aid"])
-	utilities.append(["teleport"])
-	utilities.append(["switch worms"])
-	utilities.append(["time travel"])
-	utilities.append(["jet pack"])
-	utilities.append(["flare"])
+# utilities = []
+# if True:
+	# utilities.append(["moon gravity"])
+	# utilities.append(["double damage"])
+	# utilities.append(["aim aid"])
+	# utilities.append(["teleport"])
+	# utilities.append(["switch worms"])
+	# utilities.append(["time travel"])
+	# utilities.append(["jet pack"])
+	# utilities.append(["flare"])
 	
-	weaponDict["teleport"] = -1
-	weaponDict["flare"] = -1
+	# weaponDict["teleport"] = -1
+	# weaponDict["flare"] = -1
 
-utilityDict = {}
-for i , u in enumerate(utilities):
-	utilityDict[u[0]] = i
-	utilityDict[i] = u[0]
+# utilityDict = {}
+# for i , u in enumerate(utilities):
+	# utilityDict[u[0]] = i
+	# utilityDict[i] = u[0]
 
-artifactsWeapons = []
-if True:
-	artifactsWeapons.append(["hammer strike", PUTABLE, MJOLNIR])
-	artifactsWeapons.append(["hammer throw", CHARGABLE, MJOLNIR])
-	artifactsWeapons.append(["fly through", GUN, MJOLNIR])
+# artifactsWeapons = []
+# if True:
+	# artifactsWeapons.append(["hammer strike", PUTABLE, MJOLNIR])
+	# artifactsWeapons.append(["hammer throw", CHARGABLE, MJOLNIR])
+	# artifactsWeapons.append(["fly through", GUN, MJOLNIR])
 	
-	for a in artifactsWeapons:
-		weaponDict[a[0]] = -1
+	# for a in artifactsWeapons:
+		# weaponDict[a[0]] = -1
 
-artifactDict = {}
-for i , a in enumerate(artifactsWeapons):
-	artifactDict[a[0]] = i
-	artifactDict[i] = a[0]
+# artifactDict = {}
+# for i , a in enumerate(artifactsWeapons):
+	# artifactDict[a[0]] = i
+	# artifactDict[i] = a[0]
 
 ################################################################################ Teams
 class Team:
@@ -5420,14 +5467,14 @@ class Team:
 			self.nameList = []
 		self.color = color
 		self.weaponCounter = basicSet.copy()
-		self.utilityCounter = [0] * len(utilities)
+		# self.utilityCounter = [0] * len(utilities)
 		self.worms = []
 		self.name = name
 		self.damage = 0
 		self.killCount = 0
 		self.points = 0
 		self.flagHolder = False
-		self.artifacts = [MJOLNIR]
+		# self.artifacts = [MJOLNIR]
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
@@ -5468,30 +5515,29 @@ shuffle(teams)
 
 def renderWeaponCount():
 	global currentTeam, currentWeapon, currentWeaponSurf
-	if currentWeapon in [w[0] for w in weapons]:
-		color = HUDColor
-		if currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 or weapons[weaponDict[currentWeapon]][5] != 0 or inUsedList(currentWeapon):
-			color = GREY
-		weaponStr = currentWeapon
-		if currentTeam.weaponCounter[weaponDict[currentWeapon]] < 0:
-			currentWeaponSurf = myfont.render(weaponStr, False, color)
-		else:
-			if weaponStr == "bunker buster":
-				weaponStr += " (drill)" if BunkerBuster.mode else " (rocket)"
-			currentWeaponSurf = myfont.render(weaponStr + " " + str(currentTeam.weaponCounter[weaponDict[currentWeapon]]), False, color)
-		
-		if weapons[weaponDict[currentWeapon]][4]:
-			delayAdd = myfont.render("delay: " + str(fuseTime//fps), False, color)
-			surf = pygame.Surface((currentWeaponSurf.get_width() + delayAdd.get_width() + 10, currentWeaponSurf.get_height()), pygame.SRCALPHA)
-			surf.blit(currentWeaponSurf, (0,0))
-			surf.blit(delayAdd, (currentWeaponSurf.get_width() + 10,0))
-			currentWeaponSurf = surf
-	
-	elif currentWeapon in [u[0] for u in utilities]:
-		currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.utilityCounter[utilityDict[currentWeapon]]), False, HUDColor)
-	
+	color = HUDColor
+	if currentTeam.weaponCounter[weaponDict[currentWeapon]] == 0 or weapons[weaponDict[currentWeapon]][5] != 0 or inUsedList(currentWeapon):
+		color = GREY
+	weaponStr = currentWeapon
+	if currentTeam.weaponCounter[weaponDict[currentWeapon]] < 0:
+		currentWeaponSurf = myfont.render(weaponStr, False, color)
 	else:
-		currentWeaponSurf = myfont.render(currentWeapon, False, HUDColor)
+		if weaponStr == "bunker buster":
+			weaponStr += " (drill)" if BunkerBuster.mode else " (rocket)"
+		currentWeaponSurf = myfont.render(weaponStr + " " + str(currentTeam.weaponCounter[weaponDict[currentWeapon]]), False, color)
+	
+	if weapons[weaponDict[currentWeapon]][4]:
+		delayAdd = myfont.render("delay: " + str(fuseTime//fps), False, color)
+		surf = pygame.Surface((currentWeaponSurf.get_width() + delayAdd.get_width() + 10, currentWeaponSurf.get_height()), pygame.SRCALPHA)
+		surf.blit(currentWeaponSurf, (0,0))
+		surf.blit(delayAdd, (currentWeaponSurf.get_width() + 10,0))
+		currentWeaponSurf = surf
+	
+	# elif currentWeapon in [u[0] for u in utilities]:
+		# currentWeaponSurf = myfont.render(currentWeapon + " " + str(currentTeam.utilityCounter[utilityDict[currentWeapon]]), False, HUDColor)
+	
+	# else:
+		# currentWeaponSurf = myfont.render(currentWeapon, False, HUDColor)
 		
 def addToRecord(dic):
 	keys = ["time", "winner", "mostDamage", "damager", "mode", "points"]
@@ -5990,66 +6036,78 @@ class Button:
 
 def clickInMenu():
 	Menu.menus = []
-	if Menu.event in [w[0] for w in weapons]:
-		clickWeaponButton(Menu.event)
-	elif Menu.event in [u[0] for u in utilities]:
-		clickUtilityButton(Menu.event)
-	elif Menu.event in [a[0] for a in artifactsWeapons]:
-		clickArtifactButton(Menu.event)
+	# if Menu.event in [w[0] for w in weapons]:
+	clickWeaponButton(Menu.event)
+	# elif Menu.event in [u[0] for u in utilities]:
+		# clickUtilityButton(Menu.event)
+	# elif Menu.event in [a[0] for a in artifactsWeapons]:
+		# clickArtifactButton(Menu.event)
 
 def clickWeaponButton(weapon):
 	global currentWeapon, weaponStyle
-	currentWeapon = weapon
-	renderWeaponCount()
-	weaponStyle = weapons[weaponDict[currentWeapon]][1]
-
-def clickUtilityButton(utility):
-	global currentWeapon, weaponStyle
-	decrease = True
 	
-	if utility == "moon gravity":
-		global globalGravity
-		globalGravity = 0.1
-	elif utility == "double damage":
-		global damageMult, radiusMult
-		damageMult += damageMult
-		radiusMult *= 1.5
-	elif utility == "aim aid":
-		global aimAid
-		aimAid = True
-	elif utility == "teleport":
-		currentWeapon = "teleport"
-		weaponStyle = CLICKABLE
-		decrease = False
-		renderWeaponCount()
-	elif utility == "switch worms":
-		global switchingWorms
-		if switchingWorms:
-			decrease = False
-		switchingWorms = True
-	elif utility == "time travel":
-		global timeTravel
-		if not timeTravel:
-			timeTravelInitiate()
-	elif utility == "jet pack":
-		objectUnderControl.toggleJetpack()
-	elif utility == "flare":
-		currentWeapon = "flare"
-		weaponStyle = CHARGABLE
-		decrease = False
-		renderWeaponCount()
-		
-	if decrease:
-		currentTeam.utilityCounter[utilityDict[utility]] -= 1
-
-def clickArtifactButton(artifact):
-	global currentWeapon, weaponStyle
-	currentWeapon = artifact
+	if weapons[weaponDict[weapon]][1] == UTILITY:
+		print("handle utility")
+		return
+	
+	currentWeapon = weapon
+	weaponStyle = weapons[weaponDict[currentWeapon]][1]
 	renderWeaponCount()
-	weaponStyle = artifactsWeapons[artifactDict[currentWeapon]][1]
+	
+# def clickUtilityButton(utility):
+	# global currentWeapon, weaponStyle
+	# decrease = True
+	
+	# if utility == "moon gravity":
+		# global globalGravity
+		# globalGravity = 0.1
+	# elif utility == "double damage":
+		# global damageMult, radiusMult
+		# damageMult += damageMult
+		# radiusMult *= 1.5
+	# elif utility == "aim aid":
+		# global aimAid
+		# aimAid = True
+	# elif utility == "teleport":
+		# currentWeapon = "teleport"
+		# weaponStyle = CLICKABLE
+		# decrease = False
+		# renderWeaponCount()
+	# elif utility == "switch worms":
+		# global switchingWorms
+		# if switchingWorms:
+			# decrease = False
+		# switchingWorms = True
+	# elif utility == "time travel":
+		# global timeTravel
+		# if not timeTravel:
+			# timeTravelInitiate()
+	# elif utility == "jet pack":
+		# objectUnderControl.toggleJetpack()
+	# elif utility == "flare":
+		# currentWeapon = "flare"
+		# weaponStyle = CHARGABLE
+		# decrease = False
+		# renderWeaponCount()
+		
+	# if decrease:
+		# currentTeam.utilityCounter[utilityDict[utility]] -= 1
+
+# def clickArtifactButton(artifact):
+	# global currentWeapon, weaponStyle
+	# currentWeapon = artifact
+	# renderWeaponCount()
+	# weaponStyle = artifactsWeapons[artifactDict[currentWeapon]][1]
 
 def weaponMenuInit():
 	weaponsMenu = Menu()
+	
+	
+	# check if there are utilities:
+	print(currentTeam.weaponCounter[0:weaponCount])
+	
+	
+	
 	weaponsMenu.pos = Vector(winWidth - 100 - Menu.border, 1)
 	for i, w in enumerate(weapons):
 		if currentTeam.weaponCounter[i] != 0:
@@ -6063,7 +6121,7 @@ def weaponMenuInit():
 
 	if sum(currentTeam.utilityCounter) > 0:
 		utilityMenu = Menu()
-		utilityMenu.pos = Vector(winWidth - 2 * 100 - 1 * Menu.border - 1, 1)
+		
 		for i, u in enumerate(utilities):
 			if currentTeam.utilityCounter[i] != 0:
 				secText = str(currentTeam.utilityCounter[i])
@@ -6422,7 +6480,7 @@ def randomStartingWeapons(amount):
 			team.weaponCounter[weaponDict[effect]] += 1
 			if randint(0,2) >= 1:
 				effect = choice(["moon gravity", "teleport", "jet pack", "aim aid", "switch worms"])
-				team.utilityCounter[utilityDict[effect]] += 1
+				# team.utilityCounter[utilityDict[effect]] += 1
 			if randint(0,7) == 1:
 				if randint(0,1) == 0:
 					team.weaponCounter[weaponDict["portal gun"]] += 1
@@ -7258,7 +7316,7 @@ if __name__ == "__main__":
 		timeDraw()
 		win.blit(currentWeaponSurf, ((int(25), int(8))))
 		commentator.step()
-		if not currentWeapon in ["flare", "teleport"] + [a[0] for a in artifactsWeapons]:
+		if not currentWeapon in ["flare", "teleport"]:
 			if weapons[weaponDict[currentWeapon]][3] == AIRSTRIKE:
 				mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 				win.blit(pygame.transform.flip(airStrikeSpr, False if airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(airStrikeSpr.get_size())/2))
