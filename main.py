@@ -130,14 +130,13 @@ if True:
 	cheatCode = ""
 	HUDColor = BLACK
 	holdArtifact = True
+	artifactsMode = True
+	worldArtifacts = [MJOLNIR]
 
 # bugs & improvements:
 # chum and seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
-
-# to fix:
-# time travel
 
 ################################################################################ Map
 if True:
@@ -206,6 +205,7 @@ if True:
 	parser.add_argument("-sd", "--sudden_death", default=-1, help="rounds untill sudden death", type=int)
 	parser.add_argument("-sdt", "--sudden_death_tsunami", type=bool, nargs='?', const=True, default=False, help="tsunami sudden death style")
 	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
+	parser.add_argument("-art", "--artifacts", type=bool, nargs='?', const=True, default=False, help="artifacts mode")
 	args = parser.parse_args()
 	
 	gameMode = args.game_mode
@@ -222,6 +222,7 @@ if True:
 	unlimitedMode = args.unlimited
 	manualPlace = args.place
 	roundsTillSuddenDeath = args.sudden_death
+	artifactsMode = args.artifacts
 	if args.sudden_death_tsunami:
 		suddenDeathStyle.append(TSUNAMI)
 	if args.sudden_death_plague:
@@ -1210,7 +1211,7 @@ class PhysObj:
 					self.vel.x *= 0.8
 			else:
 				self.outOfMapResponse()
-				self._reg.remove(self)
+				self.removeFromGame()
 				return
 		
 		if magVel < 0.1: # creates a double jump problem
@@ -1219,7 +1220,7 @@ class PhysObj:
 		self.secondaryStep()
 		
 		if self.dead:
-			self._reg.remove(self)
+			self.removeFromGame()
 			self.deathResponse()
 			del self
 	def applyForce(self):
@@ -1233,6 +1234,8 @@ class PhysObj:
 		pass
 	def secondaryStep(self):
 		pass
+	def removeFromGame(self):
+		PhysObj._reg.remove(self)
 	def damage(self, value, damageType=0):
 		pass
 	def collisionRespone(self, ppos):
@@ -1416,7 +1419,6 @@ class Worm (PhysObj):
 		self.wormCollider = True
 		self.flagHolder = False
 		self.sleep = False
-		self.holding = 0
 		self.surf = pygame.Surface((8, 8), pygame.SRCALPHA)
 		self.setSurf()
 		if darkness:
@@ -1517,7 +1519,6 @@ class Worm (PhysObj):
 				terminatorHit = True
 	def setSurf(self):
 		pygame.draw.circle(self.surf, self.color, (4,4), 4)
-		# pygame.draw.rect(self.surf, WHITE, ())
 	def draw(self):
 		if not self is objectUnderControl and self.alive:
 			pygame.draw.circle(wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
@@ -1531,10 +1532,12 @@ class Worm (PhysObj):
 			pygame.draw.rect(win, (220,0,0), (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
 			
 		# draw artifact
-		# if self is objectUnderControl and len(self.team.artifacts) > 0 and holdArtifact:
-			# if self.team.artifacts[0] == MJOLNIR:
-				# win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
-			
+		if len(self.team.artifacts) > 0 and holdArtifact:
+			if self is objectUnderControl and weaponMan.getCategory(weaponMan.currentWeapon) == ARTIFACTS:
+				if weaponMan.currentArtifact() in self.team.artifacts:
+					if weaponMan.currentArtifact() == MJOLNIR:
+						win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
+
 		# draw worm sprite
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		
@@ -2616,6 +2619,8 @@ class Bee:
 		self.unreachable = []
 		self.vel = Vector()
 		self.surf = None
+	def removeFromGame(self):
+		PhysObj._reg.remove(self)
 	def step(self):
 		self.lifespan -= 1
 		gameDistable()
@@ -3148,6 +3153,8 @@ class Covid19:
 		self.lifespan = 430
 		self.unreachable = []
 		self.bitten = []
+	def removeFromGame(self):
+		PhysObj._reg.remove(self)
 	def step(self):
 		# life:
 		self.lifespan -= 1
@@ -3278,6 +3285,8 @@ class LongBow:
 	def destroy(self):
 		PhysObj._reg.remove(self)
 		del self
+	def removeFromGame(self):
+		PhysObj._reg.remove(self)
 	def step(self):
 		if not self.stuck:
 			ppos = self.pos + self.vel
@@ -3719,21 +3728,13 @@ class Venus:
 				if worm in Debrie._debries or worm in Portal._reg or worm in Flag.flags:
 					continue
 				if dist(worm.pos, pos) <= 25:
-					
 					self.mode = Venus.catch
 					if worm in PhysObj._worms:
-						global damageThisTurn
-						# if not worm == objectUnderControl:
-							# if not sentring and not worm in objectUnderControl.team.worms:
-								# damageThisTurn += worm.health
 						worm.dieded(Worm.causeVenus)
 						Commentator.que.append(choice([("", ("yummy",""), worm.team.color), (worm.nameStr, ("", " was delicious"), worm.team.color), (worm.nameStr, ("", " is good protein"), worm.team.color), (worm.nameStr, ("", " is some serious gourmet s**t"), worm.team.color)]))
 					else:
 						self.explossive = True
-						if worm in PhysObj._reg:
-							PhysObj._reg.remove(worm)
-						if worm in Seagull._reg:
-							worm.removeFromGame()
+						worm.removeFromGame()
 					break
 		elif self.mode == Venus.catch:
 			gameDistable()
@@ -3744,7 +3745,7 @@ class Venus:
 				self.timer = 0
 		elif self.mode == Venus.hold:
 			gameDistable()
-			if self.timer == fps:
+			if self.timer == 1 * fps:
 				self.mode = Venus.release
 				if self.explossive:
 					self.explossive = False
@@ -4954,7 +4955,7 @@ class MjolnirThrow(PhysObj):
 			drawLightning(self, worm)
 		surf = pygame.transform.rotate(imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-		
+
 class MjolnirReturn:
 	def __init__(self, pos, angle):
 		nonPhys.append(self)
@@ -4982,7 +4983,110 @@ class MjolnirReturn:
 	def draw(self):
 		surf = pygame.transform.rotate(imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-	
+
+class Mjolnir(PhysObj):
+	def __init__(self):
+		self.initialize()
+		self.pos = Vector(randint(20, mapWidth - 20), -50)
+		self.vel = Vector(randint(-2,2), 0)
+		self.radius = 3
+		self.damp = 0.2
+		self.angle = 0
+		global camTrack
+		camTrack = self
+		commentator.que.append(("", ("a gift from the gods", ""), HUDColor))
+	def secondaryStep(self):
+		if self.vel.getMag() > 1:
+			self.rotating = True
+		else:
+			self.rotating = False
+		if self.rotating:
+			self.angle = -degrees(self.vel.getAngle()) - 90
+		# pick up
+		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0:
+			PhysObj._reg.remove(self)
+			commentator.que.append((objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), currentTeam.color))
+			currentTeam.artifacts.append(MJOLNIR)
+			for w in weaponMan.artifactWeapons(MJOLNIR):
+				currentTeam.ammo(w[0], -1, True)
+			del self
+			return
+	def removeFromGame(self):
+		# print("mjolnir gone")
+		if self in PhysObj._reg:
+			PhysObj._reg.remove(self)
+		worldArtifacts.append(MJOLNIR)
+	def collisionRespone(self, ppos):
+		vel = self.vel.getMag()
+		# print(vel, vel * 4)
+		if vel > 4:
+			boom(self.pos, max(20, 2 * self.vel.getMag()))
+		elif vel < 1:
+			self.vel *= 0
+	def draw(self):
+		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+
+class MjolnirFly(PhysObj):
+	flying = False
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		self.radius = 3
+		self.damp = 0.3
+		self.rotating = True
+		self.angle = 0
+		global holdArtifact
+		holdArtifact = False
+		PhysObj._reg.remove(self)
+		PhysObj._reg.insert(0,self)
+		MjolnirFly.flying = True
+	def secondaryStep(self):
+		if self.vel.getMag() > 1:
+			self.rotating = True
+		else:
+			self.rotating = False
+		if self.rotating:
+			self.angle = -degrees(self.vel.getAngle()) - 90
+			
+		objectUnderControl.pos = vectorCopy(self.pos)
+		objectUnderControl.vel = Vector()
+	def collisionRespone(self, ppos):
+		# colission with world:
+		response = Vector(0,0)
+		angle = atan2(self.vel.y, self.vel.x)
+		r = angle - pi#- pi/2
+		while r < angle + pi:#+ pi/2:
+			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
+			if testPos.x >= mapWidth or testPos.y >= mapHeight - Water.level or testPos.x < 0:
+				if mapClosed:
+					response += ppos - testPos
+					r += pi /8
+					continue
+				else:
+					r += pi /8
+					continue
+			if testPos.y < 0:
+				r += pi /8
+				continue
+			
+			if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
+				response += ppos - testPos
+			
+			r += pi /8
+		PhysObj._reg.remove(self)
+		
+		response.normalize()
+		pos = self.pos + response * (objectUnderControl.radius + 2)
+		objectUnderControl.pos = pos
+		MjolnirFly.flying = False
+	def removeFromGame(self):
+		PhysObj._reg.remove(self)
+		MjolnirFly.flying = False
+	def draw(self):
+		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 ################################################################################ Weapons setup
 
@@ -5056,9 +5160,9 @@ class WeaponManager:
 		
 		self.utilityCount = len(self.weapons) - self.weaponCount
 		
-		self.weapons.append(["hammer strike", PUTABLE, 0, LEGENDARY, False, 0])
-		self.weapons.append(["hammer throw", CHARGABLE, 0, LEGENDARY, False, 0])
-		self.weapons.append(["fly through", GUN, 0, LEGENDARY, False, 0])
+		self.weapons.append(["mjolnir strike", PUTABLE, 0, LEGENDARY, False, 0, MJOLNIR])
+		self.weapons.append(["mjolnir throw", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
+		self.weapons.append(["fly", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
 		
 		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
 
@@ -5091,6 +5195,15 @@ class WeaponManager:
 	def switchWeapon(self, string):
 		self.currentWeapon = string
 		self.renderWeaponCount()
+	def artifactWeapons(self, artifact):
+		moves = []
+		for w in self.weapons[self.weaponCount + self.utilityCount:]:
+			if w[6] == artifact:
+				moves.append(w)
+		return moves
+	def currentArtifact(self):
+		if self.getCategory(self.currentWeapon) == ARTIFACTS:
+			return self.weapons[self.currentIndex()][6]
 	def currentIndex(self):
 		return self.weaponDict[self.currentWeapon]
 	def currentActive(self):
@@ -5382,12 +5495,16 @@ def fire(weapon = None):
 		w = Chum(weaponOrigin, weaponDir, energy)
 	
 	# artifacts
-	elif weapon == "hammer strike":
+	elif weapon == "mjolnir strike":
 		objectUnderControl.boomAffected = False
 		boom(objectUnderControl.pos, 45)
 		objectUnderControl.boomAffected = True
-	elif weapon == "hammer throw":
+	elif weapon == "mjolnir throw":
 		w = MjolnirThrow(weaponOrigin, weaponDir, energy)
+	elif weapon == "fly":
+		if not MjolnirFly.flying:
+			w = MjolnirFly(weaponOrigin, weaponDir, energy)
+		nextState = PLAYER_CONTROL_1
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -5461,22 +5578,25 @@ class Team:
 			self.nameList = []
 		self.color = color
 		self.weaponCounter = weaponMan.basicSet.copy()
-		# self.utilityCounter = [0] * len(utilities)
 		self.worms = []
 		self.name = name
 		self.damage = 0
 		self.killCount = 0
 		self.points = 0
 		self.flagHolder = False
+		self.artifacts = []
+		
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
 		if len(self.nameList) > 0:
 			w = Worm(pos, self.nameList.pop(0), self)
 			self.worms.append(w)
-	def ammo(self, weapon, add=None):
-		if add:
+	def ammo(self, weapon, add=None, absolute=False):
+		if add and not absolute:
 			self.weaponCounter[weaponMan.weaponDict[weapon]] += add
+		elif add and absolute:
+			self.weaponCounter[weaponMan.weaponDict[weapon]] = add
 		return self.weaponCounter[weaponMan.weaponDict[weapon]]
 
 teams = []
@@ -5616,10 +5736,7 @@ def checkWinners():
 			if mostDamage[1]:
 				dic["mostDamage"] = str(int(mostDamage[0]))
 				dic["damager"] = mostDamage[1]
-	
 			addToRecord(dic)
-		
-			commentator.que.append((winningTeam.name, ("Taem "," won!"), winningTeam.color))
 			if len(winningTeam.worms) > 0:
 				camTrack = winningTeam.worms[0]
 		else:
@@ -5716,9 +5833,9 @@ def cycleWorms():
 			camTrack = w
 		if darkness:
 			for team in teams:
-				team.utilityCounter[utilityDict["flare"]] += 1
-				if team.utilityCounter[utilityDict["flare"]] > 3:
-					team.utilityCounter[utilityDict["flare"]] = 3
+				team.ammo("flare", 1)
+				if team.ammo("flare") > 3:
+					team.ammo("flare", -1)
 		return
 	
 	# rise water:
@@ -5728,6 +5845,17 @@ def cycleWorms():
 		roundCounter -= 1
 		waterRising = True
 		return
+	
+	# throw artifact:
+	if artifactsMode and len(worldArtifacts) > 0:
+		if randint(0,10) == 0:
+			artifact = choice(worldArtifacts)
+			worldArtifacts.remove(artifact)
+			if artifact == MJOLNIR:
+				Mjolnir()
+			nextState = WAIT_STABLE
+			roundCounter -= 1
+			return
 	
 	waterRising = False
 	raoning = False
@@ -6007,13 +6135,16 @@ def clickInMenu():
 		if weapon == "moon gravity":
 			global globalGravity
 			globalGravity = 0.1
+			Commentator.que.append(("", ("small step for wormanity", ""), HUDColor))
 		elif weapon == "double damage":
 			global damageMult, radiusMult
 			damageMult += damageMult
 			radiusMult *= 1.5
+			Commentator.que.append(("", ("this gonna hurt", ""), HUDColor))
 		elif weapon == "aim aid":
 			global aimAid
 			aimAid = True
+			Commentator.que.append(("", ("snipe em'", ""), HUDColor))
 		elif weapon == "teleport":
 			weaponMan.switchWeapon(weapon)
 			decrease = False
@@ -6022,10 +6153,12 @@ def clickInMenu():
 			if switchingWorms:
 				decrease = False
 			switchingWorms = True
+			Commentator.que.append(("", ("the ol' switcheroo", ""), HUDColor))
 		elif weapon == "time travel":
 			global timeTravel
 			if not timeTravel:
 				timeTravelInitiate()
+			Commentator.que.append(("", ("no need for roads", ""), HUDColor))
 		elif weapon == "jet pack":
 			objectUnderControl.toggleJetpack()
 		elif weapon == "flare":
@@ -6386,7 +6519,7 @@ def randomStartingWeapons(amount):
 			team.ammo(effect, 1)
 			if randint(0,2) >= 1:
 				effect = choice(["moon gravity", "teleport", "jet pack", "aim aid", "switch worms"])
-				# team.utilityCounter[utilityDict[effect]] += 1
+				team.ammo(effect, 1)
 			if randint(0,7) == 1:
 				if randint(0,1) == 0:
 					team.ammo("portal gun", 1)
@@ -6472,6 +6605,10 @@ def cheatActive(code):
 		global waterRise
 		waterRise = True
 		Commentator.que.append(("", ("", "water rising!"), HUDColor))
+	if code == "comeflywithme":
+		currentTeam.ammo("jet pack", 6)
+		currentTeam.ammo("rope", 6)
+		currentTeam.ammo("ender pearl", 6)
 	
 def gameDistable(): 
 	global gameStable, gameStableCounter
@@ -6560,6 +6697,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+	Mjolnir()
 
 ################################################################################ State machine
 if True:
@@ -6610,7 +6748,7 @@ def stateMachine():
 			allowAirStrikes = False
 			for team in teams:
 				for i, w in enumerate(team.weaponCounter):
-					if weaponMan.getBackColor(weaponMan.weapons[i]) == AIRSTRIKE:
+					if weaponMan.getBackColor(weaponMan.weapons[i][0]) == AIRSTRIKE:
 						team.weaponCounter[i] = 0
 		
 		nextState = PLACING_WORMS
@@ -6666,8 +6804,9 @@ def stateMachine():
 			if darkness:
 				global HUDColor
 				HUDColor = WHITE
+				weaponMan.renderWeaponCount()
 				for team in teams:
-					team.utilityCounter[utilityDict["flare"]] += 3
+					team.ammo("flare", 3)
 			if randomWeapons:
 				randomWeaponsGive()
 			if gameMode == CAPTURE_THE_FLAG:
@@ -7011,7 +7150,7 @@ if __name__ == "__main__":
 							keyWeapons = []
 							for i, w in enumerate(currentTeam.weaponCounter):
 								if w > 0 or w == -1:
-									if weapons[i][3] == LEGENDARY:
+									if weaponMan.weapons[i][3] == LEGENDARY:
 										keyWeapons.append(weaponDict[i])
 							weaponsSwitch = True
 						elif event.key == pygame.K_MINUS:
