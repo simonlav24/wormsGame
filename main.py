@@ -5141,8 +5141,6 @@ class MjolnirStrike:
 		drawLightning(Camera(Vector(self.pos.x, 0)), self)
 		for worm in self.worms:
 			drawLightning(Camera(Vector(self.pos.x, randint(0, int(self.pos.y)))), worm)
-		
-		
 
 ################################################################################ Weapons setup
 
@@ -6751,8 +6749,10 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	m = Mjolnir()
-	m.pos = mouse
+	# m = Mjolnir()
+	# m.pos = mouse
+	print("worldArtifacts=", worldArtifacts)
+	
 
 ################################################################################ State machine
 if True:
