@@ -1623,7 +1623,7 @@ class Worm (PhysObj):
 		if objectUnderControl == self:
 			if state == FIRE_MULTIPLE:
 				if weaponMan.getCurrentStyle() == GUN:
-					self.team.currentTeam.ammo(weaponMan.currentWeapon, -1)
+					self.team.ammo(weaponMan.currentWeapon, -1)
 					weaponMan.renderWeaponCount()
 			nextState = PLAYER_CONTROL_2
 			state = nextState
@@ -5075,18 +5075,74 @@ class MjolnirFly(PhysObj):
 				response += ppos - testPos
 			
 			r += pi /8
-		PhysObj._reg.remove(self)
 		
+		self.removeFromGame()
 		response.normalize()
 		pos = self.pos + response * (objectUnderControl.radius + 2)
 		objectUnderControl.pos = pos
-		MjolnirFly.flying = False
+		
 	def removeFromGame(self):
 		PhysObj._reg.remove(self)
 		MjolnirFly.flying = False
+		global holdArtifact
+		holdArtifact = True
 	def draw(self):
 		surf = pygame.transform.rotate(imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+
+class MjolnirStrike:
+	def __init__(self):
+		self.pos = objectUnderControl.pos
+		nonPhys.append(self)
+		global holdArtifact
+		holdArtifact = False
+		self.stage = 0
+		self.timer = 0
+		self.angle = 0
+		self.worms = []
+		self.facing = objectUnderControl.facing
+		objectUnderControl.boomAffected = False
+		self.radius = 0
+	def step(self):
+		self.pos = objectUnderControl.pos
+		self.facing = objectUnderControl.facing
+		if self.stage == 0:
+			self.angle += 1
+			if self.timer >= fps * 4:
+				self.stage = 1
+				self.timer = 0
+			# electrocute:
+			self.worms = []
+			for worm in PhysObj._worms:
+				if worm in currentTeam.worms:
+					continue
+				if self.pos.x - 60 < worm.pos.x and worm.pos.x < self.pos.x + 60 and worm.pos.y > self.pos.y:
+					self.worms.append(worm)
+					
+			for worm in self.worms:
+				if randint(1,100) < 5:
+					worm.damage(randint(1,8))
+					a = lambda x : 1 if x >= 0 else -1
+					worm.vel -= Vector(a(self.pos.x - worm.pos.x)*uniform(1.2,2.2), uniform(1.2,3.2))
+				if worm.health <= 0:
+					self.worms.remove(worm)
+		elif self.stage == 1:
+			self.angle += -30
+			if self.timer >= fps * 0.25:
+				boom(self.pos, 40)
+				nonPhys.remove(self)
+				objectUnderControl.boomAffected = True
+		self.timer += 1
+		gameDistable()
+	def draw(self):
+		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		surf = pygame.transform.flip(surf, self.facing == LEFT, False)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2 + Vector(0, -5)))
+		drawLightning(Camera(Vector(self.pos.x, 0)), self)
+		for worm in self.worms:
+			drawLightning(Camera(Vector(self.pos.x, randint(0, int(self.pos.y)))), worm)
+		
+		
 
 ################################################################################ Weapons setup
 
@@ -5496,9 +5552,7 @@ def fire(weapon = None):
 	
 	# artifacts
 	elif weapon == "mjolnir strike":
-		objectUnderControl.boomAffected = False
-		boom(objectUnderControl.pos, 45)
-		objectUnderControl.boomAffected = True
+		MjolnirStrike()
 	elif weapon == "mjolnir throw":
 		w = MjolnirThrow(weaponOrigin, weaponDir, energy)
 	elif weapon == "fly":
@@ -6697,7 +6751,8 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	Mjolnir()
+	m = Mjolnir()
+	m.pos = mouse
 
 ################################################################################ State machine
 if True:
@@ -7151,7 +7206,7 @@ if __name__ == "__main__":
 							for i, w in enumerate(currentTeam.weaponCounter):
 								if w > 0 or w == -1:
 									if weaponMan.weapons[i][3] == LEGENDARY:
-										keyWeapons.append(weaponDict[i])
+										keyWeapons.append(weaponMan.weapons[i][0])
 							weaponsSwitch = True
 						elif event.key == pygame.K_MINUS:
 							keyWeapons = ["rope"]
