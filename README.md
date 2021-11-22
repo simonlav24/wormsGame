@@ -96,6 +96,15 @@ game development practice in python for educational purposes and fun. pygame req
 - **portal gun** - to use in weapons.
 - **traveling kit** - more ropes and parachutes.
 
+## Artifacts
+
+Artifacts is a game option that unlocks magical items and weapons. the artifacts will randomly spawn in the map.
+
+* **Mjolnir** - Thor's magical hammar
+  * **strike** - strike the hammer with a harmful electric blast
+  * **throw** - throw the hammer
+  * **fly** - use the hammer to fly
+
 ## Game modes
 
 - Battle - last team standing wins.
