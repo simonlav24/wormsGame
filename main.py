@@ -137,6 +137,8 @@ if True:
 # chum and seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
+# nerf: acid bottle, 
+# make bat act like seeker
 
 ################################################################################ Map
 if True:
@@ -3141,7 +3143,7 @@ class ChilliPepper(PhysObj):
 			s = Fire(self.pos, 5)
 			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
 
-class Covid19:
+class Covid19Old:
 	def __init__(self, pos, angle = vectorUnitRandom().getAngle()):
 		PhysObj._reg.append(self)
 		self.pos = Vector(pos[0], pos[1])
@@ -3150,7 +3152,7 @@ class Covid19:
 		self.radius = 1
 		self.angle = angle
 		self.target = None
-		self.lifespan = 430
+		self.lifespan = fps * 12
 		self.unreachable = []
 		self.bitten = []
 	def removeFromGame(self):
@@ -4724,6 +4726,11 @@ class AcidBottle(PetrolBomb):
 
 class Seeker:#########EXPERIMENTAL
 	def __init__(self, pos, direction, energy):
+		self.initialize(pos, direction, energy)
+		self.timer = 15 * fps
+		self.triangle = [(0,-2), (0,2), (7,0)]
+		self.target = HomingMissile.Target
+	def initialize(self, pos, direction, energy):
 		nonPhys.append(self)
 		self.pos = vectorCopy(pos)
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
@@ -4733,9 +4740,6 @@ class Seeker:#########EXPERIMENTAL
 		self.color = (255,100,0)
 		self.avoid = []
 		self.radius = 6
-		self.timer = 15 * fps
-		self.triangle = [(0,-2), (0,2), (7,0)]
-		self.target = HomingMissile.Target
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
@@ -4755,11 +4759,11 @@ class Seeker:#########EXPERIMENTAL
 						self.avoid.append(testPos)
 		else:
 			if mapGetAt(self.pos) == GRD:
-				self.deathResponse()
+				self.hitResponse()
 				return
 			
 		if distance < 8:
-			self.deathResponse()
+			self.hitResponse()
 			return
 			
 		for i in self.avoid:
@@ -4773,11 +4777,15 @@ class Seeker:#########EXPERIMENTAL
 		self.vel.limit(self.maxSpeed)
 		
 		ppos = self.pos + self.vel
-		if mapGetAt(ppos) == GRD:
+		while mapGetAt(ppos) == GRD:
 			self.vel *= -1
+			self.vel.rotate(uniform(-0.5,0.5))
+			ppos = self.pos + self.vel
 		
 		self.pos = ppos
 		self.secondaryStep()
+	def hitResponse(self):
+		self.deathResponse()
 	def secondaryStep(self):
 		Blast(self.pos + vectorUnitRandom()*2, randint(5,8), 30, 3)
 	def deathResponse(self):
@@ -4813,16 +4821,8 @@ class Seeker:#########EXPERIMENTAL
 class Seagull(Seeker):
 	_reg = []
 	def __init__(self, pos, direction, energy):
-		nonPhys.append(self)
+		self.initialize(pos, direction, energy)
 		Seagull._reg.append(self)
-		self.pos = vectorCopy(pos)
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		self.acc = Vector()
-		self.maxSpeed = 5
-		self.maxForce = 1
-		self.color = (255,100,0)
-		self.avoid = []
-		self.radius = 6
 		self.timer = 15 * fps
 		self.target = Vector()
 		self.chum = None
@@ -4842,6 +4842,49 @@ class Seagull(Seeker):
 		height = 13
 		frame = timeOverall//2 % 3
 		win.blit(pygame.transform.flip(imageSeagull, dir, False), point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)) )
+
+class Covid19(Seeker):
+	def __init__(self, pos, direction, energy):
+		self.initialize(pos, direction, energy)
+		self.timer = 12 * fps
+		self.target = Vector()
+		self.wormTarget = None
+		self.chum = None
+		self.unreachable = []
+		self.bitten = []
+	def secondaryStep(self):
+		# find target
+		closest = 800
+		for worm in PhysObj._worms:
+			if worm in currentTeam.worms or worm in self.bitten or worm in self.unreachable:
+				continue
+			distance = dist(worm.pos, self.pos)
+			if distance < closest:
+				closest = distance
+				self.target = worm.pos
+				self.wormTarget = worm
+	def hitResponse(self):
+		self.bitten.append(self.wormTarget)
+		self.target = Vector()
+		# sting
+		if not self.wormTarget:
+			return
+		self.wormTarget.vel.y -= 2
+		if self.wormTarget.vel.y < -3:
+			self.wormTarget.vel.y = 3
+		if self.pos.x > self.wormTarget.pos.x:
+			self.wormTarget.vel.x -= 2
+		else:
+			self.wormTarget.vel.x += 2
+		self.wormTarget.damage(10)
+		self.wormTarget.sicken(2)
+		self.wormTarget = None
+	def draw(self):
+		global timeOverall
+		width = 16
+		height = 11
+		frame = timeOverall//2 % 5
+		win.blit(imageBat, point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)))
 
 class Chum(Grenade):
 	_chums = []
@@ -5637,7 +5680,6 @@ class Team:
 		self.points = 0
 		self.flagHolder = False
 		self.artifacts = []
-		
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
@@ -5791,6 +5833,7 @@ def checkWinners():
 			addToRecord(dic)
 			if len(winningTeam.worms) > 0:
 				camTrack = winningTeam.worms[0]
+			commentator.que.append((winningTeam.name, ("Team "," Won!"), HUDColor))
 		else:
 			commentator.que.append(("", ("Its a"," Tie!"), HUDColor))
 			print("Tie!")
@@ -6751,9 +6794,9 @@ def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 	# m = Mjolnir()
 	# m.pos = mouse
+	# Covid19(mouse, Vector(), 0)
 	print("worldArtifacts=", worldArtifacts)
 	
-
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
@@ -7419,16 +7462,22 @@ if __name__ == "__main__":
 		
 		# weapon menu:
 		# move menus
-		if len(Menu.menus) > 0:
-			Menu.menus[0].updatePosX(winWidth - 100 - Menu.border)
-			if len(Menu.menus) > 1:
-				Menu.menus[1].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
 		if len(Toast._toasts) > 0:
 			for t in Toast._toasts:
 				if t.mode == Toast.bottom:
 					t.updateWinPos((winWidth/2, winHeight))
 				elif t.mode == Toast.middle:
 					t.updateWinPos(Vector(winWidth/2, winHeight/2) - tup2vec(t.surf.get_size())/2)
+		for i, menu in enumerate(Menu.menus):
+			if i == 0: Menu.menus[0].updatePosX(winWidth - 100 - Menu.border)
+			if i == 1: Menu.menus[1].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
+			
+			if i == 2:
+				posY = 1
+				if len(Menu.menus) > 1:
+					posY = Menu.menus[1].size.y + 1
+				Menu.menus[2].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
+				Menu.menus[2].updatePosY(posY)
 		# step menus
 		Menu.event = None
 		if len(Menu.menus) > 0:
