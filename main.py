@@ -138,7 +138,7 @@ if True:
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
 # nerf: acid bottle, 
-# make bat act like seeker
+# water under darkness
 
 ################################################################################ Map
 if True:
@@ -5067,6 +5067,8 @@ class Mjolnir(PhysObj):
 		elif vel < 1:
 			self.vel *= 0
 	def draw(self):
+		if darkness and not isVisibleInDarkness(self):
+			return
 		surf = pygame.transform.rotate(imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
@@ -5159,7 +5161,7 @@ class MjolnirStrike:
 			for worm in PhysObj._worms:
 				if worm in currentTeam.worms:
 					continue
-				if self.pos.x - 60 < worm.pos.x and worm.pos.x < self.pos.x + 60 and worm.pos.y > self.pos.y:
+				if self.pos.x - 60 < worm.pos.x and worm.pos.x < self.pos.x + 60 and worm.pos.y <= self.pos.y:
 					self.worms.append(worm)
 					
 			for worm in self.worms:
