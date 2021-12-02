@@ -134,6 +134,8 @@ class Vector:
 		return self * -1
 	def __round__(self):
 		return Vector(round(self.x), round(self.y))
+	def getNormal(self):
+		return Vector(-self.y, self.x)
 
 def normalize(vec):
 	vecRes = vectorCopy(vec)

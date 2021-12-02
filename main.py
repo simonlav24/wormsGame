@@ -1,7 +1,7 @@
-from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log
+from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign
 from random import shuffle ,randint, uniform, choice
 from vector import *
-from pygame import gfxdraw
+from pygame import Vector2, gfxdraw
 import pygame
 import argparse
 import xml.etree.ElementTree as ET
@@ -81,6 +81,7 @@ if True:
 	ARENA = 6
 	
 	MJOLNIR = 0
+	PLANT_MASTER = 1
 
 # Game settings
 if True:
@@ -131,14 +132,19 @@ if True:
 	HUDColor = BLACK
 	holdArtifact = True
 	artifactsMode = True
-	worldArtifacts = [MJOLNIR]
+	worldArtifacts = [MJOLNIR, PLANT_MASTER]
 
 # bugs & improvements:
-# chum and seagulls to not spawn on top of world
+# seagulls, artifacts to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
-# nerf: acid bottle, 
-# water under darkness
+
+# artifact: plant master
+# immunity to plants
+# magic beans per turn, no turn end
+# more plant based attacks
+# plant bomb that sprouts mines
+# vine whip (?)
 
 ################################################################################ Map
 if True:
@@ -403,7 +409,7 @@ def drawLand():
 			pygame.draw.circle(darkMask, light[3], (int(light[0]), int(light[1])), int(light[2]))
 		lights = []
 	
-		win.blit(darkMask, (-int(camPos.x), -int(camPos.y)))
+		
 		
 	wormCol.fill(SKY)
 	extraCol.fill(SKY)
@@ -686,7 +692,7 @@ def placePlants(quantity = 1):
 	for times in range(quantity):
 		place = giveGoodPlace(-1, False)
 		if place:
-			PlantBomb((place.x, place.y - 2), (0,0), 0)
+			PlantBomb((place.x, place.y - 2), (0,0), 0, PlantBomb.venus)
 
 def placeFlag():
 	place = giveGoodPlace(-1)
@@ -1638,6 +1644,12 @@ class Worm (PhysObj):
 				addToKillList()
 			if state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
 				pickVictim()
+		
+		# if team kill and artifacts
+		if artifactsMode and len(self.team.worms) == 0:
+			if len(self.team.artifacts) > 0:
+				for artifact in self.team.artifacts:
+					dropArtifact(artifact, self.pos)
 	def drawHealth(self):
 		healthHeight = -15
 		if Worm.healthMode == 0:
@@ -2015,7 +2027,7 @@ class Mine(PhysObj):
 		self.pos = tup2vec(pos)
 		self.radius = 2
 		self.color = (52,66,71)
-		self.damp = 0.4
+		self.damp = 0.35
 		self.activated = False
 		self.alive = delay == 0
 		self.timer = delay
@@ -2451,7 +2463,7 @@ class Gemino(PhysObj):
 		pygame.draw.circle(win, (222,63,49), (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), 1)
 
 class Plant:
-	def __init__(self, pos, radius = 5, angle = -1, venus = False):
+	def __init__(self, pos, radius = 5, angle = -1, mode = 0):
 		PhysObj._reg.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		if angle == -1:
@@ -2463,11 +2475,11 @@ class Plant:
 		self.radius = radius
 		self.timeCounter = 0
 		self.green = 135
-		self.venus = venus
+		self.mode = mode
 	def step(self):
 		self.pos += vectorFromAngle(self.angle + uniform(-1,1))
-		if randint(1,100) <= 2 and not self.venus:
-			Plant(self.pos, self.radius, self.angle + choice([pi/3, -pi/3]))
+		if randint(1,100) <= 2 and not self.mode == PlantBomb.venus:
+			Plant(self.pos, self.radius, self.angle + choice([pi/3, -pi/3]), self.mode)
 		self.timeCounter += 1
 		if self.timeCounter % 10 == 0:
 			self.radius -= 1
@@ -2478,37 +2490,50 @@ class Plant:
 			self.green = 0
 		pygame.draw.circle(gameMap, GRD, (int(self.pos[0]), int(self.pos[1])), int(self.radius))
 		pygame.draw.circle(ground, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), int(self.radius))
-		
+		if randint(0, 100) <= 10:
+			leaf(self.pos, self.angle + 90, (55,self.green,40))
 		if self.radius == 0:
 			PhysObj._reg.remove(self)
-			if self.venus:
+			if self.mode == PlantBomb.venus:
 				Venus(self.pos, self.angle)
+			if self.mode == PlantBomb.mine:
+				Mine(self.pos, fps * 2)
 			del self
 	def draw(self):
 		pass
 
 class PlantBomb(PhysObj):
-	venus = True
-	def __init__(self, pos, direction, energy):
+	bomb = 0
+	venus = 1
+	bean = 2
+	mine = 3
+	mode = 1
+	def __init__(self, pos, direction, energy, mode=0):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (204, 204, 0)
 		self.damp = 0.5
-		self.venus = PlantBomb.venus
+		self.mode = mode
 		self.wormCollider = True
 	def collisionRespone(self, ppos):
 		response = getNormal(ppos, self.vel, self.radius, False, True)
 		
-		
 		PhysObj._reg.remove(self)
 		
-		if not self.venus:
+		if self.mode == PlantBomb.bomb:
 			for i in range(randint(4,5)):
 				Plant(ppos)
-		else:
-			Plant(ppos, 5, response.getAngle(), True)
+		elif self.mode == PlantBomb.venus:
+			Plant(ppos, 5, response.getAngle(), PlantBomb.venus)
+		elif self.mode == PlantBomb.bean:
+			w = MagicBeanGrow(ppos, normalize(response))
+			global camTrack
+			camTrack = w
+		elif self.mode == PlantBomb.mine:
+			for i in range(randint(2,3)):
+				Plant(ppos, 5, -1, PlantBomb.mine)
 
 sentring = False
 class SentryGun(PhysObj):
@@ -4697,8 +4722,8 @@ class Acid(PhysObj):
 		else:
 			for worm in PhysObj._worms:
 				if squareCollision(self.pos, worm.pos, self.radius, worm.radius):
-					worm.damage(randint(0,3))
-					self.damageCooldown = 15
+					worm.damage(randint(0,1))
+					self.damageCooldown = 30
 		self.inGround = False
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius+1)
@@ -5037,7 +5062,6 @@ class Mjolnir(PhysObj):
 		self.angle = 0
 		global camTrack
 		camTrack = self
-		commentator.que.append(("", ("a gift from the gods", ""), HUDColor))
 	def secondaryStep(self):
 		if self.vel.getMag() > 1:
 			self.rotating = True
@@ -5050,8 +5074,7 @@ class Mjolnir(PhysObj):
 			PhysObj._reg.remove(self)
 			commentator.que.append((objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), currentTeam.color))
 			currentTeam.artifacts.append(MJOLNIR)
-			for w in weaponMan.artifactWeapons(MJOLNIR):
-				currentTeam.ammo(w[0], -1, True)
+			weaponMan.addArtifactMoves(MJOLNIR)
 			del self
 			return
 	def removeFromGame(self):
@@ -5187,11 +5210,134 @@ class MjolnirStrike:
 		for worm in self.worms:
 			drawLightning(Camera(Vector(self.pos.x, randint(0, int(self.pos.y)))), worm)
 
+class MagicLeaf(PhysObj):
+	def __init__(self, pos):
+		self.initialize()
+		self.pos = pos
+		self.color = (30, 170, 40)
+		self.windAffected = True
+		self.radius = 2
+		self.damp = 0.2
+		self.turbulance = vectorUnitRandom()
+	def secondaryStep(self):
+		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0:
+			PhysObj._reg.remove(self)
+			commentator.que.append((objectUnderControl.nameStr, ("", " became master of plants"), currentTeam.color))
+			currentTeam.artifacts.append(PLANT_MASTER)
+			weaponMan.addArtifactMoves(PLANT_MASTER)
+			del self
+			return
+		
+		# drag
+		self.turbulance.rotate(uniform(-1, 1))
+		velocity = self.vel.getMag()
+		# turbulance = vectorFromAngle(uniform(0, 2 * pi))
+		force =  - 0.15 * 0.5 * velocity * velocity * normalize(self.vel)
+		force += self.turbulance * 0.1
+		self.acc += force
+	def collisionRespone(self, ppos):
+		self.turbulance *= 0.9
+	def removeFromGame(self):
+		if self in PhysObj._reg:
+			PhysObj._reg.remove(self)
+		worldArtifacts.append(PLANT_MASTER)
+	def draw(self):
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+
+class MagicBeanGrow:
+	def __init__(self, pos, vel):
+		nonPhys.append(self)
+		if vel.getMag() < 0.1:
+			vel = Vector(0, -1)
+		self.vel = vel
+		self.pos = pos
+		self.p1 = pos
+		self.p2 = pos
+		self.p3 = pos
+		self.timer = 0
+		self.green1 = 135
+		self.green2 = 135
+		self.green3 = 135
+		self.face = 0
+		global playerMoveable
+		playerMoveable = False
+	def regreen(self, value):
+		value += randint(-5,5)
+		if value > 255:
+			value = 255
+		if value < 0:
+			value = 0
+		return value
+	def step(self):
+		self.timer += 1
+		gameDistable()
+		self.pos += 1.5 * self.vel
+		if pygame.key.get_pressed()[pygame.K_LEFT]:
+			self.vel.rotate(-0.1)
+			self.face = RIGHT
+		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+			self.vel.rotate(0.1)
+			self.face = LEFT
+		
+		#if self.face == RIGHT:
+		#	self.vel.rotate(-0.03)
+		#if self.face == LEFT:
+		#	self.vel.rotate(0.03)
+		self.vel.rotate(0.02 * copysign(1,(sin(0.05 * self.timer))))
+		
+		growRadius = -0.02 * self.timer + 4
+		pygame.draw.circle(gameMap, GRD, self.p1, growRadius)
+		pygame.draw.circle(gameMap, GRD, self.p2, growRadius)
+		pygame.draw.circle(gameMap, GRD, self.p3, growRadius)
+		pygame.draw.circle(ground, (55,self.green1,40), self.p1, growRadius)
+		pygame.draw.circle(ground, (55,self.green2,40), self.p2, growRadius)
+		pygame.draw.circle(ground, (55,self.green3,40), self.p3, growRadius)
+
+		self.green1 = self.regreen(self.green1)
+		self.green2 = self.regreen(self.green2)
+		self.green3 = self.regreen(self.green3)
+
+		growRadius = -0.055 * self.timer + 9
+
+		if randint(0, 100) < 10:
+			leaf(self.p1, self.vel.getNormal().getAngle(), (55, self.green1, 40))
+
+		self.p1 = self.pos + growRadius * sin(self.timer * 0.1) * self.vel.getNormal()
+		self.p2 = self.pos + growRadius * sin(self.timer * 0.1 + 2*pi/3) * self.vel.getNormal()
+		self.p3 = self.pos + growRadius * sin(self.timer * 0.1 + 4*pi/3) * self.vel.getNormal()
+
+		if self.timer >= 5 * fps:
+			nonPhys.remove(self)
+			global playerMoveable
+			playerMoveable = True
+	def draw(self):
+		pass
+
+def leaf(pos, direction, color):
+		# create procedural leaf
+		points = []
+		width = max(0.3, uniform(0,1))
+		length = 1 + uniform(0,1)
+		for i in range(10):
+			x = (i/10) * length
+			y = 0.5 * width * sin(2 * (1/length) * pi * x)
+			points.append(Vector(x, y))
+		for i in range(10):
+			x = (1 - (i/10)) * length
+			y = - width * sqrt(1 - ((2/length) * (x - length/2))**2)
+			points.append(Vector(x, y))
+		if randint(0,1) == 0:
+			points = [Vector(-i.x, i.y) for i in points]
+		size = uniform(4, 7)
+		points = [pos + i.rotate(direction) * size for i in points]
+		pygame.draw.polygon(gameMap, GRD, points)
+		pygame.draw.polygon(ground, color, points)
+
 ################################################################################ Weapons setup
 
 class WeaponManager:
 	def __init__(self):
-		self.weapons = []
+		self.weapons = [] # name, style, amount, group, fused, delayed
 		self.weapons.append(["missile", CHARGABLE, -1, MISSILES, False, 0])
 		self.weapons.append(["gravity missile", CHARGABLE, 5, MISSILES, False, 0])
 		self.weapons.append(["bunker buster", CHARGABLE, 2, MISSILES, False, 0])
@@ -5263,6 +5409,9 @@ class WeaponManager:
 		self.weapons.append(["mjolnir throw", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
 		self.weapons.append(["fly", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
 		
+		self.weapons.append(["magic bean", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
+		self.weapons.append(["mine plant", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
+		
 		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
 
 		self.weaponDict = {}
@@ -5294,12 +5443,14 @@ class WeaponManager:
 	def switchWeapon(self, string):
 		self.currentWeapon = string
 		self.renderWeaponCount()
-	def artifactWeapons(self, artifact):
-		moves = []
+	def addArtifactMoves(self, artifact):
+		# when team pick up artifact add them to weaponCounter
 		for w in self.weapons[self.weaponCount + self.utilityCount:]:
 			if w[6] == artifact:
-				moves.append(w)
-		return moves
+				if w[0] == "magic bean":
+					currentTeam.ammo(w[0], 1, True)
+					continue
+				currentTeam.ammo(w[0], -1, True)
 	def currentArtifact(self):
 		if self.getCategory(self.currentWeapon) == ARTIFACTS:
 			return self.weapons[self.currentIndex()][6]
@@ -5404,7 +5555,7 @@ def fire(weapon = None):
 			nextState = PLAYER_CONTROL_2
 			decrease = True
 	elif weapon == "mine":
-		w = Mine(weaponOrigin, 70)
+		w = Mine(weaponOrigin, fps * 2.5)
 		w.vel.x = objectUnderControl.facing * 0.5
 	elif weapon == "baseball":
 		fireBaseball(weaponOrigin, weaponDir)
@@ -5432,7 +5583,7 @@ def fire(weapon = None):
 	elif weapon == "gemino mine":
 		w = Gemino(weaponOrigin, weaponDir, energy)
 	elif weapon == "venus fly trap":
-		w = PlantBomb(weaponOrigin, weaponDir, energy)
+		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mode)
 	elif weapon == "sentry turret":
 		w = SentryGun(weaponOrigin, currentTeam.color)
 		w.pos.y -= objectUnderControl.radius + w.radius
@@ -5592,7 +5743,12 @@ def fire(weapon = None):
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 3)
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
 		w = Chum(weaponOrigin, weaponDir, energy)
-	
+	elif weapon == "magic bean":
+		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.bean)
+		nextState = PLAYER_CONTROL_1
+	elif weapon == "mine plant":
+		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mine)
+
 	# artifacts
 	elif weapon == "mjolnir strike":
 		MjolnirStrike()
@@ -5688,11 +5844,12 @@ class Team:
 		if len(self.nameList) > 0:
 			w = Worm(pos, self.nameList.pop(0), self)
 			self.worms.append(w)
-	def ammo(self, weapon, add=None, absolute=False):
-		if add and not absolute:
-			self.weaponCounter[weaponMan.weaponDict[weapon]] += add
-		elif add and absolute:
-			self.weaponCounter[weaponMan.weaponDict[weapon]] = add
+	def ammo(self, weapon, amount=None, absolute=False):
+		# adding amount of weapon to team
+		if amount and not absolute:
+			self.weaponCounter[weaponMan.weaponDict[weapon]] += amount
+		elif amount and absolute:
+			self.weaponCounter[weaponMan.weaponDict[weapon]] = amount
 		return self.weaponCounter[weaponMan.weaponDict[weapon]]
 
 teams = []
@@ -5944,15 +6101,26 @@ def cycleWorms():
 		return
 	
 	# throw artifact:
-	if artifactsMode and len(worldArtifacts) > 0:
-		if randint(0,10) == 0:
-			artifact = choice(worldArtifacts)
-			worldArtifacts.remove(artifact)
-			if artifact == MJOLNIR:
-				Mjolnir()
-			nextState = WAIT_STABLE
-			roundCounter -= 1
-			return
+	if artifactsMode:
+		for team in teams:
+			if PLANT_MASTER in team.artifacts:
+				team.ammo("magic bean", 1, True)
+		
+		if len(worldArtifacts) > 0:
+			if randint(0,10) == 0:
+				artifact = choice(worldArtifacts)
+				worldArtifacts.remove(artifact)
+				if artifact == MJOLNIR:
+					m = Mjolnir()
+					m.pos = Vector(randint(20, mapWidth - 20), -50)
+					commentator.que.append(("", ("a gift from the gods", ""), HUDColor))
+				elif artifact == PLANT_MASTER:
+					commentator.que.append(("", ("a leaf from the heavens", ""), HUDColor))
+					m = MagicLeaf(Vector(randint(50, mapWidth - 50), -50))
+				camTrack = m
+				nextState = WAIT_STABLE
+				roundCounter -= 1
+				return
 	
 	waterRising = False
 	raoning = False
@@ -6362,7 +6530,7 @@ class Water:
 		q4 = ttt - tt
 		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
 		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
-		
+	
 		return (tx, ty)
 	def rise(self, amount):
 		self.amount = amount
@@ -6706,6 +6874,9 @@ def cheatActive(code):
 		currentTeam.ammo("jet pack", 6)
 		currentTeam.ammo("rope", 6)
 		currentTeam.ammo("ender pearl", 6)
+	if code == "odinson":
+		m = Mjolnir()
+		m.pos = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 	
 def gameDistable(): 
 	global gameStable, gameStableCounter
@@ -6794,9 +6965,9 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	# m = Mjolnir()
 	# m.pos = mouse
 	# Covid19(mouse, Vector(), 0)
+	MagicLeaf(mouse)
 	print("worldArtifacts=", worldArtifacts)
 	
 ################################################################################ State machine
@@ -6806,7 +6977,7 @@ if True:
 	state, nextState = RESET, RESET
 	loadingSurf = myfontbigger.render("Simon's Worms Loading", False, WHITE)
 	pauseSurf = myfontbigger.render("Game Paused", False, WHITE)
-	gameStable = False; playerScrollAble = False; playerControl = False
+	gameStable = False; playerScrollAble = False; playerControl = False; playerMoveable = True
 	playerControlPlacing = False; playerShootAble = False; gameStableCounter = 0
 
 def stateMachine():
@@ -6996,6 +7167,8 @@ def stateMachine():
 ################################################################################ Keys action
 def onKeyPressRight():
 	global camTrack
+	if not playerMoveable:
+		return
 	objectUnderControl.facing = RIGHT
 	if objectUnderControl.shootAngle >= pi/2 and objectUnderControl.shootAngle <= (3/2)*pi:
 		objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
@@ -7003,6 +7176,8 @@ def onKeyPressRight():
 
 def onKeyPressLeft():
 	global camTrack
+	if not playerMoveable:
+		return
 	objectUnderControl.facing = LEFT
 	if objectUnderControl.shootAngle >= -pi/2 and objectUnderControl.shootAngle <= pi/2:
 		objectUnderControl.shootAngle = pi - objectUnderControl.shootAngle
@@ -7010,6 +7185,8 @@ def onKeyPressLeft():
 
 def onKeyPressSpace():
 	global energising, energyLevel, fireWeapon
+	if not playerMoveable:
+		return
 	if Sheep.trigger == False:
 		Sheep.trigger = True
 	if useListMode and inUsedList(weaponMan.currentWeapon):
@@ -7075,10 +7252,10 @@ def onKeyPressTab():
 			FloatingText(objectUnderControl.pos + Vector(0,-5), "rocket mode", (20,20,20))
 		weaponMan.renderWeaponCount()
 	elif weaponMan.currentWeapon == "venus fly trap":
-		PlantBomb.venus = not PlantBomb.venus
-		if PlantBomb.venus:
+		PlantBomb.mode = (PlantBomb.mode + 1) % 2
+		if PlantBomb.mode == PlantBomb.venus:
 			FloatingText(objectUnderControl.pos + Vector(0,-5), "venus fly trap", (20,20,20))
-		else:
+		elif PlantBomb.mode == PlantBomb.bomb:
 			FloatingText(objectUnderControl.pos + Vector(0,-5), "plant mode", (20,20,20))
 	elif weaponMan.currentWeapon == "long bow":
 		LongBow._sleep = not LongBow._sleep
@@ -7317,10 +7494,10 @@ if __name__ == "__main__":
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_ESCAPE]: run = False	
 		#key hold:
-		if objectUnderControl and playerControl:
-			if keys[pygame.K_RIGHT]:# or joystick.get_axis(0) > 0.5:
+		if objectUnderControl and playerControl and playerMoveable:
+			if keys[pygame.K_RIGHT]:
 				actionMove = True
-			if keys[pygame.K_LEFT]:# or joystick.get_axis(0) < -0.5:
+			if keys[pygame.K_LEFT]:
 				actionMove = True
 			# fire hold
 			if playerShootAble and (keys[pygame.K_SPACE]) and weaponMan.getCurrentStyle() == CHARGABLE and energising:
@@ -7422,6 +7599,8 @@ if __name__ == "__main__":
 		for f in nonPhys: f.draw()
 		water.drawLayers(DOWN)
 		for t in Toast._toasts: t.draw()
+
+		if darkness and darkMask: win.blit(darkMask, (-int(camPos.x), -int(camPos.y)))
 		
 		if weaponMan.currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
 		if gameMode == TERMINATOR and victim and victim.alive: drawTarget(victim.pos)
@@ -7492,7 +7671,7 @@ if __name__ == "__main__":
 			for i, killed in enumerate(killList):
 				win.blit(killed[0], (5, winHeight - 14 - i * 8))
 		
-		drawExtra()
+		# drawExtra()
 		# debug:
 		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 		win.blit(damageText[1], ((int(5), int(winHeight-6))))
