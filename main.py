@@ -140,11 +140,9 @@ if True:
 # bungee using spring dynamics
 
 # artifact: plant master
-# immunity to plants
-# magic beans per turn, no turn end
 # more plant based attacks
-# plant bomb that sprouts mines
 # vine whip (?)
+# leaf drop on worm if dead
 
 ################################################################################ Map
 if True:
@@ -823,6 +821,7 @@ if True:
 	imageHole = pygame.image.load("assets/hole.png").convert_alpha()
 	imageSeagull = pygame.image.load("assets/seagull.png").convert_alpha()
 	imageMjolnir = pygame.image.load("assets/mjolnir.png").convert_alpha()
+	imageLeaf = pygame.image.load("assets/leaf.png").convert_alpha()
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -3754,6 +3753,8 @@ class Venus:
 			for worm in listToCheck:
 				if worm in Debrie._debries or worm in Portal._reg or worm in Flag.flags:
 					continue
+				if worm in PhysObj._worms and PLANT_MASTER in worm.team.artifacts:
+					continue
 				if dist(worm.pos, pos) <= 25:
 					self.mode = Venus.catch
 					if worm in PhysObj._worms:
@@ -5053,9 +5054,9 @@ class MjolnirReturn:
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Mjolnir(PhysObj):
-	def __init__(self):
+	def __init__(self, pos):
 		self.initialize()
-		self.pos = Vector(randint(20, mapWidth - 20), -50)
+		self.pos = pos
 		self.vel = Vector(randint(-2,2), 0)
 		self.radius = 3
 		self.damp = 0.2
@@ -5219,7 +5220,10 @@ class MagicLeaf(PhysObj):
 		self.radius = 2
 		self.damp = 0.2
 		self.turbulance = vectorUnitRandom()
+		self.angle = 0
 	def secondaryStep(self):
+		if self.vel.getMag() > 0.25:
+			self.angle += self.vel.x*4
 		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0:
 			PhysObj._reg.remove(self)
 			commentator.que.append((objectUnderControl.nameStr, ("", " became master of plants"), currentTeam.color))
@@ -5242,7 +5246,11 @@ class MagicLeaf(PhysObj):
 			PhysObj._reg.remove(self)
 		worldArtifacts.append(PLANT_MASTER)
 	def draw(self):
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		surf = imageLeaf
+		if self.vel.x > 0:
+			surf = pygame.transform.flip(surf, True, False)
+		surf = pygame.transform.rotate(surf, self.angle)
+		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class MagicBeanGrow:
 	def __init__(self, pos, vel):
@@ -5278,11 +5286,7 @@ class MagicBeanGrow:
 		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
 			self.vel.rotate(0.1)
 			self.face = LEFT
-		
-		#if self.face == RIGHT:
-		#	self.vel.rotate(-0.03)
-		#if self.face == LEFT:
-		#	self.vel.rotate(0.03)
+
 		self.vel.rotate(0.02 * copysign(1,(sin(0.05 * self.timer))))
 		
 		growRadius = -0.02 * self.timer + 4
@@ -5314,7 +5318,35 @@ class MagicBeanGrow:
 		pass
 
 def leaf(pos, direction, color):
-		# create procedural leaf
+	# create procedural leaf
+	points = []
+	width = max(0.3, uniform(0,1))
+	length = 1 + uniform(0,1)
+	for i in range(10):
+		x = (i/10) * length
+		y = 0.5 * width * sin(2 * (1/length) * pi * x)
+		points.append(Vector(x, y))
+	for i in range(10):
+		x = (1 - (i/10)) * length
+		y = - width * sqrt(1 - ((2/length) * (x - length/2))**2)
+		points.append(Vector(x, y))
+	if randint(0,1) == 0:
+		points = [Vector(-i.x, i.y) for i in points]
+	size = uniform(4, 7)
+	points = [pos + i.rotate(direction) * size for i in points]
+	pygame.draw.polygon(gameMap, GRD, points)
+	pygame.draw.polygon(ground, color, points)
+
+class RazorLeaf(PhysObj):
+	def __init__(self, pos, direction):
+		self.initialize()
+		self.radius = 2
+		self.color = (55, randint(100, 200), 40)
+		self.pos = pos
+		self.direction = direction
+		self.vel += vectorUnitRandom() * 1
+		self.timer = 0
+		
 		points = []
 		width = max(0.3, uniform(0,1))
 		length = 1 + uniform(0,1)
@@ -5329,9 +5361,22 @@ def leaf(pos, direction, color):
 		if randint(0,1) == 0:
 			points = [Vector(-i.x, i.y) for i in points]
 		size = uniform(4, 7)
-		points = [pos + i.rotate(direction) * size for i in points]
-		pygame.draw.polygon(gameMap, GRD, points)
-		pygame.draw.polygon(ground, color, points)
+		angle = uniform(0, 2*pi)
+		self.points = [i.rotate(angle) * size for i in points]
+	def limitVel(self):
+		self.vel.limit(15)
+	def secondaryStep(self):
+		self.timer += 1
+		if self.timer >= fps * 6:
+			self.removeFromGame()
+	def applyForce(self):
+		self.acc = vectorCopy(self.direction) * 0.8
+	def collisionRespone(self, ppos):
+		boom(ppos, 8)
+		# boom(self.pos, 10)
+		self.removeFromGame()
+	def draw(self):
+		pygame.draw.polygon(win, self.color, [point2world(self.pos + i) for i in self.points])
 
 ################################################################################ Weapons setup
 
@@ -5411,6 +5456,7 @@ class WeaponManager:
 		
 		self.weapons.append(["magic bean", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		self.weapons.append(["mine plant", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
+		self.weapons.append(["razor leaf", GUN, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		
 		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
 
@@ -5424,6 +5470,7 @@ class WeaponManager:
 			
 		self.currentWeapon = self.weapons[0][0]
 		self.surf = myfont.render(self.currentWeapon, False, HUDColor)
+		self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
 	def getStyle(self, string):
 		return self.weapons[self.weaponDict[string]][1]
 	def getCurrentStyle(self):
@@ -5743,11 +5790,6 @@ def fire(weapon = None):
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 3)
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
 		w = Chum(weaponOrigin, weaponDir, energy)
-	elif weapon == "magic bean":
-		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.bean)
-		nextState = PLAYER_CONTROL_1
-	elif weapon == "mine plant":
-		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mine)
 
 	# artifacts
 	elif weapon == "mjolnir strike":
@@ -5758,6 +5800,23 @@ def fire(weapon = None):
 		if not MjolnirFly.flying:
 			w = MjolnirFly(weaponOrigin, weaponDir, energy)
 		nextState = PLAYER_CONTROL_1
+	elif weapon == "magic bean":
+		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.bean)
+		nextState = PLAYER_CONTROL_1
+	elif weapon == "mine plant":
+		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mine)
+	elif weapon == "razor leaf":
+		decrease = False
+		if state == PLAYER_CONTROL_1:
+			shotCount = 60
+		
+		RazorLeaf(weaponOrigin + weaponDir * 10, weaponDir)
+		if not shotCount == 0:
+			shotCount -= 1
+			nextState = FIRE_MULTIPLE
+		else:
+			nextState = PLAYER_CONTROL_2
+			decrease = True
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -6107,17 +6166,12 @@ def cycleWorms():
 				team.ammo("magic bean", 1, True)
 		
 		if len(worldArtifacts) > 0:
-			if randint(0,10) == 0:
+			chance = randint(0,10)
+			print(chance)
+			if chance == 0:
 				artifact = choice(worldArtifacts)
 				worldArtifacts.remove(artifact)
-				if artifact == MJOLNIR:
-					m = Mjolnir()
-					m.pos = Vector(randint(20, mapWidth - 20), -50)
-					commentator.que.append(("", ("a gift from the gods", ""), HUDColor))
-				elif artifact == PLANT_MASTER:
-					commentator.que.append(("", ("a leaf from the heavens", ""), HUDColor))
-					m = MagicLeaf(Vector(randint(50, mapWidth - 50), -50))
-				camTrack = m
+				dropArtifact(artifact, None, True)
 				nextState = WAIT_STABLE
 				roundCounter -= 1
 				return
@@ -6252,6 +6306,20 @@ def randomPlacing(wormsPerTeam):
 
 def squareCollision(pos1, pos2, rad1, rad2):
 	return True if pos1.x < pos2.x + rad2*2 and pos1.x + rad1*2 > pos2.x and pos1.y < pos2.y + rad2*2 and pos1.y + rad1*2 > pos2.y else False
+
+def dropArtifact(artifact, pos, comment=False):
+	if not pos:
+		pos = Vector(randint(20, mapWidth - 20), -50)
+	if artifact == MJOLNIR:
+		m = Mjolnir(pos)
+		if comment:
+			commentator.que.append(("", ("a gift from the gods", ""), HUDColor))
+	elif artifact == PLANT_MASTER:
+		if comment:
+			commentator.que.append(("", ("a leaf from the heavens", ""), HUDColor))
+		m = MagicLeaf(pos)
+	global camTrack
+	camTrack = m
 
 ################################################################################ Gui
 
@@ -6965,9 +7033,8 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	# m.pos = mouse
-	# Covid19(mouse, Vector(), 0)
-	MagicLeaf(mouse)
+	# m.pos = mouses
+	dropArtifact(randint(0,1), mouse)
 	print("worldArtifacts=", worldArtifacts)
 	
 ################################################################################ State machine
@@ -7154,7 +7221,7 @@ def stateMachine():
 		playerShootAble = True
 		playerScrollAble = True
 		
-		if weaponMan.currentWeapon in ["flame thrower", "minigun", "laser gun", "bubble gun"]:
+		if weaponMan.currentWeapon in weaponMan.multipleFires:
 			fireWeapon = True
 			if not shotCount == 0:
 				nextState = FIRE_MULTIPLE
