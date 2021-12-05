@@ -2463,7 +2463,7 @@ class Gemino(PhysObj):
 
 class Plant:
 	def __init__(self, pos, radius = 5, angle = -1, mode = 0):
-		PhysObj._reg.append(self)
+		nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		if angle == -1:
 			self.angle = uniform(0, 2*pi)
@@ -2492,7 +2492,7 @@ class Plant:
 		if randint(0, 100) <= 10:
 			leaf(self.pos, self.angle + 90, (55,self.green,40))
 		if self.radius == 0:
-			PhysObj._reg.remove(self)
+			nonPhys.remove(self)
 			if self.mode == PlantBomb.venus:
 				Venus(self.pos, self.angle)
 			if self.mode == PlantBomb.mine:
@@ -3695,8 +3695,10 @@ class Venus:
 		self.opening = -pi/2 + uniform(0, 0.8)
 		self.mutant = False
 		self.desired = None
+
+		self.p1 = Vector()
+		self.p2 = Vector()
 	def step(self):
-	
 		self.gap = 5*(self.snap + pi/2)/(pi/2)
 		self.d1 = self.direction.normal()
 		self.d2 = self.d1 * -1
@@ -3801,7 +3803,10 @@ class Venus:
 			Venus._reg.remove(self)
 	def draw(self):
 		
-		if self.scale < 1: image = pygame.transform.scale(imageVenus, (tup2vec(imageVenus.get_size()) * self.scale).vec2tupint())
+		if self.scale < 1:
+			if self.scale == 0:
+				return
+			image = pygame.transform.scale(imageVenus, (tup2vec(imageVenus.get_size()) * self.scale).vec2tupint())
 		else: image = imageVenus.copy()
 		if self.mutant: image.fill((0, 125, 255, 100), special_flags=pygame.BLEND_MULT)
 			
@@ -5232,7 +5237,7 @@ class MagicLeaf(PhysObj):
 			del self
 			return
 		
-		# drag
+		# aerodynamic drag
 		self.turbulance.rotate(uniform(-1, 1))
 		velocity = self.vel.getMag()
 		# turbulance = vectorFromAngle(uniform(0, 2 * pi))
@@ -5246,6 +5251,8 @@ class MagicLeaf(PhysObj):
 			PhysObj._reg.remove(self)
 		worldArtifacts.append(PLANT_MASTER)
 	def draw(self):
+		if darkness and not isVisibleInDarkness(self):
+			return
 		surf = imageLeaf
 		if self.vel.x > 0:
 			surf = pygame.transform.flip(surf, True, False)
@@ -6943,8 +6950,9 @@ def cheatActive(code):
 		currentTeam.ammo("rope", 6)
 		currentTeam.ammo("ender pearl", 6)
 	if code == "odinson":
-		m = Mjolnir()
-		m.pos = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+		m = Mjolnir(Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+	if code == "bulbasaur":
+		m = MagicLeaf(Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 	
 def gameDistable(): 
 	global gameStable, gameStableCounter
@@ -7075,6 +7083,7 @@ def stateMachine():
 			# place plants:
 			if not diggingMatch:
 				placePlants(randint(0,2))
+				pass
 		
 		
 		# check for sky opening for airstrikes
@@ -7109,6 +7118,7 @@ def stateMachine():
 				# place plants:
 				if not diggingMatch:
 					placePlants(randint(0,2))
+					pass
 			
 			# targets:
 			if gameMode == TARGETS:
