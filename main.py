@@ -138,6 +138,8 @@ if True:
 # seagulls, artifacts to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
+# teleport dont decrease
+# nerf fly to 3 per turn
 
 # artifact: plant master
 # control venus rotation using control plants
@@ -147,6 +149,13 @@ if True:
 # smoke on the water: fire in the skies (napalm but stronger might need fire optimization)
 # more.
 
+# infinity stones:
+# space - teleport with no penalty
+# mind - control another worm
+# reality - ?
+# power - double power 
+# time - back in time once per turn
+# soul - ?
 
 ################################################################################ Map
 if True:
