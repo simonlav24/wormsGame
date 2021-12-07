@@ -140,9 +140,13 @@ if True:
 # bungee using spring dynamics
 
 # artifact: plant master
-# more plant based attacks
-# vine whip (?)
-# leaf drop on worm if dead
+# control venus rotation using control plants
+
+# artifact: guitar hero
+# master of puppets: hang worms by springs to ceiling or sky half rest length
+# smoke on the water: fire in the skies (napalm but stronger might need fire optimization)
+# more.
+
 
 ################################################################################ Map
 if True:
@@ -4605,7 +4609,11 @@ class Snail:
 		if self.clockwise == LEFT:
 			self.surf = pygame.transform.flip(self.surf, True, False)
 	def climb(self):
+		steps = 0
 		while True:
+			steps += 1
+			if steps > 20:
+				break
 			revolvment = self.pos - self.anchor
 			index = Snail.around.index(revolvment)
 			candidate = self.anchor + Snail.around[(index + self.clockwise * -1) % 8]
@@ -4755,7 +4763,7 @@ class AcidBottle(PetrolBomb):
 		poly = [point2world(self.pos + rotateVector(i, radians(self.angle))) for i in self.bottle]
 		pygame.draw.polygon(win, self.color, poly)
 
-class Seeker:#########EXPERIMENTAL
+class Seeker:
 	def __init__(self, pos, direction, energy):
 		self.initialize(pos, direction, energy)
 		self.timer = 15 * fps
@@ -4875,8 +4883,8 @@ class Seagull(Seeker):
 		win.blit(pygame.transform.flip(imageSeagull, dir, False), point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)) )
 
 class Covid19(Seeker):
-	def __init__(self, pos, direction, energy):
-		self.initialize(pos, direction, energy)
+	def __init__(self, pos):
+		self.initialize(pos, Vector(), Vector())
 		self.timer = 12 * fps
 		self.target = Vector()
 		self.wormTarget = None
@@ -5039,13 +5047,15 @@ class MjolnirReturn:
 		self.angle = angle
 		global camTrack
 		camTrack = self
+		self.timer = 0
+		self.speedLimit = 10
 	def step(self):
 		self.acc = objectUnderControl.pos - self.pos
 		self.acc.normalize()
 		self.acc *= 0.3
 		
 		self.vel += self.acc
-		self.vel.limit(10)
+		self.vel.limit(self.speedLimit)
 		self.pos += self.vel
 		
 		self.angle += (0 - self.angle) * 0.1
@@ -5054,6 +5064,11 @@ class MjolnirReturn:
 			nonPhys.remove(self)
 			global holdArtifact
 			holdArtifact = True
+		self.timer += 1
+		if self.timer >= 5 * fps:
+			self.speedLimit -= 2
+		if self.timer >= 8 * fps:
+			self.speedLimit -= 2
 	def draw(self):
 		surf = pygame.transform.rotate(imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -5379,8 +5394,7 @@ class RazorLeaf(PhysObj):
 	def applyForce(self):
 		self.acc = vectorCopy(self.direction) * 0.8
 	def collisionRespone(self, ppos):
-		boom(ppos, 8)
-		# boom(self.pos, 10)
+		boom(ppos, 7)
 		self.removeFromGame()
 	def draw(self):
 		pygame.draw.polygon(win, self.color, [point2world(self.pos + i) for i in self.points])
@@ -5461,6 +5475,7 @@ class WeaponManager:
 		self.weapons.append(["mjolnir throw", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
 		self.weapons.append(["fly", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
 		
+		self.weapons.append(["control plants", UTILITY, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		self.weapons.append(["magic bean", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		self.weapons.append(["mine plant", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		self.weapons.append(["razor leaf", GUN, 0, LEGENDARY, False, 0, PLANT_MASTER])
@@ -5487,6 +5502,8 @@ class WeaponManager:
 	def getBackColor(self, string):
 		return self.weapons[self.weaponDict[string]][3]
 	def getCategory(self, string):
+		if self.weapons[self.weaponDict[string]][1] == UTILITY:
+			return UTILITIES
 		index = self.weaponDict[string]
 		if index < self.weaponCount:
 			return WEAPONS
@@ -5771,9 +5788,6 @@ def fire(weapon = None):
 		avail = False
 	elif weapon == "distorter":
 		w = Distorter(weaponOrigin, weaponDir, energy)
-	elif weapon == "reflector":
-		fireDeflectLaser(weaponOrigin, weaponDir)
-		nextState = PLAYER_CONTROL_1
 	elif weapon == "bubble gun":
 		decrease = False
 		if state == PLAYER_CONTROL_1:
@@ -5815,7 +5829,7 @@ def fire(weapon = None):
 	elif weapon == "razor leaf":
 		decrease = False
 		if state == PLAYER_CONTROL_1:
-			shotCount = 60
+			shotCount = 50
 		
 		RazorLeaf(weaponOrigin + weaponDir * 10, weaponDir)
 		if not shotCount == 0:
@@ -6498,12 +6512,14 @@ def clickInMenu():
 			global timeTravel
 			if not timeTravel:
 				timeTravelInitiate()
-			Commentator.que.append(("", ("no need for roads", ""), HUDColor))
+			Commentator.que.append(("", ("great scott", ""), HUDColor))
 		elif weapon == "jet pack":
 			objectUnderControl.toggleJetpack()
 		elif weapon == "flare":
 			weaponMan.switchWeapon(weapon)
 			decrease = False
+		elif weapon == "control plants":
+			print("not implemented yet")
 		
 		if decrease:
 			currentTeam.ammo(weapon, -1)
@@ -7042,8 +7058,11 @@ def lstepper():
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 	# m.pos = mouses
-	dropArtifact(randint(0,1), mouse)
-	print("worldArtifacts=", worldArtifacts)
+	# dropArtifact(randint(0,1), mouse)
+	# print("worldArtifacts=", worldArtifacts)
+	for venus in Venus._reg:
+		direction = normalize(mouse - venus.pos)
+		venus.direction = direction
 	
 ################################################################################ State machine
 if True:
