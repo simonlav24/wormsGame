@@ -138,8 +138,6 @@ if True:
 # seagulls, artifacts to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
-# teleport dont decrease
-# nerf fly to 3 per turn
 
 # artifact: plant master
 # control venus rotation using control plants
@@ -5506,6 +5504,8 @@ class WeaponManager:
 		return self.weapons[self.weaponDict[string]][1]
 	def getCurrentStyle(self):
 		return self.getStyle(self.currentWeapon)
+	def getCurrentDelay(self):
+		return self.weapons[self.weaponDict[self.currentWeapon]][5]
 	def getFused(self, string):
 		return self.weapons[self.weaponDict[string]][4]
 	def getBackColor(self, string):
@@ -5529,6 +5529,9 @@ class WeaponManager:
 			if w[6] == artifact:
 				if w[0] == "magic bean":
 					currentTeam.ammo(w[0], 1, True)
+					continue
+				if w[0] == "fly":
+					currentTeam.ammo(w[0], 3, True)
 					continue
 				currentTeam.ammo(w[0], -1, True)
 	def currentArtifact(self):
@@ -5885,15 +5888,14 @@ def fireClickable():
 		return
 		
 	mousePosition = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+	addToUseList = True
 	
 	if weaponMan.currentWeapon == "girder":
 		girder(mousePosition)
 	elif weaponMan.currentWeapon == "teleport":
-		weaponMan.switchWeapon("missile")
+		# weaponMan.switchWeapon("missile")
 		objectUnderControl.pos = mousePosition
-		timeRemaining(retreatTime)
-		state = nextState
-		return
+		addToUseList = False
 	elif weaponMan.currentWeapon == "airstrike":
 		fireAirstrike(mousePosition)
 	elif weaponMan.currentWeapon == "mine strike":
@@ -5904,7 +5906,7 @@ def fireClickable():
 	if decrease and currentTeam.ammo(weaponMan.currentWeapon) != -1:
 		currentTeam.ammo(weaponMan.currentWeapon, -1)
 	
-	if useListMode and (nextState == PLAYER_CONTROL_2 or nextState == WAIT_STABLE):
+	if useListMode and (nextState == PLAYER_CONTROL_2 or nextState == WAIT_STABLE) and addToUseList:
 		addToUseList(weaponMan.currentWeapon)
 	
 	weaponMan.renderWeaponCount()
@@ -6194,6 +6196,8 @@ def cycleWorms():
 		for team in teams:
 			if PLANT_MASTER in team.artifacts:
 				team.ammo("magic bean", 1, True)
+			if MJOLNIR in team.artifacts:
+				team.ammo("fly", 3, True)
 		
 		if len(worldArtifacts) > 0:
 			chance = randint(0,10)
@@ -7017,6 +7021,21 @@ def inUsedList(string):
 			break
 	return used
 
+def canShoot():
+	# if no ammo
+	if currentTeam.ammo(weaponMan.currentWeapon) == 0:
+		return False
+	# if delayed
+	if weaponMan.getCurrentDelay() != 0:
+		return False
+	# if in use list
+	if useListMode and inUsedList(weaponMan.currentWeapon):
+		return False
+	if (not playerControl) or (not playerMoveable) or (not playerShootAble):
+		return False
+	return True
+	
+
 def pickVictim():
 	global victim, terminatorHit
 	terminatorHit = False
@@ -7290,19 +7309,15 @@ def onKeyPressLeft():
 
 def onKeyPressSpace():
 	global energising, energyLevel, fireWeapon
-	if not playerMoveable:
+	if not canShoot():
 		return
-	if Sheep.trigger == False:
-		Sheep.trigger = True
-	if useListMode and inUsedList(weaponMan.currentWeapon):
-		return
-	if objectUnderControl and playerControl:
-		if weaponMan.getCurrentStyle() == CHARGABLE and not currentTeam.ammo(weaponMan.currentWeapon) == 0:
-			energising = True
-			energyLevel = 0
-			fireWeapon = False
-			if weaponMan.currentWeapon in ["homing missile", "seeker"] and not HomingMissile.showTarget:
-				energising = False
+
+	if weaponMan.getCurrentStyle() == CHARGABLE:
+		energising = True
+		energyLevel = 0
+		fireWeapon = False
+		if weaponMan.currentWeapon in ["homing missile", "seeker"] and not HomingMissile.showTarget:
+			energising = False
 
 def onKeyHoldSpace():
 	global energyLevel, energising, fireWeapon
@@ -7318,19 +7333,13 @@ def onKeyHoldSpace():
 
 def onKeyReleaseSpace():
 	global energyLevel, fireWeapon, playerShootAble, energising
-	if playerShootAble:
-		if timeTravel and not currentTeam.ammo(weaponMan.currentWeapon) == 0:
+	if canShoot():
+		if timeTravel:
 			timeTravelPlay()
 			energyLevel = 0
-		elif weaponMan.getCurrentStyle() == CHARGABLE and energising:
-			fireWeapon = True
-		# putable/gun weapons case
-		elif (weaponMan.getCurrentStyle() in [PUTABLE, GUN]) and not currentTeam.ammo(weaponMan.currentWeapon) == 0 and not weaponMan.currentWeapon == "rope":
-			if useListMode and inUsedList(weaponMan.currentWeapon): return
-			fireWeapon = True
-			playerShootAble = False
-		# rope case:
-		elif (weaponMan.getCurrentStyle() in [PUTABLE, GUN]) and not currentTeam.ammo(weaponMan.currentWeapon) == 0 and weaponMan.currentWeapon == "rope":
+			
+		#rope
+		elif weaponMan.currentWeapon == "rope":
 			# if not currently roping:
 			fireWeapon = True
 			playerShootAble = False
@@ -7338,11 +7347,23 @@ def onKeyReleaseSpace():
 			if objectUnderControl.rope: 
 				objectUnderControl.toggleRope(None)
 				fireWeapon = False
+		
+		# chargeable
+		elif weaponMan.getCurrentStyle() == CHARGABLE and energising:
+			fireWeapon = True
+		
+		# putable & guns
+		elif (weaponMan.getCurrentStyle() in [PUTABLE, GUN]):
+			fireWeapon = True
+			playerShootAble = False
+			
 		energising = False
 	elif objectUnderControl.rope:
 		objectUnderControl.toggleRope(None)
 	elif objectUnderControl.parachuting:
 		objectUnderControl.toggleParachute()
+	elif Sheep.trigger == False:
+		Sheep.trigger = True
 
 def onKeyPressTab():
 	if not state == PLAYER_CONTROL_1:
