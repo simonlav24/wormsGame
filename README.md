@@ -16,18 +16,18 @@ game development practice in python for educational purposes and fun. pygame req
 
 # Weapons
 ## Missiles
-- **MISSILE** - chargeable, shoot a missile, wind sensitive.
-- **GRAVITY MISSILE** - chargeable, shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
-- **BUNKER BUSTER** - chargeable, shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
-- **HOMING MISSILE** - chargeable, mouse click to select target and shoot.
+- **MISSILE** - shoot a missile, wind sensitive.
+- **GRAVITY MISSILE** - shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
+- **BUNKER BUSTER** - shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
+- **HOMING MISSILE** - mouse click to select target and shoot.
 
 ## Grenades
-- **GRENADE** - chargeable, throw a grenade. all grenades delay time can be changed by pressing tab.
-- **MORTAR** - chargeable, throw a mortar grenade. release cluster on explosion.
-- **STICKY BOMB** - chargeable, a sticky grenade.
-- **GAS GRENADE** - chargeable, emit a toxic gas before exploding.
-- **ELECTRIC GRENADE** - chargeable, electrifying nearby worms. bouncy.
-- **RAON LAUNCHER** - chargeable, shooting two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
+- **GRENADE** - throw a grenade. all grenades delay time can be changed by pressing tab.
+- **MORTAR** - throw a mortar grenade. release cluster on explosion.
+- **STICKY BOMB** - a sticky grenade.
+- **GAS GRENADE** - emit a toxic gas before exploding.
+- **ELECTRIC GRENADE** - electrifying nearby worms. bouncy.
+- **RAON LAUNCHER** - shooting two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
 
 ## Guns
 - **SHOTGUN** - fire shotgun. 3 rounds.
@@ -40,7 +40,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **BUBBLE GUN** - shoot bubbles that captures worms and more.
 
 ## Fire weapons
-- **PETROL BOMB** - chargeable, throw a petrol bomb, explosive fire spreader.
+- **PETROL BOMB** - throw a petrol bomb, explosive fire spreader.
 - **FLAME THROWER** - it werfs flammen.
 
 ## Place and run
@@ -49,35 +49,35 @@ game development practice in python for educational purposes and fun. pygame req
 - **TNT** - explosive TNT bomb.
 - **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
 - **SHEEP** - baaaa.
-- **SNAIL** - chargeable, quick and sticky snail.
+- **SNAIL** - quick and sticky snail.
 
 ## Misc
 
 - **BASEBALL** - home running worms away.
-- **GIRDER** - clickable, place a girder. press tab for rotation and scaling.
+- **GIRDER** - place a girder. press tab for rotation and scaling.
 - **ROPE** - swing your way to action.
 - **PARACHUTE** - glide down safely. wind sensitive.
-- **VENUS FLY TRAP** - chargeable, throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
+- **VENUS FLY TRAP** - throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
 - **SENTRY GUN** - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
 - **ENDER PEARL** - throw and teleport to where it lands.
 - **ACID BOTTLE** - throw a bottle of hydrofluoric acid that corrode the earth and is deadly to worms.
 
 ## Aerial
-- **ARTILLERY ASSISTANCE** - chargeable, throw a flare to mark area for bombing.
-- **CHUM BUCKET** - chargeable, throw chum. attracts seagulls. *experimental*
-- **AIRSTRIKE** - clickable, missile strike, wind sensitive.
-- **NAPALM STRIKE** - clickable, smelly, firey mess. wind sensitive.
-- **MINE STRIKE** - clickable, mine strike.
+- **ARTILLERY ASSISTANCE** - throw a flare to mark area for bombing.
+- **CHUM BUCKET** - throw chum. attracts seagulls. *experimental*
+- **AIRSTRIKE** - missile strike, wind sensitive.
+- **NAPALM STRIKE** - smelly, firey mess. wind sensitive.
+- **MINE STRIKE** - mine strike.
 
 ## Super weapons
  Legendary weapons can be obtained by weapon crates marked with "W".
-- **HOLY GRENADE** - chargeable, feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
-- **BANANA** - chargeable, multiplying banana of mass destruction.
+- **HOLY GRENADE** - feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
+- **BANANA** - multiplying banana of mass destruction.
 - **EARTHQUAKE** - quakes the earth.
-- **GEMINO MINE** - chargeable, throw a mine cursed by the gemino curse.
-- **BEE HIVE** - chargeable, wake the bees at impact.
-- **VORTEX GRENADE** - chargeable, create a tear in the space time continuum.
-- **CHILLI PEPPER** - chargeable, red hot chilli pepper.
+- **GEMINO MINE** - throw a mine cursed by the gemino curse.
+- **BEE HIVE** - wake the bees at impact.
+- **VORTEX GRENADE** - create a tear in the space time continuum.
+- **CHILLI PEPPER** - red hot chilli pepper.
 - **RAGING BULL** - moooo bi%%h get out the way.
 - **ELECTRO BOOM** - like the electric grenade but with exploding electrical pulse and wider range. team friendly.
 - **POKEBALL** - catch worms. store them until the ball is damaged.
@@ -101,9 +101,14 @@ game development practice in python for educational purposes and fun. pygame req
 Artifacts is a game option that unlocks magical items and weapons. the artifacts will randomly spawn in the map.
 
 * **Mjolnir** - Thor's magical hammar
-  * **strike** - strike the hammer with a harmful electric blast
-  * **throw** - throw the hammer
-  * **fly** - use the hammer to fly
+  * **strike** - strike the hammer with a powerful electric blast
+  * **throw** - throw the hammer with a powerful electric blast
+  * **fly** - use the hammer to fly. with a powerful electric blast
+* **Plant Master** - become master of plants. grants immunity to plant attacks and the ability to control plants.
+  * **Control Plants** - activate and use arrow keys to move or rotate plants
+  * **Magic Bean** - throw bean that grows a giant beanstalk
+  * **Mine Plant** - plant that grows proximity mine flowers
+  * **Razor Leaf** - A Grass-type attack that sends sharp-edged leaves at the target. Likely to get a critical hit.
 
 ## Game modes
 
@@ -126,3 +131,6 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 - Forts - teammates spawn in cluster.
 - Digging - worms are underground. dig your way around. recommended with darkness.
 
+### Sudden Death
+
+Sudden death activated after the specified number of rounds in the options. the sudden death types are: plague - worms loose half their health and get sick, water rise - water level rising after each turn. the types can both be used.

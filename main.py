@@ -136,7 +136,7 @@ if True:
 
 # bugs & improvements:
 # seagulls, artifacts to not spawn on top of world
-# convert fire (and more ?) collisions with worms to square collision for better performance. maybe a constant fire will be a thing
+# convert fire (and more ?) collisions with worms to square/surface collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
 
 # artifact: plant master
@@ -265,7 +265,7 @@ def grabMapsFrom(path):
 		elif string.find("big16.png") != -1:
 			ratio = 2000
 		string = os.path.abspath(string)
-		maps.append((string, ratio))
+		maps.append([string, ratio])
 	return maps
 
 def createWorld():
@@ -4791,7 +4791,7 @@ class Seeker:
 		if self.timer == 0:
 			self.deathResponse()
 		gameDistable()
-		getForce = self.seek(self.target)
+		getForce = seek(self, self.target, self.maxSpeed, self.maxForce)
 		avoidForce = Vector()
 		distance = dist(self.pos, self.target)
 		if distance > 30:
@@ -4814,7 +4814,7 @@ class Seeker:
 			
 		for i in self.avoid:
 			# if dist(self.pos, i) < 50:
-			avoidForce += self.flee(i)
+			avoidForce += flee(self, i, self.maxSpeed, self.maxForce)
 		
 		force = avoidForce + getForce
 		self.applyForce(force)
@@ -4841,21 +4841,6 @@ class Seeker:
 	def applyForce(self, force):
 		force.limit(self.maxForce)
 		self.acc = vectorCopy(force)
-	def flee(self, target):
-		return self.seek(target) * -1
-	def seek(self, target, arrival=False):
-		force = tup2vec(target) - self.pos
-		desiredSpeed = self.maxSpeed
-		if arrival:
-			slowRadius = 50
-			distance = force.getMag()
-			if (distance < slowRadius):
-				desiredSpeed = smap(distance, 0, slowRadius, 0, self.maxSpeed)
-				force.setMag(desiredSpeed)
-		force.setMag(desiredSpeed)
-		force -= self.vel
-		force.limit(self.maxForce)
-		return force
 	def draw(self):
 		# for i in self.avoid:
 			# pygame.draw.circle(win, (0,0,0), point2world(i), 6)
@@ -4891,7 +4876,7 @@ class Seagull(Seeker):
 
 class Covid19(Seeker):
 	def __init__(self, pos):
-		self.initialize(pos, Vector(), Vector())
+		self.initialize(pos, Vector(), 5)
 		self.timer = 12 * fps
 		self.target = Vector()
 		self.wormTarget = None
@@ -5054,12 +5039,9 @@ class MjolnirReturn:
 		self.angle = angle
 		global camTrack
 		camTrack = self
-		self.timer = 0
-		self.speedLimit = 10
+		self.speedLimit = 8
 	def step(self):
-		self.acc = objectUnderControl.pos - self.pos
-		self.acc.normalize()
-		self.acc *= 0.3
+		self.acc = seek(self, objectUnderControl.pos, self.speedLimit, 1)
 		
 		self.vel += self.acc
 		self.vel.limit(self.speedLimit)
@@ -5071,11 +5053,6 @@ class MjolnirReturn:
 			nonPhys.remove(self)
 			global holdArtifact
 			holdArtifact = True
-		self.timer += 1
-		if self.timer >= 5 * fps:
-			self.speedLimit -= 2
-		if self.timer >= 8 * fps:
-			self.speedLimit -= 2
 	def draw(self):
 		surf = pygame.transform.rotate(imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -5406,6 +5383,28 @@ class RazorLeaf(PhysObj):
 	def draw(self):
 		pygame.draw.polygon(win, self.color, [point2world(self.pos + i) for i in self.points])
 
+class PlantControl:
+	def __init__(self):
+		nonPhys.append(self)
+		self.timer = 5 * fps
+		global playerMoveable
+		playerMoveable = False
+	def step(self):
+		self.timer -= 1
+		if self.timer == 0:
+			nonPhys.remove(self)
+			global playerMoveable
+			playerMoveable = True
+		if pygame.key.get_pressed()[pygame.K_LEFT]:
+			for plant in Venus._reg:
+				plant.direction.rotate(-0.1)
+		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+			for plant in Venus._reg:
+				plant.direction.rotate(0.1)
+		gameDistable()
+	def draw(self):
+		pass
+
 ################################################################################ Weapons setup
 
 class WeaponManager:
@@ -5482,7 +5481,7 @@ class WeaponManager:
 		self.weapons.append(["mjolnir throw", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
 		self.weapons.append(["fly", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
 		
-		self.weapons.append(["control plants", UTILITY, 0, LEGENDARY, False, 0, PLANT_MASTER])
+		self.weapons.append(["control plants", PUTABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		self.weapons.append(["magic bean", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		self.weapons.append(["mine plant", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
 		self.weapons.append(["razor leaf", GUN, 0, LEGENDARY, False, 0, PLANT_MASTER])
@@ -5833,6 +5832,8 @@ def fire(weapon = None):
 		if not MjolnirFly.flying:
 			w = MjolnirFly(weaponOrigin, weaponDir, energy)
 		nextState = PLAYER_CONTROL_1
+	elif weapon == "control plants":
+		PlantControl()
 	elif weapon == "magic bean":
 		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.bean)
 		nextState = PLAYER_CONTROL_1
@@ -5888,14 +5889,13 @@ def fireClickable():
 		return
 		
 	mousePosition = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	addToUseList = True
+	addToUsed = True
 	
 	if weaponMan.currentWeapon == "girder":
 		girder(mousePosition)
 	elif weaponMan.currentWeapon == "teleport":
-		# weaponMan.switchWeapon("missile")
 		objectUnderControl.pos = mousePosition
-		addToUseList = False
+		addToUsed = False
 	elif weaponMan.currentWeapon == "airstrike":
 		fireAirstrike(mousePosition)
 	elif weaponMan.currentWeapon == "mine strike":
@@ -5906,7 +5906,7 @@ def fireClickable():
 	if decrease and currentTeam.ammo(weaponMan.currentWeapon) != -1:
 		currentTeam.ammo(weaponMan.currentWeapon, -1)
 	
-	if useListMode and (nextState == PLAYER_CONTROL_2 or nextState == WAIT_STABLE) and addToUseList:
+	if useListMode and (nextState == PLAYER_CONTROL_2 or nextState == WAIT_STABLE) and addToUsed:
 		addToUseList(weaponMan.currentWeapon)
 	
 	weaponMan.renderWeaponCount()
@@ -6201,7 +6201,6 @@ def cycleWorms():
 		
 		if len(worldArtifacts) > 0:
 			chance = randint(0,10)
-			print(chance)
 			if chance == 0:
 				artifact = choice(worldArtifacts)
 				worldArtifacts.remove(artifact)
@@ -6532,7 +6531,8 @@ def clickInMenu():
 			weaponMan.switchWeapon(weapon)
 			decrease = False
 		elif weapon == "control plants":
-			print("not implemented yet")
+			PlantControl()
+			
 		
 		if decrease:
 			currentTeam.ammo(weapon, -1)
@@ -6904,6 +6904,23 @@ def randomWeaponsGive():
 				if randint(0,1) == 1:
 					teamCount = randint(0,5)
 
+def seek(obj, target, maxSpeed, maxForce ,arrival=False):
+	force = tup2vec(target) - obj.pos
+	desiredSpeed = maxSpeed
+	if arrival:
+		slowRadius = 50
+		distance = force.getMag()
+		if (distance < slowRadius):
+			desiredSpeed = smap(distance, 0, slowRadius, 0, maxSpeed)
+			force.setMag(desiredSpeed)
+	force.setMag(desiredSpeed)
+	force -= obj.vel
+	force.limit(maxForce)
+	return force
+	
+def flee(obj, target, maxSpeed, maxForce):
+	return seek(obj, target, maxSpeed, maxForce) * -1
+
 def suddenDeath():
 	global suddenDeathStyle
 	string = "Sudden Death!"
@@ -7034,7 +7051,6 @@ def canShoot():
 	if (not playerControl) or (not playerMoveable) or (not playerShootAble):
 		return False
 	return True
-	
 
 def pickVictim():
 	global victim, terminatorHit
@@ -7088,9 +7104,7 @@ def testerFunc():
 	# m.pos = mouses
 	# dropArtifact(randint(0,1), mouse)
 	# print("worldArtifacts=", worldArtifacts)
-	for venus in Venus._reg:
-		direction = normalize(mouse - venus.pos)
-		venus.direction = direction
+	PlantControl()
 	
 ################################################################################ State machine
 if True:
