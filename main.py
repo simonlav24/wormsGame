@@ -156,8 +156,6 @@ if True:
 # time - back in time once per turn
 # soul - ?
 
-# headsets: visor, helmet, skull, sunglasses, eyepatch
-
 ################################################################################ Map
 if True:
 	gameMap = None
@@ -823,19 +821,18 @@ if True:
 	pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
 	pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
 	imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
-	imageBat = pygame.image.load("assets/bat.png").convert_alpha()
-	imageTurret = pygame.image.load("assets/turret.png").convert_alpha()
-	imageParachute = pygame.image.load("assets/parachute.png").convert_alpha()
-	imageVenus = pygame.image.load("assets/venus.png").convert_alpha()
-	imagePokeball = pygame.image.load("assets/pokeball.png").convert_alpha()
-	imageGreenShell = pygame.image.load("assets/greenShell.png").convert_alpha()
-	imageEnder = pygame.image.load("assets/ender.png").convert_alpha()
 	imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
-	imageSnail = pygame.image.load("assets/snail.png").convert_alpha()
 	imageHole = pygame.image.load("assets/hole.png").convert_alpha()
-	imageSeagull = pygame.image.load("assets/seagull.png").convert_alpha()
-	imageMjolnir = pygame.image.load("assets/mjolnir.png").convert_alpha()
-	imageLeaf = pygame.image.load("assets/leaf.png").convert_alpha()
+	sprites = pygame.image.load("assets/sprites.png").convert_alpha()
+	imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
+	imageMjolnir.blit(sprites, (0,0), (100, 32, 24, 31))
+
+def blitWeaponSprite(dest, pos, weapon):
+	index = weaponMan.weaponDict[weapon]
+	x = index % 8
+	y = 6 + index // 8
+	rect = (x * 16, y * 16, 16, 16)
+	dest.blit(sprites, pos, rect)
 
 def drawBackGround(surf, parallax):
 	width = surf.get_width()
@@ -1327,16 +1324,26 @@ class Grenade (PhysObj):#2
 		self.color = (0,100,0)
 		self.damp = 0.4
 		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "grenade")
+		self.angle = 0
 	def deathResponse(self):
 		rad = 30
 		if randint(0,50) == 1 or megaTrigger:
 			rad *= 2
 		boom(self.pos, rad)
 	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 		self.timer += 1
 		if self.timer == fuseTime:
 			self.dead = True
 		self.stable = False
+	def draw(self):
+		if darkness and not isVisibleInDarkness(self):
+			return
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Mortar (Grenade):#3
 	def __init__(self, pos, direction, energy):
@@ -1348,6 +1355,9 @@ class Mortar (Grenade):#3
 		self.bounceBeforeDeath = -1
 		self.damp = 0.4
 		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "mortar")
+		self.angle = 0
 	def deathResponse(self):
 		global camTrack
 		megaBoom = False
@@ -1440,8 +1450,9 @@ class Worm (PhysObj):
 		self.wormCollider = True
 		self.flagHolder = False
 		self.sleep = False
-		self.surf = pygame.Surface((8, 8), pygame.SRCALPHA)
-		self.setSurf()
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (0,0,16,16))
+		self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
 		if darkness:
 			self.darktree = []
 	def applyForce(self):
@@ -1493,7 +1504,20 @@ class Worm (PhysObj):
 		pygame.draw.circle(win, (255,255,255), (int(shootVec.x) - int(camPos.x), int(shootVec.y) - int(camPos.y)), 2)
 	def sicken(self, sickness = 1):
 		self.sick = sickness
+		self.surf.fill((0,0,0,0))
+		self.surf.blit(sprites, (0,0), (0,16,16,16))
+		self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
 		self.color = (128, 189,66)
+	def heal(self, hp):
+		self.health += hp
+		
+		if self.healthMode == 1:
+			self.healthStr = myfont.render(str(self.health), False, self.team.color)
+		self.sick = 0
+		self.color = (255, 206, 167)
+		self.surf.fill((0,0,0,0))
+		self.surf.blit(sprites, (0,0), (0,0,16,16))
+		self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
 	def toggleJetpack(self):
 		self.jetpacking = not self.jetpacking
 		self.fallAffected = not self.fallAffected
@@ -1538,16 +1562,14 @@ class Worm (PhysObj):
 				currentTeam.points += 1
 				addToKillList()
 				terminatorHit = True
-	def setSurf(self):
-		pygame.draw.circle(self.surf, self.color, (4,4), 4)
 	def draw(self):
 		if not self is objectUnderControl and self.alive:
 			pygame.draw.circle(wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
 		if darkness and not isVisibleInDarkness(self):
 			return
-			
+
 		if self.parachuting:
-			win.blit(imageParachute, point2world(self.pos - tup2vec(imageParachute.get_size())//2 + Vector(0,-15)))
+			win.blit(sprites, point2world(self.pos - Vector(46,31)//2 + Vector(0,-15)), (80, 64, 46, 31))
 		if self.flagHolder:
 			pygame.draw.line(win, (51, 51, 0), point2world(self.pos), point2world(self.pos + Vector(0, -3 * self.radius)))
 			pygame.draw.rect(win, (220,0,0), (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
@@ -1561,6 +1583,7 @@ class Worm (PhysObj):
 
 		# draw worm sprite
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		win.blit(pygame.transform.flip(self.surf, self.facing == RIGHT, False), point2world(self.pos - Vector(8,8)))
 		
 		# draw name
 		nameHeight = -21
@@ -1598,6 +1621,9 @@ class Worm (PhysObj):
 		
 		self.alive = False
 		self.color = (167,167,167)
+		self.surf.fill((0,0,0,0))
+		self.surf.blit(sprites, (0,0), (16,16,16,16))
+		# self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
 		self.name = myfont.render(self.nameStr, False, grayen(self.team.color))
 
 		# insert to kill list:
@@ -1978,11 +2004,16 @@ class StickyBomb (Grenade):#9
 		self.timer = 0
 		self.sticked = False
 		self.stick = None
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "sticky bomb")
+		self.angle = 0
 	def collisionRespone(self, ppos):
 		if not self.sticked:
 			self.sticked = True
 			self.stick = vectorCopy((self.pos + ppos)/2)
+		self.vel *= 0
 	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 		self.stable = False
 		if self.stick:
 			self.pos = self.stick
@@ -2140,12 +2171,16 @@ class GasGrenade(Grenade):
 		self.bounceBeforeDeath = -1
 		self.damp = 0.5
 		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "gas grenade")
+		self.angle = 0
 	def deathResponse(self):
 		boom(self.pos, 20)
 		for i in range(40):
 			s = SickGas(self.pos)
 			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1,1.5)
 	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 		self.timer += 1
 		if self.timer == fuseTime:
 			self.dead = True
@@ -2180,14 +2215,8 @@ class HealthPack(PetrolCan):
 		if self.health <= 0:
 			self.deathResponse()
 	def effect(self, worm):
-		worm.health += 50
+		worm.heal(50)
 		FloatingText(self.pos, "+50", (0,230,0))
-		if Worm.healthMode == 1:
-			worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
-		# if worm.health > 100:
-			# worm.health = 100
-		worm.sick = 0
-		worm.color = (255, 206, 167)
 
 class UtilityPack(HealthPack):# Utility Pack
 	def __init__(self, pos = (0,0)):
@@ -2387,9 +2416,13 @@ class HolyGrenade(Grenade):
 		self.color = (230, 230, 0)
 		self.damp = 0.5
 		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "holy grenade")
+		self.angle = 0
 	def deathResponse(self):
 		boom(self.pos, 45)
 	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 		self.stable = False
 		self.timer += 1
 		if self.timer == fuseTime + 2*fps:
@@ -2406,9 +2439,12 @@ class Banana(Grenade):
 		self.color = (255, 204, 0)
 		self.damp = 0.5
 		self.timer = 0
-		self.surf = myfontbigger.render("(", False, self.color)
+		# self.surf = myfontbigger.render("(", False, self.color)
 		self.angle = 0
 		self.used = used
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "banana")
+		self.angle = 0
 	def collisionRespone(self, ppos):
 		if self.used:
 			self.dead = True
@@ -2431,9 +2467,6 @@ class Banana(Grenade):
 		if self.timer == fuseTime:
 			self.dead = True
 		self.angle -= self.vel.x*4
-	def draw(self):
-		surf = pygame.transform.rotate(self.surf, self.angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Earthquake:
 	earthquake = False
@@ -2569,7 +2602,8 @@ class SentryGun(PhysObj):
 		self.timesFired = randint(5,7)
 		self.angle = 0
 		self.angle2for = uniform(0, 2*pi)
-		self.surf = imageTurret.copy()
+		self.surf = pygame.Surface((17, 26), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (80, 32, 17, 26))
 		self.electrified = False
 		pygame.draw.circle(self.surf, self.teamColor, tup2vec(self.surf.get_size())//2, 2)
 	def fire(self):
@@ -2881,12 +2915,16 @@ class ElectricGrenade(PhysObj):
 		self.electrifying = False
 		self.emptyCounter = 0
 		self.lifespan = 300
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "electric grenade")
+		self.angle = 0
 	def deathResponse(self):
 		rad = 20
 		boom(self.pos, rad)
 		for sentry in self.sentries:
 			sentry.electrified = False
 	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 		self.stable = False
 		self.timer += 1
 		if self.timer == fuseTime:
@@ -2937,7 +2975,10 @@ class ElectricGrenade(PhysObj):
 				shell.speed = 3
 				shell.timer = 0
 	def draw(self):
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		# pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 		for worm in self.worms:
 			drawLightning(self, worm)
 		for raon in self.raons:
@@ -3070,6 +3111,9 @@ class VortexGrenade(Grenade):
 		self.color = (25, 102, 102)
 		self.damp = 0.5
 		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "vortex grenade")
+		self.angle = 0
 	def deathResponse(self):
 		Vortex(self.pos)
 
@@ -3180,85 +3224,6 @@ class ChilliPepper(PhysObj):
 		for i in range(40):
 			s = Fire(self.pos, 5)
 			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
-
-class Covid19Old:
-	def __init__(self, pos, angle = vectorUnitRandom().getAngle()):
-		PhysObj._reg.append(self)
-		self.pos = Vector(pos[0], pos[1])
-		self.stable = False
-		self.boomAffected = False
-		self.radius = 1
-		self.angle = angle
-		self.target = None
-		self.lifespan = fps * 12
-		self.unreachable = []
-		self.bitten = []
-	def removeFromGame(self):
-		PhysObj._reg.remove(self)
-	def step(self):
-		# life:
-		self.lifespan -= 1
-		if self.lifespan == 0:
-			PhysObj._reg.remove(self)
-			boom(self.pos, 25)
-			del self
-			return
-		if self.target:
-			self.angle = (self.target.pos - self.pos).getAngle()
-		else:
-			self.angle += uniform(-1,1)
-		ppos = self.pos + vectorFromAngle(self.angle)*5
-		if ppos.x >= mapWidth or ppos.y >= mapHeight or ppos.x < 0 or ppos.y < 0:
-			ppos = self.pos + vectorFromAngle(self.angle) * -1
-			self.angle += pi
-		try:
-			if gameMap.get_at((ppos.vec2tupint())) == GRD:
-				ppos = self.pos + vectorFromAngle(self.angle) * -1
-				self.angle += pi
-				if self.target:
-					self.unreachable.append(self.target)
-					self.target = None
-		except IndexError:
-			print("bat index error")
-		self.pos = ppos
-		
-		if self.lifespan % 80 == 0:
-			self.unreachable = []
-		
-		if self.lifespan < 410: # if alive
-			if not self.target:
-				closestDist = 500
-				for worm in PhysObj._worms:
-					if worm in self.unreachable or worm in self.bitten:
-						continue
-					distance = dist(self.pos, worm.pos)
-					if distance < 500 and distance < closestDist:
-						self.target = worm
-						closestDist = distance
-			else:
-				if dist(self.pos, self.target.pos) > 50 or self.target.health <= 0:
-					self.target = None
-					return
-				if dist(self.pos, self.target.pos) < self.target.radius:
-					# sting
-					self.target.vel.y -= 2
-					if self.target.vel.y < -3:
-						self.target.vel.y = 3
-					if self.pos.x > self.target.pos.x:
-						self.target.vel.x -= 2
-					else:
-						self.target.vel.x += 2
-					# PhysObj._reg.remove(self)
-					self.target.damage(10)
-					self.target.sicken(2)
-					self.bitten.append(self.target)
-					self.target = None
-	def draw(self):
-		global timeOverall
-		width = 16
-		height = 11
-		frame = timeOverall//2 % 5
-		win.blit(imageBat, point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)) )
 
 class Artillery(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -3712,6 +3677,9 @@ class Venus:
 
 		self.p1 = Vector()
 		self.p2 = Vector()
+		
+		self.surf = pygame.Surface((48, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (0, 64, 48, 16))
 	def step(self):
 		self.gap = 5*(self.snap + pi/2)/(pi/2)
 		self.d1 = self.direction.normal()
@@ -3816,12 +3784,11 @@ class Venus:
 			nonPhys.remove(self)
 			Venus._reg.remove(self)
 	def draw(self):
-		
 		if self.scale < 1:
 			if self.scale == 0:
 				return
-			image = pygame.transform.scale(imageVenus, (tup2vec(imageVenus.get_size()) * self.scale).vec2tupint())
-		else: image = imageVenus.copy()
+			image = pygame.transform.scale(self.surf, (tup2vec(self.surf.get_size()) * self.scale).vec2tupint())
+		else: image = self.surf.copy()
 		if self.mutant: image.fill((0, 125, 255, 100), special_flags=pygame.BLEND_MULT)
 			
 		rotated_image = pygame.transform.rotate(image, -degrees(self.angle - self.snap))
@@ -3939,6 +3906,8 @@ class PokeBall(PhysObj):
 		self.hold = None
 		self.health = 10
 		self.name = None
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "pokeball")
 		self.angle = 0
 	def damage(self, value, damageType=0):
 		if damageType == 1:
@@ -3998,7 +3967,8 @@ class PokeBall(PhysObj):
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
 			return
-		surf = pygame.transform.rotate(imagePokeball, self.angle)
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 		
 		if self.timer >= fuseTime and self.timer < fuseTime + fps*2 and self.hold:
@@ -4082,7 +4052,7 @@ class GreenShell(PhysObj):
 			index = int((self.timer*(self.speed/3) % 12)/3)
 		else:
 			index = 0	
-		win.blit(imageGreenShell, point2world(self.pos - Vector(16,16)/2), ((index*16, 0), (16,16)))
+		win.blit(sprites, point2world(self.pos - Vector(16,16)/2), ((index*16, 48), (16,16)))
 
 def fireLaser(start, direction):
 	hit = False
@@ -4265,7 +4235,7 @@ class EndPearl(PhysObj):
 		pos = self.pos + response * (objectUnderControl.radius + 2)
 		objectUnderControl.pos = pos
 	def draw(self):
-		win.blit(imageEnder , point2world(self.pos - tup2vec(imageEnder.get_size())/2))
+		blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "ender pearl")
 
 class Flag(PhysObj):
 	flags = []
@@ -4580,7 +4550,7 @@ class SnailShell(PhysObj):
 		self.clockwise = objectUnderControl.facing
 		self.timer = 0
 		self.surf = pygame.Surface((6,6), pygame.SRCALPHA)
-		self.surf.blit(imageSnail, (0,0))
+		self.surf.blit(sprites, (0,0), (64,48, 6,6))
 	def collisionRespone(self, ppos):
 		finalPos = vectorCopy(self.pos)
 		finalAnchor = None
@@ -4602,7 +4572,6 @@ class SnailShell(PhysObj):
 		camTrack = Snail(finalPos, finalAnchor, self.clockwise)
 	def draw(self):
 		self.timer += 1
-		
 		win.blit(pygame.transform.rotate(self.surf, (self.timer % 4) * 90), point2world(self.pos - Vector(3,3)))
 		
 class Snail:
@@ -4615,7 +4584,7 @@ class Snail:
 		self.anchor = anchor
 		self.life = 0
 		self.surf = pygame.Surface((6,6), pygame.SRCALPHA)
-		self.surf.blit(imageSnail, (0,0), ((6,0),(6,6)))
+		self.surf.blit(sprites, (0,0), (70,48,6,6))
 		if self.clockwise == LEFT:
 			self.surf = pygame.transform.flip(self.surf, True, False)
 	def climb(self):
@@ -4876,7 +4845,9 @@ class Seagull(Seeker):
 		width = 16
 		height = 13
 		frame = timeOverall//2 % 3
-		win.blit(pygame.transform.flip(imageSeagull, dir, False), point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)) )
+		surf = pygame.Surface((16,16), pygame.SRCALPHA)
+		surf.blit(sprites, (0,0), (frame * 16,80, 16, 16))
+		win.blit(pygame.transform.flip(surf, dir, False), point2world(self.pos - Vector(width//2, height//2)))
 
 class Covid19(Seeker):
 	def __init__(self, pos):
@@ -4917,9 +4888,9 @@ class Covid19(Seeker):
 	def draw(self):
 		global timeOverall
 		width = 16
-		height = 11
+		height = 16
 		frame = timeOverall//2 % 5
-		win.blit(imageBat, point2world(self.pos - Vector(width//2, height//2)), ((frame*width, 0), (width, height)))
+		win.blit(sprites, point2world(self.pos - Vector(8, 8)), ((frame * 16, 32), (16, 16)) )
 
 class Chum(Grenade):
 	_chums = []
@@ -5230,6 +5201,8 @@ class MagicLeaf(PhysObj):
 		self.damp = 0.2
 		self.turbulance = vectorUnitRandom()
 		self.angle = 0
+		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (48, 64, 16,16))
 	def secondaryStep(self):
 		if self.vel.getMag() > 0.25:
 			self.angle += self.vel.x*4
@@ -5258,7 +5231,7 @@ class MagicLeaf(PhysObj):
 	def draw(self):
 		if darkness and not isVisibleInDarkness(self):
 			return
-		surf = imageLeaf
+		surf = self.surf
 		if self.vel.x > 0:
 			surf = pygame.transform.flip(surf, True, False)
 		surf = pygame.transform.rotate(surf, self.angle)
@@ -5427,7 +5400,7 @@ class WeaponManager:
 		self.weapons.append(["gas grenade", CHARGABLE, 5, GRENADES, True, 0])
 		self.weapons.append(["electric grenade", CHARGABLE, 3, GRENADES, True, 0])
 		self.weapons.append(["raon launcher", CHARGABLE, 2, GRENADES, False, 0])
-		self.weapons.append(["distorter", CHARGABLE, 0, GRENADES, True, 0])
+		# self.weapons.append(["distorter", CHARGABLE, 0, GRENADES, True, 0])
 		self.weapons.append(["shotgun", GUN, 5, GUNS, False, 0])
 		self.weapons.append(["long bow", GUN, 3, GUNS, False, 0])
 		self.weapons.append(["minigun", GUN, 5, GUNS, False, 0])
@@ -5450,7 +5423,7 @@ class WeaponManager:
 		self.weapons.append(["venus fly trap", CHARGABLE, 1, MISC, False, 0])
 		self.weapons.append(["sentry turret", PUTABLE, 0, MISC, False, 0])
 		self.weapons.append(["ender pearl", CHARGABLE, 0, MISC, False, 0])
-		self.weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
+		# self.weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
 		self.weapons.append(["acid bottle", CHARGABLE, 1, MISC, False, 0])
 		self.weapons.append(["artillery assist", CHARGABLE, 1, AIRSTRIKE, False, 0])
 		self.weapons.append(["chum bucket", CHARGABLE, 1, AIRSTRIKE, False, 0])
@@ -5935,6 +5908,7 @@ class Team:
 		self.points = 0
 		self.flagHolder = False
 		self.artifacts = []
+		self.hatIndex = 0
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
@@ -5968,6 +5942,11 @@ mostDamage = (0,None)
 damageThisTurn = 0
 nWormsPerTeam = 0
 shuffle(teams)
+
+hats = [i for i in range(1, 8)]
+shuffle(hats)
+for team in teams:
+	team.hatIndex = hats.pop()
 
 ################################################################################ more functions
 
@@ -6944,7 +6923,7 @@ def suddenDeath():
 		waterRise = True
 	text = myfontbigger.render("sudden death", False, (220,0,0))
 	Toast(pygame.transform.scale(text, tup2vec(text.get_size()) * 2), Toast.middle)
-	
+
 def isOnMap(vec):
 	return not (vec[0] < 0 or vec[0] >= mapWidth or vec[1] < 0 or vec[1] >= mapHeight)
 
