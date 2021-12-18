@@ -134,13 +134,14 @@ if True:
 	artifactsMode = True
 	worldArtifacts = [MJOLNIR, PLANT_MASTER]
 
-# bugs & improvements:
+# improvements:
 # seagulls, artifacts to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square/surface collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
 
-# artifact: plant master
-# control venus rotation using control plants
+# bugs:
+# map from moreMaps with ratio error
+# drop artifact option (shift - tab?)
 
 # artifact: guitar hero
 # master of puppets: hang worms by springs to ceiling or sky half rest length
@@ -154,6 +155,8 @@ if True:
 # power - double power 
 # time - back in time once per turn
 # soul - ?
+
+# headsets: visor, helmet, skull, sunglasses, eyepatch
 
 ################################################################################ Map
 if True:
@@ -4746,6 +4749,7 @@ class Acid(PhysObj):
 					worm.damage(randint(0,1))
 					self.damageCooldown = 30
 		self.inGround = False
+		gameDistable()
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius+1)
 
@@ -5075,13 +5079,14 @@ class Mjolnir(PhysObj):
 		if self.rotating:
 			self.angle = -degrees(self.vel.getAngle()) - 90
 		# pick up
-		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0:
+		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0\
+			and not len(objectUnderControl.team.artifacts) > 0: 
 			PhysObj._reg.remove(self)
 			commentator.que.append((objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), currentTeam.color))
 			currentTeam.artifacts.append(MJOLNIR)
 			weaponMan.addArtifactMoves(MJOLNIR)
 			del self
-			return
+			return 
 	def removeFromGame(self):
 		# print("mjolnir gone")
 		if self in PhysObj._reg:
@@ -5228,7 +5233,8 @@ class MagicLeaf(PhysObj):
 	def secondaryStep(self):
 		if self.vel.getMag() > 0.25:
 			self.angle += self.vel.x*4
-		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0:
+		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0\
+			and not len(objectUnderControl.team.artifacts) > 0:
 			PhysObj._reg.remove(self)
 			commentator.que.append((objectUnderControl.nameStr, ("", " became master of plants"), currentTeam.color))
 			currentTeam.artifacts.append(PLANT_MASTER)
