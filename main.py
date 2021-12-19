@@ -826,6 +826,7 @@ if True:
 	sprites = pygame.image.load("assets/sprites.png").convert_alpha()
 	imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
 	imageMjolnir.blit(sprites, (0,0), (100, 32, 24, 31))
+	weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
 
 def blitWeaponSprite(dest, pos, weapon):
 	index = weaponMan.weaponDict[weapon]
@@ -1396,11 +1397,12 @@ class PetrolBomb(PhysObj):#4
 		self.color = (158,66,43)
 		self.bounceBeforeDeath = 1
 		self.damp = 0.5
-		self.surf = pygame.Surface((3, 8)).convert_alpha()
-		self.surf.fill(self.color)
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "petrol bomb")
 		self.angle = 0
 	def secondaryStep(self):
-		self.angle -= self.vel.x*4
+		self.angle -= self.vel.x * 4
+		Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
 	def deathResponse(self):
 		boom(self.pos, 15)
 		if randint(0,50) == 1 or megaTrigger:
@@ -1412,8 +1414,11 @@ class PetrolBomb(PhysObj):#4
 				s = Fire(self.pos, 5)
 				s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
 	def draw(self):
-		surf = pygame.transform.rotate(self.surf, self.angle)
-		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
+		if darkness and not isVisibleInDarkness(self):
+			return
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Worm (PhysObj):
 	healthMode = 0
@@ -1607,6 +1612,11 @@ class Worm (PhysObj):
 		if self.sleep and self.alive:
 			if timeOverall % fps == 0:
 				FloatingText(self.pos, "z", (0,0,0))
+				
+		# draw holding weapon
+		if self is objectUnderControl and state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
+			weaponSurf = pygame.transform.rotate(pygame.transform.flip(weaponHold, False, self.facing == LEFT), -degrees(self.shootAngle))
+			win.blit(weaponSurf, point2world(self.pos - tup2vec(weaponSurf.get_size())/2 + Vector(0, 5)))
 	def __str__(self):
 		return self.nameStr
 	def __repr__(self):
@@ -2116,20 +2126,29 @@ class Mine(PhysObj):
 			if self.timer % 2 == 0:
 				pygame.draw.circle(win, (222,63,49), point2world(self.pos), 1)
 
-def fireBaseball(start, direction):
-	global camTrack
-	hitted = []
-	layersLines.append(((255, 204, 0), start + direction * 5, start + direction * 20, 4, 15))
-	for t in range(5, 20):
-		testPos = start + direction * t
-		for worm in PhysObj._worms:
-			if dist(testPos, worm.pos) < worm.radius:
+class Baseball:
+	def __init__(self):	
+		self.direction = vectorFromAngle(objectUnderControl.shootAngle)
+		nonPhys.append(self)
+		self.timer = 0
+		hitted = []
+		for t in range(5, 25):
+			testPos = objectUnderControl.pos + self.direction * t
+			for worm in PhysObj._worms:
 				if worm in hitted:
 					continue
-				hitted.append(worm)
-				worm.damage(randint(15,25))
-				worm.vel += direction*8
-				camTrack = worm
+				if dist(testPos, worm.pos) < worm.radius:
+					hitted.append(worm)
+					worm.damage(randint(15,25))
+					worm.vel += self.direction * 8
+					camTrack = worm
+	def step(self):
+		self.timer += 1
+		if self.timer >= 15:
+			nonPhys.remove(self)
+	def draw(self):
+		weaponSurf = pygame.transform.rotate(pygame.transform.flip(weaponHold, False, objectUnderControl.facing == LEFT), -degrees(objectUnderControl.shootAngle) + 180)
+		win.blit(weaponSurf, point2world(objectUnderControl.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
 
 class SickGas:
 	def __init__(self, pos, sickness = 1):
@@ -2489,7 +2508,6 @@ class Earthquake:
 			nonPhys.remove(self)
 			Earthquake.earthquake = False
 			del self
-		
 	def draw(self):
 		pass
 
@@ -3298,7 +3316,7 @@ class LongBow:
 		self.stable = False
 		self.boomAffected = False
 		self.stuck = None
-		self.color = (204, 102, 0)
+		self.color = (112, 74, 37)
 		self.ignore = None
 		self.sleep = sleep
 		self.triangle = [Vector(0,3), Vector(6,0), Vector(0,-3)]
@@ -5523,6 +5541,16 @@ class WeaponManager:
 	def switchWeapon(self, string):
 		self.currentWeapon = string
 		self.renderWeaponCount()
+		weaponHold.fill((0,0,0,0))
+		if self.getBackColor(string) in [GRENADES, GUNS, MISC, LEGENDARY, FIREY] or string in [""]:
+			if string in ["covid 19", "parachute", "earthquake"]:
+				return
+			if string == "gemino mine":
+				blitWeaponSprite(weaponHold, (0,0), "mine")
+				return
+			blitWeaponSprite(weaponHold, (0,0), string)
+		if self.getBackColor(string) in [AIRSTRIKE]:
+			weaponHold.blit(sprites, (0,0), (64,64,16,16))
 	def addArtifactMoves(self, artifact):
 		# when team pick up artifact add them to weaponCounter
 		for w in self.weapons[self.weaponCount + self.utilityCount:]:
@@ -5641,7 +5669,7 @@ def fire(weapon = None):
 		w = Mine(weaponOrigin, fps * 2.5)
 		w.vel.x = objectUnderControl.facing * 0.5
 	elif weapon == "baseball":
-		fireBaseball(weaponOrigin, weaponDir)
+		Baseball()
 	elif weapon == "gas grenade":
 		w = GasGrenade(weaponOrigin, weaponDir, energy)
 	elif weapon == "gravity missile":
