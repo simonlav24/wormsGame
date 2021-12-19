@@ -1299,21 +1299,20 @@ class Missile (PhysObj):#1
 		self.megaBoom = False or megaTrigger
 		if randint(0,50) == 1:
 			self.megaBoom = True
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "missile")
 	def deathResponse(self):
 		if self.megaBoom:
 			self.boomRadius *= 2
 		boom(self.pos, self.boomRadius)
 	def draw(self):
-		theta = self.vel.getAngle()
-		dir = vectorCopy(self.vel)
-		dir.setMag(self.radius + 6)
-		dir2 = vectorCopy(dir)
-		dir2.setDir(dir.getAngle() + pi/2)
-		dir2.setMag(2)
-		a,b = self.pos.x,self.pos.y
-		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
+		if darkness and not isVisibleInDarkness(self):
+			return
+		angle = -degrees(self.vel.getAngle()) - 90
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 	def secondaryStep(self):
-		Blast(self.pos + vectorUnitRandom()*2, randint(5,8), 30, 3)
+		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
 
 class Grenade (PhysObj):#2
 	def __init__(self, pos, direction, energy):
@@ -1972,16 +1971,19 @@ girderAngle = 0
 girderSize = 50
 def girder(pos):
 	surf = pygame.Surface((girderSize, 10)).convert_alpha()
-	surf.fill((102, 102, 153, 255))
+	for i in range(girderSize // 16 + 1):
+		surf.blit(sprites, (i * 16, 0), (64,80,16,16))
 	surfGround = pygame.transform.rotate(surf, girderAngle)
 	ground.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
 	surf.fill(GRD)
 	surfMap = pygame.transform.rotate(surf, girderAngle)
 	gameMap.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
-	
+
 def drawGirderHint():#7
 	surf = pygame.Surface((girderSize, 10)).convert_alpha()
-	surf.fill((102, 102, 153, 100))
+	for i in range(girderSize // 16 + 1):
+		surf.blit(sprites, (i * 16, 0), (64,80,16,16))
+	surf.set_alpha(100)
 	surf = pygame.transform.rotate(surf, girderAngle)
 	pos = pygame.mouse.get_pos()
 	pos = Vector(pos[0]/scalingFactor , pos[1]/scalingFactor )
@@ -2541,6 +2543,8 @@ class Plant:
 		if self.radius == 0:
 			nonPhys.remove(self)
 			if self.mode == PlantBomb.venus:
+				pygame.draw.circle(gameMap, GRD, (int(self.pos[0]), int(self.pos[1])), 3)
+				pygame.draw.circle(ground, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), 3)
 				Venus(self.pos, self.angle)
 			if self.mode == PlantBomb.mine:
 				Mine(self.pos, fps * 2)
@@ -2563,7 +2567,13 @@ class PlantBomb(PhysObj):
 		self.damp = 0.5
 		self.mode = mode
 		self.wormCollider = True
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "venus fly trap")
+		self.angle = 0
+	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 	def collisionRespone(self, ppos):
+
 		response = getNormal(ppos, self.vel, self.radius, False, True)
 		
 		PhysObj._reg.remove(self)
@@ -2580,6 +2590,11 @@ class PlantBomb(PhysObj):
 		elif self.mode == PlantBomb.mine:
 			for i in range(randint(2,3)):
 				Plant(ppos, 5, -1, PlantBomb.mine)
+		
+	def draw(self):
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 sentring = False
 class SentryGun(PhysObj):
@@ -2671,7 +2686,6 @@ class SentryGun(PhysObj):
 		size = Vector(4*2,10*2)
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 		pygame.draw.line(win, self.teamColor, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
-		
 	def damage(self, value, damageType=0):
 		dmg = value
 		if self.health > 0:
@@ -2768,7 +2782,12 @@ class BeeHive(PhysObj):
 		self.beeSurf.fill((0,0,0), ((2,2), (2,3)))
 		self.beeSurf.fill((255,255,0), ((3,2), (3,3)))
 		self.beeSurf.fill((143,234,217,100), ((1,0), (2,2)))
+		
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "bee hive")
+		self.angle = 0
 	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 		if self.beeCount <= 0:
 			self.dead = True
 	def deathResponse(self):
@@ -2780,6 +2799,12 @@ class BeeHive(PhysObj):
 			b = Bee(self.pos, uniform(0,2*pi))
 			b.surf = self.beeSurf
 			self.beeCount -= 1
+	def draw(self):
+		if darkness and not isVisibleInDarkness(self):
+			return
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class BunkerBuster(PhysObj):
 	mode = False #True = drill
@@ -2796,6 +2821,8 @@ class BunkerBuster(PhysObj):
 		self.drillVel = None
 		self.inGround = False
 		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "bunker buster")
 	def step(self):
 		self.applyForce()
 		
@@ -2864,14 +2891,9 @@ class BunkerBuster(PhysObj):
 		pygame.draw.line(gameMap, SKY, line[0], line[1], self.radius*2)
 		pygame.draw.line(ground, SKY, line[0], line[1], self.radius*2)
 	def draw(self):
-		theta = self.vel.getAngle()
-		dir = vectorCopy(self.vel)
-		dir.setMag(self.radius + 6)
-		dir2 = vectorCopy(dir)
-		dir2.setDir(dir.getAngle() + pi/2)
-		dir2.setMag((self.radius + 6)/2)
-		a,b = self.pos.x,self.pos.y
-		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
+		angle = -degrees(self.vel.getAngle()) - 90
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 	def deathResponse(self):
 		boom(self.pos, 23)
 
@@ -3003,6 +3025,8 @@ class HomingMissile(PhysObj):
 		self.boomRadius = 30
 		self.activated = False
 		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "homing missile")
 	def applyForce(self):
 		# gravity:
 		if self.activated:
@@ -3013,7 +3037,7 @@ class HomingMissile(PhysObj):
 		else:
 			self.acc.y += globalGravity
 	def secondaryStep(self):
-		Blast(self.pos + vectorUnitRandom()*2, 5)
+		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), 5)
 		self.timer += 1
 		if self.timer == 20:
 			self.activated = True
@@ -3027,14 +3051,9 @@ class HomingMissile(PhysObj):
 		HomingMissile.showTarget = False
 		boom(ppos, self.boomRadius)
 	def draw(self):
-		theta = self.vel.getAngle()
-		dir = vectorCopy(self.vel)
-		dir.setMag(self.radius + 6)
-		dir2 = vectorCopy(dir)
-		dir2.setDir(dir.getAngle() + pi/2)
-		dir2.setMag((self.radius + 6)/2)
-		a,b = self.pos.x,self.pos.y
-		pygame.draw.polygon(win, self.color, [(int(a+dir.x - camPos.x),int(b+dir.y- camPos.y)), (int(a+dir2.x- camPos.x),int(b+dir2.y- camPos.y)), (int(a-dir2.x- camPos.x),int(b-dir2.y- camPos.y)) ])
+		angle = -degrees(self.vel.getAngle()) - 90
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 def drawTarget(pos):
 	pygame.draw.line(win, (180,0,0), point2world((pos.x - 10, pos.y - 8)) , point2world((pos.x + 10, pos.y + 8)), 2)
@@ -3204,17 +3223,15 @@ class ChilliPepper(PhysObj):
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
-		width = 8
-		height = 13
-		self.surf = pygame.Surface((width, height)).convert_alpha()
-		self.surf.fill((0,0,0,0))
-		pygame.draw.polygon(self.surf, (230, 46, 0), [(0,0), (width-1, 0), (width//2, height)])
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "chilli pepper")
 		self.damp = 0.5
 		self.angle = 0
 		self.boomAffected = False
 		self.bounceBeforeDeath = 6
 	def draw(self):
-		surf = pygame.transform.rotate(self.surf, self.angle)
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
@@ -3484,7 +3501,11 @@ class ElectroBoom(PhysObj):
 		self.network = []
 		self.used = []
 		self.electrifying = False
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "electro boom")
+		self.angle = 0
 	def secondaryStep(self):
+		self.angle -= self.vel.x*4
 		self.stable = False
 		self.timer += 1
 		if self.timer == fuseTime:
@@ -3513,7 +3534,9 @@ class ElectroBoom(PhysObj):
 					self.used.append(worm)
 			self.network.append((selfWorm, net))
 	def draw(self):
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 		
 		for worm in self.worms:
 			drawLightning(self, worm)
@@ -4116,8 +4139,8 @@ class GuidedMissile(PhysObj):
 		self.speed = 5.5
 		self.vel = Vector(0, -self.speed)
 		self.stable = False
-		self.surf = pygame.Surface((10,6), pygame.SRCALPHA)
-		pygame.draw.polygon(self.surf, (255,255,0), [(0,0), (0,6), (10,3)])
+		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "guided missile")
 		self.radius = 3
 	def applyForce(self):
 		pass
@@ -4131,7 +4154,7 @@ class GuidedMissile(PhysObj):
 			self.vel.rotate(-0.3)
 		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
 			self.vel.rotate(0.3)
-		Blast(self.pos - self.vel * 1.5 + vectorUnitRandom()*2, randint(5,8))
+		Blast(self.pos - self.vel * 1.5 + vectorUnitRandom() * 2 - 10 * normalize(self.vel), randint(5,8))
 		
 		angle = atan2(self.vel.y, self.vel.x)
 		r = angle - pi
@@ -4164,9 +4187,8 @@ class GuidedMissile(PhysObj):
 			PhysObj._reg.remove(self)
 		if self.pos.y > mapHeight:
 			PhysObj._reg.remove(self)
-		
 	def draw(self):
-		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		surf = pygame.transform.rotate(self.surf, -90 -degrees(self.vel.getAngle()))
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Flare(PhysObj):
@@ -4731,24 +4753,27 @@ class AcidBottle(PetrolBomb):
 		self.color = (200,255,200)
 		self.bounceBeforeDeath = 1
 		self.damp = 0.5
-		self.bottle = [(1,2), (1,6), (-1,6), (-1,2), (-3,-2), (3,-2)]
 		self.angle = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "acid bottle")
 	def secondaryStep(self):
-		self.angle += self.vel.x*4
+		self.angle -= self.vel.x*4
 	def deathResponse(self):
 		boom(self.pos, 10)
 		for i in range(40):
 			s = Acid(self.pos, Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2))
 	def draw(self):
-		poly = [point2world(self.pos + rotateVector(i, radians(self.angle))) for i in self.bottle]
-		pygame.draw.polygon(win, self.color, poly)
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Seeker:
 	def __init__(self, pos, direction, energy):
 		self.initialize(pos, direction, energy)
 		self.timer = 15 * fps
-		self.triangle = [(0,-2), (0,2), (7,0)]
 		self.target = HomingMissile.Target
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "seeker")
 	def initialize(self, pos, direction, energy):
 		nonPhys.append(self)
 		self.pos = vectorCopy(pos)
@@ -4806,7 +4831,7 @@ class Seeker:
 	def hitResponse(self):
 		self.deathResponse()
 	def secondaryStep(self):
-		Blast(self.pos + vectorUnitRandom()*2, randint(5,8), 30, 3)
+		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
 	def deathResponse(self):
 		boom(self.pos, 30)
 		nonPhys.remove(self)
@@ -4815,12 +4840,9 @@ class Seeker:
 		force.limit(self.maxForce)
 		self.acc = vectorCopy(force)
 	def draw(self):
-		# for i in self.avoid:
-			# pygame.draw.circle(win, (0,0,0), point2world(i), 6)
-		shape = []
-		for i in self.triangle:
-			shape.append(point2world(self.pos + tup2vec(i).rotate(self.vel.getAngle())))
-		pygame.draw.polygon(win, self.color, shape)
+		angle = -degrees(self.vel.getAngle()) - 90
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Seagull(Seeker):
 	_reg = []
