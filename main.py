@@ -831,7 +831,7 @@ if True:
 def blitWeaponSprite(dest, pos, weapon):
 	index = weaponMan.weaponDict[weapon]
 	x = index % 8
-	y = 6 + index // 8
+	y = 7 + index // 8
 	rect = (x * 16, y * 16, 16, 16)
 	dest.blit(sprites, pos, rect)
 
@@ -1373,6 +1373,8 @@ class Mortar (Grenade):#3
 					k.boomAffected = False
 					k.color = (0,50,0)
 					k.radius = 1.5
+					k.surf.fill((0,0,0,0))
+					k.surf.blit(sprites, (0,0), (0,96,16,16))
 					if j == 5:
 						camTrack = k
 				return
@@ -1385,6 +1387,8 @@ class Mortar (Grenade):#3
 			m.boomAffected = False
 			m.color = (0,50,0)
 			m.radius = 1.5
+			m.surf.fill((0,0,0,0))
+			m.surf.blit(sprites, (0,0), (0,96,16,16))
 			if i == 0:
 				camTrack = m
 
@@ -5542,15 +5546,16 @@ class WeaponManager:
 		self.currentWeapon = string
 		self.renderWeaponCount()
 		weaponHold.fill((0,0,0,0))
-		if self.getBackColor(string) in [GRENADES, GUNS, MISC, LEGENDARY, FIREY] or string in [""]:
-			if string in ["covid 19", "parachute", "earthquake"]:
-				return
-			if string == "gemino mine":
-				blitWeaponSprite(weaponHold, (0,0), "mine")
-				return
-			blitWeaponSprite(weaponHold, (0,0), string)
-		if self.getBackColor(string) in [AIRSTRIKE]:
-			weaponHold.blit(sprites, (0,0), (64,64,16,16))
+		if canShoot():
+			if self.getBackColor(string) in [GRENADES, GUNS, MISC, LEGENDARY, FIREY] or string in [""]:
+				if string in ["covid 19", "parachute", "earthquake"]:
+					return
+				if string == "gemino mine":
+					blitWeaponSprite(weaponHold, (0,0), "mine")
+					return
+				blitWeaponSprite(weaponHold, (0,0), string)
+			if self.getBackColor(string) in [AIRSTRIKE]:
+				weaponHold.blit(sprites, (0,0), (64,64,16,16))
 	def addArtifactMoves(self, artifact):
 		# when team pick up artifact add them to weaponCounter
 		for w in self.weapons[self.weaponCount + self.utilityCount:]:
@@ -6289,6 +6294,8 @@ def cycleWorms():
 	for worm in PhysObj._worms:
 		if not worm.sick == 0 and worm.health > 5:
 			worm.damage(min(int(5/damageMult)+1, int((worm.health-5)/damageMult) +1), 2)
+	
+	weaponMan.switchWeapon(weaponMan.currentWeapon)
 	
 	# select next team
 	index = teams.index(currentTeam)
