@@ -1,8 +1,10 @@
 # Worms Game
 ![Alt text](wormsShoot.png?raw=true "Worms")
-game development practice in python for educational purposes and fun. pygame required.
+game development practice in python for educational purposes and fun.
 
-# how to play
+**requirements**: Python3, Pygame, PySimpleGui
+
+# :question: ​how to play
 - right/left arrow keys - movement.
 - up/down arrow keys - pointing.
 - enter - jump in pointing direction.
@@ -14,22 +16,22 @@ game development practice in python for educational purposes and fun. pygame req
 - mouse right click - open weapons menu.
 - mouse scroll - scroll weapons menu.
 
-# Weapons
-## Missiles
+# :crossed_swords: Weapons
+## :rocket: Missiles
 - **MISSILE** - shoot a missile, wind sensitive.
 - **GRAVITY MISSILE** - shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
 - **BUNKER BUSTER** - shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
 - **HOMING MISSILE** - mouse click to select target and shoot.
 
-## Grenades
+## :comet: Grenades
 - **GRENADE** - throw a grenade. all grenades delay time can be changed by pressing tab.
 - **MORTAR** - throw a mortar grenade. release cluster on explosion.
 - **STICKY BOMB** - a sticky grenade.
 - **GAS GRENADE** - emit a toxic gas before exploding.
-- **ELECTRIC GRENADE** - electrifying nearby worms. bouncy.
-- **RAON LAUNCHER** - shooting two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
+- **ELECTRIC GRENADE** - electrifying grenade
+- **RAON LAUNCHER** - shoot two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
 
-## Guns
+## :gun: Guns
 - **SHOTGUN** - fire shotgun. 3 rounds.
 - **MINIGUN** - fire minigun.
 - **GAMMA GUN** - fire gamma radiation pulse. make worms sick and mutate venus fly traps. can pass through terrain.
@@ -39,11 +41,11 @@ game development practice in python for educational purposes and fun. pygame req
 - **PORTAL GUN** - the cake is a deception. obtainable by utility crate.
 - **BUBBLE GUN** - shoot bubbles that captures worms and more.
 
-## Fire weapons
-- **PETROL BOMB** - throw a petrol bomb, explosive fire spreader.
+## :fire: Fire weapons
+- **PETROL BOMB** - explosive fire spreader.
 - **FLAME THROWER** - it werfs flammen.
 
-## Place and run
+## :bomb: Place and run
 
 - **MINE** - mine.
 - **TNT** - explosive TNT bomb.
@@ -51,7 +53,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **SHEEP** - baaaa.
 - **SNAIL** - quick and sticky snail.
 
-## Misc
+## :wrench: Misc
 
 - **BASEBALL** - home running worms away.
 - **GIRDER** - place a girder. press tab for rotation and scaling.
@@ -62,14 +64,14 @@ game development practice in python for educational purposes and fun. pygame req
 - **ENDER PEARL** - throw and teleport to where it lands.
 - **ACID BOTTLE** - throw a bottle of hydrofluoric acid that corrode the earth and is deadly to worms.
 
-## Aerial
+## :small_airplane: Aerial
 - **ARTILLERY ASSISTANCE** - throw a flare to mark area for bombing.
 - **CHUM BUCKET** - throw chum. attracts seagulls. *experimental*
 - **AIRSTRIKE** - missile strike, wind sensitive.
 - **NAPALM STRIKE** - smelly, firey mess. wind sensitive.
 - **MINE STRIKE** - mine strike.
 
-## Super weapons
+## :hot_pepper: Super weapons
  Legendary weapons can be obtained by weapon crates marked with "W".
 - **HOLY GRENADE** - feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
 - **BANANA** - multiplying banana of mass destruction.
@@ -84,7 +86,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **GREEN SHELL** - actual Koopa Troopa shell.
 - **GUIDED MISSILE** - controllable missile. use RIGHT KEY and LEFT KEY to control.
 
-# Utilities:
+# :hammer: Utilities:
  Utilities can be obtained by utility crates marked with "?".
 - **moon gravity** - big step for wormanity.
 - **double damage** - twice as fun.
@@ -96,7 +98,7 @@ game development practice in python for educational purposes and fun. pygame req
 - **portal gun** - to use in weapons.
 - **traveling kit** - more ropes and parachutes.
 
-## Artifacts
+## :moyai: Artifacts
 
 Artifacts is a game option that unlocks magical items and weapons. the artifacts will randomly spawn in the map.
 
@@ -110,7 +112,7 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
   * **Mine Plant** - plant that grows proximity mine flowers
   * **Razor Leaf** - A Grass-type attack that sends sharp-edged leaves at the target. Likely to get a critical hit.
 
-## Game modes
+## :hammer_and_pick: Game modes
 
 - Battle - last team standing wins.
 - Points - damage = points. The team with the most points wins.
@@ -120,7 +122,7 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 - David vs Goliath - starter worm receives 50% of all teammate's health.
 - Arena - worms get points for standing on top of the arena at the end of each turn. The team with the most points wins.
 
-## Options
+## :gear: Options
 
 - Cooldown - weapons have a cooldown for 4 turns.
 - Warped - horizontal map warp. *experimental*
@@ -131,6 +133,6 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 - Forts - teammates spawn in cluster.
 - Digging - worms are underground. dig your way around. recommended with darkness.
 
-### Sudden Death
+### :ocean: Sudden Death
 
 Sudden death activated after the specified number of rounds in the options. the sudden death types are: plague - worms loose half their health and get sick, water rise - water level rising after each turn. the types can both be used.

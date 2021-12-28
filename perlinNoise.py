@@ -8,27 +8,18 @@ import os
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-d", "--dump", action='store_true', help='generate image and quit')
+parser.add_argument("-t", "--type", default="noise", help="noise type", type=str)
 
 args = parser.parse_args()
 
 winWidth = 800
 winHeight = 300
-noiseWid = winWidth
-noiseHei = winWidth
 
 pygame.init()
-if not args.dump:
-	
-	fpsClock = pygame.time.Clock()
 
 win = pygame.display.set_mode((winWidth,winHeight))
 
 ################################################################################
-
-noiseSeed = [uniform(0,1) for i in range(winWidth)]
-noiseSeed2D = [uniform(0,1) for i in range(noiseWid * noiseHei)]
-# print(len(noiseSeed2D))
-perlinNoise = []
 
 def perlin1D(count, seedArray, octaves, bias):
 	output = []
@@ -48,18 +39,6 @@ def perlin1D(count, seedArray, octaves, bias):
 			scale /= bias
 		output.append(noise / scaleAcc)
 	return output
-
-def perlin2Do(width, height, seedArray, octaves, bias):
-	output = [0] * width * height
-	for y in range(height):
-		xoff = 0
-		perlin1d = perlin1D(width, [uniform(0,1) for i in range(height)], 7, 1.5)
-		for x in range(width):
-			r = perlin1d[xoff] * 255
-			output[x + y * width] = (r,r,r)
-			xoff += 1
-			
-	return (output, 0.5)
 
 def perlin2D(width, height, seedArray, octaves, bias):
 	output = [0] * width * height
@@ -92,24 +71,65 @@ def perlin2D(width, height, seedArray, octaves, bias):
 			average += noise / scaleAcc
 	return (output, average / (width * height))
 
-def regenerate():
-	global perlin, avrg, octaveCount, bias
-	perlin, avrg = perlin2D(noiseWid, noiseHei, noiseSeed2D, octaveCount, bias)
-	# print(avrg)
+def generatePerlinNoise(width, height):
+	noiseSeed2D = [uniform(0,1) for i in range(noiseWid * noiseHei)]
+	octaveCount = 7
+	bias = 1.2
 	
+	perlin, avrg = perlin2D(noiseWid, noiseHei, noiseSeed2D, octaveCount, bias)
+	
+	surf = pygame.Surface((width, height))
+	
+	for x in range(noiseWid):
+		for y in range(noiseHei):
+			pixel = perlin[y * noiseWid + x]
+			if pixel < avrg: surf.set_at((x,y), (255,255,255))
+			if pixel >= avrg: surf.set_at((x,y), (0,0,0))
+	
+	return surf
 
-octaveCount = 7
-bias = 1.2
+def random_bw(minimum=0, maximum=255):
+	color = randint(minimum, maximum)
+	return (color, color, color)
 
-perlin = []
-avrg = 0
+def threshold(surf, avrg):
+	for x in range(surf.get_width()):
+		for y in range(surf.get_height()):
+			pixel = surf.get_at((x, y))[0]
+			if pixel < avrg: surf.set_at((x,y), (255,255,255))
+			if pixel >= avrg: surf.set_at((x,y), (0,0,0))
 
-regenerate()
+def generateNoise(width, height):
+	ratio = height / width
+	pool = randint(20, 50)
+	size = (pool, int(pool * ratio))
+	noise_org = pygame.Surface(size)
+	for y in range(size[1]):
+		for x in range(size[0]):
+			noise_org.set_at((x,y), random_bw())
+			if x == 0:
+				noise_org.set_at((x,y), random_bw(128,255))
+			if x == size[0] - 1:
+				noise_org.set_at((x,y), random_bw(128,255))
+			if y == 0:
+				noise_org.set_at((x,y), random_bw(128,255))
+			if y == size[1] - 1:
+				noise_org.set_at((x,y), random_bw(0,128))
+			
+	surf = pygame.transform.smoothscale(noise_org, (winWidth, winHeight))
+	threshold(surf, randint(100, 128))
+	return surf
 
 ################################################################################ Main Loop
+
+if args.type == "perlin":
+	noise = generatePerlinNoise(winWidth, winHeight)
+elif args.type == "noise":
+	noise = generateNoise(winWidth, winHeight)
+win.blit(noise, (0,0))
+
 run = True
 while run:
-	if not args.dump: fpsClock.tick(3)
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			run = False
@@ -117,48 +137,19 @@ while run:
 		if event.type == pygame.KEYDOWN:
 			#key pressed once:
 			if event.key == pygame.K_x:
-				bias = uniform(1.2, 2.2)
-				octaveCount = randint(6,7)
-				noiseSeed2D = [uniform(0,1) for i in range(noiseWid * noiseHei)]
-				regenerate()
-			if event.key == pygame.K_l:
-				bias += 0.1
-				regenerate()
-			if event.key == pygame.K_k:
-				bias -= 0.1
-				regenerate()
+				if args.type == "perlin":
+					noise = generatePerlinNoise(winWidth, winHeight)
+				elif args.type == "noise":
+					noise = generateNoise(winWidth, winHeight)
+				win.blit(noise, (0,0))
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_ESCAPE]:
 		run = False
 	
-	# draw:
-	# win.fill((255,255,255))
-	
-	
-	# print(perlin)
-	# print(hh)
-	
-	# perlin = perlin1D(winWidth, noiseSeed, octaveCount, 1.8)
-	# for x, y in enumerate(perlin):
-		# pygame.draw.line(win, (0,0,0), (x, 0), (x, y * winHeight))
-	
-	
-	# for x in range(winWidth):
-		# for y in range(winHeight):
-			# pixel = perlin[y * winWidth + x]
-			# win.set_at((x,y), pixel)
-	
-	
-	for x in range(noiseWid):
-		for y in range(noiseHei):
-			pixel = perlin[y * noiseWid + x]
-			if pixel < avrg: win.set_at((x,y), (255,255,255))
-			if pixel >= avrg: win.set_at((x,y), (0,0,0))
-	
 	if args.dump:
 		break
 	pygame.display.update()
-	
+
 x = datetime.datetime.now()
 if not os.path.exists("wormsMaps/PerlinMaps"):
 	os.mkdir("wormsMaps/PerlinMaps")

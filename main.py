@@ -135,7 +135,7 @@ if True:
 	worldArtifacts = [MJOLNIR, PLANT_MASTER]
 
 # improvements:
-# seagulls, artifacts to not spawn on top of world
+# seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square/surface collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
 
@@ -151,10 +151,10 @@ if True:
 # infinity stones:
 # space - teleport with no penalty
 # mind - control another worm
-# reality - ?
+# reality - earthquake, water rise, gravity switch, rectangular world alter team friendly
 # power - double power 
 # time - back in time once per turn
-# soul - ?
+# soul - -50% for nearby worms health
 
 ################################################################################ Map
 if True:
@@ -576,18 +576,6 @@ def mapGetAt(pos, mat=None):
 		return SKY
 	return mat.get_at((int(pos[0]), int(pos[1])))
 
-def isVisibleInDarkness(self):
-	if state == PLACING_WORMS:
-		return True
-	if self in PhysObj._worms and objectUnderControl:
-		if dist(self.pos, objectUnderControl.pos) < lightRadius:
-			return True
-	
-	if isOnMap(self.pos):
-		if darkMask.get_at(self.pos.vec2tupint())[3] < 255:
-			return True
-	return False
-
 def drawWindIndicator():
 	pygame.draw.line(win, (100,100,255), (20, 15), (int(20 + wind * 20),15))
 	pygame.draw.line(win, (0,0,255), (20, 10), (20,20))
@@ -1008,6 +996,13 @@ def getClosestPosAvail(obj):
 def grayen(color):
 	return tuple(i//5 + 167 for i in color)
 
+def desaturate(color, value=0.5):
+	grey = color[0] * 0.299 + color[1] * 0.587 + color[2] * 0.144
+	return tuple(grey * value + i * (1 - value) for i in color)
+
+def darken(color):
+	return tuple(max(i - 30,0) for i in color)
+
 def getNormal(pos, vel, radius, wormCollision, extraCollision):
 	# colission with world:
 	response = Vector(0,0)
@@ -1283,8 +1278,6 @@ class Debrie (PhysObj):
 		# gravity:
 		self.acc.y += globalGravity * 2.5
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius))
 
 class Missile (PhysObj):#1
@@ -1307,8 +1300,6 @@ class Missile (PhysObj):#1
 			self.boomRadius *= 2
 		boom(self.pos, self.boomRadius)
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		angle = -degrees(self.vel.getAngle()) - 90
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -1339,8 +1330,6 @@ class Grenade (PhysObj):#2
 			self.dead = True
 		self.stable = False
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -1418,8 +1407,6 @@ class PetrolBomb(PhysObj):#4
 				s = Fire(self.pos, 5)
 				s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -1460,7 +1447,7 @@ class Worm (PhysObj):
 		self.sleep = False
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		self.surf.blit(sprites, (0,0), (0,0,16,16))
-		self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
+		self.surf.blit(self.team.hatSurf, (0,0))
 		if darkness:
 			self.darktree = []
 	def applyForce(self):
@@ -1513,19 +1500,18 @@ class Worm (PhysObj):
 	def sicken(self, sickness = 1):
 		self.sick = sickness
 		self.surf.fill((0,0,0,0))
-		self.surf.blit(sprites, (0,0), (0,16,16,16))
-		self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
+		self.surf.blit(sprites, (0,0), (16,0,16,16))
+		self.surf.blit(self.team.hatSurf, (0,0))
 		self.color = (128, 189,66)
 	def heal(self, hp):
 		self.health += hp
-		
 		if self.healthMode == 1:
 			self.healthStr = myfont.render(str(self.health), False, self.team.color)
 		self.sick = 0
 		self.color = (255, 206, 167)
 		self.surf.fill((0,0,0,0))
 		self.surf.blit(sprites, (0,0), (0,0,16,16))
-		self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
+		self.surf.blit(self.team.hatSurf, (0,0))
 	def toggleJetpack(self):
 		self.jetpacking = not self.jetpacking
 		self.fallAffected = not self.fallAffected
@@ -1573,8 +1559,6 @@ class Worm (PhysObj):
 	def draw(self):
 		if not self is objectUnderControl and self.alive:
 			pygame.draw.circle(wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
-		if darkness and not isVisibleInDarkness(self):
-			return
 
 		if self.parachuting:
 			win.blit(sprites, point2world(self.pos - Vector(46,31)//2 + Vector(0,-15)), (80, 64, 46, 31))
@@ -1590,7 +1574,6 @@ class Worm (PhysObj):
 						win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
 
 		# draw worm sprite
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		win.blit(pygame.transform.flip(self.surf, self.facing == RIGHT, False), point2world(self.pos - Vector(8,8)))
 		
 		# draw name
@@ -1635,7 +1618,7 @@ class Worm (PhysObj):
 		self.alive = False
 		self.color = (167,167,167)
 		self.surf.fill((0,0,0,0))
-		self.surf.blit(sprites, (0,0), (16,16,16,16))
+		self.surf.blit(sprites, (0,0), (32,0,16,16))
 		# self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
 		self.name = myfont.render(self.nameStr, False, grayen(self.team.color))
 
@@ -1654,7 +1637,7 @@ class Worm (PhysObj):
 			self.flagHolder = False
 			self.team.flagHolder = False
 			if cause == Worm.causeFlew:
-				p = deployPack(FLAG_DEPLOY)
+				p = deployPack(Flag)
 				global camTrack
 				camTrack = p
 			else:
@@ -1701,7 +1684,7 @@ class Worm (PhysObj):
 		if artifactsMode and len(self.team.worms) == 0:
 			if len(self.team.artifacts) > 0:
 				for artifact in self.team.artifacts:
-					dropArtifact(artifact, self.pos)
+					dropArtifact(weaponMan.artifactDict[artifact], self.pos)
 	def drawHealth(self):
 		healthHeight = -15
 		if Worm.healthMode == 0:
@@ -1940,7 +1923,7 @@ class TNT(PhysObj):#5
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 2
-		self.color = (255,0,0)
+		self.color = (230,57,70)
 		self.bounceBeforeDeath = -1
 		self.damp = 0.2
 		self.timer = 0
@@ -2075,8 +2058,6 @@ class PetrolCan(PhysObj):
 				self.health = 0
 	def draw(self):
 		pygame.draw.rect(extraCol, GRD, (int(self.pos.x -3),int(self.pos.y -5), 7,10))
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.draw.rect(win, self.color, (int(self.pos.x -3) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 7,10))
 		pygame.draw.circle(win, (218, 238, 44), (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), 3)
 
@@ -2114,8 +2095,6 @@ class Mine(PhysObj):
 	def deathResponse(self):
 		boom(self.pos, 30)
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		if diggingMatch:
 			if self.activated:
 				pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
@@ -2132,6 +2111,7 @@ class Mine(PhysObj):
 
 class Baseball:
 	def __init__(self):	
+		global camTrack
 		self.direction = vectorFromAngle(objectUnderControl.shootAngle)
 		nonPhys.append(self)
 		self.timer = 0
@@ -2167,8 +2147,6 @@ class SickGas:
 		self.timeCounter = 0
 		self.sickness = sickness
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.gfxdraw.filled_circle(win, int(self.pos.x - camPos.x), int(self.pos.y - camPos.y), self.radius, self.color)
 	def step(self):
 		self.timeCounter += 1
@@ -2225,8 +2203,6 @@ class HealthPack(PetrolCan):
 		self.windAffected = 0
 		#Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.draw.rect(win, self.color, (int(self.pos.x) -5 - int(camPos.x),int(self.pos.y) -5 - int(camPos.y) , 10,10))
 		pygame.draw.rect(win, (255,108,80), (int(self.pos.x) -4 - int(camPos.x),int(self.pos.y) -1 - int(camPos.y) , 8,2))
 		pygame.draw.rect(win, (255,108,80), (int(self.pos.x) -1 - int(camPos.x),int(self.pos.y) -4 - int(camPos.y) , 2,8))
@@ -2256,8 +2232,6 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.windAffected = 0
 		self.box = choice(["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel", "jet pack", "portal gun", "travel kit", "ender pearls"])
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-1, int(self.pos.y) - int(camPos.y)-2))
 	def effect(self, worm):
@@ -2293,8 +2267,6 @@ class WeaponPack(HealthPack):# Weapon Pack
 			weaponsInBox .append("mine strike")
 		self.box = choice(weaponsInBox)
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
 		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
 	def effect(self, worm):
@@ -2336,14 +2308,7 @@ def deployPack(pack):
 				goodPlace = False
 				continue
 	
-	if pack == HEALTH_PACK:
-		p = HealthPack((x, y))
-	elif pack == UTILITY_PACK:
-		p = UtilityPack((x, y))
-	elif pack == WEAPON_PACK:
-		p = WeaponPack((x, y))
-	elif pack == FLAG_DEPLOY:
-		p = Flag((x, y))
+	p = pack(Vector(x, y))
 	return p
 
 airStrikeDir = RIGHT
@@ -2703,8 +2668,6 @@ class SentryGun(PhysObj):
 			
 			del self
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		size = Vector(4*2,10*2)
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 		pygame.draw.line(win, self.teamColor, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
@@ -2822,8 +2785,6 @@ class BeeHive(PhysObj):
 			b.surf = self.beeSurf
 			self.beeCount -= 1
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -3561,10 +3522,10 @@ class ElectroBoom(PhysObj):
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 		
 		for worm in self.worms:
-			drawLightning(self, worm)
+			drawLightning(self, worm, (250, 250, 21))
 		for net in self.network:
 			for worm in net[1]:
-				drawLightning(net[0], worm)
+				drawLightning(net[0], worm, (250, 250, 21))
 
 def firePortal(start, direction):
 	steps = 500
@@ -3684,8 +3645,6 @@ class Portal:
 					finalAngle = broAngle + angle
 					worm.vel.setAngle(finalAngle)
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 
 class Venus:
@@ -3839,15 +3798,13 @@ class Venus:
 		rotated_image = pygame.transform.rotate(image, -degrees(self.angle - self.snap))
 		rotated_offset = rotateVector(self.offset, self.angle - self.snap)
 		rect = rotated_image.get_rect(center=(self.p2 + rotated_offset).vec2tupint())
-		if not (darkness and not isVisibleInDarkness(self)):
-			win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
+		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
 		extraCol.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 		
 		rotated_image = pygame.transform.rotate(pygame.transform.flip(image, False, True), -degrees(self.angle + self.snap))
 		rotated_offset = rotateVector(self.offset, self.angle + self.snap)
 		rect = rotated_image.get_rect(center=(self.p1 + rotated_offset).vec2tupint())
-		if not (darkness and not isVisibleInDarkness(self)):
-			win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
+		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
 		extraCol.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 
 class Ball(PhysObj):#########EXPERIMENTAL
@@ -4010,8 +3967,6 @@ class PokeBall(PhysObj):
 		if self.vel.getMag() > 0.25:
 			self.angle -= self.vel.x*4
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -4091,8 +4046,6 @@ class GreenShell(PhysObj):
 				
 				self.timer = (3 - self.speed) * 100
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		if not self.speed == 0:
 			index = int((self.timer*(self.speed/3) % 12)/3)
 		else:
@@ -4304,7 +4257,7 @@ class Flag(PhysObj):
 				return
 	def outOfMapResponse(self):
 		Flag.flags.remove(self)
-		p = deployPack(FLAG_DEPLOY)
+		p = deployPack(Flag)
 		global camTrack
 		camTrack = p
 	def draw(self):
@@ -4453,8 +4406,6 @@ class Raon(PhysObj):
 		self.dead = True
 		Raon._raons.remove(self)
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.draw.rect(win, self.color, (point2world(self.pos - Vector(self.radius, self.radius)), (self.radius * 2, self.radius * 2)))
 		pygame.draw.line(win, (255,0,0), point2world(self.pos + Vector(self.radius-1, self.radius)), point2world(self.pos + Vector(-self.radius, self.radius)))
 		pygame.draw.line(win, (0,0,0), point2world(self.pos + Vector(0, self.radius - 1)), point2world(self.pos + Vector(0, self.radius + 2)))
@@ -4655,8 +4606,6 @@ class Snail:
 				boom(self.pos, 30)
 				return
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		angle = Snail.around.index(self.anchor - self.pos)//2 * 90 + (90 if self.clockwise == LEFT else 180)
 		win.blit(pygame.transform.rotate(self.surf, angle) , point2world(self.pos - Vector(3,3)))
 
@@ -4724,8 +4673,6 @@ class Bubble:
 			d = Debrie(self.pos, self.radius/5, [self.color], 1)
 			d.radius = 1
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		pygame.gfxdraw.circle(win, *point2world(self.pos), self.radius, self.color)
 
 class Acid(PhysObj):
@@ -5099,6 +5046,8 @@ class Mjolnir(PhysObj):
 			PhysObj._reg.remove(self)
 			commentator.que.append((objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), currentTeam.color))
 			currentTeam.artifacts.append(MJOLNIR)
+			# add artifacts moves:
+			
 			weaponMan.addArtifactMoves(MJOLNIR)
 			del self
 			return 
@@ -5115,11 +5064,11 @@ class Mjolnir(PhysObj):
 		elif vel < 1:
 			self.vel *= 0
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		surf = pygame.transform.rotate(imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-
+	def comment(self):
+		commentator.que.append(("", ("a gift from the gods", ""), HUDColor))
+	
 class MjolnirFly(PhysObj):
 	flying = False
 	def __init__(self, pos, direction, energy):
@@ -5273,13 +5222,13 @@ class MagicLeaf(PhysObj):
 			PhysObj._reg.remove(self)
 		worldArtifacts.append(PLANT_MASTER)
 	def draw(self):
-		if darkness and not isVisibleInDarkness(self):
-			return
 		surf = self.surf
 		if self.vel.x > 0:
 			surf = pygame.transform.flip(surf, True, False)
 		surf = pygame.transform.rotate(surf, self.angle)
 		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())/2))
+	def comment(self):
+		commentator.que.append(("", ("a leaf from the gods", ""), HUDColor))
 
 class MagicBeanGrow:
 	def __init__(self, pos, vel):
@@ -5432,82 +5381,82 @@ class PlantControl:
 
 class WeaponManager:
 	def __init__(self):
-		self.weapons = [] # name, style, amount, group, fused, delayed
-		self.weapons.append(["missile", CHARGABLE, -1, MISSILES, False, 0])
-		self.weapons.append(["gravity missile", CHARGABLE, 5, MISSILES, False, 0])
-		self.weapons.append(["bunker buster", CHARGABLE, 2, MISSILES, False, 0])
-		self.weapons.append(["homing missile", CHARGABLE, 2, MISSILES, False, 0])
-		self.weapons.append(["seeker", CHARGABLE, 1, MISSILES, False, 0])
-		self.weapons.append(["grenade", CHARGABLE, 5, GRENADES, True, 0])
-		self.weapons.append(["mortar", CHARGABLE, 3, GRENADES, True, 0])
-		self.weapons.append(["sticky bomb", CHARGABLE, 3, GRENADES, True, 0])
-		self.weapons.append(["gas grenade", CHARGABLE, 5, GRENADES, True, 0])
-		self.weapons.append(["electric grenade", CHARGABLE, 3, GRENADES, True, 0])
-		self.weapons.append(["raon launcher", CHARGABLE, 2, GRENADES, False, 0])
-		# self.weapons.append(["distorter", CHARGABLE, 0, GRENADES, True, 0])
-		self.weapons.append(["shotgun", GUN, 5, GUNS, False, 0])
-		self.weapons.append(["long bow", GUN, 3, GUNS, False, 0])
-		self.weapons.append(["minigun", GUN, 5, GUNS, False, 0])
-		self.weapons.append(["gamma gun", GUN, 3, GUNS, False, 0])
-		self.weapons.append(["spear", CHARGABLE, 2, GUNS, False, 0])
-		self.weapons.append(["laser gun", GUN, 3, GUNS, False, 0])
-		self.weapons.append(["portal gun", GUN, 0, GUNS, False, 0])
-		self.weapons.append(["bubble gun", GUN, 1, GUNS, False, 2])
-		self.weapons.append(["petrol bomb", CHARGABLE, 5, FIREY, False, 0])
-		self.weapons.append(["flame thrower", PUTABLE, 5, FIREY, False, 0])
-		self.weapons.append(["mine", PUTABLE, 5, GRENADES, False, 0])
-		self.weapons.append(["TNT", PUTABLE, 1, GRENADES, False, 0])
-		self.weapons.append(["covid 19", PUTABLE, 0, GRENADES, False, 0])
-		self.weapons.append(["sheep", PUTABLE, 1, GRENADES, False, 0])
-		self.weapons.append(["snail", CHARGABLE, 2, GRENADES, False, 0])
-		self.weapons.append(["baseball", PUTABLE, 3, MISC, False, 0])
-		self.weapons.append(["girder", CLICKABLE, -1, MISC, False, 0])
-		self.weapons.append(["rope", PUTABLE, 3, MISC, False, 0])
-		self.weapons.append(["parachute", PUTABLE, 3, MISC, False, 0])
-		self.weapons.append(["venus fly trap", CHARGABLE, 1, MISC, False, 0])
-		self.weapons.append(["sentry turret", PUTABLE, 0, MISC, False, 0])
-		self.weapons.append(["ender pearl", CHARGABLE, 0, MISC, False, 0])
-		# self.weapons.append(["fus ro duh", PUTABLE, 0, MISC, False, 0])
-		self.weapons.append(["acid bottle", CHARGABLE, 1, MISC, False, 0])
-		self.weapons.append(["artillery assist", CHARGABLE, 1, AIRSTRIKE, False, 0])
-		self.weapons.append(["chum bucket", CHARGABLE, 1, AIRSTRIKE, False, 0])
-		self.weapons.append(["airstrike", CLICKABLE, 1, AIRSTRIKE, False, 8])
-		self.weapons.append(["napalm strike", CLICKABLE, 1, AIRSTRIKE, False, 8])
-		self.weapons.append(["mine strike", CLICKABLE, 0, AIRSTRIKE, False, 1])
-		self.weapons.append(["holy grenade", CHARGABLE, 0, LEGENDARY, True, 1])
-		self.weapons.append(["banana", CHARGABLE, 0, LEGENDARY, True, 1])
-		self.weapons.append(["earthquake", PUTABLE, 0, LEGENDARY, False, 1])
-		self.weapons.append(["gemino mine", CHARGABLE, 0, LEGENDARY, False, 1])
-		self.weapons.append(["bee hive", CHARGABLE, 0, LEGENDARY, False, 1])
-		self.weapons.append(["vortex grenade", CHARGABLE, 0, LEGENDARY, True, 1])
-		self.weapons.append(["chilli pepper", CHARGABLE, 0, LEGENDARY, False, 1])
-		self.weapons.append(["raging bull", PUTABLE, 0, LEGENDARY, False, 1])
-		self.weapons.append(["electro boom", CHARGABLE, 0, LEGENDARY, True, 1])
-		self.weapons.append(["pokeball", CHARGABLE, 0, LEGENDARY, True, 1])
-		self.weapons.append(["green shell", PUTABLE, 0, LEGENDARY, False, 1])
-		self.weapons.append(["guided missile", PUTABLE, 0, LEGENDARY, False, 1])
+		self.weapons = [] #	  name					style	amount	group		fused	delay
+		self.weapons.append(["missile",				CHARGABLE,	-1,	MISSILES,	False,	0])
+		self.weapons.append(["gravity missile",		CHARGABLE,	5,	MISSILES,	False,	0])
+		self.weapons.append(["bunker buster",		CHARGABLE,	2,	MISSILES,	False,	0])
+		self.weapons.append(["homing missile",		CHARGABLE,	2,	MISSILES,	False,	0])
+		self.weapons.append(["seeker",				CHARGABLE,	1,	MISSILES,	False,	0])
+		self.weapons.append(["grenade",				CHARGABLE,	5,	GRENADES,	True,	0])
+		self.weapons.append(["mortar",				CHARGABLE,	3,	GRENADES,	True,	0])
+		self.weapons.append(["sticky bomb",			CHARGABLE,	3,	GRENADES,	True,	0])
+		self.weapons.append(["gas grenade",			CHARGABLE,	5,	GRENADES,	True,	0])
+		self.weapons.append(["electric grenade",	CHARGABLE,	3,	GRENADES,	True,	0])
+		self.weapons.append(["raon launcher",		CHARGABLE,	2,	GRENADES,	False,	0])
+		self.weapons.append(["shotgun",				GUN,		5,	GUNS,		False,	0])
+		self.weapons.append(["long bow",			GUN,		3,	GUNS,		False,	0])
+		self.weapons.append(["minigun",				GUN,		5,	GUNS,		False,	0])
+		self.weapons.append(["gamma gun",			GUN,		3,	GUNS,		False,	0])
+		self.weapons.append(["spear",				CHARGABLE,	2,	GUNS,		False,	0])
+		self.weapons.append(["laser gun",			GUN,		3,	GUNS,		False,	0])
+		self.weapons.append(["portal gun",			GUN,		0,	GUNS,		False,	0])
+		self.weapons.append(["bubble gun",			GUN,		1,	GUNS,		False,	2])
+		self.weapons.append(["petrol bomb",			CHARGABLE,	5,	FIREY,		False,	0])
+		self.weapons.append(["flame thrower",		PUTABLE,	5,	FIREY,		False,	0])
+		self.weapons.append(["mine",				PUTABLE,	5,	GRENADES,	False,	0])
+		self.weapons.append(["TNT",					PUTABLE,	1,	GRENADES,	False,	0])
+		self.weapons.append(["covid 19",			PUTABLE,	0,	GRENADES,	False,	0])
+		self.weapons.append(["sheep",				PUTABLE,	1,	GRENADES,	False,	0])
+		self.weapons.append(["snail",				CHARGABLE,	2,	GRENADES,	False,	0])
+		self.weapons.append(["baseball",			PUTABLE,	3,	MISC,		False,	0])
+		self.weapons.append(["girder",				CLICKABLE,	-1,	MISC,		False,	0])
+		self.weapons.append(["rope",				PUTABLE,	3,	MISC,		False,	0])
+		self.weapons.append(["parachute",			PUTABLE,	3,	MISC,		False,	0])
+		self.weapons.append(["venus fly trap",		CHARGABLE,	1,	MISC,		False,	0])
+		self.weapons.append(["sentry turret",		PUTABLE,	0,	MISC,		False,	0])
+		self.weapons.append(["ender pearl",			CHARGABLE,	0,	MISC,		False,	0])
+		self.weapons.append(["acid bottle",			CHARGABLE,	1,	MISC,		False,	0])
+		self.weapons.append(["artillery assist",	CHARGABLE,	1,	AIRSTRIKE,	False,	0])
+		self.weapons.append(["chum bucket",			CHARGABLE,	1,	AIRSTRIKE,	False,	0])
+		self.weapons.append(["airstrike",			CLICKABLE,	1,	AIRSTRIKE,	False,	8])
+		self.weapons.append(["napalm strike",		CLICKABLE,	1,	AIRSTRIKE,	False,	8])
+		self.weapons.append(["mine strike",			CLICKABLE,	0,	AIRSTRIKE,	False,	1])
+		self.weapons.append(["holy grenade",		CHARGABLE,	0,	LEGENDARY,	True,	1])
+		self.weapons.append(["banana",				CHARGABLE,	0,	LEGENDARY,	True,	1])
+		self.weapons.append(["earthquake",			PUTABLE,	0,	LEGENDARY,	False,	1])
+		self.weapons.append(["gemino mine",			CHARGABLE,	0,	LEGENDARY,	False,	1])
+		self.weapons.append(["bee hive",			CHARGABLE,	0,	LEGENDARY,	False,	1])
+		self.weapons.append(["vortex grenade",		CHARGABLE,	0,	LEGENDARY,	True,	1])
+		self.weapons.append(["chilli pepper",		CHARGABLE,	0,	LEGENDARY,	False,	1])
+		self.weapons.append(["raging bull",			PUTABLE,	0,	LEGENDARY,	False,	1])
+		self.weapons.append(["electro boom",		CHARGABLE,	0,	LEGENDARY,	True,	1])
+		self.weapons.append(["pokeball",			CHARGABLE,	0,	LEGENDARY,	True,	1])
+		self.weapons.append(["green shell",			PUTABLE,	0,	LEGENDARY,	False,	1])
+		self.weapons.append(["guided missile",		PUTABLE,	0,	LEGENDARY,	False,	1])
+		self.weapons.append(["distorter",			CHARGABLE,	0,	GRENADES,	True,	0])
+		self.weapons.append(["fus ro duh",			PUTABLE,	0,	MISC,		False,	0])
 		
 		self.weaponCount = len(self.weapons)
 		
-		self.weapons.append(["moon gravity", UTILITY, 0, WHITE, False, 0])
-		self.weapons.append(["double damage", UTILITY, 0, WHITE, False, 0])
-		self.weapons.append(["aim aid", UTILITY, 0, WHITE, False, 0])
-		self.weapons.append(["teleport", CLICKABLE, 0, WHITE, False, 0])
-		self.weapons.append(["switch worms", UTILITY, 0, WHITE, False, 0])
-		self.weapons.append(["time travel", UTILITY, 0, WHITE, False, 0])
-		self.weapons.append(["jet pack", UTILITY, 0, WHITE, False, 0])
-		self.weapons.append(["flare", CHARGABLE, 0, WHITE, False, 0])
+		self.weapons.append(["moon gravity"	,		UTILITY,	0,	WHITE,		False,	0])
+		self.weapons.append(["double damage",		UTILITY,	0,	WHITE,		False,	0])
+		self.weapons.append(["aim aid",				UTILITY,	0,	WHITE,		False,	0])
+		self.weapons.append(["teleport",			CLICKABLE,	0,	WHITE,		False,	0])
+		self.weapons.append(["switch worms",		UTILITY,	0,	WHITE,		False,	0])
+		self.weapons.append(["time travel",			UTILITY,	0,	WHITE,		False,	0])
+		self.weapons.append(["jet pack",			UTILITY,	0,	WHITE,		False,	0])
+		self.weapons.append(["flare",				CHARGABLE,	0,	WHITE,		False,	0])
 		
 		self.utilityCount = len(self.weapons) - self.weaponCount
 		
-		self.weapons.append(["mjolnir strike", PUTABLE, 0, LEGENDARY, False, 0, MJOLNIR])
-		self.weapons.append(["mjolnir throw", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
-		self.weapons.append(["fly", CHARGABLE, 0, LEGENDARY, False, 0, MJOLNIR])
-		
-		self.weapons.append(["control plants", PUTABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
-		self.weapons.append(["magic bean", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
-		self.weapons.append(["mine plant", CHARGABLE, 0, LEGENDARY, False, 0, PLANT_MASTER])
-		self.weapons.append(["razor leaf", GUN, 0, LEGENDARY, False, 0, PLANT_MASTER])
+		self.weapons.append(["mjolnir strike",		PUTABLE,	0,	LEGENDARY,	False,	0,	MJOLNIR])
+		self.weapons.append(["mjolnir throw",		CHARGABLE,	0,	LEGENDARY,	False,	0,	MJOLNIR])
+		self.weapons.append(["fly",					CHARGABLE,	0,	LEGENDARY,	False,	0,	MJOLNIR])
+						
+		self.weapons.append(["control plants",		PUTABLE,	0,	LEGENDARY,	False,	0,	PLANT_MASTER])
+		self.weapons.append(["magic bean",			CHARGABLE,	0,	LEGENDARY,	False,	0,	PLANT_MASTER])
+		self.weapons.append(["mine plant",			CHARGABLE,	0,	LEGENDARY,	False,	0,	PLANT_MASTER])
+		self.weapons.append(["razor leaf",			GUN,		0,	LEGENDARY,	False,	0,	PLANT_MASTER])
 		
 		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
 
@@ -5522,6 +5471,8 @@ class WeaponManager:
 		self.currentWeapon = self.weapons[0][0]
 		self.surf = myfont.render(self.currentWeapon, False, HUDColor)
 		self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
+		
+		self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf}
 	def getStyle(self, string):
 		return self.weapons[self.weaponDict[string]][1]
 	def getCurrentStyle(self):
@@ -5545,6 +5496,7 @@ class WeaponManager:
 	def switchWeapon(self, string):
 		self.currentWeapon = string
 		self.renderWeaponCount()
+		# global weaponH
 		weaponHold.fill((0,0,0,0))
 		if canShoot():
 			if self.getBackColor(string) in [GRENADES, GUNS, MISC, LEGENDARY, FIREY] or string in [""]:
@@ -5963,7 +5915,16 @@ class Team:
 		self.points = 0
 		self.flagHolder = False
 		self.artifacts = []
-		self.hatIndex = 0
+		self.hatOptions = None
+		self.hatSurf = None
+	def makeHat(self, index):
+		self.hatSurf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.hatSurf.blit(sprites, (0,0), (16 * (index % 8),16 * (index // 8),16,16))
+		pixels = pygame.PixelArray(self.hatSurf)
+		color = desaturate(self.color)
+		pixels.replace((101, 101, 101), color)
+		pixels.replace((81, 81, 81), darken(color))
+		del pixels
 	def __len__(self):
 		return len(self.worms)
 	def addWorm(self, pos):
@@ -5983,11 +5944,22 @@ teams = []
 for teamsData in ET.parse('wormsTeams.xml').getroot():
 	newTeam = Team()
 	newTeam.name = teamsData.attrib["name"]
+	newTeam.hatOptions = teamsData.attrib["hat"]
 	newTeam.color = tuple([int(i) for i in teamsData.attrib["color"][1:-1].split(",")])
 	for team in teamsData:
 		if team.tag == "worm":
 			newTeam.nameList.append(team.attrib["name"])
 	teams.append(newTeam)
+
+for team in teams:
+	indexChoice = []
+	options = team.hatOptions.replace(" ", "").split(",")
+	for option in options:
+		if "-" in option:
+			indexChoice += [i for i in range(int(option.split("-")[0]), int(option.split("-")[1]) + 1)]
+		else:
+			indexChoice.append(int(option))
+	team.makeHat(choice(indexChoice))
 
 totalTeams = len(teams)
 currentTeam = None
@@ -5998,10 +5970,9 @@ damageThisTurn = 0
 nWormsPerTeam = 0
 shuffle(teams)
 
-hats = [i for i in range(1, 8)]
-shuffle(hats)
-for team in teams:
-	team.hatIndex = hats.pop()
+# hats = [i for i in range(1, 8)] + [i for i in range(10, 16)]
+# shuffle(hats)
+
 
 ################################################################################ more functions
 
@@ -6214,7 +6185,7 @@ def cycleWorms():
 		nextState = WAIT_STABLE
 		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
 		for i in range(packMult):
-			w = deployPack(choice([HEALTH_PACK,UTILITY_PACK, WEAPON_PACK]))
+			w = deployPack(choice([HealthPack,UtilityPack, WeaponPack]))
 			camTrack = w
 		if darkness:
 			for team in teams:
@@ -6244,7 +6215,7 @@ def cycleWorms():
 			if chance == 0:
 				artifact = choice(worldArtifacts)
 				worldArtifacts.remove(artifact)
-				dropArtifact(artifact, None, True)
+				dropArtifact(weaponMan.artifactDict[artifact], None, True)
 				nextState = WAIT_STABLE
 				roundCounter -= 1
 				return
@@ -6383,16 +6354,29 @@ def squareCollision(pos1, pos2, rad1, rad2):
 	return True if pos1.x < pos2.x + rad2*2 and pos1.x + rad1*2 > pos2.x and pos1.y < pos2.y + rad2*2 and pos1.y + rad1*2 > pos2.y else False
 
 def dropArtifact(artifact, pos, comment=False):
+	deploy = False
 	if not pos:
-		pos = Vector(randint(20, mapWidth - 20), -50)
-	if artifact == MJOLNIR:
-		m = Mjolnir(pos)
-		if comment:
-			commentator.que.append(("", ("a gift from the gods", ""), HUDColor))
-	elif artifact == PLANT_MASTER:
-		if comment:
-			commentator.que.append(("", ("a leaf from the heavens", ""), HUDColor))
-		m = MagicLeaf(pos)
+		# find good position for artifact
+		goodPlace = False
+		count = 0
+		deploy = False
+		while not goodPlace:
+			pos = Vector(randint(20, mapWidth - 20), -50)
+			if not mapGetAt((pos.x, 0)) == GRD:
+				goodPlace = True
+			count += 1
+			if count > 2000:
+				break
+		if not goodPlace:
+			deploy = True
+	
+	if not deploy:
+		m = artifact(pos)
+	else:
+		m = deployPack(artifact)
+	
+	if comment:
+		m.comment()
 	global camTrack
 	camTrack = m
 
@@ -7143,11 +7127,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	# m.pos = mouses
-	# dropArtifact(randint(0,1), mouse)
-	# print("worldArtifacts=", worldArtifacts)
-	PlantControl()
-	
+
 ################################################################################ State machine
 if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
