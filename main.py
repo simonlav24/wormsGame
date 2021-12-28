@@ -1448,6 +1448,7 @@ class Worm (PhysObj):
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		self.surf.blit(sprites, (0,0), (0,0,16,16))
 		self.surf.blit(self.team.hatSurf, (0,0))
+		self.angle = 0
 		if darkness:
 			self.darktree = []
 	def applyForce(self):
@@ -1574,7 +1575,10 @@ class Worm (PhysObj):
 						win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
 
 		# draw worm sprite
-		win.blit(pygame.transform.flip(self.surf, self.facing == RIGHT, False), point2world(self.pos - Vector(8,8)))
+		angle = 45 * int(self.angle / 45)
+		fliped = pygame.transform.flip(self.surf, self.facing == RIGHT, False)
+		rotated = pygame.transform.rotate(fliped, angle)
+		win.blit(rotated, point2world(self.pos - tup2vec(rotated.get_size())//2))
 		
 		# draw name
 		nameHeight = -21
@@ -1704,6 +1708,10 @@ class Worm (PhysObj):
 			pygame.draw.rect(win, (0,0,220),(point2world(self.pos + Vector(-10, -25)), (int(value),3)))
 	def secondaryStep(self):
 		global state, nextState
+		if not self.stable and not self is objectUnderControl: 
+			self.angle -= self.vel.x*4
+		else:
+			self.angle = 0
 		if objectUnderControl == self and playerControl and self.alive:
 			if not self.rope: self.damp = 0.1
 			else: self.damp = 0.5
@@ -1795,21 +1803,7 @@ class Worm (PhysObj):
 			self.shootAngle = clamp(self.shootAngle, pi/2, -pi/2)
 		elif self.facing == LEFT:
 			self.shootAngle = clamp(self.shootAngle, pi + pi/2, pi/2)
-		
-		# maintain dark tree
-		# if darkness and objectUnderControl and self in currentTeam.worms:
-			# if dist(self.pos, objectUnderControl.pos) < lightRadius:
-				# if not self in objectUnderControl.darktree:
-					# objectUnderControl.darktree.append(self)
-					# for worm in currentTeam.worms:
-						# if dist()
-			# if self in objectUnderControl.darktree and not dist(self.pos, objectUnderControl.pos) < lightRadius:
-				# objectUnderControl.darktree.remove(self)
-			
-			
-			# for w in self.darktree:
-				# lights.append((w.pos[0], w.pos[1], lightRadius, (0,0,0,0)))
-		
+				
 		# check if killed:
 		if self.health <= 0 and self.alive:
 			self.dieded()
@@ -3233,17 +3227,18 @@ class Artillery(PhysObj):
 		self.radius = 2
 		self.color = (128, 0, 0)
 		self.damp = 0.5
-		self.surf = pygame.Surface((3, 8)).convert_alpha()
-		self.surf.fill(self.color)
-		self.angle = 0
 		self.timer = 0
 		self.bombing = False
 		self.boomAffected = False
 		self.booms = randint(3,5)
 		self.boomCount = 20 if randint(0,50) == 0 or megaTrigger else self.booms
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (32, 96, 16, 16))
+		self.angle = 0
 	def draw(self):
-		surf = pygame.transform.rotate(self.surf, self.angle)
-		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 	def secondaryStep(self):
 		if not self.bombing:
 			self.angle -= self.vel.x*4
@@ -4176,10 +4171,10 @@ class Flare(PhysObj):
 		self.radius = 2
 		self.color = (128, 0, 0)
 		self.damp = 0.4
-		self.surf = pygame.Surface((3, 8)).convert_alpha()
-		self.surf.fill(self.color)
-		self.angle = 0
 		self.lightRadius = 50
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (32, 96, 16, 16))
+		self.angle = 0
 	def secondaryStep(self):
 		if self.vel.getMag() > 0.25:
 			self.angle -= self.vel.x*4
@@ -4191,10 +4186,10 @@ class Flare(PhysObj):
 			del self
 			return
 		lights.append((self.pos[0], self.pos[1], self.lightRadius, (100,0,0,100)))
-		
 	def draw(self):
-		surf = pygame.transform.rotate(self.surf, self.angle)
-		win.blit(surf , (int(self.pos.x - camPos.x - surf.get_size()[0]/2), int(self.pos.y - camPos.y - surf.get_size()[1]/2)))
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class EndPearl(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -5506,8 +5501,16 @@ class WeaponManager:
 					blitWeaponSprite(weaponHold, (0,0), "mine")
 					return
 				blitWeaponSprite(weaponHold, (0,0), string)
+				return
+			if string in ["flare", "artillery assist"]:
+				weaponHold.blit(sprites, (0,0), (32,96,16,16))
+				return
 			if self.getBackColor(string) in [AIRSTRIKE]:
+				if string == "chum bucket":
+					weaponHold.blit(sprites, (0,0), (16,96,16,16))
+					return
 				weaponHold.blit(sprites, (0,0), (64,64,16,16))
+			
 	def addArtifactMoves(self, artifact):
 		# when team pick up artifact add them to weaponCounter
 		for w in self.weapons[self.weaponCount + self.utilityCount:]:
@@ -5969,10 +5972,6 @@ mostDamage = (0,None)
 damageThisTurn = 0
 nWormsPerTeam = 0
 shuffle(teams)
-
-# hats = [i for i in range(1, 8)] + [i for i in range(10, 16)]
-# shuffle(hats)
-
 
 ################################################################################ more functions
 
@@ -7460,27 +7459,6 @@ commentator = Commentator()
 water = Water()
 Water.layersA.append(water)
 water.createLayers()
-
-def makeRandomTeams(teamQuantity, wormsPerTeam, names):
-	global teams, totalTeams, currentTeam, teamChoser
-	tempTeam = []
-	shuffle(names)
-	colorsChoice = [RED, YELLOW, BLUE, GREEN]
-	shuffle(colorsChoice)
-	for team in range(teamQuantity):
-		teamNames = []
-		for worm in range(wormsPerTeam):
-			teamNames.append(names.pop())
-		tempTeam.append(Team(teamNames, colorsChoice.pop()))
-	teams = tempTeam
-	totalTeams = teamQuantity
-	currentTeam = choice(teams)
-	teamChoser = randint(0,3) % totalTeams
-
-namesCustom = ["eithan", "almog", "berry", "simon", "dor", "evgeny", "ted", "shahaf", "nakar", "dan", "yoni", "asi"]
-namesCustom2 = ["Cenzor", "aliza", "naomi", "phathi", "yohai", "yulia", "rom", "lidia", "acasha", "ziv", "mario", "hagar"]
-if False:
-	makeRandomTeams(4, 4, namesCustom + namesCustom2)
 
 ################################################################################ Main Loop
 
