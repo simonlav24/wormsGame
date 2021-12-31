@@ -1,4 +1,4 @@
-from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign
+from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign, fmod
 from random import shuffle ,randint, uniform, choice
 from vector import *
 from pygame import Vector2, gfxdraw
@@ -138,15 +138,27 @@ if True:
 # seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square/surface collision for better performance. maybe a constant fire will be a thing
 # bungee using spring dynamics
+# call ship that comes through sea and blast cannons
+# golden snitch for points game ?
 
 # bugs:
-# map from moreMaps with ratio error
 # drop artifact option (shift - tab?)
+# fix baseball and spear
 
 # artifact: guitar hero
 # master of puppets: hang worms by springs to ceiling or sky half rest length
 # smoke on the water: fire in the skies (napalm but stronger might need fire optimization)
 # more.
+
+# artifact: avatar
+# 3 fire balls
+# throw rock/ground
+# tornado
+
+# artifact: batman
+# more ropes (black)
+# batarangs
+# 
 
 # infinity stones:
 # space - teleport with no penalty
@@ -1449,8 +1461,7 @@ class Worm (PhysObj):
 		self.surf.blit(sprites, (0,0), (0,0,16,16))
 		self.surf.blit(self.team.hatSurf, (0,0))
 		self.angle = 0
-		if darkness:
-			self.darktree = []
+		self.stableCount = 0
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
@@ -1578,6 +1589,8 @@ class Worm (PhysObj):
 		angle = 45 * int(self.angle / 45)
 		fliped = pygame.transform.flip(self.surf, self.facing == RIGHT, False)
 		rotated = pygame.transform.rotate(fliped, angle)
+		if self.jetpacking:
+			win.blit(sprites, point2world(self.pos - Vector(8,8)), (48, 96, 16, 16))
 		win.blit(rotated, point2world(self.pos - tup2vec(rotated.get_size())//2))
 		
 		# draw name
@@ -1708,10 +1721,18 @@ class Worm (PhysObj):
 			pygame.draw.rect(win, (0,0,220),(point2world(self.pos + Vector(-10, -25)), (int(value),3)))
 	def secondaryStep(self):
 		global state, nextState
-		if not self.stable and not self is objectUnderControl: 
-			self.angle -= self.vel.x*4
+	
+		if self.stable and self.alive:
+			self.stableCount += 1
+			if self.stableCount >= 30:
+				
+				self.angle *= 0.8
 		else:
-			self.angle = 0
+			self.stableCount = 0
+			if not self is objectUnderControl:
+				self.angle -= self.vel.x * 4
+				self.angle = self.angle % 360
+		
 		if objectUnderControl == self and playerControl and self.alive:
 			if not self.rope: self.damp = 0.1
 			else: self.damp = 0.5
@@ -2026,11 +2047,13 @@ class PetrolCan(PhysObj):
 		PetrolCan._cans.append(self)
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
-		self.radius = 5
+		self.radius = 6
 		self.color = (191, 44, 44)
 		self.damp = 0.1
 		self.health = 5
 		self.extraCollider = True
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (64, 96, 16, 16))
 	def deathResponse(self):
 		boom(self.pos, 20)
 		pygame.draw.rect(extraCol, SKY, (int(self.pos.x -3),int(self.pos.y -5), 7,10))
@@ -2051,9 +2074,8 @@ class PetrolCan(PhysObj):
 			if self.health < 0:
 				self.health = 0
 	def draw(self):
-		pygame.draw.rect(extraCol, GRD, (int(self.pos.x -3),int(self.pos.y -5), 7,10))
-		pygame.draw.rect(win, self.color, (int(self.pos.x -3) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 7,10))
-		pygame.draw.circle(win, (218, 238, 44), (int(self.pos.x) - int(camPos.x), int(self.pos.y) - int(camPos.y)), 3)
+		win.blit(self.surf , point2world(self.pos - tup2vec(self.surf.get_size())/2))
+		pygame.draw.rect(extraCol, GRD, (int(self.pos.x -6),int(self.pos.y -8), 12,16))
 
 class Mine(PhysObj):
 	def __init__(self, pos, delay=0):
@@ -2195,11 +2217,10 @@ class HealthPack(PetrolCan):
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = 0
-		#Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (112, 96, 16, 16))
 	def draw(self):
-		pygame.draw.rect(win, self.color, (int(self.pos.x) -5 - int(camPos.x),int(self.pos.y) -5 - int(camPos.y) , 10,10))
-		pygame.draw.rect(win, (255,108,80), (int(self.pos.x) -4 - int(camPos.x),int(self.pos.y) -1 - int(camPos.y) , 8,2))
-		pygame.draw.rect(win, (255,108,80), (int(self.pos.x) -1 - int(camPos.x),int(self.pos.y) -4 - int(camPos.y) , 2,8))
+		win.blit(self.surf , point2world(self.pos - tup2vec(self.surf.get_size())/2))
 	def secondaryStep(self):
 		global objectUnderControl
 		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0:
@@ -2219,15 +2240,13 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 5
 		self.color = (166, 102, 33)
-		self.surf = myfont.render("?", False, (222,222,0))
 		self.damp = 0.01
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = 0
 		self.box = choice(["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel", "jet pack", "portal gun", "travel kit", "ender pearls"])
-	def draw(self):
-		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
-		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-1, int(self.pos.y) - int(camPos.y)-2))
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (96, 96, 16, 16))
 	def effect(self, worm):
 		if unlimitedMode:
 			return
@@ -2251,7 +2270,6 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 5
 		self.color = (166, 102, 33)
-		self.surf = myfont.render("W", False, (222,222,0))
 		self.damp = 0.01
 		self.health = 5
 		self.fallAffected = False
@@ -2260,13 +2278,11 @@ class WeaponPack(HealthPack):# Weapon Pack
 		if allowAirStrikes:
 			weaponsInBox .append("mine strike")
 		self.box = choice(weaponsInBox)
-	def draw(self):
-		pygame.draw.rect(win, self.color, (int(self.pos.x -5) - int(camPos.x),int(self.pos.y -5) - int(camPos.y) , 10,10))
-		win.blit(self.surf, (int(self.pos.x) - int(camPos.x)-2, int(self.pos.y) - int(camPos.y)-2))
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (80, 96, 16, 16))
 	def effect(self, worm):
 		if unlimitedMode:
 			return
-		
 		FloatingText(self.pos, self.box, (0,200,200))
 		worm.team.ammo(self.box, 1)
 
@@ -5954,6 +5970,7 @@ for teamsData in ET.parse('wormsTeams.xml').getroot():
 			newTeam.nameList.append(team.attrib["name"])
 	teams.append(newTeam)
 
+hatsChosen = []
 for team in teams:
 	indexChoice = []
 	options = team.hatOptions.replace(" ", "").split(",")
@@ -5962,7 +5979,9 @@ for team in teams:
 			indexChoice += [i for i in range(int(option.split("-")[0]), int(option.split("-")[1]) + 1)]
 		else:
 			indexChoice.append(int(option))
-	team.makeHat(choice(indexChoice))
+	hatChoice = choice([hat for hat in indexChoice if hat not in hatsChosen])
+	team.makeHat(hatChoice)
+	hatsChosen.append(hatChoice)
 
 totalTeams = len(teams)
 currentTeam = None
