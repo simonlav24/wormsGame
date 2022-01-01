@@ -40,9 +40,9 @@ if True:
 	GUN = 3
 	UTILITY = 4
 	
-	WEAPONS = 0
-	UTILITIES = 1
-	ARTIFACTS = 2
+	CATEGORY_WEAPONS = 0
+	CATEGORY_UTILITIES = 1
+	CATEGORY_ARTIFACTS = 2
 	
 	RIGHT = 1
 	LEFT = -1
@@ -66,9 +66,11 @@ if True:
 	GUNS = (255, 204, 153)
 	FIREY = (255, 204, 204)
 	MISC = (224, 224, 235)
+	BOMBS = (200, 255, 200)
 	AIRSTRIKE = (204, 255, 255)
 	LEGENDARY = (255, 255, 102)
-	CUTILITIES = (254, 254, 254)
+	UTILITIES = (254, 254, 254)
+	ARTIFACTS = (255, 255, 101)
 	
 	PLAGUE = 0
 	TSUNAMI = 1
@@ -1581,7 +1583,7 @@ class Worm (PhysObj):
 			
 		# draw artifact
 		if len(self.team.artifacts) > 0 and holdArtifact:
-			if self is objectUnderControl and weaponMan.getCategory(weaponMan.currentWeapon) == ARTIFACTS:
+			if self is objectUnderControl and weaponMan.getCategory(weaponMan.currentWeapon) == CATEGORY_ARTIFACTS:
 				if weaponMan.currentArtifact() in self.team.artifacts:
 					if weaponMan.currentArtifact() == MJOLNIR:
 						win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
@@ -5415,11 +5417,11 @@ class WeaponManager:
 		self.weapons.append(["bubble gun",			GUN,		1,	GUNS,		False,	2])
 		self.weapons.append(["petrol bomb",			CHARGABLE,	5,	FIREY,		False,	0])
 		self.weapons.append(["flame thrower",		PUTABLE,	5,	FIREY,		False,	0])
-		self.weapons.append(["mine",				PUTABLE,	5,	GRENADES,	False,	0])
-		self.weapons.append(["TNT",					PUTABLE,	1,	GRENADES,	False,	0])
-		self.weapons.append(["covid 19",			PUTABLE,	0,	GRENADES,	False,	0])
-		self.weapons.append(["sheep",				PUTABLE,	1,	GRENADES,	False,	0])
-		self.weapons.append(["snail",				CHARGABLE,	2,	GRENADES,	False,	0])
+		self.weapons.append(["mine",				PUTABLE,	5,	BOMBS,		False,	0])
+		self.weapons.append(["TNT",					PUTABLE,	1,	BOMBS,		False,	0])
+		self.weapons.append(["covid 19",			PUTABLE,	0,	BOMBS,		False,	0])
+		self.weapons.append(["sheep",				PUTABLE,	1,	BOMBS,		False,	0])
+		self.weapons.append(["snail",				CHARGABLE,	2,	BOMBS,		False,	0])
 		self.weapons.append(["baseball",			PUTABLE,	3,	MISC,		False,	0])
 		self.weapons.append(["girder",				CLICKABLE,	-1,	MISC,		False,	0])
 		self.weapons.append(["rope",				PUTABLE,	3,	MISC,		False,	0])
@@ -5445,30 +5447,30 @@ class WeaponManager:
 		self.weapons.append(["pokeball",			CHARGABLE,	0,	LEGENDARY,	True,	1])
 		self.weapons.append(["green shell",			PUTABLE,	0,	LEGENDARY,	False,	1])
 		self.weapons.append(["guided missile",		PUTABLE,	0,	LEGENDARY,	False,	1])
-		self.weapons.append(["distorter",			CHARGABLE,	0,	MISC,	True,	0])
-		self.weapons.append(["fus ro duh",			PUTABLE,	0,	MISC,		False,	0])
+		# self.weapons.append(["distorter",			CHARGABLE,	0,	MISC,	True,	0])
+		# self.weapons.append(["fus ro duh",			PUTABLE,	0,	MISC,		False,	0])
 		
 		self.weaponCount = len(self.weapons)
 		
-		self.weapons.append(["moon gravity"	,		UTILITY,	0,	CUTILITIES,		False,	0])
-		self.weapons.append(["double damage",		UTILITY,	0,	CUTILITIES,		False,	0])
-		self.weapons.append(["aim aid",				UTILITY,	0,	CUTILITIES,		False,	0])
-		self.weapons.append(["teleport",			CLICKABLE,	0,	CUTILITIES,		False,	0])
-		self.weapons.append(["switch worms",		UTILITY,	0,	CUTILITIES,		False,	0])
-		self.weapons.append(["time travel",			UTILITY,	0,	CUTILITIES,		False,	0])
-		self.weapons.append(["jet pack",			UTILITY,	0,	CUTILITIES,		False,	0])
-		self.weapons.append(["flare",				CHARGABLE,	0,	CUTILITIES,		False,	0])
+		self.weapons.append(["moon gravity"	,		UTILITY,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["double damage",		UTILITY,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["aim aid",				UTILITY,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["teleport",			CLICKABLE,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["switch worms",		UTILITY,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["time travel",			UTILITY,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["jet pack",			UTILITY,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["flare",				CHARGABLE,	0,	UTILITIES,		False,	0])
 		
 		self.utilityCount = len(self.weapons) - self.weaponCount
 		
-		self.weapons.append(["mjolnir strike",		PUTABLE,	0,	LEGENDARY,	False,	0,	MJOLNIR])
-		self.weapons.append(["mjolnir throw",		CHARGABLE,	0,	LEGENDARY,	False,	0,	MJOLNIR])
-		self.weapons.append(["fly",					CHARGABLE,	0,	LEGENDARY,	False,	0,	MJOLNIR])
-						
-		self.weapons.append(["control plants",		PUTABLE,	0,	LEGENDARY,	False,	0,	PLANT_MASTER])
-		self.weapons.append(["magic bean",			CHARGABLE,	0,	LEGENDARY,	False,	0,	PLANT_MASTER])
-		self.weapons.append(["mine plant",			CHARGABLE,	0,	LEGENDARY,	False,	0,	PLANT_MASTER])
-		self.weapons.append(["razor leaf",			GUN,		0,	LEGENDARY,	False,	0,	PLANT_MASTER])
+		self.weapons.append(["mjolnir strike",		PUTABLE,	0,	ARTIFACTS,	False,	0,	MJOLNIR])
+		self.weapons.append(["mjolnir throw",		CHARGABLE,	0,	ARTIFACTS,	False,	0,	MJOLNIR])
+		self.weapons.append(["fly",					CHARGABLE,	0,	ARTIFACTS,	False,	0,	MJOLNIR])
+
+		self.weapons.append(["control plants",		PUTABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
+		self.weapons.append(["magic bean",			CHARGABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
+		self.weapons.append(["mine plant",			CHARGABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
+		self.weapons.append(["razor leaf",			GUN,		0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
 		
 		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
 
@@ -5497,21 +5499,21 @@ class WeaponManager:
 		return self.weapons[self.weaponDict[string]][3]
 	def getCategory(self, string):
 		if self.weapons[self.weaponDict[string]][1] == UTILITY:
-			return UTILITIES
+			return CATEGORY_UTILITIES
 		index = self.weaponDict[string]
 		if index < self.weaponCount:
-			return WEAPONS
+			return CATEGORY_WEAPONS
 		elif index < self.weaponCount + self.utilityCount:
-			return UTILITIES
+			return CATEGORY_UTILITIES
 		else:
-			return ARTIFACTS
+			return CATEGORY_ARTIFACTS
 	def switchWeapon(self, string):
 		self.currentWeapon = string
 		self.renderWeaponCount()
-		# global weaponH
+
 		weaponHold.fill((0,0,0,0))
 		if canShoot():
-			if self.getBackColor(string) in [GRENADES, GUNS, MISC, LEGENDARY, FIREY] or string in [""]:
+			if self.getBackColor(string) in [GRENADES, GUNS, MISC, LEGENDARY, FIREY, BOMBS] or string in [""]:
 				if string in ["covid 19", "parachute", "earthquake"]:
 					return
 				if string == "gemino mine":
@@ -5539,7 +5541,7 @@ class WeaponManager:
 					continue
 				currentTeam.ammo(w[0], -1, True)
 	def currentArtifact(self):
-		if self.getCategory(self.currentWeapon) == ARTIFACTS:
+		if self.getCategory(self.currentWeapon) == CATEGORY_ARTIFACTS:
 			return self.weapons[self.currentIndex()][6]
 	def currentIndex(self):
 		return self.weaponDict[self.currentWeapon]
@@ -5917,6 +5919,47 @@ def fireClickable():
 	weaponMan.renderWeaponCount()
 	timeRemaining(retreatTime)
 	state = nextState
+
+def fireUtility(weapon = None):
+	weapon = weaponMan.currentWeapon
+	decrease = True
+	if weapon == "moon gravity":
+		global globalGravity
+		globalGravity = 0.1
+		Commentator.que.append(("", ("small step for wormanity", ""), HUDColor))
+	elif weapon == "double damage":
+		global damageMult, radiusMult
+		damageMult += damageMult
+		radiusMult *= 1.5
+		Commentator.que.append(("", ("this gonna hurt", ""), HUDColor))
+	elif weapon == "aim aid":
+		global aimAid
+		aimAid = True
+		Commentator.que.append(("", ("snipe em'", ""), HUDColor))
+	elif weapon == "teleport":
+		weaponMan.switchWeapon(weapon)
+		decrease = False
+	elif weapon == "switch worms":
+		global switchingWorms
+		if switchingWorms:
+			decrease = False
+		switchingWorms = True
+		Commentator.que.append(("", ("the ol' switcheroo", ""), HUDColor))
+	elif weapon == "time travel":
+		global timeTravel
+		if not timeTravel:
+			timeTravelInitiate()
+		Commentator.que.append(("", ("great scott", ""), HUDColor))
+	elif weapon == "jet pack":
+		objectUnderControl.toggleJetpack()
+	elif weapon == "flare":
+		weaponMan.switchWeapon(weapon)
+		decrease = False
+	elif weapon == "control plants":
+		PlantControl()
+	
+	if decrease:
+		currentTeam.ammo(weapon, -1)
 
 ################################################################################ Teams
 class Team:
@@ -6457,6 +6500,7 @@ class HealthBar:
 				if teams[i].flagHolder:
 					pygame.draw.circle(win, (220,0,0), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
 
+"""
 class Menu:
 	border = 1
 	event = None
@@ -6526,7 +6570,7 @@ class Button:
 			self.color = RED
 			Menu.event = self.key
 		else:
-			self.selected = False
+			# self.selected = False
 			self.color =  [self.color[i] + (self.bgColor[i] - self.color[i]) * 0.2 for i in range(3)]
 		
 	def draw(self):
@@ -6541,10 +6585,10 @@ def clickInMenu():
 	weapon = Menu.event
 	Menu.menus = []
 	
-	if weaponMan.getCategory(weapon) == WEAPONS:
+	if weaponMan.getCategory(weapon) == CATEGORY_WEAPONS:
 		weaponMan.switchWeapon(weapon)
 		
-	if weaponMan.getCategory(weapon) == UTILITIES:
+	if weaponMan.getCategory(weapon) == CATEGORY_UTILITIES:
 		decrease = True
 		if weapon == "moon gravity":
 			global globalGravity
@@ -6585,7 +6629,7 @@ def clickInMenu():
 		if decrease:
 			currentTeam.ammo(weapon, -1)
 	
-	if weaponMan.getCategory(weapon) == ARTIFACTS:
+	if weaponMan.getCategory(weapon) == CATEGORY_ARTIFACTS:
 		weaponMan.switchWeapon(weapon)
 
 def weaponMenuInit():
@@ -6593,18 +6637,18 @@ def weaponMenuInit():
 	weaponsMenu.pos = Vector(winWidth - 100 - Menu.border, 1)
 	Menu.menus.append(weaponsMenu)
 	
-	mode = WEAPONS
+	mode = CATEGORY_WEAPONS
 	menuUtilitiesExist = False
 	menuArtifactsExist = False
 	
 	for i, w in enumerate(weaponMan.weapons):
-		if mode == WEAPONS and i >= weaponMan.weaponCount:
-			mode = UTILITIES
+		if mode == CATEGORY_WEAPONS and i >= weaponMan.weaponCount:
+			mode = CATEGORY_UTILITIES
 			utilitiesMenu = Menu()
 			utilitiesMenu.pos = Vector(winWidth - 2 * 100 - 1 * Menu.border - 1, 1)
 			Menu.menus.append(utilitiesMenu)
-		if mode == UTILITIES and i >= weaponMan.weaponCount + weaponMan.utilityCount:
-			mode = ARTIFACTS
+		if mode == CATEGORY_UTILITIES and i >= weaponMan.weaponCount + weaponMan.utilityCount:
+			mode = CATEGORY_ARTIFACTS
 			artifactsMenu = Menu()
 			posY = 1
 			if len(Menu.menus) > 1:
@@ -6622,14 +6666,14 @@ def weaponMenuInit():
 			continue
 	
 		
-		if mode == WEAPONS:
+		if mode == CATEGORY_WEAPONS:
 			newButton = weaponsMenu.addButton(w[0], secText, w[0], w[3], active)
 		
-		if mode == UTILITIES:
+		if mode == CATEGORY_UTILITIES:
 			newButton = utilitiesMenu.addButton(w[0], secText, w[0], w[3], active)
 			menuUtilitiesExist = True
 		
-		if mode == ARTIFACTS:
+		if mode == CATEGORY_ARTIFACTS:
 			newButton = artifactsMenu.addButton(w[0], secText, w[0], w[3], active)
 			menuArtifactsExist = True
 			
@@ -6648,6 +6692,7 @@ def scrollMenu(up = True):
 		menu.updatePosY(-(menu.elements[0].size.y + 0 * Menu.border) * 5, False)
 	if menu.pos.y >= 1:
 		menu.updatePosY(1, True)
+"""
 
 def drawArc(center, outr, inr, start, end, color):
 	points = []
@@ -6666,7 +6711,8 @@ def drawArc(center, outr, inr, start, end, color):
 	pygame.draw.polygon(win, (0,0,0), points, 2)
 
 class RadialMenu:
-	event = None
+	events = [None, None]
+	menu = None
 	def __init__(self):
 		self.center = Vector(winWidth//2, winHeight//2)
 		self.elements = []
@@ -6692,7 +6738,6 @@ class RadialMenu:
 		self.recalculate()
 		return b
 		
-		
 	def draw(self):
 		for e in self.elements:
 			e.draw()
@@ -6705,68 +6750,132 @@ class RadialButton:
 		self.selected = False
 		self.color = bgColor
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		# blitWeaponSprite(self.surf, (0,0), "missile")
 		self.center = Vector(winWidth//2, winHeight//2)
+		self.subButtons = []
+		self.level = 0
 	def step(self):
 		mouse = Vector(pygame.mouse.get_pos()[0]/scalingFactor, pygame.mouse.get_pos()[1]/scalingFactor)
 		mouseInMenu = mouse - self.center
 		mouseInRadial = Vector(sqrt(mouseInMenu[0]**2 + mouseInMenu[1]**2), atan2(mouseInMenu[1], mouseInMenu[0]))
 		if mouseInRadial[1] < 0:
-			mouseInRadial[1] += 2*pi
+			mouseInRadial[1] += 2 * pi
 		if mouseInRadial[0] > self.rect[0][0] and mouseInRadial[0] < self.rect[1][0]\
-			and mouseInRadial[1] > self.rect[0][1] and mouseInRadial[1] < self.rect[1][1]:
+			and ((mouseInRadial[1] > self.rect[0][1] and mouseInRadial[1] < self.rect[1][1]) or\
+			(mouseInRadial[1] + 2*pi > self.rect[0][1] and mouseInRadial[1] + 2*pi < self.rect[1][1]) or\
+			(mouseInRadial[1] - 2*pi > self.rect[0][1] and mouseInRadial[1] - 2*pi < self.rect[1][1])):
 			self.selected = True
 			self.color = RED
-			RadialMenu.event = self.key
+			RadialMenu.events[self.level] = self.key
 		else:
 			self.selected = False
 			self.color =  [self.color[i] + (self.bgColor[i] - self.color[i]) * 0.2 for i in range(3)]
+
+		# add sub buttons
+		if self.level == 0:
+			if RadialMenu.events[self.level] == self.key and len(self.subButtons) == 0:
+				# self key is category, add all weapons in that category
+				for weapon in weaponMan.weapons:
+					if currentTeam.ammo(weapon[0]) == 0:
+						continue
+					active = True
+					if inUsedList(weapon[0]) or weapon[5] != 0:
+						active = False
+					if weapon[3] == self.key:
+						b = self.addSubButton(weapon[0])
+						b.level = self.level + 1
+						blitWeaponSprite(b.surf, (0,0), weapon[0])
+						if not active:
+							b.surf.fill((200, 200, 200), special_flags= pygame.BLEND_SUB)
+							b.surf.fill((200, 200, 200), special_flags= pygame.BLEND_ADD)
+			if RadialMenu.events[self.level] != self.key:
+				self.subButtons.clear()
+			
+		for e in self.subButtons:
+			e.step()
+	def recalculate(self):
+		offset = (self.rect[1][1] + self.rect[0][1])/2 - ((pi / 10) * len(self.subButtons)) /2
+		outr = 90
+		inr = 65
+		NumButtons = len(self.subButtons)
+		buttonArcAngle = pi / 10
+		# update buttons rects
+		for i, button in enumerate(self.subButtons):
+			buttonRect = ((inr, i * buttonArcAngle + offset), (outr, i * buttonArcAngle + buttonArcAngle + offset))
+			button.rect = buttonRect
+			
+	def addSubButton(self, key):
+		b = RadialButton(key, self.bgColor)
+		self.subButtons.insert(0, b)
+		self.recalculate()
+		return b
+		
 	def draw(self):
 		drawArc(self.center, self.rect[1][0], self.rect[0][0], self.rect[0][1], self.rect[1][1], self.color)
 		if self.surf:
 			posRadial = (tup2vec(self.rect[0]) + tup2vec(self.rect[1])) / 2
 			pos = vectorFromAngle(posRadial[1], posRadial[0]) + self.center
 			win.blit(self.surf, pos - Vector(8,8))
-
-rm = RadialMenu()
+		for e in self.subButtons:
+			e.draw()
 
 def clickInRadialMenu():
-	print(RadialMenu.event)
+	# print(RadialMenu.events)
+	weapon = RadialMenu.events[1]
+	if weapon == None:
+		return
+	if inUsedList(weapon):
+		return
+	if weaponMan.weapons[weaponMan.weaponDict[weapon]][5] != 0:
+		return
+	
+	if weaponMan.getCategory(weapon) == CATEGORY_WEAPONS:
+		weaponMan.switchWeapon(weapon)
+		
+	if weaponMan.getCategory(weapon) == CATEGORY_UTILITIES:
+		fireUtility()
+		
+	if weaponMan.getCategory(weapon) == CATEGORY_ARTIFACTS:
+		weaponMan.switchWeapon(weapon)
+	
+	# delete menu
+	RadialMenu.menu = None
+	RadialMenu.events = [None, None]
 
 def weaponMenuRadialInit():
 	# get categories
+	RadialMenu.menu = RadialMenu()
 	categories = []
 	for i, weapon in enumerate(weaponMan.weapons):
+		if currentTeam.ammo(weapon[0]) == 0:
+			continue
 		if not weapon[3] in categories:
 			categories.append(weapon[3])
-			b = rm.addButton(weapon[0], weapon[3])
+			b = RadialMenu.menu.addButton(weapon[3], weapon[3])
 			blitWeaponSprite(b.surf, (0,0), weapon[0])
 
-def drawRadialMenu():
-	center = Vector(winWidth//2, winHeight//2)
-	outr = 60
-	inr = 30
-	buttons = 10
-	buttonArc = 2 * pi / 10
-	border = 0.03
-	color = (255, 255, 255)
-	mouse = Vector(pygame.mouse.get_pos()[0]/scalingFactor, pygame.mouse.get_pos()[1]/scalingFactor)
-	mouseInMenu = mouse - center
+# def drawRadialMenu():
+	# center = Vector(winWidth//2, winHeight//2)
+	# outr = 60
+	# inr = 30
+	# buttons = 10
+	# buttonArc = 2 * pi / 10
+	# border = 0.03
+	# color = (255, 255, 255)
+	# mouse = Vector(pygame.mouse.get_pos()[0]/scalingFactor, pygame.mouse.get_pos()[1]/scalingFactor)
+	# mouseInMenu = mouse - center
 	
-	mouseInRadial = Vector(sqrt(mouseInMenu[0]**2 + mouseInMenu[1]**2), atan2(mouseInMenu[1], mouseInMenu[0]))
-	if mouseInRadial[1] < 0:
-		mouseInRadial[1] += 2*pi
-	buttonColors = [WHITE for i in range(buttons)]
-	for i in range(buttons):
-		buttonRect = ((inr, i * buttonArc), (outr, i * buttonArc + buttonArc))
-		if mouseInRadial[0] > buttonRect[0][0] and mouseInRadial[0] < buttonRect[1][0]\
-			and mouseInRadial[1] > buttonRect[0][1] and mouseInRadial[1] < buttonRect[1][1]:
-			buttonColors[i] = RED
+	# mouseInRadial = Vector(sqrt(mouseInMenu[0]**2 + mouseInMenu[1]**2), atan2(mouseInMenu[1], mouseInMenu[0]))
+	# if mouseInRadial[1] < 0:
+		# mouseInRadial[1] += 2*pi
+	# buttonColors = [WHITE for i in range(buttons)]
+	# for i in range(buttons):
+		# buttonRect = ((inr, i * buttonArc), (outr, i * buttonArc + buttonArc))
+		# if mouseInRadial[0] > buttonRect[0][0] and mouseInRadial[0] < buttonRect[1][0]\
+			# and mouseInRadial[1] > buttonRect[0][1] and mouseInRadial[1] < buttonRect[1][1]:
+			# buttonColors[i] = RED
 	
-	for i in range(buttons):
-		drawArc(center, outr, inr, i * buttonArc + border, i * buttonArc + buttonArc - border, buttonColors[i])
-	
-
+	# for i in range(buttons):
+		# drawArc(center, outr, inr, i * buttonArc + border, i * buttonArc + buttonArc - border, buttonColors[i])
 
 waterAmp = 2
 waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
@@ -7266,13 +7375,9 @@ def lstepper():
 	screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 	pygame.display.update()
 
-rmCount = 0
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	weaponMenuRadialInit()
-	# global rmCount
-	# rm.addButton("key" + str(rmCount), (255,255,255))
-	# rmCount += 1
+	# weaponMenuRadialInit()
 
 ################################################################################ State machine
 if True:
@@ -7610,7 +7715,6 @@ water.createLayers()
 ################################################################################ Main Loop
 
 if __name__ == "__main__":
-	# pygame.mouse.set_visible(False)
 	run = True
 	pause = False
 	while run:
@@ -7632,14 +7736,12 @@ if __name__ == "__main__":
 				# CLICKABLE weapon check:
 				if state == PLAYER_CONTROL_1 and weaponMan.getCurrentStyle() == CLICKABLE:
 					fireClickable()
-				if state == PLAYER_CONTROL_1 and weaponMan.currentWeapon in ["homing missile", "seeker"] and not len(Menu.menus) > 0:
+				if state == PLAYER_CONTROL_1 and weaponMan.currentWeapon in ["homing missile", "seeker"] and not RadialMenu.menu:
 					HomingMissile.Target.x, HomingMissile.Target.y = mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y
 					HomingMissile.showTarget = True
 				# cliking in menu
-				if RadialMenu.event:
+				if RadialMenu.events:
 					clickInRadialMenu()
-				if Menu.event:
-					clickInMenu()
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
 				pass
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
@@ -7649,22 +7751,21 @@ if __name__ == "__main__":
 					# state = nextState
 					weaponMan.renderWeaponCount()
 				elif state == PLAYER_CONTROL_1:
-					if len(Menu.menus) == 0:
-						weaponMenuInit()
+					if RadialMenu.menu is None:
+						weaponMenuRadialInit()
 					else:
-						Menu.menus.clear()
+						RadialMenu.menu = None
+						RadialMenu.events = [None, None]
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down
-				if len(Menu.menus) > 0:
-					scrollMenu()
-				else:
+				if not RadialMenu.menu:
 					scalingFactor *= 1.1
-					if scalingFactor >= 3: scalingFactor = 3
+					if scalingFactor >= 3:
+						scalingFactor = 3
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll up
-				if len(Menu.menus) > 0:
-					scrollMenu(False)
-				else:
+				if not RadialMenu.menu:
 					scalingFactor *= 0.9
-					if scalingFactor <= 1: scalingFactor = 1
+					if scalingFactor <= 1:
+						scalingFactor = 1
 	
 			# key press
 			if event.type == pygame.KEYDOWN:
@@ -7798,7 +7899,7 @@ if __name__ == "__main__":
 
 		# use edge gameMap scroll
 		mousePos = pygame.mouse.get_pos()
-		if playerScrollAble and pygame.mouse.get_focused() and not len(Menu.menus) > 0:
+		if playerScrollAble and pygame.mouse.get_focused() and RadialMenu.menu is None:
 			scroll = Vector()
 			if mousePos[0] < edgeBorder:
 				scroll.x -= mapScrollSpeed * (2.5 - scalingFactor/2)
@@ -7841,7 +7942,7 @@ if __name__ == "__main__":
 		if fireWeapon and playerShootAble: fire()
 		
 		# step:
-		rm.step()
+		
 		gameStable = True
 		for p in PhysObj._reg:
 			p.step()
@@ -7869,6 +7970,10 @@ if __name__ == "__main__":
 		cloudManager()
 		
 		if Arena.arena: Arena.arena.step()
+		
+		# menu step
+		if RadialMenu.menu:
+			RadialMenu.menu.step()
 		
 		# reset actions
 		actionMove = False
@@ -7911,7 +8016,6 @@ if __name__ == "__main__":
 		drawLayers()
 		
 		# HUD
-		rm.draw()
 		drawWindIndicator()
 		timeDraw()
 		if weaponMan.surf: win.blit(weaponMan.surf, ((int(25), int(8))))
@@ -7937,21 +8041,23 @@ if __name__ == "__main__":
 					t.updateWinPos((winWidth/2, winHeight))
 				elif t.mode == Toast.middle:
 					t.updateWinPos(Vector(winWidth/2, winHeight/2) - tup2vec(t.surf.get_size())/2)
-		for i, menu in enumerate(Menu.menus):
-			if i == 0: Menu.menus[0].updatePosX(winWidth - 100 - Menu.border)
-			if i == 1: Menu.menus[1].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
+		# for i, menu in enumerate(Menu.menus):
+			# if i == 0: Menu.menus[0].updatePosX(winWidth - 100 - Menu.border)
+			# if i == 1: Menu.menus[1].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
 			
-			if i == 2:
-				posY = 1
-				if len(Menu.menus) > 1:
-					posY = Menu.menus[1].size.y + 1
-				Menu.menus[2].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
-				Menu.menus[2].updatePosY(posY)
-		# step menus
-		Menu.event = None
-		if len(Menu.menus) > 0:
-			for menu in Menu.menus: menu.step()
-			for menu in Menu.menus: menu.draw()
+			# if i == 2:
+				# posY = 1
+				# if len(Menu.menus) > 1:
+					# posY = Menu.menus[1].size.y + 1
+				# Menu.menus[2].updatePosX(winWidth - 2 * 100 - 1 * Menu.border - 1)
+				# Menu.menus[2].updatePosY(posY)
+		# draw menus
+		# Menu.event = None
+		# if len(Menu.menus) > 0:
+			# for menu in Menu.menus: menu.step()
+			# for menu in Menu.menus: menu.draw()
+		if RadialMenu.menu:
+			RadialMenu.menu.draw()
 		# draw kill list
 		if gameMode in [POINTS, TARGETS, TERMINATOR]:
 			while len(killList) > 8:
