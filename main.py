@@ -1,4 +1,4 @@
-from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign, fmod
+from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign, fmod, fabs
 from random import shuffle ,randint, uniform, choice
 from vector import *
 from pygame import Vector2, gfxdraw
@@ -143,10 +143,11 @@ if True:
 # bungee using spring dynamics
 # call ship that comes through sea and blast cannons
 # golden snitch for points game ?
+# hedgehog that moves around catching worms
 
 # bugs:
 # drop artifact option (shift - tab?)
-# fix baseball and spear
+# fix baseball and spear BASEBALL FIXED
 
 # artifact: guitar hero
 # master of puppets: hang worms by springs to ceiling or sky half rest length
@@ -2137,15 +2138,21 @@ class Baseball:
 		self.timer = 0
 		hitted = []
 		for t in range(5, 25):
+			testPositions = []
 			testPos = objectUnderControl.pos + self.direction * t
+			testPositions.append(testPos)
+			testPositions.append(testPos + normalize(self.direction).getNormal() * 3)
+			testPositions.append(testPos - normalize(self.direction).getNormal() * 3)
+			
 			for worm in PhysObj._worms:
-				if worm in hitted:
-					continue
-				if dist(testPos, worm.pos) < worm.radius:
-					hitted.append(worm)
-					worm.damage(randint(15,25))
-					worm.vel += self.direction * 8
-					camTrack = worm
+				for point in testPositions:
+					if worm in hitted:
+						continue
+					if dist(point, worm.pos) < worm.radius:
+						hitted.append(worm)
+						worm.damage(randint(15,25))
+						worm.vel += self.direction * 8
+						camTrack = worm
 	def step(self):
 		self.timer += 1
 		if self.timer >= 15:
@@ -3822,7 +3829,7 @@ class Venus:
 		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
 		extraCol.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 
-class Ball(PhysObj):#########EXPERIMENTAL
+class Ball0(PhysObj):#########EXPERIMENTAL
 	def __init__(self, pos):
 		self.initialize()
 		self.pos = Vector(pos[0],pos[1])
@@ -3911,6 +3918,109 @@ class Ball(PhysObj):#########EXPERIMENTAL
 		if self.vel.getMag() > 5:
 			boom(ppos, 7)
 
+def doCirclesOverlap(pos1, r1, pos2, r2):
+	return fabs((pos1[0] - pos2[0])*(pos1[0] - pos2[0]) + (pos1[1] - pos2[1])*(pos1[1] - pos2[1])) <= (r1 + r2)*(r1 + r2)
+
+def isPointInCircle(pos, radius, point):
+	return fabs((pos[0] - point[0])*(pos[0] - point[0]) + (pos[1] - point[1])*(pos[1] - point[1])) <= radius * radius
+
+class Ball(PhysObj):
+	def __init__(self, pos):
+		self.initialize()
+		self.pos = Vector(pos[0],pos[1])
+		
+		self.radius = 3
+		self.damp = 0.3
+		self.collidingBalls = []
+		self.fakeballs = []
+	def step(self):
+		self.applyForce()
+		
+		# velocity
+		self.vel += self.acc
+		# position
+		self.pos += self.vel
+		
+		# reset forces
+		self.acc *= 0
+		
+		intppos = Vector(int(self.pos.x), int(self.pos.y))
+		start = intppos + Vector(-self.radius - 2, -self.radius - 2)
+		end = intppos + Vector(self.radius + 2, +self.radius + 2)
+		self.fakeballs = []
+		
+		
+		
+		for y in range(start.y, end.y):
+			for x in range(start.x, end.x):
+				pos = Vector(x, y)
+				if mapGetAt(pos) == GRD:
+					self.fakeballs.append(pos)
+		
+		shuffle(self.fakeballs)
+		
+		for ball in self.fakeballs:
+			if self.colliding(ball):
+				self.collidingBalls.append(ball)
+			
+		masterBall = Vector()
+		for ball in self.collidingBalls:
+			masterBall += ball
+		masterBall = masterBall / len(self.collidingBalls)
+		
+		if self.colliding(masterBall):
+			self.resolveCollision(masterBall)
+		
+	def colliding(self, ball):
+		otherRadius = 0.5
+	
+		xd = self.pos.x - ball.x
+		yd = self.pos.y - ball.y
+		
+		sumRadius = self.radius + otherRadius
+		sqrRadius = sumRadius * sumRadius
+		
+		distsqr = (xd * xd) + (yd * yd)
+		if distsqr <= sqrRadius:
+			return True
+		return False
+		
+	def resolveCollision(self, ball):
+		otherRadius = 0.5
+		selfMass = 1
+		otherMass = 5
+		otherVel = Vector()
+		restitution = 0.5
+	
+		delta = self.pos - ball
+		d = delta.getMag()
+		
+		mtd = delta * (((self.radius + otherRadius) - d) / d)
+		
+		im1 = 1 / selfMass
+		im2 = 1 / otherMass
+		
+		self.pos = self.pos + (mtd * (im1 / (im1 + im2)))# + (mtd * (im2 / (im1 + im2)))
+		# ballPos = ball - (mtd * (im2 / (im1 + im2)))
+		
+		v = self.vel - otherVel
+		vn = dotProduct(self.vel, normalize(mtd))
+		
+		if vn > 0.0:
+			return
+		
+		i = (-(1.0 + restitution) * vn) / (im1 + im2)
+		impulse = normalize(mtd) * i
+		
+		self.vel = self.vel + impulse * im1
+		
+		
+	def draw(self):
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		for i in self.collidingBalls:
+			pygame.draw.circle(win, self.color, point2world(i), int(0.5)+1)
+		self.collidingBalls = []
+		
 class PokeBall(PhysObj):
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -7176,7 +7286,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	# weaponMenuRadialInit()
+	# Ball(mouse)
 
 ################################################################################ State machine
 if True:
@@ -7849,7 +7959,7 @@ if __name__ == "__main__":
 			for i, killed in enumerate(killList):
 				win.blit(killed[0], (5, winHeight - 14 - i * 8))
 		
-		# drawExtra()
+		drawExtra()
 		# debug:
 		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
 		win.blit(damageText[1], ((int(5), int(winHeight-6))))
