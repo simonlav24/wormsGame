@@ -20,19 +20,17 @@ class Vector:
 		self.x *= mag
 		self.y *= mag
 	def getMag(self):
-		return math.sqrt(self.x**2 + self.y**2)
+		return math.sqrt(self.x * self.x + self.y * self.y)
 	def setDir(self,angle):
-		mag = self.getMag()
-		self.x = mag*math.cos(angle)
-		self.y = mag*math.sin(angle)
+		self.setAngle(angle)
 	def getDir(self):
 		return Vector(self.x, self.y).normalize()
 	def getAngle(self):
 		return math.atan2(self.y, self.x)
 	def setAngle(self, angle):
 		mag = self.getMag()
-		self.x = mag*math.cos(angle)
-		self.y = mag*math.sin(angle)
+		self.x = mag * math.cos(angle)
+		self.y = mag * math.sin(angle)
 	def get(self):
 		return [self.x,self.y]
 	def normal(self):
@@ -50,7 +48,7 @@ class Vector:
 		self[1] -= vec[1]
 		return self
 	def __mul__(self,mag):
-		return Vector(self.x*mag,self.y*mag)
+		return Vector(self.x * mag, self.y * mag)
 	def __rmul__(self,mag):
 		return self * mag
 	def __imul__(self,mag):
@@ -159,7 +157,10 @@ def dotProduct(vec1, vec2):
 	return vec1.dot(vec2)
 
 def dist(vec1,vec2):
-	return math.sqrt( (vec2[0] - vec1[0])**2 + (vec2[1] - vec1[1])**2 )
+	return math.sqrt((vec2[0] - vec1[0])*(vec2[0] - vec1[0]) + (vec2[1] - vec1[1])*(vec2[1] - vec1[1]))
+
+def distus(vec1, vec2):
+	return (vec2[0] - vec1[0])*(vec2[0] - vec1[0]) + (vec2[1] - vec1[1])*(vec2[1] - vec1[1])
 
 def getAngleByTwoVectors(vec_org,vec_taget):
 	return math.atan2(vec_taget[1] - vec_org[1], vec_taget[0] - vec_org[0])

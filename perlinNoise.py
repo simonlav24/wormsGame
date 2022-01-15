@@ -113,7 +113,7 @@ def generateNoise(width, height):
 				noise_org.set_at((x,y), random_bw(128,255))
 			if y == 0:
 				noise_org.set_at((x,y), random_bw(128,255))
-			if y == size[1] - 1:
+			if y in [size[1] - 1, size[1] - 2]:
 				noise_org.set_at((x,y), random_bw(0,128))
 	
 	pygame.draw.circle(noise_org, (255, 255, 255), (randint(5, size[0] - 5), randint(5, size[0] - 5)), size[1] //2 - randint(2,6))

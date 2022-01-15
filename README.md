@@ -21,7 +21,8 @@ game development practice in python for educational purposes and fun.
 - **MISSILE** - shoot a missile, wind sensitive.
 - **GRAVITY MISSILE** - shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
 - **BUNKER BUSTER** - shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
-- **HOMING MISSILE** - mouse click to select target and shoot.
+- **HOMING MISSILE** - mouse click to select target and shoot. 
+- **SEEKER** - target seeking missile.
 
 ## :comet: Grenades
 - **GRENADE** - throw a grenade. all grenades delay time can be changed by pressing tab.
@@ -33,36 +34,36 @@ game development practice in python for educational purposes and fun.
 
 ## :gun: Guns
 - **SHOTGUN** - fire shotgun. 3 rounds.
+- **LONG BOW** - shoot arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
 - **MINIGUN** - fire minigun.
 - **GAMMA GUN** - fire gamma radiation pulse. make worms sick and mutate venus fly traps. can pass through terrain.
-- **LONG BOW** - shoot arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
 - **SPEAR** - throw spear, impale all worms in its way. 2 spears.
 - **LASER GUN** - destructive laser destroy destructively every thing on its way.
-- **PORTAL GUN** - the cake is a deception. obtainable by utility crate.
-- **BUBBLE GUN** - shoot bubbles that captures worms and more.
+- **BUBBLE GUN** - shoot bubbles that captures worms and more
 
-## :fire: Fire weapons
+## :fire: Incendiary
 - **PETROL BOMB** - explosive fire spreader.
-- **FLAME THROWER** - it werfs flammen.
+- **FLAME THROWER** - it werfs flammen
 
-## :bomb: Place and run
+## :bomb: Bombs and Animals
 
-- **MINE** - mine.
 - **TNT** - explosive TNT bomb.
-- **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
+- **MINE** - mine.
+- **ACID BOTTLE** - throw a bottle of hydrofluoric acid that corrode the earth and is deadly to worms.
 - **SHEEP** - baaaa.
 - **SNAIL** - quick and sticky snail.
+- **VENUS FLY TRAP** - throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
+- **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
 
-## :wrench: Misc
+## :wrench: Tools
 
 - **BASEBALL** - home running worms away.
 - **GIRDER** - place a girder. press tab for rotation and scaling.
 - **ROPE** - swing your way to action.
 - **PARACHUTE** - glide down safely. wind sensitive.
-- **VENUS FLY TRAP** - throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
 - **SENTRY GUN** - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
-- **ENDER PEARL** - throw and teleport to where it lands.
-- **ACID BOTTLE** - throw a bottle of hydrofluoric acid that corrode the earth and is deadly to worms.
+- **PORTAL GUN** - the cake is a deception. obtainable by utility crate.
+- **ENDER PEARL** - throw and teleport to where it lands. obtainable by utility crate.
 
 ## :small_airplane: Aerial
 - **ARTILLERY ASSISTANCE** - throw a flare to mark area for bombing.
