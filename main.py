@@ -14,20 +14,20 @@ if True:
 	fps = 30
 	
 	pygame.font.init()
-	myfont = pygame.font.Font("fonts\pixelFont.ttf", 5)
-	myfontbigger = pygame.font.Font("fonts\pixelFont.ttf", 10)
+	pixelFont5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
+	pixelFont10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
 	
+	screenWidth = 1280
+	screenHeight = 720
 	scalingFactor = 3
-	winWidth = int(1280 / scalingFactor)
-	winHeight = int(720 / scalingFactor)
+	winWidth = int(screenWidth / scalingFactor)
+	winHeight = int(screenHeight / scalingFactor)
 	win = pygame.Surface((winWidth, winHeight))
 	
-	screenWidth = int(winWidth * scalingFactor)
-	screenHeight = int(winHeight * scalingFactor)
 	pygame.display.set_caption("Simon's Worms")
 	screen = pygame.display.set_mode((screenWidth,screenHeight))
 
-# Macros
+# constants
 if True:
 	SKY = (0,0,0,0)
 	GRD = (255,255,255,255)
@@ -147,8 +147,6 @@ if True:
 
 # bugs:
 # drop artifact option (shift - tab?)
-# reverse worms in reverse gravity
-# redo weapons categories
 
 # artifact: guitar hero
 # master of puppets: hang worms by springs to ceiling or sky half rest length
@@ -471,7 +469,9 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 	
 	# ground delete
 	if not fire:
-		Explossion(pos, radius)
+		Explossion(pos, radius * 1.2)
+		if radius > 25:
+			Earthquake(int(0.3 * fps), True, min(0.5, 0.02 * radius - 0.3))
 		
 	# draw burn:
 	stain(pos, imageHole, (int(radius*4),int(radius*4)), True)
@@ -506,7 +506,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 					camTrack = p
 	if debries:
 		for i in range(int(radius)):
-			d = Debrie(pos, radius/5, colors)
+			d = Debrie(pos, radius/5, colors, 2, radius > 25)
 			d.radius = choice([2,1])
 
 def stain(pos, surf, size, alphaMore):
@@ -530,11 +530,87 @@ def stain(pos, surf, size, alphaMore):
 
 def splash(pos, vel):
 	for i in range(10 + int(vel.getMag())):
-		d = Debrie(Vector(pos.x, mapHeight - Water.level - 3), 10, [waterColor[1]], 1)
+		d = Debrie(Vector(pos.x, mapHeight - Water.level - 3), 10, [waterColor[1]], 1, False, True)
 		d.vel = vectorUnitRandom()
 		d.vel.y = uniform(-1,0) * vel.getMag()
 		d.vel.x *= vel.getMag() * 0.17
 		d.radius = choice([2,1])
+
+class Explossion2:
+	def __init__(self, pos, radius):
+		radius *= 1.2
+		nonPhys.append(self)
+		self.pos = pos
+		self.surf = pygame.Surface((radius*4, radius*4))
+		self.surf.fill((255,255,255))
+		self.blasts = []
+		self.radius = radius
+		
+		outerRing = 6
+		indices1 = [i for i in range(outerRing)]
+		shuffle(indices1)
+		angles = [(i / outerRing) * 2*pi + uniform(-0.3,0.3) for i in indices1]
+		rot = uniform(0, 1)
+		for angle in angles:
+			b = Blast1(Vector(0,0), angle + rot, radius * 0.5)
+			b.explossion = self.surf
+			self.blasts.append(b)
+			
+		for angle in angles:
+			b = Blast1(Vector(0,0), angle, radius * 0.3)
+			b.explossion = self.surf
+			self.blasts.append(b)
+			
+		for angle in angles:
+			b = Blast1(Vector(0,0), angle + rot, radius * 0.1)
+			b.explossion = self.surf
+			self.blasts.append(b)
+		
+		for s in range(randint(0, 10)):
+			Smoke(self.pos + vectorFromAngle(uniform(0, 2*pi), randint(0, int(self.radius * 0.7))))
+		
+	def step(self):
+		for b in self.blasts:
+			if b.step():
+				self.blasts.remove(b)
+		if len(self.blasts) == 0:
+			nonPhys.remove(self)
+	def draw(self):
+		for b in self.blasts:
+			b.draw()
+				
+		self.surf.set_colorkey((255,255,255))
+		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
+
+class Blast2:
+	def __init__(self, pos, angle, radius):
+		self.explossion = None
+		self.time = 0
+		self.pos = pos
+		self.angle = angle
+		self.radius = radius
+	def step(self):
+		
+		self.time += 0.4
+		if self.time >= 8:
+			return True
+		return False
+		
+	def draw(self):
+		r1 = self.radius * (1 - exp(-self.time))
+		r2 = self.radius * (1 - exp(-self.time + 0.6))
+		r3 = self.radius * (1 - exp(-self.time + 1.2))
+		r4 = self.radius * (1 - exp(-self.time + 1.8))
+		
+		pos1 = vectorFromAngle(self.angle, r1) * sqrt(2)
+		pos2 = vectorFromAngle(self.angle, r2) * sqrt(2)
+		pos3 = vectorFromAngle(self.angle, r3) * sqrt(2)
+		pos4 = vectorFromAngle(self.angle, r4) * sqrt(2)
+		
+		pygame.draw.circle(self.explossion, (0,0,0), pos1 + tup2vec(self.explossion.get_size())/2, r1)
+		pygame.draw.circle(self.explossion, (255,132,0), pos2 + tup2vec(self.explossion.get_size())/2, r2)
+		pygame.draw.circle(self.explossion, (255,191,0), pos3 + tup2vec(self.explossion.get_size())/2, r3)
+		pygame.draw.circle(self.explossion, (255,255,255), pos4 + tup2vec(self.explossion.get_size())/2,1.1 * r4)
 
 class Blast:
 	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
@@ -1065,7 +1141,7 @@ def getNormal(pos, vel, radius, wormCollision, extraCollision):
 ################################################################################ Objects
 timeCounter = turnTime
 timeOverall = 0
-timeSurf = (timeCounter, myfont.render(str(timeCounter), False, HUDColor))
+timeSurf = (timeCounter, pixelFont5.render(str(timeCounter), False, HUDColor))
 def timeStep():
 	global timeCounter
 	if timeCounter == 0:
@@ -1090,7 +1166,7 @@ def timeOnTimer():
 def timeDraw():
 	global timeSurf
 	if timeSurf[0] != timeCounter:
-		timeSurf = (timeCounter, myfont.render(str(timeCounter), False, HUDColor))
+		timeSurf = (timeCounter, pixelFont5.render(str(timeCounter), False, HUDColor))
 	win.blit(timeSurf[1] , ((int(10), int(8))))
 def timeReset():
 	global timeCounter
@@ -1104,7 +1180,7 @@ class FloatingText: #pos, text, color
 	def __init__(self, pos, text, color = (255,0,0)):
 		nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
-		self.surf = myfont.render(str(text), False, color)
+		self.surf = pixelFont5.render(str(text), False, color)
 		self.timeCounter = 0
 		self.phase = uniform(0,2*pi)
 	def step(self):
@@ -1293,22 +1369,42 @@ class PhysObj:
 
 class Debrie (PhysObj):
 	_debries = []
-	def __init__(self, pos, blast, colors, bounces=2):
+	def __init__(self, pos, blast, colors, bounces=2, firey=True, water=False):
 		Debrie._debries.append(self)
 		self.initialize()
 		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
-		self.pos = Vector(pos[0],pos[1])
+		self.pos = Vector(pos[0], pos[1])
 		
 		self.boomAffected = False
 		self.bounceBeforeDeath = bounces
 		self.color = choice(colors)
 		self.radius = 1
-		self.damp = 0.5
+		self.damp = 0.2
+		
+		width = randint(1,3)
+		height = randint(1,3)
+		point = Vector(width/2, height/2)
+		
+		self.rect = [point, Vector(point.x, -point.y), -point, -Vector(point.x, -point.y)]
+		self.angle = 0
+		
+		self.firey = randint(0, 5) == 0 and firey
+		self.water = water
 	def applyForce(self):
-		# gravity:
-		self.acc.y += globalGravity * 2.5
+		factor = 2.5# if self.water else 1
+		self.acc.y += globalGravity * factor
+	def secondaryStep(self):
+		self.angle -= self.vel.x * 2
+		if self.firey:
+			Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
+	def collisionRespone(self, ppos):
+		self.firey = False
 	def draw(self):
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius))
+		if self.water:
+			pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius))
+			return
+		points = [point2world(self.pos + rotateVector(i, -self.angle)) for i in self.rect]
+		pygame.draw.polygon(win, self.color, points)
 
 class Missile (PhysObj):#1
 	def __init__(self, pos, direction, energy):
@@ -1466,8 +1562,8 @@ class Worm (PhysObj):
 			self.nameStr = name
 		else:
 			self.nameStr = randomNames.pop()
-		self.name = myfont.render(self.nameStr, False, self.team.color)
-		self.healthStr = myfont.render(str(self.health), False, self.team.color)
+		self.name = pixelFont5.render(self.nameStr, False, self.team.color)
+		self.healthStr = pixelFont5.render(str(self.health), False, self.team.color)
 		self.score = 0
 		self.jetpacking = False
 		self.rope = None #[pos, radius]
@@ -1536,7 +1632,7 @@ class Worm (PhysObj):
 	def heal(self, hp):
 		self.health += hp
 		if self.healthMode == 1:
-			self.healthStr = myfont.render(str(self.health), False, self.team.color)
+			self.healthStr = pixelFont5.render(str(self.health), False, self.team.color)
 		self.sick = 0
 		self.color = (255, 206, 167)
 		self.surf.fill((0,0,0,0))
@@ -1571,7 +1667,7 @@ class Worm (PhysObj):
 			if self.health < 0:
 				self.health = 0
 			if Worm.healthMode == 1:
-				self.healthStr = myfont.render(str(self.health), False, self.team.color)
+				self.healthStr = pixelFont5.render(str(self.health), False, self.team.color)
 			global damageThisTurn
 			if not self == objectUnderControl:
 				if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
@@ -1607,6 +1703,8 @@ class Worm (PhysObj):
 		angle = 45 * int(self.angle / 45)
 		fliped = pygame.transform.flip(self.surf, self.facing == RIGHT, False)
 		rotated = pygame.transform.rotate(fliped, angle)
+		if self.gravity == UP:
+			rotated = pygame.transform.flip(rotated, False, True)
 		if self.jetpacking:
 			blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "jet pack")
 			win.blit(sprites, point2world(self.pos - Vector(8,8)), (48, 96, 16, 16))
@@ -1617,7 +1715,7 @@ class Worm (PhysObj):
 		namePos = Vector(self.pos.x - self.name.get_width()/2, max(self.pos.y + nameHeight, 10))
 		win.blit(self.name , point2world(namePos))
 		if self.alive and self.pos.y < 0:
-			num = myfont.render(str(int(-self.pos.y)), False, self.team.color)
+			num = pixelFont5.render(str(int(-self.pos.y)), False, self.team.color)
 			win.blit(num, point2world(namePos + Vector(self.name.get_width() + 2,0)))
 		
 		if warpedMode:
@@ -1656,7 +1754,7 @@ class Worm (PhysObj):
 		self.surf.fill((0,0,0,0))
 		self.surf.blit(sprites, (0,0), (32,0,16,16))
 		# self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
-		self.name = myfont.render(self.nameStr, False, grayen(self.team.color))
+		self.name = pixelFont5.render(self.nameStr, False, grayen(self.team.color))
 
 		# insert to kill list:
 		if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
@@ -1664,7 +1762,7 @@ class Worm (PhysObj):
 			currentTeam.killCount += 1
 			if gameMode == POINTS:
 				string = self.nameStr + " by " + objectUnderControl.nameStr
-				killList.insert(0, (myfont.render(string, False, HUDColor), 0))
+				killList.insert(0, (pixelFont5.render(string, False, HUDColor), 0))
 		
 		self.health = 0
 		
@@ -2351,7 +2449,7 @@ def deployPack(pack):
 	return p
 
 airStrikeDir = RIGHT
-airStrikeSpr = myfontbigger.render(">>>", False, HUDColor)
+airStrikeSpr = pixelFont10.render(">>>", False, HUDColor)
 def fireAirstrike(pos):
 	global camTrack
 	x = pos[0]
@@ -2481,7 +2579,7 @@ class Banana(Grenade):
 		self.color = (255, 204, 0)
 		self.damp = 0.5
 		self.timer = 0
-		# self.surf = myfontbigger.render("(", False, self.color)
+		# self.surf = pixelFont10.render("(", False, self.color)
 		self.angle = 0
 		self.used = used
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
@@ -2511,23 +2609,25 @@ class Banana(Grenade):
 		self.angle -= self.vel.x*4
 
 class Earthquake:
-	earthquake = False
-	def __init__(self):
-		self.timer = 210
+	earthquake = 0
+	def __init__(self, timer = 7 * fps, decorative = False, strength = 1):
+		self.timer = timer
 		nonPhys.append(self)
 		self.stable = False
 		self.boomAffected = False
-		Earthquake.earthquake = True
+		Earthquake.earthquake = strength
+		self.decorative = decorative
 	def step(self):
-		for obj in PhysObj._reg:
-			if obj == self or obj in Portal._reg:
-				continue
-			if randint(0,5) == 1:
-				obj.vel += Vector(randint(-1,1), -uniform(0,1))
+		if not self.decorative:
+			for obj in PhysObj._reg:
+				if obj == self or obj in Portal._reg:
+					continue
+				if randint(0,5) == 1:
+					obj.vel += Vector(randint(-1,1), -uniform(0,1))
 		self.timer -= 1
 		if self.timer == 0:
 			nonPhys.remove(self)
-			Earthquake.earthquake = False
+			Earthquake.earthquake = 0
 			del self
 	def draw(self):
 		pass
@@ -2954,6 +3054,7 @@ def drawLightning(start, end, color = (153, 255, 255)):
 		for i in lightings:
 			lights.append((i[0], i[1], 50, [color[0], color[1], color[2], 100]))
 	if len(points) > 1:
+		points.append(point2world(end))
 		for i, point in enumerate(points):
 			width = int((1-(i / (len(points)-1)))*4) + 1
 			if i == len(points) - 1:
@@ -3251,7 +3352,7 @@ def timeTravelPlay():
 	timeTravelList["weaponDir"] = Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle))
 	objectUnderControl.health = timeTravelList["health"]
 	if Worm.healthMode == 1:
-		objectUnderControl.healthStr = myfont.render(str(objectUnderControl.health), False, objectUnderControl.team.color)
+		objectUnderControl.healthStr = pixelFont5.render(str(objectUnderControl.health), False, objectUnderControl.team.color)
 	objectUnderControl.pos = timeTravelList["initial pos"]
 	objectUnderControl.vel *= 0
 	jetPackFuel = timeTravelList["jet pack"]
@@ -3870,7 +3971,7 @@ class Venus:
 		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
 		extraCol.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 
-class Ball0(PhysObj):#########EXPERIMENTAL
+class Ball0(PhysObj):# EXPERIMENTAL
 	def __init__(self, pos):
 		self.initialize()
 		self.pos = Vector(pos[0],pos[1])
@@ -3965,7 +4066,7 @@ def doCirclesOverlap(pos1, r1, pos2, r2):
 def isPointInCircle(pos, radius, point):
 	return fabs((pos[0] - point[0])*(pos[0] - point[0]) + (pos[1] - point[1])*(pos[1] - point[1])) <= radius * radius
 
-class Ball(PhysObj):
+class Ball(PhysObj):# EXPERIMENTAL
 	def __init__(self, pos):
 		self.initialize()
 		self.pos = Vector(pos[0],pos[1])
@@ -4122,7 +4223,7 @@ class PokeBall(PhysObj):
 					self.hold.flagHolder = False
 					self.hold.team.flagHolder = False
 					Flag(self.hold.pos)
-				self.name = myfont.render(self.hold.nameStr, False, self.hold.team.color)
+				self.name = pixelFont5.render(self.hold.nameStr, False, self.hold.team.color)
 				Commentator.que.append(choice([(self.hold.nameStr, ("",", i choose you"), self.hold.team.color), ("", ("", "gotta catch 'em al"), self.hold.team.color), (self.hold.nameStr, ("", " will help beat the next gym leader"), self.hold.team.color)]))
 			else:
 				self.dead = True
@@ -4459,7 +4560,7 @@ class ShootingTarget:
 		pygame.draw.circle(win, RED, point2world(self.pos), int(self.radius - 4))
 		pygame.draw.circle(win, WHITE, point2world(self.pos), int(self.radius - 8))
 
-class Distorter(Grenade):#########EXPERIMENTAL
+class Distorter(Grenade):# EXPERIMENTAL
 	def deathResponse(self):
 		global ground
 		width = randint(100, 150)
@@ -4585,54 +4686,7 @@ class Raon(PhysObj):
 			pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 			win.set_at(point2world(self.pos), (0,0,0))
 
-class Path:#########EXPERIMENTAL
-	spacing = 50
-	def __init__(self, pos):
-		nonPhys.append(self)
-		self.wormPoints = []
-		for worm in PhysObj._worms:
-			self.wormPoints.append(self.pathPoint(worm.pos))
-		self.start = self.pathPoint(pos)
-		self.graph = []
-		for x in range(mapWidth//Path.spacing+1):
-			col = []
-			for y in range(mapHeight//Path.spacing+1):
-				col.append(((Path.spacing*x,Path.spacing*y), "white", None))
-			self.graph.append(col)
-	def changePointByPos(self, pos, value):
-		pass
-	def pathPoint(self, x):
-		return (int(round(x[0]/Path.spacing) * Path.spacing), int(round(x[1]/Path.spacing) * Path.spacing))
-	def posAddend(pos, index):
-		if index == 0:
-			return (pos[0] + Path.spacing, pos[1])
-		elif index == 1:
-			return (pos[0] + Path.spacing, pos[1] + Path.spacing)
-		elif index == 2:
-			return (pos[0], pos[1] + Path.spacing)
-		elif index == 3:
-			return (pos[0] - Path.spacing, pos[1] + Path.spacing)
-		elif index == 4:
-			return (pos[0] - Path.spacing, pos[1])
-		elif index == 5:
-			return (pos[0] - Path.spacing, pos[1] - Path.spacing)
-		elif index == 6:
-			return (pos[0], pos[1] - Path.spacing)
-		elif index == 7:
-			return (pos[0] + Path.spacing, pos[1] - Path.spacing)
-	def runBfs(self):
-		pass
-	def step(self):
-		pass
-	def draw(self):
-		for x in self.graph:
-			for y in x:
-				pygame.draw.circle(win, (0,0,0), point2world(y), 2)
-		for point in self.wormPoints:
-			pygame.draw.circle(win, (255,255,255), point2world(point), 2)
-		pygame.draw.circle(win, (255,255,255), point2world(self.graph[2][3]), 2)
-
-def fireFusrodah(start, direction):#########EXPERIMENTAL
+def fireFusrodah(start, direction):# EXPERIMENTAL
 	# layersCircles[0].append(((0,0,0), start + direction * 40, 40))
 	# layersCircles[0].append(((0,0,0), start + direction * 80, 26))
 	# layersCircles[0].append(((0,0,0), start + direction * 110, 10))
@@ -4835,7 +4889,7 @@ class Bubble:
 		if self in nonPhys:
 			nonPhys.remove(self)
 		for i in range(min(int(self.radius), 8)):
-			d = Debrie(self.pos, self.radius/5, [self.color], 1)
+			d = Debrie(self.pos, self.radius/5, [self.color], 1, False, True)
 			d.radius = 1
 	def draw(self):
 		pygame.gfxdraw.circle(win, *point2world(self.pos), self.radius, self.color)
@@ -5554,6 +5608,55 @@ class GroundThrow(PhysObj):
 		normal = getNormal(objectUnderControl.pos, objectUnderControl.vel, objectUnderControl.radius, False, True)
 		addExtra(objectUnderControl.pos + 5 * normal)
 
+class MasterOfPuppets:
+	def __init__(self):
+		nonPhys.append(self)
+		self.springs = []
+		self.timer = 0
+		for worm in PhysObj._worms:
+			# point = Vector(worm.pos.x, 0)
+			for t in range(200):
+				posToCheck = worm.pos - Vector(0, t * 5)
+				if mapGetAt(posToCheck) == GRD:
+					break
+				if posToCheck.y < 0:
+					break
+			rest = dist(posToCheck, worm.pos) / 2
+			p = PointSpring(0.01, rest, worm, posToCheck)
+			self.springs.append(p)
+	def step(self):
+		self.timer += 1
+		if self.timer >= fps * 15:
+			self.springs.clear()
+			nonPhys.remove(self)
+		for p in self.springs:
+			p.step()
+	def draw(self):
+		for p in self.springs:
+			p.draw()
+
+class PointSpring:
+	def __init__(self, k, rest, obj, point):
+		self.k = k
+		self.rest = rest
+		self.obj = obj
+		self.point = point
+		self.alive = True
+	def step(self):
+		force = self.point - self.obj.pos
+		x = force.getMag() - self.rest
+		x = x * -1
+		force.setMag(-1 * self.k * x)
+		
+		if distus(self.obj.pos, self.point) > self.rest * self.rest:
+			self.obj.acc += force
+		if not self.obj.alive:
+			self.alive = False
+	def draw(self):
+		if not self.alive:
+			return
+		pygame.draw.line(win, (255, 220, 0), point2world(self.obj.pos), point2world(self.point))
+
 ################################################################################ Weapons setup
 
 class WeaponManager:
@@ -5646,7 +5749,7 @@ class WeaponManager:
 			else: self.basicSet.append(-1)
 			
 		self.currentWeapon = self.weapons[0][0]
-		self.surf = myfont.render(self.currentWeapon, False, HUDColor)
+		self.surf = pixelFont5.render(self.currentWeapon, False, HUDColor)
 		self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
 		
 		self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf}
@@ -5730,7 +5833,7 @@ class WeaponManager:
 		if self.getFused(self.currentWeapon):
 			weaponStr += "  delay: " + str(fuseTime//fps)
 			
-		self.surf = myfont.render(weaponStr, False, color)
+		self.surf = pixelFont5.render(weaponStr, False, color)
 	def updateDelay(self):
 		for w in self.weapons:
 			if not w[5] == 0:
@@ -6726,7 +6829,7 @@ class RadialButton:
 		self.ammo = currentTeam.ammo(self.key)
 		self.amount = None
 		if self.ammo > 0:
-			self.amount = myfont.render(str(self.ammo), False, BLACK)
+			self.amount = pixelFont5.render(str(self.ammo), False, BLACK)
 		self.subButtons = []
 		self.level = 0
 		self.category = None
@@ -6748,7 +6851,7 @@ class RadialButton:
 			if self.level == 0:
 				RadialMenu.events[self.level + 1] = self.key
 			if self.level == 1 and RadialMenu.toster[1] != self.key:
-				textSurf = myfont.render(self.key, False, WHITE)
+				textSurf = pixelFont5.render(self.key, False, WHITE)
 				RadialMenu.toster[0] = pygame.Surface(tup2vec(textSurf.get_size()) + Vector(2,2))
 				RadialMenu.toster[0].blit(textSurf, (1,1))
 				RadialMenu.toster[1] = self.key
@@ -6980,13 +7083,13 @@ class Commentator:#(name, strings, color)
 			else:
 				self.mode = Commentator.RENDER
 		elif self.mode == Commentator.RENDER:
-			nameSurf = myfont.render(self.que[0][0], False, self.que[0][2])
+			nameSurf = pixelFont5.render(self.que[0][0], False, self.que[0][2])
 				
 			string1 = self.que[0][1][0]
 			string2 = self.que[0][1][1]
 			
-			stringSurf1 = myfont.render(string1, False, HUDColor)
-			stringSurf2 = myfont.render(string2, False, HUDColor)
+			stringSurf1 = pixelFont5.render(string1, False, HUDColor)
+			stringSurf2 = pixelFont5.render(string2, False, HUDColor)
 			# combine strings
 			self.textSurf = pygame.Surface((nameSurf.get_width() + stringSurf1.get_width() + stringSurf2.get_width(), nameSurf.get_height())).convert_alpha()
 			self.textSurf.fill((0,0,0,0))
@@ -7066,8 +7169,8 @@ def toastInfo():
 	toastWidth = 100
 	surfs = []
 	for team in teams:
-		name = myfont.render(team.name, False, team.color)
-		points = myfont.render(str(team.points), False, HUDColor)
+		name = pixelFont5.render(team.name, False, team.color)
+		points = pixelFont5.render(str(team.points), False, HUDColor)
 		surfs.append((name, points))
 	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * totalTeams), pygame.SRCALPHA)
 	i = 0
@@ -7176,7 +7279,7 @@ def suddenDeath():
 		string += " water rise!"
 		global waterRise
 		waterRise = True
-	text = myfontbigger.render("sudden death", False, (220,0,0))
+	text = pixelFont10.render("sudden death", False, (220,0,0))
 	Toast(pygame.transform.scale(text, tup2vec(text.get_size()) * 2), Toast.middle)
 
 def isOnMap(vec):
@@ -7239,6 +7342,8 @@ def cheatActive(code):
 		m = Mjolnir(Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 	if code == "bulbasaur":
 		m = MagicLeaf(Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+	if code == "masterofpuppets":
+		MasterOfPuppets()
 	
 def gameDistable(): 
 	global gameStable, gameStableCounter
@@ -7248,7 +7353,7 @@ def gameDistable():
 killList = []
 useList = []
 def addToUseList(string):
-	useList.append([myfont.render(string, False, HUDColor), string])
+	useList.append([pixelFont5.render(string, False, HUDColor), string])
 	if len(useList) > 4:
 		useList.pop(0)
 
@@ -7259,7 +7364,7 @@ def addToKillList():
 		amount += killList[0][2]
 		killList.pop(0)
 	string = objectUnderControl.nameStr + ": " + str(amount)
-	killList.insert(0, (myfont.render(string, False, HUDColor), objectUnderControl.nameStr, amount))
+	killList.insert(0, (pixelFont5.render(string, False, HUDColor), objectUnderControl.nameStr, amount))
 
 def drawUseList():
 	space = 0
@@ -7341,6 +7446,7 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+	
 	# pygame.image.save(win, "screenShoot" + str(uniform(0, 100)).replace(".", "") + ".png")
 
 ################################################################################ State machine
@@ -7348,8 +7454,8 @@ if True:
 	RESET = 0; GENERATE_TERRAIN = 1; PLACING_WORMS = 2; CHOOSE_STARTER = 3; PLAYER_CONTROL_1 = 4
 	PLAYER_CONTROL_2 = 5; WAIT_STABLE = 6; FIRE_MULTIPLE = 7; WIN = 8
 	state, nextState = RESET, RESET
-	loadingSurf = myfontbigger.render("Simon's Worms Loading", False, WHITE)
-	pauseSurf = myfontbigger.render("Game Paused", False, WHITE)
+	loadingSurf = pixelFont10.render("Simon's Worms Loading", False, WHITE)
+	pauseSurf = pixelFont10.render("Game Paused", False, WHITE)
 	gameStable = False; playerScrollAble = False; playerControl = False; playerMoveable = True
 	playerControlPlacing = False; playerShootAble = False; gameStableCounter = 0
 
@@ -7442,10 +7548,10 @@ def stateMachine():
 					for i in range(length):
 						if i == 0:
 							team.worms[i].health = initialHealth + (length - 1) * (initialHealth//2)
-							team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
+							team.worms[i].healthStr = pixelFont5.render(str(team.worms[i].health), False, team.worms[i].team.color)
 						else:
 							team.worms[i].health = (initialHealth//2)
-							team.worms[i].healthStr = myfont.render(str(team.worms[i].health), False, team.worms[i].team.color)
+							team.worms[i].healthStr = pixelFont5.render(str(team.worms[i].health), False, team.worms[i].team.color)
 				initialHealth = teams[0].worms[0].health
 			if darkness:
 				global HUDColor
@@ -7670,7 +7776,7 @@ def onKeyPressEnter():
 
 ################################################################################ Setup
 HealthBar.healthBar = HealthBar()
-damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
+damageText = (damageThisTurn, pixelFont5.render(str(int(damageThisTurn)), False, HUDColor))
 commentator = Commentator()
 water = Water()
 Water.layersA.append(water)
@@ -7816,7 +7922,7 @@ if __name__ == "__main__":
 						Worm.healthMode = (Worm.healthMode + 1) % 2
 						if Worm.healthMode == 1:
 							for worm in PhysObj._worms:
-								worm.healthStr = myfont.render(str(worm.health), False, worm.team.color)
+								worm.healthStr = pixelFont5.render(str(worm.health), False, worm.team.color)
 					if event.key == pygame.K_F3:
 						drawGroundSec = not drawGroundSec
 					if event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
@@ -7891,7 +7997,9 @@ if __name__ == "__main__":
 			if camPos.x >= mapWidth - winWidth:
 				camPos.x = mapWidth - winWidth
 		
-		if Earthquake.earthquake: camPos.x += 25*sin(timeOverall); camPos.y += 15*sin(timeOverall * 1.8)
+		if Earthquake.earthquake > 0:
+			camPos.x += Earthquake.earthquake * 25 * sin(timeOverall)
+			camPos.y += Earthquake.earthquake * 15 * sin(timeOverall * 1.8)
 		
 		# Fire
 		if fireWeapon and playerShootAble: fire()
@@ -8007,10 +8115,10 @@ if __name__ == "__main__":
 		
 		drawExtra()
 		# debug:
-		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, myfont.render(str(int(damageThisTurn)), False, HUDColor))
+		if damageText[0] != damageThisTurn: damageText = (damageThisTurn, pixelFont5.render(str(int(damageThisTurn)), False, HUDColor))
 		win.blit(damageText[1], ((int(5), int(winHeight-6))))
 		
-		if state == PLACING_WORMS: win.blit(myfont.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
+		if state == PLACING_WORMS: win.blit(pixelFont5.render(str(len(PhysObj._worms)), False, HUDColor), ((int(20), int(winHeight-6))))
 		
 		# draw loading screen
 		if state in [RESET, GENERATE_TERRAIN] or (state in [PLACING_WORMS, CHOOSE_STARTER] and not manualPlace):
