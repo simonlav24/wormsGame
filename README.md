@@ -101,7 +101,7 @@ game development practice in python for educational purposes and fun.
 
 ## :moyai: Artifacts
 
-Artifacts is a game option that unlocks magical items and weapons. the artifacts will randomly spawn in the map.
+Artifacts is a game option that unlocks magical items and weapons. the artifacts will randomly spawn in the map and must be collected to activate their abilities.
 
 * **Mjolnir** - Thor's magical hammar
   * **strike** - strike the hammer with a powerful electric blast
@@ -112,6 +112,11 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
   * **Magic Bean** - throw bean that grows a giant beanstalk
   * **Mine Plant** - plant that grows proximity mine flowers
   * **Razor Leaf** - A Grass-type attack that sends sharp-edged leaves at the target. Likely to get a critical hit.
+* **Avatar** - become master of all four elements.
+  * **Icicle** - shoot freezing icicle
+  * **Earth Spike** - bend the earth into a spike to shoot nearby emenies and objects to space
+  * **Fire Ball** - a flying blast of fire ball exploding into flames
+  * **Air Tornado** - send a violently rotating column of air
 
 ## :hammer_and_pick: Game modes
 
@@ -133,7 +138,8 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 - Closed map - cant exit the map bounding box.
 - Forts - teammates spawn in cluster.
 - Digging - worms are underground. dig your way around. recommended with darkness.
+- Artifacts - enable artifacts in the games.
 
 ### :ocean: Sudden Death
 
-Sudden death activated after the specified number of rounds in the options. the sudden death types are: plague - worms loose half their health and get sick, water rise - water level rising after each turn. the types can both be used.
+Sudden death activates after several number of rounds, defined in the options. the sudden death types are: plague - worms loose half their health and get sick, water rise - water level rising after each turn. the types can both be used.

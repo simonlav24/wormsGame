@@ -85,6 +85,7 @@ if True:
 	
 	MJOLNIR = 0
 	PLANT_MASTER = 1
+	AVATAR = 2
 
 # Game settings
 if True:
@@ -135,7 +136,8 @@ if True:
 	HUDColor = BLACK
 	holdArtifact = True
 	artifactsMode = True
-	worldArtifacts = [MJOLNIR, PLANT_MASTER]
+	worldArtifacts = [MJOLNIR, PLANT_MASTER, AVATAR]
+	trigerArtifact = False
 
 # improvements:
 # seagulls to not spawn on top of world
@@ -147,11 +149,6 @@ if True:
 
 # bugs:
 # drop artifact option (shift - tab?)
-
-# artifact: guitar hero
-# master of puppets: hang worms by springs to ceiling or sky half rest length
-# smoke on the water: fire in the skies (napalm but stronger might need fire optimization)
-# more.
 
 # artifact: avatar
 # 3 fire balls
@@ -214,6 +211,7 @@ if True:
 	timeTravel = False
 	megaTrigger = False
 	fuseTime = fps*2
+	customObjects = []
 
 # parse arguments
 if True:
@@ -288,13 +286,18 @@ def createWorld():
 	# choose map
 	maps = []
 	maps += grabMapsFrom("wormsMaps")
-	maps += grabMapsFrom("wormsMaps/moreMaps")
+	if os.path.exists("wormsMaps/moreMaps"):
+		maps += grabMapsFrom("wormsMaps/moreMaps")
 	
 	if args.map_choice == "":
-		# no map chosed in arguments pick one at random
+		# no map chosen in arguments. pick one at random
 		imageChoice = choice(maps)
 	else:
 		imageChoice = [None, None]
+		# if perlin map, recolor ground
+		if "PerlinMaps" in args.map_choice:
+			args.recolor_ground = True
+		# search for chosen map
 		for m in maps:
 			if args.map_choice in m[0]:
 				imageChoice = m
@@ -303,9 +306,6 @@ def createWorld():
 		if imageChoice[0] == None:
 			imageChoice[0] = args.map_choice
 			imageChoice[1] = randint(512, 600)
-		# if perlin map, recolor ground
-		if "PerlinMaps" in args.map_choice:
-			args.recolor_ground = True
 		
 	if args.map_ratio != -1:
 		imageChoice[1] = args.map_ratio
@@ -344,14 +344,14 @@ def createMap(imageChoice):
 	global mapImage
 	mapImage = pygame.image.load(imageChoice[0])
 	
-	# flip for diversity
+	# flip for fun
 	if randint(0,1) == 0:
 		mapImage = pygame.transform.flip(mapImage, True, False)
 	
 	# rescale based on ratio
 	ratio = mapImage.get_width() / mapImage.get_height()
 	mapImage = pygame.transform.scale(mapImage, (int(imageChoice[1] * ratio), imageChoice[1]))
-		
+	
 	createMapSurfaces((mapImage.get_width(), mapImage.get_height() + initialWaterLevel))
 	
 	# fill gameMap
@@ -925,7 +925,7 @@ if True:
 def blitWeaponSprite(dest, pos, weapon):
 	index = weaponMan.weaponDict[weapon]
 	x = index % 8
-	y = 7 + index // 8
+	y = 9 + index // 8
 	rect = (x * 16, y * 16, 16, 16)
 	dest.blit(sprites, pos, rect)
 
@@ -1075,8 +1075,8 @@ def checkPotential(obj, count):
 			
 	pot = pot[0:i]
 	
-	for i in pot:
-		addExtra(i)
+	# for i in pot:
+		# addExtra(i)
 	return pot
 
 def getClosestPosAvail(obj):
@@ -1707,7 +1707,7 @@ class Worm (PhysObj):
 			rotated = pygame.transform.flip(rotated, False, True)
 		if self.jetpacking:
 			blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "jet pack")
-			win.blit(sprites, point2world(self.pos - Vector(8,8)), (48, 96, 16, 16))
+			# win.blit(sprites, point2world(self.pos - Vector(8,8)), (48, 96, 16, 16))
 		win.blit(rotated, point2world(self.pos - tup2vec(rotated.get_size())//2))
 		
 		# draw name
@@ -3438,12 +3438,10 @@ class Artillery(PhysObj):
 class LongBow:
 	_sleep = False #0-regular 1-sleep
 	def __init__(self, pos, direction, sleep=False):
-		PhysObj._reg.append(self)
+		nonPhys.append(self)
 		self.pos = vectorCopy(pos)
 		self.direction = direction
 		self.vel = direction.normalize() * 20
-		self.stable = False
-		self.boomAffected = False
 		self.stuck = None
 		self.color = (112, 74, 37)
 		self.ignore = None
@@ -3452,10 +3450,8 @@ class LongBow:
 		for vec in self.triangle:
 			vec.rotate(self.direction.getAngle())
 	def destroy(self):
-		PhysObj._reg.remove(self)
+		nonPhys.remove(self)
 		del self
-	def removeFromGame(self):
-		PhysObj._reg.remove(self)
 	def step(self):
 		if not self.stuck:
 			ppos = self.pos + self.vel
@@ -3474,14 +3470,7 @@ class LongBow:
 					if worm == self.ignore:
 						continue
 					if dist(testPos, worm.pos) < worm.radius + 1:
-						worm.vel += self.direction*4
-						worm.vel.y -= 2
-						worm.damage(randint(10,20) if self.sleep else randint(15,25))
-						global camTrack
-						camTrack = worm
-						if self.sleep: worm.sleep = True
-						self.destroy()
-						stain(worm.pos, imageBlood, imageBlood.get_size(), False)
+						self.wormCollision(worm)
 						return
 				# check target collision:
 				for target in ShootingTarget._reg:
@@ -3491,22 +3480,36 @@ class LongBow:
 						return
 				# check gameMap collision
 				if not isOnMap(testPos.vec2tupint()):
-					PhysObj._reg.remove(self)
+					nonPhys.remove(self)
 					return
 				if gameMap.get_at(testPos.vec2tupint()) == GRD:
 					self.stuck = vectorCopy(testPos)
 			self.pos = ppos
 		if self.stuck:
-			self.pos = self.stuck
+			self.stamp()
+		self.secondaryStep()
+	def wormCollision(self, worm):
+		worm.vel += self.direction*4
+		worm.vel.y -= 2
+		worm.damage(randint(10,20) if self.sleep else randint(15,25))
+		global camTrack
+		camTrack = worm
+		if self.sleep: worm.sleep = True
+		self.destroy()
+		stain(worm.pos, imageBlood, imageBlood.get_size(), False)
+	def secondaryStep(self):
+		pass
+	def stamp(self):
+		self.pos = self.stuck
 			
-			points = [(self.pos - self.direction * 10 + i).vec2tupint() for i in self.triangle]
-			pygame.draw.polygon(ground, (230,235,240), points)
-			pygame.draw.polygon(gameMap, GRD, points)
-			
-			pygame.draw.line(gameMap, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
-			pygame.draw.line(ground, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
-			
-			self.destroy()
+		points = [(self.pos - self.direction * 10 + i).vec2tupint() for i in self.triangle]
+		pygame.draw.polygon(ground, (230,235,240), points)
+		pygame.draw.polygon(gameMap, GRD, points)
+		
+		pygame.draw.line(gameMap, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+		pygame.draw.line(ground, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+		
+		self.destroy()
 	def draw(self):
 		points = [point2world(self.pos - self.direction * 10 + i) for i in self.triangle]
 		pygame.draw.polygon(win, (230,235,240), points)
@@ -5657,6 +5660,248 @@ class PointSpring:
 			return
 		pygame.draw.line(win, (255, 220, 0), point2world(self.obj.pos), point2world(self.point))
 
+class Frost:
+	def __init__(self, pos):
+		self.pos = pos.integer()
+		self.visited = []
+		self.next = []
+		self.timer = fps * randint(2, 6)
+		if not mapGetAt(self.pos) == GRD:
+			return
+		nonPhys.append(self)
+	def step(self):
+		color = ground.get_at(self.pos)
+		r = color[0] + (256 - color[0]) // 2
+		g = color[1] + (256 - color[1]) // 2
+		b = color[2] + int((256 - color[2]) * 0.8)
+		newColor = (r, g, b)
+		ground.set_at(self.pos, newColor)
+		self.visited.append(vectorCopy(self.pos))
+		directions = [Vector(1,0), Vector(0,1), Vector(-1,0), Vector(0,-1)]
+		shuffle(directions)
+		
+		while len(directions) > 0:
+			direction = directions.pop(0)
+			checkPos = self.pos + direction
+			if mapGetAt(checkPos) == GRD and not checkPos in self.visited:
+				self.next.append(checkPos)
+		
+		self.pos = choice(self.next)
+		self.next.remove(self.pos)
+		
+		self.timer -= 1
+		if self.timer <= 0:
+			nonPhys.remove(self)
+	def draw(self):
+		pass
+
+class Icicle(LongBow):
+	def __init__(self, pos, direction):
+		nonPhys.append(self)
+		self.pos = vectorCopy(pos)
+		self.direction = direction
+		self.vel = direction.normalize() * 20
+		self.stuck = None
+		self.color = (112, 74, 255)
+		self.ignore = None
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "icicle")
+	def secondaryStep(self):
+		if randint(0,5) == 0:
+			Frost(self.pos + vectorUnitRandom() * 3)
+	def destroy(self):
+		nonPhys.remove(self)
+		for i in range(8):
+			d = Debrie(self.pos, 5, [(200,200,255)], 1, False, True)
+		del self
+	def stamp(self):
+		self.pos = self.stuck
+		Frost(self.stuck)
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		ground.blit(surf, self.pos - tup2vec(surf.get_size())//2)
+		for y in range(self.surf.get_height()):
+			for x in range(self.surf.get_width()):
+				if not self.surf.get_at((x,y))[3] < 255:
+					self.surf.set_at((x,y), GRD)
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		gameMap.blit(surf, self.pos - tup2vec(surf.get_size())//2)
+		
+		self.destroy()
+	def wormCollision(self, worm):
+		for i in range(8):
+			pos = worm.pos + vectorFromAngle(2 * pi * i / 8, worm.radius + 1)
+			Frost(pos)
+		worm.vel += self.direction*4
+		worm.vel.y -= 2
+		worm.damage(randint(20,30))
+		global camTrack
+		camTrack = worm
+		for i in range(8):
+			d = Debrie(self.pos, 5, [(200,200,255)], 1, False, True)
+		self.destroy()
+	def draw(self):
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())//2))
+
+class EarthSpike:
+	def __init__(self):
+		self.squareSize = Vector(16,32)
+		self.pos = checkPotential(objectUnderControl, 25)[-1]
+		nonPhys.append(self)
+		self.timer = 0
+		self.surf = pygame.Surface((32, 32), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), ((32, 96), (32, 32)))
+		if randint(0, 1) == 0:
+			self.surf = pygame.transform.flip(self.surf, True, False)
+		self.colors = [(139, 140, 123), (91, 92, 75), (208, 195, 175), (48, 35, 34)]
+	def step(self):
+		if self.timer < 5:
+			for i in range(randint(5,10)):
+				d = Debrie(self.pos + Vector(randint(-8,8), -3), 10, self.colors, 1, False, True)
+				d.vel = vectorUnitRandom()
+				d.vel.y = uniform(-10, -8)
+				d.radius = choice([2,1])
+		if self.timer == 5:
+			surf = pygame.transform.scale(self.surf, (32, 16))
+			rectPos = self.pos + Vector(-surf.get_width() // 2, 3 - surf.get_height())
+			win.blit(surf, point2world(rectPos))
+			stain(self.pos - Vector(0, 3), imageHole, (32,32), True)
+			
+		if self.timer == 6:
+			rectPos = self.pos + Vector(-self.surf.get_width() // 2, 3 - self.surf.get_height())
+			for obj in PhysObj._reg:
+				if obj in Debrie._debries:
+					continue
+				if obj.pos.x > rectPos.x + 8 and obj.pos.x <= rectPos.x + self.surf.get_width() - 8 \
+						and obj.pos.y > rectPos.y and obj.pos.y <= rectPos.y + self.surf.get_height():
+					obj.pos += Vector(0, -self.surf.get_height())
+					obj.vel.x = obj.pos.x - self.pos.x
+					obj.vel.y -= randint(7,9)
+					if obj in PhysObj._worms:
+						obj.damage(randint(25,35))
+			
+			ground.blit(self.surf, rectPos)
+			surf = self.surf.copy()
+			pixels = pygame.PixelArray(surf)
+			for i in self.colors:
+				pixels.replace(i, GRD)
+			del pixels
+			gameMap.blit(surf, rectPos)
+		self.timer += 1
+	def draw(self):
+		pass
+
+class FireBall(LongBow):
+	def __init__(self, pos, direction):
+		nonPhys.append(self)
+		self.pos = vectorCopy(pos)
+		self.direction = direction
+		self.vel = direction.normalize() * 20
+		self.stuck = None
+		self.color = (112, 74, 255)
+		self.ignore = None
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "fire ball")
+	def secondaryStep(self):
+		if randint(0,2) == 0:
+			Fire(self.pos)
+		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
+	def destroy(self):
+		if self.stuck:
+			boomPos = self.stuck
+		else:
+			boomPos = self.pos
+		boom(boomPos, 15)
+		for i in range(40):
+			s = Fire(boomPos, 5)
+			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
+		nonPhys.remove(self)
+	def stamp(self):
+		self.destroy()
+	def wormCollision(self, worm):
+		self.stuck = worm.pos + vectorUnitRandom() * 2
+		self.destroy()
+	def draw(self):
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())//2))
+
+class Tornado:
+	def __init__(self):
+		self.width = 30
+		self.pos = objectUnderControl.pos + Vector(objectUnderControl.radius + self.width / 2, 0) * objectUnderControl.facing
+		self.facing = objectUnderControl.facing
+		nonPhys.append(self)
+		self.points = [Vector(0, 10 * i) for i in range(50)]
+		self.swirles = []
+		self.sizes = [self.width + randint(0,20) for i in self.points]
+		for point in self.points:
+			xRadius = 0
+			yRadius = 0
+			theta = uniform(0, 2 * pi)
+			self.swirles.append([xRadius, yRadius, theta])
+		self.timer = 0
+		self.speed = 2
+		self.radius = 0
+	def step(self):
+		gameDistable()
+		if self.timer < 2 * fps:
+			for i, swirl in enumerate(self.swirles):
+				swirl[0] = min(self.timer, self.sizes[i])
+				swirl[1] = min(self.timer / 3, 10)
+		self.pos.x += self.speed * self.facing
+		for swirl in self.swirles:
+			swirl[2] += 0.1
+		rect = (Vector(self.pos.x - self.width / 2, 0), Vector(self.width, mapHeight))
+		for obj in PhysObj._reg:
+			if obj.pos.x > rect[0][0] and obj.pos.x <= rect[0][0] + rect[1][0]:
+				if obj.vel.y > -2:
+					obj.acc.y += -0.4
+				obj.acc.x += 0.4 * sin(self.timer/3)
+		if self.timer >= fps * 10 and len(self.swirles) > 0:
+			self.swirles.pop(-1)
+			if len(self.swirles) == 0:
+				nonPhys.remove(self)
+		self.timer += 1
+	def draw(self):
+		for i, swirl in enumerate(self.swirles):
+			five = [point2world(Vector(swirl[0] * cos(swirl[2] + t/5) + self.pos.x, 10 * i + swirl[1] * sin(swirl[2] + t/5))) for t in range(5)]
+			pygame.draw.lines(win, (255,255,255), False, five)
+
+class Avatar(PhysObj):
+	def __init__(self, pos):
+		self.initialize()
+		self.pos = pos
+		self.vel = Vector(randint(-2,2), 0)
+		self.radius = 3
+		self.damp = 0.2
+		self.angle = 0
+		global camTrack
+		camTrack = self
+		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+		self.surf.blit(sprites, (0,0), (0,112,16,16))
+	def secondaryStep(self):
+		self.angle -= self.vel.x*4
+		# pick up
+		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0\
+			and not len(objectUnderControl.team.artifacts) > 0: 
+			PhysObj._reg.remove(self)
+			commentator.que.append((currentTeam.name, ("everything changed when the ", " attacked"), currentTeam.color))
+			currentTeam.artifacts.append(AVATAR)
+			# add artifacts moves:
+			weaponMan.addArtifactMoves(AVATAR)
+			del self
+			return 
+	def removeFromGame(self):
+		if self in PhysObj._reg:
+			PhysObj._reg.remove(self)
+		worldArtifacts.append(AVATAR)
+	def draw(self):
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+	def comment(self):
+		commentator.que.append(("", ("who is the next avatar?", ""), HUDColor))
+
 ################################################################################ Weapons setup
 
 class WeaponManager:
@@ -5713,19 +5958,19 @@ class WeaponManager:
 		self.weapons.append(["pokeball",			CHARGABLE,	0,	LEGENDARY,	True,	1])
 		self.weapons.append(["green shell",			PUTABLE,	0,	LEGENDARY,	False,	1])
 		self.weapons.append(["guided missile",		PUTABLE,	0,	LEGENDARY,	False,	1])
-		# self.weapons.append(["distorter",			CHARGABLE,	0,	TOOLS,	True,	0])
-		# self.weapons.append(["fus ro duh",			PUTABLE,	0,	TOOLS,		False,	0])
+		# self.weapons.append(["distorter",			CHARGABLE,	0,	TOOLS,		True,	0])
+		# self.weapons.append(["fus ro duh",		PUTABLE,	0,	TOOLS,		False,	0])
 		
 		self.weaponCount = len(self.weapons)
 		
-		self.weapons.append(["moon gravity"	,		UTILITY,	0,	UTILITIES,		False,	0])
-		self.weapons.append(["double damage",		UTILITY,	0,	UTILITIES,		False,	0])
-		self.weapons.append(["aim aid",				UTILITY,	0,	UTILITIES,		False,	0])
-		self.weapons.append(["teleport",			CLICKABLE,	0,	UTILITIES,		False,	0])
-		self.weapons.append(["switch worms",		UTILITY,	0,	UTILITIES,		False,	0])
-		self.weapons.append(["time travel",			UTILITY,	0,	UTILITIES,		False,	0])
-		self.weapons.append(["jet pack",			UTILITY,	0,	UTILITIES,		False,	0])
-		self.weapons.append(["flare",				CHARGABLE,	0,	UTILITIES,		False,	0])
+		self.weapons.append(["moon gravity"	,		UTILITY,	0,	UTILITIES,	False,	0])
+		self.weapons.append(["double damage",		UTILITY,	0,	UTILITIES,	False,	0])
+		self.weapons.append(["aim aid",				UTILITY,	0,	UTILITIES,	False,	0])
+		self.weapons.append(["teleport",			CLICKABLE,	0,	UTILITIES,	False,	0])
+		self.weapons.append(["switch worms",		UTILITY,	0,	UTILITIES,	False,	0])
+		self.weapons.append(["time travel",			UTILITY,	0,	UTILITIES,	False,	0])
+		self.weapons.append(["jet pack",			UTILITY,	0,	UTILITIES,	False,	0])
+		self.weapons.append(["flare",				CHARGABLE,	0,	UTILITIES,	False,	0])
 		
 		self.utilityCount = len(self.weapons) - self.weaponCount
 		
@@ -5737,6 +5982,11 @@ class WeaponManager:
 		self.weapons.append(["magic bean",			CHARGABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
 		self.weapons.append(["mine plant",			CHARGABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
 		self.weapons.append(["razor leaf",			GUN,		0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
+		
+		self.weapons.append(["icicle",				GUN,		0,	ARTIFACTS,	False,	0,	AVATAR])
+		self.weapons.append(["earth spike",			PUTABLE,	0,	ARTIFACTS,	False,	0,	AVATAR])
+		self.weapons.append(["fire ball",			GUN,		0,	ARTIFACTS,	False,	0,	AVATAR])
+		self.weapons.append(["air tornado",			PUTABLE,	0,	ARTIFACTS,	False,	0,	AVATAR])
 		
 		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
 
@@ -5752,7 +6002,7 @@ class WeaponManager:
 		self.surf = pixelFont5.render(self.currentWeapon, False, HUDColor)
 		self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
 		
-		self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf}
+		self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf, AVATAR: Avatar}
 	def getStyle(self, string):
 		return self.weapons[self.weaponDict[string]][1]
 	def getCurrentStyle(self):
@@ -5838,6 +6088,17 @@ class WeaponManager:
 		for w in self.weapons:
 			if not w[5] == 0:
 				w[5] -= 1
+	def drawWeaponIndicators(self):
+		if weaponMan.currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget:
+			drawTarget(HomingMissile.Target)
+		if weaponMan.currentWeapon == "girder" and state == PLAYER_CONTROL_1:
+			drawGirderHint()
+		if weaponMan.getBackColor(weaponMan.currentWeapon) == AIRSTRIKE:
+			mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
+			win.blit(pygame.transform.flip(airStrikeSpr, False if airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(airStrikeSpr.get_size())/2))
+		if weaponMan.currentWeapon == "earth spike" and state == PLAYER_CONTROL_1 and currentTeam.ammo("earth spike") != 0:
+			pot = checkPotential(objectUnderControl, 25)
+			drawTarget(pot[-1])
 
 weaponMan = WeaponManager()
 
@@ -6124,6 +6385,36 @@ def fire(weapon = None):
 		else:
 			nextState = PLAYER_CONTROL_2
 			decrease = True
+	elif weapon == "icicle":
+		decrease = False
+		if state == PLAYER_CONTROL_1:
+			shotCount = 4
+		w = Icicle(weaponOrigin + weaponDir * 5, weaponDir) # fire
+		w.ignore = objectUnderControl
+		shotCount -= 1
+		if shotCount > 0:
+			nextState = FIRE_MULTIPLE
+		if shotCount == 0:
+			decrease = True
+			nextState = PLAYER_CONTROL_2
+		avail = False
+	elif weapon == "earth spike":
+		EarthSpike()
+	elif weapon == "fire ball":
+		decrease = False
+		if state == PLAYER_CONTROL_1:
+			shotCount = 4
+		w = FireBall(weaponOrigin + weaponDir * 5, weaponDir) # fire
+		w.ignore = objectUnderControl
+		shotCount -= 1
+		if shotCount > 0:
+			nextState = FIRE_MULTIPLE
+		if shotCount == 0:
+			decrease = True
+			nextState = PLAYER_CONTROL_2
+		avail = False
+	elif weapon == "air tornado":
+		w = Tornado()
 	
 	if w and not timeTravelFire: camTrack = w	
 	
@@ -6433,7 +6724,7 @@ def checkWinners():
 
 def cycleWorms():
 	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn
-	global deploying, sentring, deployPacks, switchingWorms, raoning, waterRising, roundsTillSuddenDeath
+	global deploying, sentring, deployPacks, switchingWorms, raoning, waterRising, roundsTillSuddenDeath, trigerArtifact
 	global deployingArtifact
 
 	# reset special effects:
@@ -6541,7 +6832,8 @@ def cycleWorms():
 		
 		if len(worldArtifacts) > 0 and not deployingArtifact:
 			chance = randint(0,10)
-			if chance == 0:
+			if chance == 0 or trigerArtifact:
+				trigerArtifact = False
 				deployingArtifact = True
 				artifact = choice(worldArtifacts)
 				worldArtifacts.remove(artifact)
@@ -7344,6 +7636,9 @@ def cheatActive(code):
 		m = MagicLeaf(Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 	if code == "masterofpuppets":
 		MasterOfPuppets()
+	if code == "artifact":
+		global trigerArtifact
+		trigerArtifact = True
 	
 def gameDistable(): 
 	global gameStable, gameStableCounter
@@ -7446,7 +7741,6 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	
 	# pygame.image.save(win, "screenShoot" + str(uniform(0, 100)).replace(".", "") + ".png")
 
 ################################################################################ State machine
@@ -8056,7 +8350,7 @@ if __name__ == "__main__":
 
 		if darkness and darkMask: win.blit(darkMask, (-int(camPos.x), -int(camPos.y)))
 		
-		if weaponMan.currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget: drawTarget(HomingMissile.Target)
+		
 		if gameMode == TERMINATOR and victim and victim.alive: drawTarget(victim.pos)
 		if Arena.arena: Arena.arena.draw()
 			
@@ -8073,7 +8367,7 @@ if __name__ == "__main__":
 				angle = objectUnderControl.shootAngle
 				pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + vectorFromAngle(angle) * i))
 				i += 1
-		if weaponMan.currentWeapon == "girder" and state == PLAYER_CONTROL_1: drawGirderHint()
+		
 		drawExtra()
 		drawLayers()
 		
@@ -8082,9 +8376,8 @@ if __name__ == "__main__":
 		timeDraw()
 		if weaponMan.surf: win.blit(weaponMan.surf, ((int(25), int(8))))
 		commentator.step()
-		if weaponMan.getBackColor(weaponMan.currentWeapon) == AIRSTRIKE:
-			mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-			win.blit(pygame.transform.flip(airStrikeSpr, False if airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(airStrikeSpr.get_size())/2))
+		# draw weapon indicators
+		weaponMan.drawWeaponIndicators()
 		if useListMode: drawUseList()
 		# draw health bar
 		if not state in [RESET, GENERATE_TERRAIN, PLACING_WORMS, CHOOSE_STARTER] and drawHealthBar: HealthBar.healthBar.step()
