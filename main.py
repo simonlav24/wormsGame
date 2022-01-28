@@ -148,21 +148,18 @@ if True:
 # call ship that comes through sea and blast cannons
 # golden snitch for points game ?
 # hedgehog that moves around catching worms
-# seasons, rainy means fire puts out faster
+# seasons, rainy means fire puts out faster, lightning storms
+# drop artifact option (shift - tab?)
 
 # bugs:
-# drop artifact option (shift - tab?)
 # sprite of artillery
+# time travel with correct sprite
+# arrows outside of map
 
-# artifact: avatar
-# 3 fire balls
-# throw rock/ground
-# tornado
-
-# artifact: batman
-# more ropes (black)
+# artifact: batman (?)
+# more ropes (in black)
 # batarangs
-# 
+# ??
 
 # infinity stones:
 # space - teleport with no penalty
