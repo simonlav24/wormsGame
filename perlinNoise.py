@@ -5,19 +5,7 @@ import argparse
 import datetime
 import os
 
-parser = argparse.ArgumentParser()
 
-parser.add_argument("-d", "--dump", action='store_true', help='generate image and quit')
-parser.add_argument("-t", "--type", default="noise", help="noise type", type=str)
-
-args = parser.parse_args()
-
-winWidth = 800
-winHeight = 300
-
-pygame.init()
-
-win = pygame.display.set_mode((winWidth,winHeight))
 
 ################################################################################
 
@@ -123,42 +111,58 @@ def generateNoise(width, height):
 
 ################################################################################ Main Loop
 
-if args.type == "perlin":
-	noise = generatePerlinNoise(winWidth, winHeight)
-elif args.type == "noise":
-	noise = generateNoise(winWidth, winHeight)
-win.blit(noise, (0,0))
+if __name__ == "__main__":
 
-run = True
-while run:
-	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument("-d", "--dump", action='store_true', help='generate image and quit')
+	parser.add_argument("-t", "--type", default="noise", help="noise type", type=str)
+	
+	args = parser.parse_args()
+	
+	winWidth = 800
+	winHeight = 300
+	
+	pygame.init()
+	
+	win = pygame.display.set_mode((winWidth,winHeight))
+
+	if args.type == "perlin":
+		noise = generatePerlinNoise(winWidth, winHeight)
+	elif args.type == "noise":
+		noise = generateNoise(winWidth, winHeight)
+	win.blit(noise, (0,0))
+
+	run = True
+	while run:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				run = False
+	
+			if event.type == pygame.KEYDOWN:
+				#key pressed once:
+				if event.key == pygame.K_x:
+					if args.type == "perlin":
+						noise = generatePerlinNoise(winWidth, winHeight)
+					elif args.type == "noise":
+						noise = generateNoise(winWidth, winHeight)
+					win.blit(noise, (0,0))
+		keys = pygame.key.get_pressed()
+		if keys[pygame.K_ESCAPE]:
 			run = False
-
-		if event.type == pygame.KEYDOWN:
-			#key pressed once:
-			if event.key == pygame.K_x:
-				if args.type == "perlin":
-					noise = generatePerlinNoise(winWidth, winHeight)
-				elif args.type == "noise":
-					noise = generateNoise(winWidth, winHeight)
-				win.blit(noise, (0,0))
-	keys = pygame.key.get_pressed()
-	if keys[pygame.K_ESCAPE]:
-		run = False
+		
+		if args.dump:
+			break
+		pygame.display.update()
 	
-	if args.dump:
-		break
-	pygame.display.update()
-
-x = datetime.datetime.now()
-if not os.path.exists("wormsMaps/PerlinMaps"):
-	os.mkdir("wormsMaps/PerlinMaps")
-	
-imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
-pygame.image.save(win, imageString)
-print(imageString)
-pygame.quit()
+	x = datetime.datetime.now()
+	if not os.path.exists("wormsMaps/PerlinMaps"):
+		os.mkdir("wormsMaps/PerlinMaps")
+		
+	imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
+	pygame.image.save(win, imageString)
+	print(imageString)
+	pygame.quit()
 
 
 

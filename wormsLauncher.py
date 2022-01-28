@@ -63,9 +63,9 @@ defaults = {"--worms_per_team": 8, "--initial_health": 100, "--pack_mult": 1, "-
 
 tab1_layout =   [[sg.Text("Simon's worms game launcher", font=fnt_bold)],
 			[sg.Text('Gameplay Mode', font=fnt_bold),
-				sg.Radio('Battle', "RADIO1", key="battleMode", default=True), sg.Radio('Points', "RADIO1", key="pointsMode2"),
-				sg.Radio('Targets', "RADIO1", key="targetsMode3"), sg.Radio('Capture the flag', "RADIO1", key="captureTheFlagMode4")],
-			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="terminatorMode5"), sg.Radio('David vs Goliath', "RADIO1", key="davidVGoliathMode1"), sg.Radio('Arena', "RADIO1", key="arenaMode6")],
+				sg.Radio('Battle', "RADIO1", key="battleMode", default=True), sg.Radio('Points', "RADIO1", key="pointsMode1"),
+				sg.Radio('Targets', "RADIO1", key="targetsMode3"), sg.Radio('Capture the flag', "RADIO1", key="captureTheFlagMode5")],
+			[sg.Text('                          '), sg.Radio('Terminator', "RADIO1", key="terminatorMode2"), sg.Radio('David vs Goliath', "RADIO1", key="davidVGoliathMode4"), sg.Radio('Arena', "RADIO1", key="arenaMode6")],
 			[sg.Text('Options', font=fnt_bold), sg.Checkbox('Cooldown', key="--used_list", default=True), sg.Checkbox('Artifacts', key="--artifacts", default=True),sg.Text('Random'), sg.Combo(['Complete', 'In Team'], key='--random'), sg.Checkbox('Manual placing', key="--place"), 
 				], 
 			[sg.Text('            '), sg.Checkbox('Closed map', key="--closed_map"), sg.Checkbox('Forts', key="--forts"), sg.Checkbox('Digging', key="--digging"), sg.Checkbox('Darkness', key="--darkness"), sg.Checkbox('Warped', key="--warped")],

@@ -53,6 +53,7 @@ if True:
 	BLACK = (0,0,0)
 	WHITE = (255,255,255)
 	GREY = (100,100,100)
+	DARK_COLOR = (30,30,30)
 	DOWN = 1
 	UP = -1
 	
@@ -76,11 +77,11 @@ if True:
 	TSUNAMI = 1
 	
 	BATTLE = 0
-	DAVID_AND_GOLIATH = 1
-	POINTS = 2
+	POINTS = 1
+	TERMINATOR = 2
 	TARGETS = 3
-	CAPTURE_THE_FLAG = 4
-	TERMINATOR = 5
+	DAVID_AND_GOLIATH = 4
+	CAPTURE_THE_FLAG = 5
 	ARENA = 6
 	
 	MJOLNIR = 0
@@ -138,6 +139,7 @@ if True:
 	artifactsMode = True
 	worldArtifacts = [MJOLNIR, PLANT_MASTER, AVATAR]
 	trigerArtifact = False
+	backColor = None
 
 # improvements:
 # seagulls to not spawn on top of world
@@ -146,9 +148,11 @@ if True:
 # call ship that comes through sea and blast cannons
 # golden snitch for points game ?
 # hedgehog that moves around catching worms
+# seasons, rainy means fire puts out faster
 
 # bugs:
 # drop artifact option (shift - tab?)
+# sprite of artillery
 
 # artifact: avatar
 # 3 fire balls
@@ -203,7 +207,6 @@ if True:
 			 [(37,145,184), (232, 213, 155), (85,179,191), (16, 160, 187)],
 			 [(246,153,121), (255, 205, 187), (252,117,92), (196, 78, 63)]
 			 ]
-	feelColor = choice(feels)
 	wind = uniform(-1,1)
 	actionMove = False
 	aimAid = False
@@ -237,6 +240,7 @@ if True:
 	parser.add_argument("-sdt", "--sudden_death_tsunami", type=bool, nargs='?', const=True, default=False, help="tsunami sudden death style")
 	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
 	parser.add_argument("-art", "--artifacts", type=bool, nargs='?', const=True, default=False, help="artifacts mode")
+	parser.add_argument("-feel", "--feel_index", default=-1, help="choice of background feel color", type=int)
 	args = parser.parse_args()
 	
 	gameMode = args.game_mode
@@ -258,6 +262,10 @@ if True:
 		suddenDeathStyle.append(TSUNAMI)
 	if args.sudden_death_plague:
 		suddenDeathStyle.append(PLAGUE)
+	if args.feel_index == -1:
+		args.feel_index = randint(0, len(feels) - 1)
+	feelColor = feels[args.feel_index]
+	backColor = feelColor[0]
 	
 def grabMapsFrom(path):
 	if not os.path.exists(path):
@@ -421,7 +429,9 @@ def drawLand():
 		if drawGroundSec: win.blit(groundSec, point2world((-mapWidth,0)))
 		win.blit(ground, point2world((-mapWidth,0)))
 	if darkness and not state == PLACING_WORMS:
-		darkMask.fill((30,30,30))
+		darkMask.fill(DARK_COLOR)
+		global backColor
+		backColor = DARK_COLOR
 		if objectUnderControl:
 			# advanced darkness:
 			if False:
@@ -883,9 +893,9 @@ def perlinNoise1D(count, seed, octaves, bias):
 		output.append(noise / scaleAcc)
 	return output
 
-def renderCloud2():
-	c1 = (224, 233, 232)
-	c2 = (192, 204, 220)
+def renderCloud(colors=[(224, 233, 232), (192, 204, 220)]):
+	c1 = colors[0]
+	c2 = colors[1]
 	surf = pygame.Surface((170, 70), pygame.SRCALPHA)
 	circles = []
 	leng = randint(15,30)
@@ -4931,6 +4941,8 @@ class Acid(PhysObj):
 					worm.damage(randint(0,1))
 					self.damageCooldown = 30
 		self.inGround = False
+		if randint(0,50) < 1:
+			Smoke(self.pos, color=(200,255,200,100))
 		gameDistable()
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius+1)
@@ -6922,12 +6934,12 @@ def cycleWorms():
 				continue
 			switched = True
 			
-		if randomCycle == 1:
+		if randomCycle == 1: # complete random
 			currentTeam = choice(teams)
 			while not len(currentTeam.worms) > 0:
 				currentTeam = choice(teams)
 			w = choice(currentTeam.worms)
-		if randomCycle == 2:
+		if randomCycle == 2: # random in the current team
 			w = choice(currentTeam.worms)
 	
 		objectUnderControl = w
@@ -7333,7 +7345,7 @@ class Cloud:
 		self.pos = Vector(pos[0],pos[1])
 		self.vel = Vector(0,0)
 		self.acc = Vector(0,0)
-		self.surf = renderCloud2()
+		self.surf = renderCloud()
 		self.randomness = uniform(0.97, 1.02)
 	def step(self):
 		self.acc.x = wind
@@ -8335,7 +8347,7 @@ if __name__ == "__main__":
 		actionMove = False
 			
 		# draw:
-		win.fill(feelColor[0])
+		win.fill(backColor)
 		win.blit(pygame.transform.scale(imageSky, (win.get_width(), mapHeight)), (0,0 - camPos[1]))
 		for cloud in Cloud._reg: cloud.draw()
 		drawBackGround(imageMountain2,4)
