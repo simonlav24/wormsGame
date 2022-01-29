@@ -151,8 +151,10 @@ if True:
 # seasons, rainy means fire puts out faster, lightning storms
 # drop artifact option (shift - tab?)
 
+# make a game class to hold all global elements
+# improve state machine
+
 # bugs:
-# sprite of artillery
 # time travel with correct sprite
 # arrows outside of map
 
@@ -262,7 +264,6 @@ if True:
 	if args.feel_index == -1:
 		args.feel_index = randint(0, len(feels) - 1)
 	feelColor = feels[args.feel_index]
-	backColor = feelColor[0]
 	
 def grabMapsFrom(path):
 	if not os.path.exists(path):
@@ -361,7 +362,7 @@ def createMap(imageChoice):
 	
 	# fill gameMap
 	global lstepmax
-	lstepmax = mapWidth//10 + wormsPerTeam * len(teams) + 1
+	lstepmax = mapWidth//10 + wormsPerTeam * len(teamManager.teams) + 1
 	for x in range(mapWidth):
 		for y in range(mapHeight - initialWaterLevel):
 			if not (mapImage.get_at((x, y)) == (0,0,0) or mapImage.get_at((x, y))[3] < 100):
@@ -427,10 +428,8 @@ def drawLand():
 		win.blit(ground, point2world((-mapWidth,0)))
 	if darkness and not state == PLACING_WORMS:
 		darkMask.fill(DARK_COLOR)
-		global backColor
-		backColor = DARK_COLOR
 		if objectUnderControl:
-			# advanced darkness:
+			# advanced darkness experimental:
 			if False:
 				center = objectUnderControl.pos
 				points = []
@@ -453,8 +452,6 @@ def drawLand():
 			pygame.draw.circle(darkMask, light[3], (int(light[0]), int(light[1])), int(light[2]))
 		lights = []
 	
-		
-		
 	wormCol.fill(SKY)
 	extraCol.fill(SKY)
 
@@ -537,7 +534,7 @@ def stain(pos, surf, size, alphaMore):
 
 def splash(pos, vel):
 	for i in range(10 + int(vel.getMag())):
-		d = Debrie(Vector(pos.x, mapHeight - Water.level - 3), 10, [waterColor[1]], 1, False, True)
+		d = Debrie(Vector(pos.x, mapHeight - Water.level - 3), 10, [Water.waterColor[1]], 1, False, True)
 		d.vel = vectorUnitRandom()
 		d.vel.y = uniform(-1,0) * vel.getMag()
 		d.vel.x *= vel.getMag() * 0.17
@@ -682,6 +679,155 @@ class Explossion:
 	def draw(self):
 		pass
 
+class Water:
+	level = initialWaterLevel
+	quiet = 0
+	waterAmp = 2
+	rising = 1
+	layersA = []
+	layersB = []
+	waterColor = []
+	def __init__(self):
+		self.points = [Vector(i * 20, 3 + Water.waterAmp + Water.waterAmp * (-1)**i) for i in range(-1,12)]
+		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
+		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+		
+		self.surf = pygame.Surface((200, Water.waterAmp * 2 + 6), pygame.SRCALPHA)
+		self.state = Water.quiet
+		self.amount = 0
+	def getSplinePoint(self, t):
+		p1 = int(t) + 1
+		p2 = p1 + 1
+		p3 = p2 + 1
+		p0 = p1 - 1
+			
+		t = t - int(t)
+		tt = t * t
+		ttt = t * tt
+		q1 = -ttt + 2 * tt - t
+		q2 = 3 * ttt - 5 * tt + 2
+		q3 = -3 * ttt + 4 * tt + t
+		q4 = ttt - tt
+		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
+		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
+	
+		return (tx, ty)
+	def rise(self, amount):
+		self.amount = amount
+		self.state = Water.rising
+	def riseAll(self, amount):
+		self.rise(amount)
+	def step(self):
+		self.surf.fill((0,0,0,0))
+		self.points = [Vector(i * 20, 3 + Water.waterAmp + self.phase[i % 10] * Water.waterAmp * (-1)**i) for i in range(-1,12)]
+		pygame.draw.polygon(self.surf, Water.waterColor[0], self.points + [(200, Water.waterAmp * 2 + 6), (0, Water.waterAmp * 2 + 6)])
+		for t in range(0,(len(self.points) - 3) * 20):
+			point = self.getSplinePoint(t / 20)
+			pygame.draw.circle(self.surf,  Water.waterColor[1], (int(point[0]), int(point[1])), 1)
+		
+		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+	
+		if self.state == Water.rising:
+			gameDistable()
+			Water.level += 1
+			self.amount -= 1
+			if self.amount <= 0:
+				self.amount = 0
+				self.state = Water.quiet
+	def draw(self, offsetY=0):
+
+		width = 200
+		height = 10
+		offset = (camPos.x)//width
+		times = winWidth//width + 2
+		for i in range(times):
+			x = int(-camPos.x) + int(int(offset) * width + i * width)
+			y =  int(mapHeight - Water.level - 3 - Water.waterAmp - offsetY) - int(camPos.y)
+			win.blit(self.surf, (x, y))
+		
+		pygame.draw.rect(win, Water.waterColor[0], ((0,y + height), (winWidth, Water.level)))
+	def createLayers(self):
+		Water.layersA.append(Water())
+		Water.layersB.append(Water())
+	def stepAll(self):
+		for w in Water.layersA:
+			w.step()
+		for w in Water.layersB:
+			w.step()
+	def drawLayers(self, layer):
+		if layer == DOWN:
+			offset = 2
+			for w in Water.layersA:
+				w.draw(offset)
+				offset -= 10
+		else:
+			offset = 12
+			for w in Water.layersB:
+				w.draw(offset)
+				offset -= 10
+
+class Cloud:
+	_reg = []
+	cWidth = 170
+	def __init__(self, pos):
+		self._reg.append(self)
+		self.pos = Vector(pos[0],pos[1])
+		self.vel = Vector(0,0)
+		self.acc = Vector(0,0)
+		self.surf = renderCloud()
+		self.randomness = uniform(0.97, 1.02)
+	def step(self):
+		self.acc.x = wind
+		self.vel += self.acc
+		self.vel *= 0.85 * self.randomness
+		self.pos += self.vel
+		
+		if self.pos.x > camPos.x + winWidth + 100 or self.pos.x < camPos.x - 100 - self.cWidth:
+			self._reg.remove(self)
+			del self
+	def draw(self):
+		win.blit(self.surf, point2world(self.pos))
+
+class BackGround:
+	def __init__(self):
+		self.mountains = [renderMountains((180, 110), feelColor[3]), renderMountains((180, 150), feelColor[2])]
+		colorRect = pygame.Surface((2,2))
+		pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
+		pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
+		self.imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
+		self.backColor = feelColor[0]
+		if darkness:
+			self.backColor = DARK_COLOR
+
+		Water.waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
+		Water.waterColor.append(tuple(min(int(Water.waterColor[0][i] * 1.5), 255) for i in range(3)))
+
+		self.water = Water()
+		Water.layersA.append(self.water)
+		self.water.createLayers()
+	def step(self):
+		self.manageClouds()
+		self.water.stepAll()
+	def manageClouds(self):
+		if mapHeight == 0:
+			return
+		if len(Cloud._reg) < 8 and randint(0,10) == 1:
+			pos = Vector(choice([camPos.x - Cloud.cWidth - 100, camPos.x + winWidth + 100]), randint(5, mapHeight - 150))
+			Cloud(pos)
+		for cloud in Cloud._reg: cloud.step()
+	def draw(self):
+		win.fill(self.backColor)
+		win.blit(pygame.transform.scale(self.imageSky, (win.get_width(), mapHeight)), (0,0 - camPos[1]))
+		
+		for cloud in Cloud._reg:
+			cloud.draw()
+		drawBackGround(self.mountains[1],4)
+		drawBackGround(self.mountains[0],2)
+
+		self.water.drawLayers(UP)
+	def drawSecondary(self):
+		self.water.drawLayers(DOWN)
+
 def mapGetAt(pos, mat=None):
 	if not mat:
 		mat = gameMap
@@ -698,8 +844,8 @@ def giveGoodPlace(div = 0, girderPlace = True):
 	counter = 0
 	
 	if fortsMode and not div == -1:
-		half = mapWidth/totalTeams
-		Slice = div % totalTeams
+		half = mapWidth / teamManager.totalTeams
+		Slice = div % teamManager.totalTeams
 		
 		left = half * Slice
 		right = left + half
@@ -916,12 +1062,6 @@ def renderCloud(colors=[(224, 233, 232), (192, 204, 220)]):
 
 # sprites
 if True:
-	imageMountain = renderMountains((180, 110), feelColor[3])
-	imageMountain2 = renderMountains((180, 150), feelColor[2])
-	colorRect = pygame.Surface((2,2))
-	pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
-	pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
-	imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
 	imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
 	imageHole = pygame.image.load("assets/hole.png").convert_alpha()
 	sprites = pygame.image.load("assets/sprites.png").convert_alpha()
@@ -1146,6 +1286,8 @@ def getNormal(pos, vel, radius, wormCollision, extraCollision):
 	return response
 
 ################################################################################ Objects
+
+
 timeCounter = turnTime
 timeOverall = 0
 timeSurf = (timeCounter, pixelFont5.render(str(timeCounter), False, HUDColor))
@@ -1677,7 +1819,7 @@ class Worm (PhysObj):
 				self.healthStr = pixelFont5.render(str(self.health), False, self.team.color)
 			global damageThisTurn
 			if not self == objectUnderControl:
-				if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
+				if not sentring and not raoning and not waterRising and not self in teamManager.currentTeam.worms:
 					damageThisTurn += dmg
 			if gameMode == CAPTURE_THE_FLAG and damageType != 2:
 				if self.flagHolder:
@@ -1686,7 +1828,7 @@ class Worm (PhysObj):
 					Flag(self.pos)
 			global terminatorHit
 			if gameMode == TERMINATOR and victim == self and not terminatorHit:
-				currentTeam.points += 1
+				teamManager.currentTeam.points += 1
 				addToKillList()
 				terminatorHit = True
 	def draw(self):
@@ -1750,7 +1892,7 @@ class Worm (PhysObj):
 	def __repr__(self):
 		return str(self)
 	def dieded(self, cause=-1):
-		global state, nextState, teams, damageThisTurn
+		global state, nextState, damageThisTurn
 		
 		if timeTravel:
 			timeTravelPlay()
@@ -1764,9 +1906,9 @@ class Worm (PhysObj):
 		self.name = pixelFont5.render(self.nameStr, False, grayen(self.team.color))
 
 		# insert to kill list:
-		if not sentring and not raoning and not waterRising and not self in currentTeam.worms:
+		if not sentring and not raoning and not waterRising and not self in teamManager.currentTeam.worms:
 			damageThisTurn += self.health
-			currentTeam.killCount += 1
+			teamManager.currentTeam.killCount += 1
 			if gameMode == POINTS:
 				string = self.nameStr + " by " + objectUnderControl.nameStr
 				killList.insert(0, (pixelFont5.render(string, False, HUDColor), 0))
@@ -1789,7 +1931,7 @@ class Worm (PhysObj):
 			Commentator.que.append((self.nameStr, choice(Commentator.stringsDmg), self.team.color))
 		elif cause == Worm.causeFlew:
 			comment = True
-			if not self in currentTeam.worms and weaponMan.currentWeapon == "baseball" and state in [PLAYER_CONTROL_2, WAIT_STABLE]:
+			if not self in teamManager.currentTeam.worms and weaponMan.currentWeapon == "baseball" and state in [PLAYER_CONTROL_2, WAIT_STABLE]:
 				Commentator.que.append((self.nameStr, Commentator.stringBaseBall, self.team.color))
 				comment = False
 			if comment:
@@ -1813,10 +1955,10 @@ class Worm (PhysObj):
 			state = nextState
 			timeRemaining(wormDieTime)
 		if gameMode == TERMINATOR and self == victim:
-			currentTeam.points += 1
+			teamManager.currentTeam.points += 1
 			addToKillList()
 			if not terminatorHit:
-				currentTeam.points += 1
+				teamManager.currentTeam.points += 1
 				addToKillList()
 			if state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
 				pickVictim()
@@ -4560,7 +4702,7 @@ class ShootingTarget:
 		boom(self.pos, 15)
 		nonPhys.remove(self)
 		ShootingTarget._reg.remove(self)
-		currentTeam.points += 1
+		teamManager.currentTeam.points += 1
 		if len(ShootingTarget._reg) < ShootingTarget.numTargets:
 			ShootingTarget()
 		# add to kill list(surf, name, amount):
@@ -5084,7 +5226,7 @@ class Covid19(Seeker):
 		# find target
 		closest = 800
 		for worm in PhysObj._worms:
-			if worm in currentTeam.worms or worm in self.bitten or worm in self.unreachable:
+			if worm in teamManager.currentTeam.worms or worm in self.bitten or worm in self.unreachable:
 				continue
 			distance = dist(worm.pos, self.pos)
 			if distance < closest:
@@ -5197,7 +5339,7 @@ class MjolnirThrow(PhysObj):
 		# electrocute
 		self.worms = []
 		for worm in PhysObj._worms:
-			if worm in currentTeam.worms:
+			if worm in teamManager.currentTeam.worms:
 				continue
 			if distus(self.pos, worm.pos) < 10000:
 				self.worms.append(worm)
@@ -5276,8 +5418,8 @@ class Mjolnir(PhysObj):
 		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0\
 			and not len(objectUnderControl.team.artifacts) > 0: 
 			PhysObj._reg.remove(self)
-			commentator.que.append((objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), currentTeam.color))
-			currentTeam.artifacts.append(MJOLNIR)
+			commentator.que.append((objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), teamManager.currentTeam.color))
+			teamManager.currentTeam.artifacts.append(MJOLNIR)
 			# add artifacts moves:
 			
 			weaponMan.addArtifactMoves(MJOLNIR)
@@ -5388,7 +5530,7 @@ class MjolnirStrike:
 			# electrocute:
 			self.worms = []
 			for worm in PhysObj._worms:
-				if worm in currentTeam.worms:
+				if worm in teamManager.currentTeam.worms:
 					continue
 				if self.pos.x - 60 < worm.pos.x and worm.pos.x < self.pos.x + 60 and worm.pos.y <= self.pos.y:
 					self.worms.append(worm)
@@ -5435,8 +5577,8 @@ class MagicLeaf(PhysObj):
 			and not objectUnderControl.health <= 0\
 			and not len(objectUnderControl.team.artifacts) > 0:
 			PhysObj._reg.remove(self)
-			commentator.que.append((objectUnderControl.nameStr, ("", " became master of plants"), currentTeam.color))
-			currentTeam.artifacts.append(PLANT_MASTER)
+			commentator.que.append((objectUnderControl.nameStr, ("", " became master of plants"), teamManager.currentTeam.color))
+			teamManager.currentTeam.artifacts.append(PLANT_MASTER)
 			weaponMan.addArtifactMoves(PLANT_MASTER)
 			del self
 			return
@@ -5610,16 +5752,6 @@ class PlantControl:
 	def draw(self):
 		pass
 
-class GroundThrow(PhysObj):
-	def __init__(self):
-		self.initialize()
-		self.radius = 2
-		self.color = (55, randint(100, 200), 40)
-	def getGroundSurf():
-		# get response:
-		normal = getNormal(objectUnderControl.pos, objectUnderControl.vel, objectUnderControl.radius, False, True)
-		addExtra(objectUnderControl.pos + 5 * normal)
-
 class MasterOfPuppets:
 	def __init__(self):
 		nonPhys.append(self)
@@ -5786,7 +5918,7 @@ class EarthSpike:
 					obj.pos += Vector(0, -self.surf.get_height())
 					obj.vel.x = obj.pos.x - self.pos.x
 					obj.vel.y -= randint(7,9)
-					if obj in PhysObj._worms:
+					if obj in PhysObj._worms and not obj in teamManager.currentTeam.worms:
 						obj.damage(randint(25,35))
 			
 			ground.blit(self.surf, rectPos)
@@ -5894,8 +6026,8 @@ class Avatar(PhysObj):
 		if dist(objectUnderControl.pos, self.pos) < self.radius + objectUnderControl.radius + 5 and not objectUnderControl.health <= 0\
 			and not len(objectUnderControl.team.artifacts) > 0: 
 			PhysObj._reg.remove(self)
-			commentator.que.append((currentTeam.name, ("everything changed when the ", " attacked"), currentTeam.color))
-			currentTeam.artifacts.append(AVATAR)
+			commentator.que.append((teamManager.currentTeam.name, ("everything changed when the ", " attacked"), teamManager.currentTeam.color))
+			teamManager.currentTeam.artifacts.append(AVATAR)
 			# add artifacts moves:
 			weaponMan.addArtifactMoves(AVATAR)
 			del self
@@ -6033,6 +6165,7 @@ class WeaponManager:
 		else:
 			return CATEGORY_ARTIFACTS
 	def switchWeapon(self, string):
+		""" switch weapon and draw weapon sprite """
 		self.currentWeapon = string
 		self.renderWeaponCount()
 
@@ -6047,7 +6180,7 @@ class WeaponManager:
 				blitWeaponSprite(weaponHold, (0,0), string)
 				return
 			if string in ["flare", "artillery assist"]:
-				weaponHold.blit(sprites, (0,0), (32,96,16,16))
+				blitWeaponSprite(weaponHold, (0,0), "flare")
 				return
 			if self.getBackColor(string) in [AIRSTRIKE]:
 				if string == "chum bucket":
@@ -6059,12 +6192,12 @@ class WeaponManager:
 		for w in self.weapons[self.weaponCount + self.utilityCount:]:
 			if w[6] == artifact:
 				if w[0] == "magic bean":
-					currentTeam.ammo(w[0], 1, True)
+					teamManager.currentTeam.ammo(w[0], 1, True)
 					continue
 				if w[0] == "fly":
-					currentTeam.ammo(w[0], 3, True)
+					teamManager.currentTeam.ammo(w[0], 3, True)
 					continue
-				currentTeam.ammo(w[0], -1, True)
+				teamManager.currentTeam.ammo(w[0], -1, True)
 	def currentArtifact(self):
 		if self.getCategory(self.currentWeapon) == CATEGORY_ARTIFACTS:
 			return self.weapons[self.currentIndex()][6]
@@ -6075,7 +6208,7 @@ class WeaponManager:
 	def renderWeaponCount(self):
 		color = HUDColor
 		# if no ammo in current team
-		ammo = currentTeam.ammo(weaponMan.currentWeapon)
+		ammo = teamManager.currentTeam.ammo(weaponMan.currentWeapon)
 		if ammo == 0 or self.currentActive() or inUsedList(self.currentWeapon):
 			color = GREY
 		weaponStr = self.currentWeapon
@@ -6105,7 +6238,7 @@ class WeaponManager:
 		if weaponMan.getBackColor(weaponMan.currentWeapon) == AIRSTRIKE:
 			mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 			win.blit(pygame.transform.flip(airStrikeSpr, False if airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(airStrikeSpr.get_size())/2))
-		if weaponMan.currentWeapon == "earth spike" and state == PLAYER_CONTROL_1 and currentTeam.ammo("earth spike") != 0:
+		if weaponMan.currentWeapon == "earth spike" and state == PLAYER_CONTROL_1 and teamManager.currentTeam.ammo("earth spike") != 0:
 			pot = checkPotential(objectUnderControl, 25)
 			drawTarget(pot[-1])
 
@@ -6210,7 +6343,7 @@ def fire(weapon = None):
 	elif weapon == "venus fly trap":
 		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mode)
 	elif weapon == "sentry turret":
-		w = SentryGun(weaponOrigin, currentTeam.color)
+		w = SentryGun(weaponOrigin, teamManager.currentTeam.color)
 		w.pos.y -= objectUnderControl.radius + w.radius
 	elif weapon == "bee hive":
 		w = BeeHive(weaponOrigin, weaponDir, energy)
@@ -6434,8 +6567,8 @@ def fire(weapon = None):
 			w.pos = availpos
 	
 	if decrease:
-		if currentTeam.ammo(weapon) != -1:
-			currentTeam.ammo(weapon, -1)
+		if teamManager.currentTeam.ammo(weapon) != -1:
+			teamManager.currentTeam.ammo(weapon, -1)
 		weaponMan.renderWeaponCount()
 
 	fireWeapon = False
@@ -6458,7 +6591,7 @@ def fireClickable():
 	decrease = True
 	if not RadialMenu.menu is None or inUsedList(weaponMan.currentWeapon):
 		return
-	if currentTeam.ammo(weaponMan.currentWeapon) == 0:
+	if teamManager.currentTeam.ammo(weaponMan.currentWeapon) == 0:
 		return
 		
 	mousePosition = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
@@ -6476,8 +6609,8 @@ def fireClickable():
 	elif weaponMan.currentWeapon == "napalm strike":
 		fireNapalmStrike(mousePosition)
 	
-	if decrease and currentTeam.ammo(weaponMan.currentWeapon) != -1:
-		currentTeam.ammo(weaponMan.currentWeapon, -1)
+	if decrease and teamManager.currentTeam.ammo(weaponMan.currentWeapon) != -1:
+		teamManager.currentTeam.ammo(weaponMan.currentWeapon, -1)
 	
 	if useListMode and (nextState == PLAYER_CONTROL_2 or nextState == WAIT_STABLE) and addToUsed:
 		addToUseList(weaponMan.currentWeapon)
@@ -6526,7 +6659,7 @@ def fireUtility(weapon = None):
 		PlantControl()
 	
 	if decrease:
-		currentTeam.ammo(weapon, -1)
+		teamManager.currentTeam.ammo(weapon, -1)
 
 ################################################################################ Teams
 class Team:
@@ -6568,39 +6701,44 @@ class Team:
 			self.weaponCounter[weaponMan.weaponDict[weapon]] = amount
 		return self.weaponCounter[weaponMan.weaponDict[weapon]]
 
-teams = []
-# read teams from xml
-for teamsData in ET.parse('wormsTeams.xml').getroot():
-	newTeam = Team()
-	newTeam.name = teamsData.attrib["name"]
-	newTeam.hatOptions = teamsData.attrib["hat"]
-	newTeam.color = tuple([int(i) for i in teamsData.attrib["color"][1:-1].split(",")])
-	for team in teamsData:
-		if team.tag == "worm":
-			newTeam.nameList.append(team.attrib["name"])
-	teams.append(newTeam)
+class TeamManager:
+	def __init__(self):
+		self.teams = []
+		for teamsData in ET.parse('wormsTeams.xml').getroot():
+			newTeam = Team()
+			newTeam.name = teamsData.attrib["name"]
+			newTeam.hatOptions = teamsData.attrib["hat"]
+			newTeam.color = tuple([int(i) for i in teamsData.attrib["color"][1:-1].split(",")])
+			for team in teamsData:
+				if team.tag == "worm":
+					newTeam.nameList.append(team.attrib["name"])
+			self.teams.append(newTeam)
 
-hatsChosen = []
-for team in teams:
-	indexChoice = []
-	options = team.hatOptions.replace(" ", "").split(",")
-	for option in options:
-		if "-" in option:
-			indexChoice += [i for i in range(int(option.split("-")[0]), int(option.split("-")[1]) + 1)]
-		else:
-			indexChoice.append(int(option))
-	hatChoice = choice([hat for hat in indexChoice if hat not in hatsChosen])
-	team.makeHat(hatChoice)
-	hatsChosen.append(hatChoice)
+		# hats
+		hatsChosen = []
+		for team in self.teams:
+			indexChoice = []
+			options = team.hatOptions.replace(" ", "").split(",")
+			for option in options:
+				if "-" in option:
+					indexChoice += [i for i in range(int(option.split("-")[0]), int(option.split("-")[1]) + 1)]
+				else:
+					indexChoice.append(int(option))
+			hatChoice = choice([hat for hat in indexChoice if hat not in hatsChosen])
+			team.makeHat(hatChoice)
+			hatsChosen.append(hatChoice)
 
-totalTeams = len(teams)
-currentTeam = None
-teamChoser = 0
+		self.totalTeams = len(self.teams)
+		self.currentTeam = None
+		self.teamChoser = 0
+		self.nWormsPerTeam = 0
+		shuffle(self.teams)
+
+teamManager = TeamManager()
+
 roundCounter = 0
-mostDamage = (0,None)
 damageThisTurn = 0
-nWormsPerTeam = 0
-shuffle(teams)
+mostDamage = (0,None)
 
 ################################################################################ more functions
 
@@ -6637,16 +6775,16 @@ def checkWinners():
 	lastTeam = None
 	count = 0
 	pointsGame = False
-	for team in teams:
+	for team in teamManager.teams:
 		if len(team.worms) == 0:
 			count += 1
-	if count == totalTeams - 1:
+	if count == teamManager.totalTeams - 1:
 		# one team remains
 		end = True
-		for team in teams:
+		for team in teamManager.teams:
 			if not len(team.worms) == 0:
 				lastTeam = team
-	if count == totalTeams:
+	if count == teamManager.totalTeams:
 		# no team remains
 		end = True
 	
@@ -6663,7 +6801,7 @@ def checkWinners():
 	if gameMode == CAPTURE_THE_FLAG:
 		dic["mode"] = "CTF"
 		pointsGame = True
-		for team in teams:
+		for team in teamManager.teams:
 			if team.flagHolder:
 				team.points += 1 + 3 # bonus points
 				print("[ctf win, team", team.name, "got 3 bonus points]")
@@ -6678,9 +6816,9 @@ def checkWinners():
 			
 	elif gameMode == TARGETS:
 		pointsGame = True
-		currentTeam.points += 3 # bonus points
+		teamManager.currentTeam.points += 3 # bonus points
 		dic["mode"] = "targets"
-		print("[targets win, team", currentTeam.name, "got 3 bonus points]")
+		print("[targets win, team", teamManager.currentTeam.name, "got 3 bonus points]")
 	
 	elif gameMode == TERMINATOR:
 		pointsGame = True
@@ -6697,9 +6835,9 @@ def checkWinners():
 	
 	# win points:
 	if pointsGame:
-		for team in teams:
+		for team in teamManager.teams:
 			print("[ |", team.name, "got", team.points, "points! | ]")
-		teamsFinals = sorted(teams, key = lambda x: x.points)
+		teamsFinals = sorted(teamManager.teams, key = lambda x: x.points)
 		winningTeam = teamsFinals[-1]
 		print("[most points to team", winningTeam.name, "]")
 		dic["points"] = str(winningTeam.points)
@@ -6732,7 +6870,7 @@ def checkWinners():
 	return end
 
 def cycleWorms():
-	global objectUnderControl, camTrack, currentTeam, run, nextState, roundCounter, mostDamage, damageThisTurn
+	global objectUnderControl, camTrack, run, nextState, roundCounter, mostDamage, damageThisTurn
 	global deploying, sentring, deployPacks, switchingWorms, raoning, waterRising, roundsTillSuddenDeath, trigerArtifact
 	global deployingArtifact
 
@@ -6764,9 +6902,9 @@ def cycleWorms():
 	elif damageThisTurn > int(initialHealth * 1.5):
 		Commentator.que.append((objectUnderControl.nameStr, choice([("good shot ", "!"), ("nicely done ","")]), objectUnderControl.team.color))
 	
-	currentTeam.damage += damageThisTurn
+	teamManager.currentTeam.damage += damageThisTurn
 	if gameMode == POINTS:
-		currentTeam.points = currentTeam.damage + 50 * currentTeam.killCount
+		teamManager.currentTeam.points = teamManager.currentTeam.damage + 50 * teamManager.currentTeam.killCount
 	damageThisTurn = 0
 	if checkWinners():
 		return
@@ -6808,7 +6946,7 @@ def cycleWorms():
 			return
 		
 	# deploy pack:
-	if deployPacks and roundCounter % totalTeams == 0 and not deploying:
+	if deployPacks and roundCounter % teamManager.totalTeams == 0 and not deploying:
 		deploying = True
 		roundCounter -= 1
 		nextState = WAIT_STABLE
@@ -6817,7 +6955,7 @@ def cycleWorms():
 			w = deployPack(choice([HealthPack,UtilityPack, WeaponPack]))
 			camTrack = w
 		if darkness:
-			for team in teams:
+			for team in teamManager.teams:
 				team.ammo("flare", 1)
 				if team.ammo("flare") > 3:
 					team.ammo("flare", -1)
@@ -6833,7 +6971,7 @@ def cycleWorms():
 	
 	# throw artifact:
 	if artifactsMode:
-		for team in teams:
+		for team in teamManager.teams:
 			if PLANT_MASTER in team.artifacts:
 				team.ammo("magic bean", 1, True)
 			if MJOLNIR in team.artifacts:
@@ -6857,19 +6995,19 @@ def cycleWorms():
 	sentring = False
 	deployingArtifact = False
 	
-	if roundCounter % totalTeams == 0:
+	if roundCounter % teamManager.totalTeams == 0:
 		roundsTillSuddenDeath -= 1
 		if roundsTillSuddenDeath == 0:
 			suddenDeath()
 	
 	if gameMode == CAPTURE_THE_FLAG:
-		for team in teams:
+		for team in teamManager.teams:
 			if team.flagHolder:
 				team.points += 1
 				break
 
 	# update weapons delay (and targets)
-	if roundCounter % totalTeams == 0:
+	if roundCounter % teamManager.totalTeams == 0:
 		weaponMan.updateDelay()
 	
 		if gameMode == TARGETS:
@@ -6901,13 +7039,13 @@ def cycleWorms():
 	weaponMan.switchWeapon(weaponMan.currentWeapon)
 	
 	# select next team
-	index = teams.index(currentTeam)
-	index = (index + 1) % totalTeams
-	currentTeam = teams[index]
-	while not len(currentTeam.worms) > 0:
-		index = teams.index(currentTeam)
-		index = (index + 1) % totalTeams
-		currentTeam = teams[index]
+	index = teamManager.teams.index(teamManager.currentTeam)
+	index = (index + 1) % teamManager.totalTeams
+	teamManager.currentTeam = teamManager.teams[index]
+	while not len(teamManager.currentTeam.worms) > 0:
+		index = teamManager.teams.index(teamManager.currentTeam)
+		index = (index + 1) % teamManager.totalTeams
+		teamManager.currentTeam = teamManager.teams[index]
 	
 	if gameMode == TERMINATOR:
 		pickVictim()
@@ -6924,30 +7062,30 @@ def cycleWorms():
 		# actual worm switch:
 		switched = False
 		while not switched:
-			w = currentTeam.worms.pop(0)
-			currentTeam.worms.append(w)
+			w = teamManager.currentTeam.worms.pop(0)
+			teamManager.currentTeam.worms.append(w)
 			if w.sleep:
 				w.sleep = False
 				continue
 			switched = True
 			
 		if randomCycle == 1: # complete random
-			currentTeam = choice(teams)
-			while not len(currentTeam.worms) > 0:
-				currentTeam = choice(teams)
-			w = choice(currentTeam.worms)
+			teamManager.currentTeam = choice(teamManager.teams)
+			while not len(teamManager.currentTeam.worms) > 0:
+				teamManager.currentTeam = choice(teamManager.teams)
+			w = choice(teamManager.currentTeam.worms)
 		if randomCycle == 2: # random in the current team
-			w = choice(currentTeam.worms)
+			w = choice(teamManager.currentTeam.worms)
 	
 		objectUnderControl = w
 		camTrack = objectUnderControl
 
 def switchWorms():
 	global objectUnderControl, camTrack
-	currentWorm = currentTeam.worms.index(objectUnderControl)
-	totalWorms = len(currentTeam.worms)
+	currentWorm = teamManager.currentTeam.worms.index(objectUnderControl)
+	totalWorms = len(teamManager.currentTeam.worms)
 	currentWorm = (currentWorm + 1) % totalWorms
-	objectUnderControl = currentTeam.worms[currentWorm]
+	objectUnderControl = teamManager.currentTeam.worms[currentWorm]
 	camTrack = objectUnderControl
 
 def isGroundAround(place, radius = 5):
@@ -6966,7 +7104,7 @@ def isGroundAround(place, radius = 5):
 	return False
 
 def randomPlacing(wormsPerTeam):
-	for i in range(wormsPerTeam * len(teams)):
+	for i in range(wormsPerTeam * len(teamManager.teams)):
 		if fortsMode:
 			place = giveGoodPlace(i)
 		else:
@@ -6975,9 +7113,8 @@ def randomPlacing(wormsPerTeam):
 			pygame.draw.circle(gameMap, SKY, place, 35)
 			pygame.draw.circle(ground, SKY, place, 35)
 			pygame.draw.circle(groundSec, SKY, place, 30)
-		global teamChoser
-		teams[teamChoser].addWorm(place.vec2tup())
-		teamChoser = (teamChoser + 1) % totalTeams
+		teamManager.teams[teamManager.teamChoser].addWorm(place.vec2tup())
+		teamManager.teamChoser = (teamManager.teamChoser + 1) % teamManager.totalTeams
 		lstepper()
 	global state
 	state = nextState
@@ -7021,19 +7158,19 @@ class HealthBar:
 	width = 40
 	def __init__(self):
 		self.mode = 0
-		self.teamHealthMod = [0] * totalTeams
-		self.teamHealthAct = [0] * totalTeams
+		self.teamHealthMod = [0] * teamManager.totalTeams
+		self.teamHealthAct = [0] * teamManager.totalTeams
 		self.maxHealth = 0
 		if diggingMatch:
 			HealthBar.drawBar = False
 	def calculateInit(self):
-		self.maxHealth = nWormsPerTeam * initialHealth
+		self.maxHealth = teamManager.nWormsPerTeam * initialHealth
 		if gameMode == DAVID_AND_GOLIATH:
-			self.maxHealth = int(initialHealth/(1+0.5*(nWormsPerTeam - 1))) * nWormsPerTeam
-		for i, team in enumerate(teams):
+			self.maxHealth = int(initialHealth/(1+0.5*(teamManager.nWormsPerTeam - 1))) * teamManager.nWormsPerTeam
+		for i, team in enumerate(teamManager.teams):
 			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
 	def step(self):
-		for i, team in enumerate(teams):
+		for i, team in enumerate(teamManager.teams):
 			# calculate teamhealth
 			self.teamHealthAct[i] = sum(worm.health for worm in team.worms)
 			
@@ -7043,9 +7180,9 @@ class HealthBar:
 				self.teamHealthMod[i] = self.teamHealthAct[i]
 	def draw(self):
 		if not HealthBar.drawBar: return
-		maxPoints = sum(i.points for i in teams)
+		maxPoints = sum(i.points for i in teamManager.teams)
 		
-		for i, team in enumerate(teams):
+		for i, team in enumerate(teamManager.teams):
 			pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, HealthBar.width, 2))
 			
 			# health:
@@ -7053,20 +7190,20 @@ class HealthBar:
 			if value < 1 and value > 0:
 				value = 1
 			if not value <= 0:
-				pygame.draw.rect(win, teams[i].color, (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
+				pygame.draw.rect(win, teamManager.teams[i].color, (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
 			
 			# points:
 			if not HealthBar.drawPoints:
 				continue
 			if maxPoints == 0:
 				continue
-			value = (teams[i].points / maxPoints) * HealthBar.width
+			value = (teamManager.teams[i].points / maxPoints) * HealthBar.width
 			if value < 1 and value > 0:
 				value = 1
 			if not value == 0:
 				pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
 			if gameMode == CAPTURE_THE_FLAG:
-				if teams[i].flagHolder:
+				if teamManager.teams[i].flagHolder:
 					pygame.draw.circle(win, (220,0,0), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
 
 def drawArc(center, outr, inr, start, end, color):
@@ -7127,7 +7264,7 @@ class RadialButton:
 		self.selected = False
 		self.color = bgColor
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.ammo = currentTeam.ammo(self.key)
+		self.ammo = teamManager.currentTeam.ammo(self.key)
 		self.amount = None
 		if self.ammo > 0:
 			self.amount = pixelFont5.render(str(self.ammo), False, BLACK)
@@ -7165,7 +7302,7 @@ class RadialButton:
 			if RadialMenu.events[self.level] == self.key and len(self.subButtons) == 0:
 				# self key is category, add all weapons in that category
 				for weapon in weaponMan.weapons:
-					if currentTeam.ammo(weapon[0]) == 0:
+					if teamManager.currentTeam.ammo(weapon[0]) == 0:
 						continue
 					active = True
 					if inUsedList(weapon[0]) or weapon[5] != 0:
@@ -7237,132 +7374,13 @@ def weaponMenuRadialInit():
 	RadialMenu.menu = RadialMenu()
 	categories = []
 	for i, weapon in enumerate(weaponMan.weapons):
-		if currentTeam.ammo(weapon[0]) == 0:
+		if teamManager.currentTeam.ammo(weapon[0]) == 0:
 			continue
 		if not weapon[3] in categories:
 			categories.append(weapon[3])
 			b = RadialMenu.menu.addButton(weapon[0], weapon[3])
 			b.category = weapon[3]
 			blitWeaponSprite(b.surf, (0,0), weapon[0])
-
-waterAmp = 2
-waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
-waterColor.append(tuple(min(int(waterColor[0][i] * 1.5), 255) for i in range(3)))
-
-class Water:
-	level = initialWaterLevel
-	quiet = 0
-	rising = 1
-	layersA = []
-	layersB = []
-	def __init__(self):
-		self.points = [Vector(i * 20, 3 + waterAmp + waterAmp * (-1)**i) for i in range(-1,12)]
-		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
-		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-		
-		self.surf = pygame.Surface((200, waterAmp * 2 + 6), pygame.SRCALPHA)
-		self.state = Water.quiet
-		self.amount = 0
-	def getSplinePoint(self, t):
-		p1 = int(t) + 1
-		p2 = p1 + 1
-		p3 = p2 + 1
-		p0 = p1 - 1
-			
-		t = t - int(t)
-		tt = t * t
-		ttt = t * tt
-		q1 = -ttt + 2 * tt - t
-		q2 = 3 * ttt - 5 * tt + 2
-		q3 = -3 * ttt + 4 * tt + t
-		q4 = ttt - tt
-		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
-		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
-	
-		return (tx, ty)
-	def rise(self, amount):
-		self.amount = amount
-		self.state = Water.rising
-	def riseAll(self, amount):
-		self.rise(amount)
-	def step(self):
-		self.surf.fill((0,0,0,0))
-		self.points = [Vector(i * 20, 3 + waterAmp + self.phase[i % 10] * waterAmp * (-1)**i) for i in range(-1,12)]
-		pygame.draw.polygon(self.surf, waterColor[0], self.points + [(200, waterAmp * 2 + 6), (0, waterAmp * 2 + 6)])
-		for t in range(0,(len(self.points) - 3) * 20):
-			point = self.getSplinePoint(t / 20)
-			pygame.draw.circle(self.surf,  waterColor[1], (int(point[0]), int(point[1])), 1)
-		
-		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-	
-		if self.state == Water.rising:
-			gameDistable()
-			Water.level += 1
-			self.amount -= 1
-			if self.amount <= 0:
-				self.amount = 0
-				self.state = Water.quiet
-	def draw(self, offsetY=0):
-
-		width = 200
-		height = 10
-		offset = (camPos.x)//width
-		times = winWidth//width + 2
-		for i in range(times):
-			x = int(-camPos.x) + int(int(offset) * width + i * width)
-			y =  int(mapHeight - Water.level - 3 - waterAmp - offsetY) - int(camPos.y)
-			win.blit(self.surf, (x, y))
-		
-		pygame.draw.rect(win, waterColor[0], ((0,y + height), (winWidth, Water.level)))
-	def createLayers(self):
-		Water.layersA.append(Water())
-		Water.layersB.append(Water())
-	def stepAll(self):
-		for w in Water.layersA:
-			w.step()
-		for w in Water.layersB:
-			w.step()
-	def drawLayers(self, layer):
-		if layer == DOWN:
-			offset = 2
-			for w in Water.layersA:
-				w.draw(offset)
-				offset -= 10
-		else:
-			offset = 12
-			for w in Water.layersB:
-				w.draw(offset)
-				offset -= 10
-
-class Cloud:
-	_reg = []
-	cWidth = 170
-	def __init__(self, pos):
-		self._reg.append(self)
-		self.pos = Vector(pos[0],pos[1])
-		self.vel = Vector(0,0)
-		self.acc = Vector(0,0)
-		self.surf = renderCloud()
-		self.randomness = uniform(0.97, 1.02)
-	def step(self):
-		self.acc.x = wind
-		self.vel += self.acc
-		self.vel *= 0.85 * self.randomness
-		self.pos += self.vel
-		
-		if self.pos.x > camPos.x + winWidth + 100 or self.pos.x < camPos.x - 100 - self.cWidth:
-			self._reg.remove(self)
-			del self
-	def draw(self):
-		win.blit(self.surf, point2world(self.pos))
-
-def cloudManager():
-	if mapHeight == 0:
-		return
-	if len(Cloud._reg) < 8 and randint(0,10) == 1:
-		pos = Vector(choice([camPos.x - Cloud.cWidth - 100, camPos.x + winWidth + 100]), randint(5, mapHeight - 150))
-		Cloud(pos)
-	for cloud in Cloud._reg: cloud.step()
 
 class Commentator:#(name, strings, color)
 	que = []
@@ -7469,11 +7487,11 @@ def toastInfo():
 		return
 	toastWidth = 100
 	surfs = []
-	for team in teams:
+	for team in teamManager.teams:
 		name = pixelFont5.render(team.name, False, team.color)
 		points = pixelFont5.render(str(team.points), False, HUDColor)
 		surfs.append((name, points))
-	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * totalTeams), pygame.SRCALPHA)
+	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * teamManager.totalTeams), pygame.SRCALPHA)
 	i = 0
 	for s in surfs:
 		surf.blit(s[0], (0, i))
@@ -7527,7 +7545,7 @@ def randomStartingWeapons(amount):
 		startingWeapons.append("mine strike")
 	if unlimitedMode: return
 	for i in range(amount):
-		for team in teams:
+		for team in teamManager.teams:
 			effect = choice(startingWeapons)
 			team.ammo(effect, 1)
 			if randint(0,2) >= 1:
@@ -7540,7 +7558,7 @@ def randomStartingWeapons(amount):
 					team.ammo("ender pearl", 3)
 
 def randomWeaponsGive():
-	for team in teams:
+	for team in teamManager.teams:
 		for i, teamCount in enumerate(team.weaponCounter):
 			if teamCount == -1:
 				continue
@@ -7590,7 +7608,7 @@ def cheatActive(code):
 	code = code[:-1]
 	if code == "gibguns":
 		unlimitedMode = True
-		for team in teams:
+		for team in teamManager.teams:
 			for i, teamCount in enumerate(team.weaponCounter):
 				team.weaponCounter[i] = -1
 		for weapon in weaponMan.weapons:
@@ -7622,7 +7640,7 @@ def cheatActive(code):
 		HealthPack((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 	if code == "globalshift":
 		for worm in PhysObj._worms:
-			# if worm in currentTeam.worms:
+			# if worm in teamManager.currentTeam.worms:
 				# continue
 			worm.gravity = worm.gravity * -1
 	if code == "gibpetrolcan":
@@ -7636,9 +7654,9 @@ def cheatActive(code):
 		waterRise = True
 		Commentator.que.append(("", ("", "water rising!"), HUDColor))
 	if code == "comeflywithme":
-		currentTeam.ammo("jet pack", 6)
-		currentTeam.ammo("rope", 6)
-		currentTeam.ammo("ender pearl", 6)
+		teamManager.currentTeam.ammo("jet pack", 6)
+		teamManager.currentTeam.ammo("rope", 6)
+		teamManager.currentTeam.ammo("ender pearl", 6)
 	if code == "odinson":
 		m = Mjolnir(Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
 	if code == "bulbasaur":
@@ -7689,7 +7707,7 @@ def inUsedList(string):
 
 def canShoot():
 	# if no ammo
-	if currentTeam.ammo(weaponMan.currentWeapon) == 0:
+	if teamManager.currentTeam.ammo(weaponMan.currentWeapon) == 0:
 		return False
 	# if delayed
 	if weaponMan.getCurrentDelay() != 0:
@@ -7706,7 +7724,7 @@ def pickVictim():
 	terminatorHit = False
 	worms = []
 	for w in PhysObj._worms:
-		if w in currentTeam.worms:
+		if w in teamManager.currentTeam.worms:
 			continue
 		worms.append(w)
 	if len(worms) == 0:
@@ -7763,7 +7781,7 @@ if True:
 	playerControlPlacing = False; playerShootAble = False; gameStableCounter = 0
 
 def stateMachine():
-	global state, nextState, gameStable, playerControl, playerControlPlacing, playerShootAble, playerScrollAble, currentTeam
+	global state, nextState, gameStable, playerControl, playerControlPlacing, playerShootAble, playerScrollAble
 	global objectUnderControl, camTrack, gameStableCounter, shotCount, fireWeapon, run, mapClosed, allowAirStrikes
 	if state == RESET:
 		gameStable = False
@@ -7780,8 +7798,8 @@ def stateMachine():
 		playerScrollAble = False
 		
 		createWorld()
-		currentTeam = teams[0]
-		teamChoser = teams.index(currentTeam)
+		teamManager.currentTeam = teamManager.teams[0]
+		teamManager.teamChoser = teamManager.teams.index(teamManager.currentTeam)
 		# place stuff:
 		if not diggingMatch:
 			placeMines(randint(2,4))
@@ -7800,7 +7818,7 @@ def stateMachine():
 				closedSkyCounter += 1
 		if closedSkyCounter > 50:
 			allowAirStrikes = False
-			for team in teams:
+			for team in teamManager.teams:
 				for i, w in enumerate(team.weaponCounter):
 					if weaponMan.getBackColor(weaponMan.weapons[i][0]) == AIRSTRIKE:
 						team.weaponCounter[i] = 0
@@ -7835,7 +7853,7 @@ def stateMachine():
 			if diggingMatch:
 				placeMines(80)
 				# more digging
-				for team in teams:
+				for team in teamManager.teams:
 					team.ammo("minigun", 5)
 					team.ammo("bunker buster", 3)
 					team.ammo("laser gun", 3)
@@ -7846,7 +7864,7 @@ def stateMachine():
 			
 			if gameMode == DAVID_AND_GOLIATH:
 				global initialHealth
-				for team in teams:
+				for team in teamManager.teams:
 					length = len(team.worms)
 					for i in range(length):
 						if i == 0:
@@ -7855,12 +7873,12 @@ def stateMachine():
 						else:
 							team.worms[i].health = (initialHealth//2)
 							team.worms[i].healthStr = pixelFont5.render(str(team.worms[i].health), False, team.worms[i].team.color)
-				initialHealth = teams[0].worms[0].health
+				initialHealth = teamManager.teams[0].worms[0].health
 			if darkness:
 				global HUDColor
 				HUDColor = WHITE
 				weaponMan.renderWeaponCount()
-				for team in teams:
+				for team in teamManager.teams:
 					team.ammo("flare", 3)
 			if randomWeapons:
 				randomWeaponsGive()
@@ -7875,20 +7893,19 @@ def stateMachine():
 		playerScrollAble = False
 		
 		# choose the fisrt worm and rotate
-		w = currentTeam.worms.pop(0)
-		currentTeam.worms.append(w)
+		w = teamManager.currentTeam.worms.pop(0)
+		teamManager.currentTeam.worms.append(w)
 		
-		global nWormsPerTeam
-		nWormsPerTeam = 0
-		for team in teams:
-			if len(team) > nWormsPerTeam:
-				nWormsPerTeam = len(team)
+		teamManager.nWormsPerTeam = 0
+		for team in teamManager.teams:
+			if len(team) > teamManager.nWormsPerTeam:
+				teamManager.nWormsPerTeam = len(team)
 		
 		# health calc:
 		HealthBar.healthBar.calculateInit()
 		
 		if randomCycle:
-			w = choice(currentTeam.worms)
+			w = choice(teamManager.currentTeam.worms)
 		
 		objectUnderControl = w
 		if gameMode == TERMINATOR: pickVictim()
@@ -7948,7 +7965,7 @@ def stateMachine():
 			run = False
 			subprocess.Popen("wormsLauncher.py -popwin", shell=True)
 
-################################################################################ Keys action
+################################################################################ Key bindings
 def onKeyPressRight():
 	global camTrack
 	if not playerMoveable:
@@ -8077,17 +8094,12 @@ def onKeyPressEnter():
 		objectUnderControl.vel += Vector(cos(objectUnderControl.shootAngle), sin(objectUnderControl.shootAngle)) * 3
 		objectUnderControl.stable = False
 
-################################################################################ Setup
-HealthBar.healthBar = HealthBar()
-damageText = (damageThisTurn, pixelFont5.render(str(int(damageThisTurn)), False, HUDColor))
-commentator = Commentator()
-water = Water()
-Water.layersA.append(water)
-water.createLayers()
-
-################################################################################ Main Loop
-
 if __name__ == "__main__":
+	bg = BackGround()
+	HealthBar.healthBar = HealthBar()
+	damageText = (damageThisTurn, pixelFont5.render(str(int(damageThisTurn)), False, HUDColor))
+	commentator = Commentator()
+
 	run = True
 	pause = False
 	while run:
@@ -8104,8 +8116,8 @@ if __name__ == "__main__":
 				#mouse position:
 				mousePos = pygame.mouse.get_pos()
 				if playerControlPlacing:
-					teams[teamChoser].addWorm((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
-					teamChoser = (teamChoser + 1) % totalTeams
+					teamManager.teams[teamManager.teamChoser].addWorm((mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y))
+					teamManager.teamChoser = (teamManager.teamChoser + 1) % teamManager.totalTeams
 				# CLICKABLE weapon check:
 				if state == PLAYER_CONTROL_1 and weaponMan.getCurrentStyle() == CLICKABLE:
 					fireClickable()
@@ -8185,7 +8197,7 @@ if __name__ == "__main__":
 							weaponsSwitch = True
 						elif event.key == pygame.K_0:
 							keyWeapons = []
-							for i, w in enumerate(currentTeam.weaponCounter):
+							for i, w in enumerate(teamManager.currentTeam.weaponCounter):
 								if w > 0 or w == -1:
 									if weaponMan.weapons[i][3] in [LEGENDARY, ARTIFACTS]:
 										keyWeapons.append(weaponMan.weapons[i][0])
@@ -8213,12 +8225,6 @@ if __name__ == "__main__":
 						onKeyPressTab()
 					if event.key == pygame.K_t:
 						testerFunc()
-					if event.key == pygame.K_PAGEUP or event.key == pygame.K_KP9:
-						if not RadialMenu.menu is None:
-							scrollMenu()
-					if event.key == pygame.K_PAGEDOWN or event.key == pygame.K_KP3:
-						if not RadialMenu.menu is None:
-							scrollMenu(False)
 					if event.key == pygame.K_F1:
 						toastInfo()
 					if event.key == pygame.K_F2:
@@ -8331,8 +8337,7 @@ if __name__ == "__main__":
 		timeOverall += 1
 		if timeOverall % fps == 0 and state != PLACING_WORMS: timeStep()
 		
-		water.stepAll()
-		cloudManager()
+		bg.step()
 		
 		if Arena.arena: Arena.arena.step()
 		
@@ -8342,23 +8347,16 @@ if __name__ == "__main__":
 		
 		# reset actions
 		actionMove = False
-			
+
 		# draw:
-		win.fill(backColor)
-		win.blit(pygame.transform.scale(imageSky, (win.get_width(), mapHeight)), (0,0 - camPos[1]))
-		for cloud in Cloud._reg: cloud.draw()
-		drawBackGround(imageMountain2,4)
-		drawBackGround(imageMountain,2)
-		
-		water.drawLayers(UP)
+		bg.draw()
 		drawLand()
 		for p in PhysObj._reg: p.draw()
 		for f in nonPhys: f.draw()
-		water.drawLayers(DOWN)
+		bg.drawSecondary()
 		for t in Toast._toasts: t.draw()
 
 		if darkness and darkMask: win.blit(darkMask, (-int(camPos.x), -int(camPos.y)))
-		
 		
 		if gameMode == TERMINATOR and victim and victim.alive: drawTarget(victim.pos)
 		if Arena.arena: Arena.arena.draw()
@@ -8432,9 +8430,7 @@ if __name__ == "__main__":
 			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0], pos[1] + loadingSurf.get_height() + 20))
 			pygame.draw.line(win, (255,255,255), (pos[0] + loadingSurf.get_width(), pos[1] + 20), (pos[0] + loadingSurf.get_width(), pos[1] + loadingSurf.get_height() + 20))
 			pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((lstep/lstepmax)*loadingSurf.get_width(), loadingSurf.get_height())))
-		
-		# drawRadialMenu()
-		
+				
 		# screen manegement
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 		

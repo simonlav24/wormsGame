@@ -696,7 +696,6 @@ bg = BackGround()
 
 run = True
 while run:
-	
 	for event in pygame.event.get():
 		handleEvents(event)
 		if event.type == pygame.QUIT:
