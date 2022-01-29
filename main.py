@@ -690,7 +690,7 @@ class Water:
 	def __init__(self):
 		self.points = [Vector(i * 20, 3 + Water.waterAmp + Water.waterAmp * (-1)**i) for i in range(-1,12)]
 		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
-		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+		self.phase = [sin(timeManager.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 		
 		self.surf = pygame.Surface((200, Water.waterAmp * 2 + 6), pygame.SRCALPHA)
 		self.state = Water.quiet
@@ -725,7 +725,7 @@ class Water:
 			point = self.getSplinePoint(t / 20)
 			pygame.draw.circle(self.surf,  Water.waterColor[1], (int(point[0]), int(point[1])), 1)
 		
-		self.phase = [sin(timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+		self.phase = [sin(timeManager.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 	
 		if self.state == Water.rising:
 			gameDistable()
@@ -1287,42 +1287,45 @@ def getNormal(pos, vel, radius, wormCollision, extraCollision):
 
 ################################################################################ Objects
 
+class TimeManager:
+	def __init__(self):
+		self.timeCounter = turnTime
+		self.timeOverall = 0
+		self.timeSurf = (self.timeCounter, pixelFont5.render(str(self.timeCounter), False, HUDColor))
+	def step(self):
+		self.timeOverall += 1
+		if self.timeOverall % fps == 0 and state != PLACING_WORMS:
+			self.timeStep()
+	def timeStep(self):
+		if self.timeCounter == 0:
+			self.timeOnTimer()
+		if not self.timeCounter <= 0:
+			self.timeCounter -= 1
+	def timeOnTimer(self):
+		global state, nextState
+		if state == PLAYER_CONTROL_1:
+			state = WAIT_STABLE
+			
+		elif state == PLAYER_CONTROL_2:
+			state = nextState
+			
+		elif state == FIRE_MULTIPLE:
+			state = PLAYER_CONTROL_2
+			
+		if objectUnderControl.rope:
+			objectUnderControl.toggleRope(None)
+		if objectUnderControl.parachuting:
+			objectUnderControl.toggleParachute()
+	def draw(self):
+		if self.timeSurf[0] != self.timeCounter:
+			self.timeSurf = (self.timeCounter, pixelFont5.render(str(self.timeCounter), False, HUDColor))
+		win.blit(self.timeSurf[1] , ((int(10), int(8))))
+	def timeReset(self):
+		self.timeCounter = turnTime
+	def timeRemaining(self, amount):
+		self.timeCounter = amount
 
-timeCounter = turnTime
-timeOverall = 0
-timeSurf = (timeCounter, pixelFont5.render(str(timeCounter), False, HUDColor))
-def timeStep():
-	global timeCounter
-	if timeCounter == 0:
-		timeOnTimer()
-	if not timeCounter <= 0:
-		timeCounter -= 1
-def timeOnTimer():
-	global state, nextState
-	if state == PLAYER_CONTROL_1:
-		state = WAIT_STABLE
-		
-	elif state == PLAYER_CONTROL_2:
-		state = nextState
-		
-	elif state == FIRE_MULTIPLE:
-		state = PLAYER_CONTROL_2
-		
-	if objectUnderControl.rope:
-		objectUnderControl.toggleRope(None)
-	if objectUnderControl.parachuting:
-		objectUnderControl.toggleParachute()
-def timeDraw():
-	global timeSurf
-	if timeSurf[0] != timeCounter:
-		timeSurf = (timeCounter, pixelFont5.render(str(timeCounter), False, HUDColor))
-	win.blit(timeSurf[1] , ((int(10), int(8))))
-def timeReset():
-	global timeCounter
-	timeCounter = turnTime
-def timeRemaining(amount):
-	global timeCounter
-	timeCounter = amount
+timeManager = TimeManager()
 
 nonPhys = []
 class FloatingText: #pos, text, color
@@ -1335,7 +1338,7 @@ class FloatingText: #pos, text, color
 	def step(self):
 		self.timeCounter += 1
 		self.pos.y -= 0.5
-		self.pos.x += 0.25 * sin(0.1 * timeOverall + self.phase)
+		self.pos.x += 0.25 * sin(0.1 * timeManager.timeOverall + self.phase)
 		if self.timeCounter == 50:
 			nonPhys.remove(self)
 			del self
@@ -1880,7 +1883,7 @@ class Worm (PhysObj):
 		if self.alive and drawHealthBar:
 			self.drawHealth()
 		if self.sleep and self.alive:
-			if timeOverall % fps == 0:
+			if timeManager.timeOverall % fps == 0:
 				FloatingText(self.pos, "z", (0,0,0))
 				
 		# draw holding weapon
@@ -1953,7 +1956,7 @@ class Worm (PhysObj):
 					weaponMan.renderWeaponCount()
 			nextState = PLAYER_CONTROL_2
 			state = nextState
-			timeRemaining(wormDieTime)
+			timeManager.timeRemaining(wormDieTime)
 		if gameMode == TERMINATOR and self == victim:
 			teamManager.currentTeam.points += 1
 			addToKillList()
@@ -2163,7 +2166,7 @@ class Fire(PhysObj):
 			radius += 1
 		if self.life > 10:
 			radius += 1
-		self.yellow = int(sin(0.3*timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
+		self.yellow = int(sin(0.3*timeManager.timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
 		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - camPos.x), int(self.pos.y - camPos.y)), radius)
 
 class Smoke:
@@ -2946,12 +2949,12 @@ class SentryGun(PhysObj):
 						self.health = 0
 		
 		if self.electrified:
-			if timeOverall % 2 == 0:
+			if timeManager.timeOverall % 2 == 0:
 				self.angle = uniform(0,2*pi)
 				fireMiniGun(self.pos, vectorFromAngle(self.angle))
 		
 		self.angle += (self.angle2for - self.angle)*0.2
-		if not self.target and timeOverall % (fps*2) == 0:
+		if not self.target and timeManager.timeOverall % (fps*2) == 0:
 			self.angle2for = uniform(0,2*pi)
 		
 		# extra "damp"
@@ -3480,20 +3483,20 @@ timeTravelPositions = []
 timeTravelList = {}
 timeTravelFire = False
 def timeTravelInitiate():
-	global timeTravel, timeTravelList, timeCounter
+	global timeTravel, timeTravelList
 	timeTravel = True
 	timeTravelList = {}
 	timeTravelList["color"] = objectUnderControl.color
 	timeTravelList["name"] = objectUnderControl.name
 	timeTravelList["health"] = objectUnderControl.health
 	timeTravelList["initial pos"] = vectorCopy(objectUnderControl.pos)
-	timeTravelList["timeCounter in turn"] = timeCounter
+	timeTravelList["timeCounter in turn"] = timeManager.timeCounter
 	timeTravelList["jet pack"] = jetPackFuel
 def timeTravelRecord():
 	timeTravelPositions.append(objectUnderControl.pos.vec2tup())
 def timeTravelPlay():
-	global timeTravel, timeCounter, timeTravelList, jetPackFuel
-	timeCounter = timeTravelList["timeCounter in turn"]
+	global timeTravel, timeTravelList, jetPackFuel
+	timeManager.timeCounter = timeTravelList["timeCounter in turn"]
 	timeTravel = False
 	timeTravelList["weapon"] = weaponMan.currentWeapon
 	timeTravelList["weaponOrigin"] = vectorCopy(objectUnderControl.pos)
@@ -3730,7 +3733,7 @@ class Armageddon:
 			nonPhys.remove(self)
 			del self
 			return
-		if timeOverall % 10 == 0:
+		if timeManager.timeOverall % 10 == 0:
 			for i in range(randint(1,2)):
 				x = randint(-100, mapWidth + 100)
 				m = Missile((x, -10), Vector(randint(-10,10), 5).normalize(), 1)
@@ -5003,7 +5006,7 @@ class Bubble:
 		self.vel.x *= 0.99
 		self.acc *= 0
 		
-		if self.radius != self.grow and timeOverall % 5 == 0:
+		if self.radius != self.grow and timeManager.timeOverall % 5 == 0:
 			self.radius += 1
 			
 		if not self.catch:
@@ -5204,11 +5207,10 @@ class Seagull(Seeker):
 	def secondaryStep(self):
 		self.target = self.chum.pos
 	def draw(self):
-		global timeOverall
 		dir = self.vel.x > 0
 		width = 16
 		height = 13
-		frame = timeOverall//2 % 3
+		frame = timeManager.timeOverall//2 % 3
 		surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		surf.blit(sprites, (0,0), (frame * 16,80, 16, 16))
 		win.blit(pygame.transform.flip(surf, dir, False), point2world(self.pos - Vector(width//2, height//2)))
@@ -5250,10 +5252,9 @@ class Covid19(Seeker):
 		self.wormTarget.sicken(2)
 		self.wormTarget = None
 	def draw(self):
-		global timeOverall
 		width = 16
 		height = 16
-		frame = timeOverall//2 % 5
+		frame = timeManager.timeOverall//2 % 5
 		win.blit(sprites, point2world(self.pos - Vector(8, 8)), ((frame * 16, 32), (16, 16)) )
 
 class Chum(Grenade):
@@ -6580,7 +6581,7 @@ def fire(weapon = None):
 		return
 	
 	state = nextState
-	if state == PLAYER_CONTROL_2: timeRemaining(retreatTime)
+	if state == PLAYER_CONTROL_2: timeManager.timeRemaining(retreatTime)
 	
 	# for uselist:
 	if useListMode and (state == PLAYER_CONTROL_2 or state == WAIT_STABLE):
@@ -6616,7 +6617,7 @@ def fireClickable():
 		addToUseList(weaponMan.currentWeapon)
 	
 	weaponMan.renderWeaponCount()
-	timeRemaining(retreatTime)
+	timeManager.timeRemaining(retreatTime)
 	state = nextState
 
 def fireUtility(weapon = None):
@@ -6852,7 +6853,7 @@ def checkWinners():
 		print("[winning team is", winningTeam.name, "]")
 		if winningTeam != None:
 			print("Team", winningTeam.name, "won!")
-			dic["time"] = str(timeOverall//fps)
+			dic["time"] = str(timeManager.timeOverall//fps)
 			dic["winner"] = winningTeam.name
 			if mostDamage[1]:
 				dic["mostDamage"] = str(int(mostDamage[0]))
@@ -7752,7 +7753,7 @@ def drawDirInd(pos):
 	for point in points:
 		point.rotate(angle)
 	
-	pygame.draw.polygon(win, (255,0,0), [intersection + i + normalize(direction) * 4 * sin(timeOverall / 5) for i in points])
+	pygame.draw.polygon(win, (255,0,0), [intersection + i + normalize(direction) * 4 * sin(timeManager.timeOverall / 5) for i in points])
 
 lstep = 0
 lstepmax = 1
@@ -7910,7 +7911,7 @@ def stateMachine():
 		objectUnderControl = w
 		if gameMode == TERMINATOR: pickVictim()
 		camTrack = w
-		timeReset()
+		timeManager.timeReset()
 
 		nextState = PLAYER_CONTROL_1
 		state = nextState
@@ -7943,7 +7944,7 @@ def stateMachine():
 			if gameStableCounter == 10:
 				# next turn
 				gameStableCounter = 0
-				timeReset()
+				timeManager.timeReset()
 				cycleWorms()
 				weaponMan.renderWeaponCount()
 				state = nextState
@@ -8239,7 +8240,7 @@ if __name__ == "__main__":
 						if camTrack == None:
 							camTrack = objectUnderControl
 					# if event.key == pygame.K_n:
-						# pygame.image.save(win, "wormshoot" + str(timeOverall) + ".png")	
+						# pygame.image.save(win, "wormshoot" + str(timeManager.timeOverall) + ".png")	
 					cheatCode += event.unicode
 					if event.key == pygame.K_EQUALS:
 						cheatActive(cheatCode)
@@ -8307,8 +8308,8 @@ if __name__ == "__main__":
 				camPos.x = mapWidth - winWidth
 		
 		if Earthquake.earthquake > 0:
-			camPos.x += Earthquake.earthquake * 25 * sin(timeOverall)
-			camPos.y += Earthquake.earthquake * 15 * sin(timeOverall * 1.8)
+			camPos.x += Earthquake.earthquake * 25 * sin(timeManager.timeOverall)
+			camPos.y += Earthquake.earthquake * 15 * sin(timeManager.timeOverall * 1.8)
 		
 		# Fire
 		if fireWeapon and playerShootAble: fire()
@@ -8325,7 +8326,7 @@ if __name__ == "__main__":
 		if timeTravel: timeTravelRecord()
 			
 		# camera for wait to stable:
-		if state == WAIT_STABLE and timeOverall % 20 == 0:
+		if state == WAIT_STABLE and timeManager.timeOverall % 20 == 0:
 			for worm in PhysObj._worms:
 				if worm.stable:
 					continue
@@ -8334,8 +8335,9 @@ if __name__ == "__main__":
 					break
 		
 		# advance timer
-		timeOverall += 1
-		if timeOverall % fps == 0 and state != PLACING_WORMS: timeStep()
+		timeManager.step()
+
+		
 		
 		bg.step()
 		
@@ -8380,7 +8382,7 @@ if __name__ == "__main__":
 		
 		# HUD
 		drawWindIndicator()
-		timeDraw()
+		timeManager.draw()
 		if weaponMan.surf: win.blit(weaponMan.surf, ((int(25), int(8))))
 		commentator.step()
 		# draw weapon indicators
