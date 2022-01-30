@@ -195,6 +195,22 @@ class Game:
 		self.feelColor = feels[args.feel_index]
 		self.args = args
 
+class MapManager:
+	_mapManager = None
+	def __init__(self):
+		MapManager._mapManager = self
+		self.ground = None
+		self.groundBack = None
+		self.wormCol = None
+		self.extraCol = None
+
+		self.mapWidth = 0
+		self.mapHeight = 0
+
+		self.darkMask = None
+		self.lights = []
+
+
 ################################################################################ Map
 if True:
 	gameMap = None
@@ -377,11 +393,7 @@ def createMap(imageChoice):
 	pixels.close()
 	
 	gameMap = temp2
-	# save temp as png
-	pygame.image.save(temp2, "temp.png")
-
-	
-
+	gameMap.fill(SKY, ((0, mapHeight - initialWaterLevel), (mapWidth, mapHeight)))
 
 	mapImage.set_colorkey((0,0,0))
 
@@ -390,6 +402,7 @@ def renderGround():
 	render ground only
 	"""
 	ground.fill(SKY)
+	
 	# recolor ground and gameMap
 	if Game._game.diggingMatch or Game._game.args.recolor_ground:
 		# pick ground pattern
@@ -442,12 +455,6 @@ def renderGround():
 	mapImage.set_alpha(64)
 	groundSec.blit(mapImage, (0,0))
 	groundSec.set_colorkey(Game._game.feelColor[0])
-
-	# gameMap.blit(ground, (0,0))
-	# for x in range(mapWidth):
-	# 	for y in range(mapHeight):
-	# 		if ground.get_at((x,y))[3] > 100:
-	# 			gameMap.set_at((x,y), GRD)
 
 def drawLand():
 	if mapWidth == 0:
