@@ -430,7 +430,7 @@ if os.path.exists('wormsMaps/moreMaps'):
 
 def handleMenuEvents(event):
 	key = event.key
-	print(event.key, event.value)
+	# print(event.key, event.value)
 	if key == "random_image":
 		path = choice(maps)
 		picture.setImage(path)
@@ -446,7 +446,6 @@ def handleMenuEvents(event):
 		picture.setImage(mapChoice)
 	if key == "play":
 		values = evaluateMenuForm()
-		print(values)
 		string = "main.py "
 		for key in values.keys():
 			if key[0] == "-":
@@ -467,10 +466,14 @@ def handleMenuEvents(event):
 					else:
 						string += "1" + " "
 					continue
+				if key == "-map":
+					mapName = values[key].split("/")[-1]
+					string += key + " " + mapName + " "
+					continue
 				if key == "-ratio" and values[key] == "auto":
 					continue
 				string += key + " " + str(values[key]) + " "
-		print(string)
+		# print(string)
 		subprocess.Popen(string, shell=True)
 		exit(0)
 

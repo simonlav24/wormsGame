@@ -196,20 +196,9 @@ class Game:
 		self.args = args
 
 class MapManager:
-	_mapManager = None
+	_man = None
 	def __init__(self):
-		MapManager._mapManager = self
-		self.ground = None
-		self.groundBack = None
-		self.wormCol = None
-		self.extraCol = None
-
-		self.mapWidth = 0
-		self.mapHeight = 0
-
-		self.darkMask = None
-		self.lights = []
-
+		MapManager._man = self
 
 ################################################################################ Map
 if True:
@@ -283,61 +272,63 @@ def parseArgs():
 
 	return args
 	
-def grabMapsFrom(paths):
+def grabMapsFrom(path):
+	if not os.path.exists(path):
+		return
 	maps = []
-	for path in paths:
-		if os.path.isdir(path):
-			for imageFile in os.listdir(path):
-				if imageFile[-4:] != ".png":
-					continue
-				string = path + "/" + imageFile
-				ratio = 512
-				if string.find("big") != -1:
-					ratio = 800
-				if string.find("big1.png") != -1:
-					ratio = 1000
-				elif string.find("big6.png") != -1:
-					ratio = 700
-				elif string.find("big13.png") != -1:
-					ratio = 1000
-				elif string.find("big16.png") != -1:
-					ratio = 2000
-				string = os.path.abspath(string)
-				maps.append([string, ratio])
+	for imageFile in os.listdir(path):
+		if imageFile[-4:] != ".png":
+			continue
+		string = path + "/" + imageFile
+		ratio = 512
+		if string.find("big") != -1:
+			ratio = 800
+		if string.find("big1.png") != -1:
+			ratio = 1000
+		elif string.find("big6.png") != -1:
+			ratio = 700
+		elif string.find("big13.png") != -1:
+			ratio = 1000
+		elif string.find("big16.png") != -1:
+			ratio = 2000
+		string = os.path.abspath(string)
+		maps.append([string, ratio])
 	return maps
 
 def createWorld():
 	# choose map
-	maps = grabMapsFrom(["wormsMaps", "wormsMaps/moreMaps"])
+	maps = []
+	maps += grabMapsFrom("wormsMaps")
+	if os.path.exists("wormsMaps/moreMaps"):
+		maps += grabMapsFrom("wormsMaps/moreMaps")
 	
 	if Game._game.args.map_choice == "":
 		# no map chosen in arguments. pick one at random
 		imageChoice = choice(maps)
 	else:
 		imageChoice = [None, None]
+		# if perlin map, recolor ground
+		if "PerlinMaps" in Game._game.args.map_choice:
+			Game._game.args.recolor_ground = True
 		# search for chosen map
 		for m in maps:
 			if Game._game.args.map_choice in m[0]:
 				imageChoice = m
 				break
-		# if perlin map, recolor ground
-		if "PerlinMaps" in Game._game.args.map_choice:
-			Game._game.args.recolor_ground = True
 		# if not found, then custom map
 		if imageChoice[0] == None:
 			imageChoice[0] = Game._game.args.map_choice
 			imageChoice[1] = randint(512, 600)
-	
-	# if custom ratio
+		
 	if Game._game.args.map_ratio != -1:
 		imageChoice[1] = Game._game.args.map_ratio
 	
-	createMap(imageChoice)
-	renderGround()
+	makeGameMap(imageChoice)
+	makeGroundMap()
 
-def initMapSurfaces(dims):
+def createMapSurfaces(dims):
 	"""
-	initiate all map related surfaces
+	create all map related surfaces
 	"""
 	global gameMap, mapWidth, mapHeight, ground, wormCol, extraCol, groundSec, darkMask
 	mapWidth, mapHeight = dims
@@ -353,14 +344,15 @@ def initMapSurfaces(dims):
 	if Game._game.darkness:
 		darkMask = pygame.Surface((mapWidth, mapHeight)).convert_alpha()
 
-def createMap(imageChoice):
+def makeGameMap(imageChoice):
 	"""
 	create and initialize all map related surfaces
 	"""	
+	global lstepmax
+	lstepmax = Game._game.wormsPerTeam * len(teamManager.teams) + 1
 	global gameMap
-	# if digging match, create full GRD map and return
 	if Game._game.diggingMatch:
-		initMapSurfaces((int(1024 * 1.5), 512))
+		createMapSurfaces((int(1024 * 1.5), 512))
 		gameMap.fill(GRD)
 		return
 
@@ -376,36 +368,24 @@ def createMap(imageChoice):
 	ratio = mapImage.get_width() / mapImage.get_height()
 	mapImage = pygame.transform.scale(mapImage, (int(imageChoice[1] * ratio), imageChoice[1]))
 	
-	initMapSurfaces((mapImage.get_width(), mapImage.get_height() + initialWaterLevel))
+	createMapSurfaces((mapImage.get_width(), mapImage.get_height() + initialWaterLevel))
 	
+	# fill gameMap
 	image = mapImage.copy()
-	pixels = pygame.PixelArray(image)
-	extracted = pixels.extract(SKY)
-	temp = extracted.make_surface()
-	temp2 = pygame.Surface((mapWidth, mapHeight))
-	temp2.fill((255,255,255))
-	temp2.blit(temp, (0,0), special_flags=pygame.BLEND_RGB_SUB)
-	temp2.set_colorkey((0,0,0, 255))
-	pixels.close()
-
-	pixels = pygame.PixelArray(temp2)
-	pixels.replace((0,0,0), SKY)
-	pixels.close()
-	
-	gameMap = temp2
-	gameMap.fill(SKY, ((0, mapHeight - initialWaterLevel), (mapWidth, mapHeight)))
+	imagepixels = pygame.PixelArray(image)
+	extracted = imagepixels.extract(SKY)
+	imagepixels.close()
+	extracted.replace((0,0,0), (255,0,0))
+	extracted.replace((255,255,255), SKY)
+	extracted.replace((255,0,0), GRD)	
+	gameMap.blit(extracted.make_surface(), (0,0))
+	extracted.close()
 
 	mapImage.set_colorkey((0,0,0))
 
-def renderGround():
-	"""
-	render ground only
-	"""
+def makeGroundMap():
 	ground.fill(SKY)
-	
-	# recolor ground and gameMap
 	if Game._game.diggingMatch or Game._game.args.recolor_ground:
-		# pick ground pattern
 		assets = os.listdir("./assets/")
 		patterns = []
 		for asset in assets:
@@ -414,18 +394,11 @@ def renderGround():
 		patternImage = pygame.image.load("./assets/" + choice(patterns))
 		grassColor = choice([(10, 225, 10), (10,100,10)] + [i[3] for i in feels])
 		
-		# blit pattern all over ground in repeatable pattern
-		for x in range(0,mapWidth,patternImage.get_width()):
-			for y in range(0,mapHeight,patternImage.get_height()):
-				ground.blit(patternImage, (x,y))
+		for x in range(0,mapWidth):
+			for y in range(0,mapHeight):
+				if gameMap.get_at((x,y)) == GRD:
+					ground.set_at((x,y), patternImage.get_at((x % patternImage.get_width(), y % patternImage.get_height())))
 		
-		# cut out ground from gameMap
-		temp = gameMap.copy()
-		temp.set_colorkey(GRD)
-		ground.blit(temp, (0,0), special_flags=pygame.BLEND_RGB_MULT)
-		ground.set_colorkey(SKY)
-
-		# add some color
 		colorfulness = pygame.Surface((8,5), pygame.SRCALPHA)
 		for x in range(8):
 			for y in range(5):
@@ -433,7 +406,6 @@ def renderGround():
 				colorfulness.set_at((x, y), choice([randColor, (0,0,0)]))
 		ground.blit(pygame.transform.smoothscale(colorfulness, (mapWidth, mapHeight)), (0,0), special_flags=pygame.BLEND_SUB)
 		
-		# add grass
 		for x in range(0,mapWidth):
 			for y in range(0,mapHeight):
 				if gameMap.get_at((x,y)) == GRD:
@@ -449,7 +421,7 @@ def renderGround():
 		groundSec.blit(groundCopy, (0,0))
 		groundSec.set_colorkey(Game._game.feelColor[0])
 		return
-	
+		
 	ground.blit(mapImage, (0,0))
 	groundSec.fill(Game._game.feelColor[0])
 	mapImage.set_alpha(64)
@@ -562,7 +534,7 @@ def stain(pos, surf, size, alphaMore):
 	grounder.blit(ground, (0,0), (pos - tup2vec(size)/2, size))
 	patch = pygame.Surface(size, pygame.SRCALPHA)
 	
-	grounder.blit(ground, (0,0), (pos - tup2vec(size)/2, size))
+	# grounder.blit(ground, (0,0), (pos - tup2vec(size)/2, size))
 	patch.blit(gameMap, (0,0), (pos - tup2vec(size)/2, size))
 	patch.set_colorkey(GRD)
 	
