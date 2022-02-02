@@ -2,7 +2,7 @@ from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign
 from random import shuffle ,randint, uniform, choice
 from vector import *
 from pygame import Vector2, gfxdraw
-import pygame
+import pygame, timeit
 import argparse
 import xml.etree.ElementTree as ET
 import os
@@ -25,7 +25,7 @@ if True:
 	win = pygame.Surface((winWidth, winHeight))
 	
 	pygame.display.set_caption("Simon's Worms")
-	screen = pygame.display.set_mode((screenWidth,screenHeight))
+	screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
 
 # constants
 if True:
@@ -134,10 +134,7 @@ if True:
 # seasons, rainy means fire puts out faster, lightning storms
 # drop artifact option (shift - tab?)
 
-# make a game class to hold all global elements
-# improve state machine
-
-# no need for game map. only ground
+# tornado drawing
 
 # bugs:
 # time travel with correct sprite
@@ -168,6 +165,10 @@ class Game:
 		self.mostDamage = (0,None)
 
 		self.evaluateArgs()
+
+	def step(self):
+		pass
+
 	def evaluateArgs(self):
 		args = parseArgs()
 		self.mapChoice = args.map_choice
@@ -194,11 +195,11 @@ class Game:
 			args.feel_index = randint(0, len(feels) - 1)
 		self.feelColor = feels[args.feel_index]
 		self.args = args
-
-class MapManager:
-	_man = None
-	def __init__(self):
-		MapManager._man = self
+	
+# class MapManager:
+# 	_man = None
+# 	def __init__(self):
+# 		MapManager._man = self
 
 ################################################################################ Map
 if True:
@@ -597,7 +598,7 @@ class FireBlast():
 	def draw(self):
 		if self.radius == 0:
 			win.set_at(point2world(self.pos), self.color)
-		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius)
+		layersCircles[2].append((self.color, self.pos, self.radius))
 
 class Explossion:
 	def __init__(self, pos, radius):	
@@ -726,26 +727,78 @@ class Cloud:
 
 class BackGround:
 	_bg = None
-	def __init__(self):
+	def __init__(self, feelColor, isDark=False):
 		BackGround._bg = self
-		self.mountains = [renderMountains((180, 110), Game._game.feelColor[3]), renderMountains((180, 150), Game._game.feelColor[2])]
+		self.mountains = [renderMountains((180, 110), feelColor[3]), renderMountains((180, 150), feelColor[2])]
 		colorRect = pygame.Surface((2,2))
-		pygame.draw.line(colorRect, Game._game.feelColor[0], (0,0), (2,0))
-		pygame.draw.line(colorRect, Game._game.feelColor[1], (0,1), (2,1))
+		pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
+		pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
 		self.imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
-		self.backColor = Game._game.feelColor[0]
-		if Game._game.darkness:
+
+		self.backColor = feelColor[0]
+		if isDark:
 			self.backColor = DARK_COLOR
 
-		Water.waterColor = [tuple((Game._game.feelColor[0][i] + Game._game.feelColor[1][i]) // 2 for i in range(3))]
+		Water.waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
 		Water.waterColor.append(tuple(min(int(Water.waterColor[0][i] * 1.5), 255) for i in range(3)))
 
 		self.water = Water()
 		Water.layersA.append(self.water)
 		self.water.createLayers()
+
+		self.backGroundDarken = 255
+		self.shootingLightningTimer = -1
+		self.lightningPos = Vector(0,0)
+		self.rainSurfs = [pygame.Surface(screen.get_size(), pygame.SRCALPHA) for i in range(3)]
+		for i, rain in enumerate(self.rainSurfs):
+			for x in range(0, screen.get_width(),rainSprite.get_width()):
+				for y in range(0, screen.get_height(), 64):
+					rain.blit(rainSprite, (x, y), ((0, i * 64), (rainSprite.get_width(), 64)))
+		self.seasonTimer = 0
+
+		seasons = ["rain", "storm", "regular", "regular"]
+		self.seasons = ["regular", "storm", "regular", "storm", "regular", "storm", "regular", "storm"] + [choice(seasons) for i in range(15)]
+		self.seasonMode = "stay"
+		self.seasonTimer = 0
+	def getCurrentSeason(self):
+		return self.seasons[(Game._game.roundCounter // 4) % 16]
 	def step(self):
 		self.manageClouds()
 		self.water.stepAll()
+
+		if not self.shootingLightningTimer == -1:
+			self.shootingLightningTimer += 1
+			self.backGroundDarken = 255 * ( -abs(self.shootingLightningTimer - 2)/4 + 1)
+			if self.shootingLightningTimer >=4:
+				self.shootingLightningTimer = -1
+			# if self.shootingLightningTimer == 2:
+				# check for position from (pos[0], 0) and down to find first instance of GRD in map
+				# for i in range(0, mapHeight, 10):
+				# 	if mapGetAt((self.lightningPos[0], i)) == GRD:
+				# 		# boom(Vector(self.lightningPos[0], i), 15)
+				# 		break
+		
+		if self.seasonMode == "change":
+			self.seasonTimer += 1
+			if self.seasonTimer >= 8 * fps:
+				print("stay")
+				self.seasonMode = "stay"
+			# if changing to storm lower brightness
+			if self.seasons[(Game._game.roundCounter // 4) % 16] in ["storm", "rain"]:
+				self.backGroundDarken += copysign(1, 128 - self.backGroundDarken)
+			if self.seasons[(Game._game.roundCounter // 4) % 16] == "regular":
+				self.backGroundDarken += copysign(1, 255 - self.backGroundDarken)
+
+		if self.getCurrentSeason() == "storm" and self.seasonMode == "stay":
+			if randint(0, 50) == 0:
+				self.lightningStrike(Vector(randint(-50, mapWidth + 50), 0))
+	def changeSeason(self):
+		self.seasonTimer = 0
+		self.seasonMode = "change"
+		print("change")
+	def lightningStrike(self, pos):
+		self.shootingLightningTimer = 0
+		self.lightningPos = pos
 	def manageClouds(self):
 		if mapHeight == 0:
 			return
@@ -759,12 +812,50 @@ class BackGround:
 		
 		for cloud in Cloud._reg:
 			cloud.draw()
-		drawBackGround(self.mountains[1],4)
-		drawBackGround(self.mountains[0],2)
+		self.drawBackGround(self.mountains[1],4)
+		self.drawBackGround(self.mountains[0],2)
+
+		if self.shootingLightningTimer in [1,2,3]:
+			drawLightning(Camera(Vector(self.lightningPos[0], 0)), Camera(Vector(self.lightningPos[0], mapHeight)))
 
 		self.water.drawLayers(UP)
 	def drawSecondary(self):
+		
+		# draw rain on screen with animation
+		if self.getCurrentSeason() in ["rain", "storm"]:
+			step = (TimeManager._tm.timeOverall // 2) % 3
+			rainSurf = self.rainSurfs[step]
+			if self.seasonMode == "change":
+				rainSurf.set_alpha(255-self.backGroundDarken)
+			self.drawBackGroundxy(rainSurf, 2)
+
+		# draw top layer of water
 		self.water.drawLayers(DOWN)
+
+		# brightness of game in seasons
+		if self.getCurrentSeason() in ["rain", "storm"] or self.seasonMode == "change":
+			win.fill((self.backGroundDarken, self.backGroundDarken, self.backGroundDarken), special_flags=pygame.BLEND_RGB_MULT)
+	def drawBackGround(self, surf, parallax):
+		width = surf.get_width()
+		height = surf.get_height()
+		offset = (camPos.x/parallax)//width
+		times = winWidth//width + 2
+		for i in range(times):
+			x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
+			y = int(mapHeight - initialWaterLevel - height) - int(camPos.y) + int((mapHeight - initialWaterLevel - winHeight - int(camPos.y))/(parallax*1.5)) + 20 - parallax * 3
+			win.blit(surf, (x, y))
+	def drawBackGroundxy(self, surf, parallax):
+		width = surf.get_width()
+		height = surf.get_height()
+		offsetx = (camPos.x/parallax)//width
+		offsety = (camPos.y/parallax)//height
+		timesx = winWidth//width + 2
+		timesy = winHeight//height + 2
+		for i in range(timesx):
+			for j in range(timesy):
+				x = int(-camPos.x/parallax) + int(int(offsetx) * width + i * width)
+				y = int(-camPos.y/parallax) + int(int(offsety) * height + j * height)
+				win.blit(surf, (x, y))
 
 def mapGetAt(pos, mat=None):
 	if not mat:
@@ -1006,6 +1097,7 @@ if True:
 	imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
 	imageMjolnir.blit(sprites, (0,0), (100, 32, 24, 31))
 	weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
+	rainSprite = pygame.image.load("assets/rain.png").convert_alpha()
 
 def blitWeaponSprite(dest, pos, weapon):
 	index = weaponMan.weaponDict[weapon]
@@ -1013,16 +1105,6 @@ def blitWeaponSprite(dest, pos, weapon):
 	y = 9 + index // 8
 	rect = (x * 16, y * 16, 16, 16)
 	dest.blit(sprites, pos, rect)
-
-def drawBackGround(surf, parallax):
-	width = surf.get_width()
-	height = surf.get_height()
-	offset = (camPos.x/parallax)//width
-	times = winWidth//width + 2
-	for i in range(times):
-		x = int(-camPos.x/parallax) + int(int(offset) * width + i * width)
-		y = int(mapHeight - initialWaterLevel - height) - int(camPos.y) + int((mapHeight - initialWaterLevel - winHeight - int(camPos.y))/(parallax*1.5)) + 20 - parallax * 3
-		win.blit(surf, (x, y))
 
 def point2world(point):
 	return (int(point[0]) - int(camPos[0]), int(point[1]) - int(camPos[1]))
@@ -1226,7 +1308,9 @@ def getNormal(pos, vel, radius, wormCollision, extraCollision):
 ################################################################################ Objects
 
 class TimeManager:
+	_tm = None
 	def __init__(self):
+		TimeManager._tm = self
 		self.timeCounter = turnTime
 		self.timeOverall = 0
 		self.timeSurf = (self.timeCounter, pixelFont5.render(str(self.timeCounter), False, HUDColor))
@@ -1262,9 +1346,6 @@ class TimeManager:
 		self.timeCounter = turnTime
 	def timeRemaining(self, amount):
 		self.timeCounter = amount
-
-timeManager = TimeManager()
-
 nonPhys = []
 class FloatingText: #pos, text, color
 	def __init__(self, pos, text, color = (255,0,0)):
@@ -6927,6 +7008,7 @@ def cycleWorms():
 		Game._game.roundsTillSuddenDeath -= 1
 		if Game._game.roundsTillSuddenDeath == 0:
 			suddenDeath()
+		BackGround._bg.changeSeason()
 	
 	if Game._game.gameMode == CAPTURE_THE_FLAG:
 		for team in teamManager.teams:
@@ -7360,6 +7442,7 @@ class Commentator:#(name, strings, color)
 class Camera:
 	def __init__(self, pos):
 		self.pos = pos
+		self.radius = 1
 
 class Toast:
 	_toasts = []
@@ -7700,7 +7783,9 @@ def lstepper():
 
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
-	# pygame.image.save(win, "screenShoot" + str(uniform(0, 100)).replace(".", "") + ".png")
+	# BackGround._bg.lightningStrike(mouse)
+	TimeManager._tm.timeRemaining(1)
+
 
 ################################################################################ State machine
 if True:
@@ -8028,10 +8113,11 @@ if __name__ == "__main__":
 
 	# setup
 	game = Game()
+	timeManager = TimeManager()
 	weaponMan = WeaponManager()
 	teamManager = TeamManager()
 
-	bg = BackGround()
+	bg = BackGround(Game._game.feelColor, game._game.darkness)
 	hb = HealthBar()
 	
 	damageText = (Game._game.damageThisTurn, pixelFont5.render(str(int(Game._game.damageThisTurn)), False, HUDColor))
@@ -8040,10 +8126,7 @@ if __name__ == "__main__":
 	run = True
 	pause = False
 	while run:
-		
-		
-		
-		
+				
 		# events
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -8204,7 +8287,11 @@ if __name__ == "__main__":
 			pygame.display.update()
 			continue
 
+		if TimeManager._tm.timeOverall % fps == 0:
+			start = timeit.timeit()
+
 		stateMachine()
+
 
 		# use edge gameMap scroll
 		mousePos = pygame.mouse.get_pos()
@@ -8272,11 +8359,9 @@ if __name__ == "__main__":
 					camTrack = worm
 					break
 		
+		Game._game.step()
 		# advance timer
 		timeManager.step()
-
-		
-		
 		bg.step()
 		
 		if Arena._arena: Arena._arena.step()
@@ -8374,7 +8459,15 @@ if __name__ == "__main__":
 		# screen manegement
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 		
+		if TimeManager._tm.timeOverall % fps == 0:
+			end = timeit.timeit()
+			print(abs(end - start))
+
 		pygame.display.update()
 		fpsClock.tick(fps)
+
+		
+		# 
+		
 		
 	pygame.quit()
