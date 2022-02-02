@@ -2,7 +2,7 @@ from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign
 from random import shuffle ,randint, uniform, choice
 from vector import *
 from pygame import Vector2, gfxdraw
-import pygame, timeit
+import pygame
 import argparse
 import xml.etree.ElementTree as ET
 import os
@@ -131,7 +131,6 @@ if True:
 # call ship that comes through sea and blast cannons
 # golden snitch for points game ?
 # hedgehog that moves around catching worms
-# seasons, rainy means fire puts out faster, lightning storms
 # drop artifact option (shift - tab?)
 
 # tornado drawing
@@ -746,59 +745,9 @@ class BackGround:
 		Water.layersA.append(self.water)
 		self.water.createLayers()
 
-		self.backGroundDarken = 255
-		self.shootingLightningTimer = -1
-		self.lightningPos = Vector(0,0)
-		self.rainSurfs = [pygame.Surface(screen.get_size(), pygame.SRCALPHA) for i in range(3)]
-		for i, rain in enumerate(self.rainSurfs):
-			for x in range(0, screen.get_width(),rainSprite.get_width()):
-				for y in range(0, screen.get_height(), 64):
-					rain.blit(rainSprite, (x, y), ((0, i * 64), (rainSprite.get_width(), 64)))
-		self.seasonTimer = 0
-
-		seasons = ["rain", "storm", "regular", "regular"]
-		self.seasons = ["regular", "storm", "regular", "storm", "regular", "storm", "regular", "storm"] + [choice(seasons) for i in range(15)]
-		self.seasonMode = "stay"
-		self.seasonTimer = 0
-	def getCurrentSeason(self):
-		return self.seasons[(Game._game.roundCounter // 4) % 16]
 	def step(self):
 		self.manageClouds()
 		self.water.stepAll()
-
-		if not self.shootingLightningTimer == -1:
-			self.shootingLightningTimer += 1
-			self.backGroundDarken = 255 * ( -abs(self.shootingLightningTimer - 2)/4 + 1)
-			if self.shootingLightningTimer >=4:
-				self.shootingLightningTimer = -1
-			# if self.shootingLightningTimer == 2:
-				# check for position from (pos[0], 0) and down to find first instance of GRD in map
-				# for i in range(0, mapHeight, 10):
-				# 	if mapGetAt((self.lightningPos[0], i)) == GRD:
-				# 		# boom(Vector(self.lightningPos[0], i), 15)
-				# 		break
-		
-		if self.seasonMode == "change":
-			self.seasonTimer += 1
-			if self.seasonTimer >= 8 * fps:
-				print("stay")
-				self.seasonMode = "stay"
-			# if changing to storm lower brightness
-			if self.seasons[(Game._game.roundCounter // 4) % 16] in ["storm", "rain"]:
-				self.backGroundDarken += copysign(1, 128 - self.backGroundDarken)
-			if self.seasons[(Game._game.roundCounter // 4) % 16] == "regular":
-				self.backGroundDarken += copysign(1, 255 - self.backGroundDarken)
-
-		if self.getCurrentSeason() == "storm" and self.seasonMode == "stay":
-			if randint(0, 50) == 0:
-				self.lightningStrike(Vector(randint(-50, mapWidth + 50), 0))
-	def changeSeason(self):
-		self.seasonTimer = 0
-		self.seasonMode = "change"
-		print("change")
-	def lightningStrike(self, pos):
-		self.shootingLightningTimer = 0
-		self.lightningPos = pos
 	def manageClouds(self):
 		if mapHeight == 0:
 			return
@@ -815,26 +764,10 @@ class BackGround:
 		self.drawBackGround(self.mountains[1],4)
 		self.drawBackGround(self.mountains[0],2)
 
-		if self.shootingLightningTimer in [1,2,3]:
-			drawLightning(Camera(Vector(self.lightningPos[0], 0)), Camera(Vector(self.lightningPos[0], mapHeight)))
-
 		self.water.drawLayers(UP)
 	def drawSecondary(self):
-		
-		# draw rain on screen with animation
-		if self.getCurrentSeason() in ["rain", "storm"]:
-			step = (TimeManager._tm.timeOverall // 2) % 3
-			rainSurf = self.rainSurfs[step]
-			if self.seasonMode == "change":
-				rainSurf.set_alpha(255-self.backGroundDarken)
-			self.drawBackGroundxy(rainSurf, 2)
-
 		# draw top layer of water
 		self.water.drawLayers(DOWN)
-
-		# brightness of game in seasons
-		if self.getCurrentSeason() in ["rain", "storm"] or self.seasonMode == "change":
-			win.fill((self.backGroundDarken, self.backGroundDarken, self.backGroundDarken), special_flags=pygame.BLEND_RGB_MULT)
 	def drawBackGround(self, surf, parallax):
 		width = surf.get_width()
 		height = surf.get_height()
@@ -7008,7 +6941,6 @@ def cycleWorms():
 		Game._game.roundsTillSuddenDeath -= 1
 		if Game._game.roundsTillSuddenDeath == 0:
 			suddenDeath()
-		BackGround._bg.changeSeason()
 	
 	if Game._game.gameMode == CAPTURE_THE_FLAG:
 		for team in teamManager.teams:
@@ -7589,7 +7521,7 @@ def seek(obj, target, maxSpeed, maxForce ,arrival=False):
 		slowRadius = 50
 		distance = force.getMag()
 		if (distance < slowRadius):
-			desiredSpeed = smap(distance, 0, slowRadius, 0, maxSpeed)
+			# desiredSpeed = smap(distance, 0, slowRadius, 0, maxSpeed)
 			force.setMag(desiredSpeed)
 	force.setMag(desiredSpeed)
 	force -= obj.vel
@@ -8287,11 +8219,7 @@ if __name__ == "__main__":
 			pygame.display.update()
 			continue
 
-		if TimeManager._tm.timeOverall % fps == 0:
-			start = timeit.timeit()
-
 		stateMachine()
-
 
 		# use edge gameMap scroll
 		mousePos = pygame.mouse.get_pos()
@@ -8458,16 +8386,8 @@ if __name__ == "__main__":
 				
 		# screen manegement
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-		
-		if TimeManager._tm.timeOverall % fps == 0:
-			end = timeit.timeit()
-			print(abs(end - start))
 
 		pygame.display.update()
 		fpsClock.tick(fps)
-
-		
-		# 
-		
 		
 	pygame.quit()
