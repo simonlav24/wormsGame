@@ -1,7 +1,7 @@
 from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign, fmod, fabs
 from random import shuffle ,randint, uniform, choice
 from vector import *
-from pygame import Vector2, gfxdraw
+from pygame import gfxdraw
 import pygame
 import argparse
 import xml.etree.ElementTree as ET
@@ -165,9 +165,60 @@ class Game:
 
 		self.evaluateArgs()
 
+		self.extra = []
+		self.layersCircles = [[],[],[]]
+		self.layersLines = [] #color, start, end, width, delay
+
+		self.nonPhys = []
+
+		self.girderAngle = 0
+		self.girderSize = 50
+
 	def step(self):
 		pass
+	def addExtra(self, pos, color = (255,255,255), delay = 5, absolute = False):
+		self.extra.append((pos[0], pos[1], color, delay, absolute))
+	def drawExtra(self):
+		extraNext = []
+		for i in self.extra:
+			if not i[4]:
+				win.fill(i[2], (point2world((i[0], i[1])),(1,1)))
+			else:
+				win.fill(i[2], ((i[0], i[1]),(1,1)))
+			if i[3] > 0:
+				extraNext.append((i[0], i[1], i[2], i[3]-1, i[4]))
+		self.extra = extraNext
+	def drawLayers(self):
+		layersLinesNext = []
 
+		for i in self.layersLines:
+			pygame.draw.line(win, i[0], point2world(i[1]), point2world(i[2]), i[3])
+			if i[4]:
+				layersLinesNext.append((i[0], i[1], i[2], i[3], i[4]-1))
+		self.layersLines = layersLinesNext
+
+		for j in self.layersCircles:
+			for i in j:
+				pygame.draw.circle(win, i[0], point2world(i[1]), int(i[2]))
+		self.layersCircles = [[],[],[]]
+	def girder(self, pos):
+		surf = pygame.Surface((self.girderSize, 10)).convert_alpha()
+		for i in range(self.girderSize // 16 + 1):
+			surf.blit(sprites, (i * 16, 0), (64,80,16,16))
+		surfGround = pygame.transform.rotate(surf, self.girderAngle)
+		ground.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
+		surf.fill(GRD)
+		surfMap = pygame.transform.rotate(surf, self.girderAngle)
+		gameMap.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
+	def drawGirderHint(self):#7
+		surf = pygame.Surface((self.girderSize, 10)).convert_alpha()
+		for i in range(self.girderSize // 16 + 1):
+			surf.blit(sprites, (i * 16, 0), (64,80,16,16))
+		surf.set_alpha(100)
+		surf = pygame.transform.rotate(surf, self.girderAngle)
+		pos = pygame.mouse.get_pos()
+		pos = Vector(pos[0]/scalingFactor , pos[1]/scalingFactor )
+		win.blit(surf, (int(pos[0] - surf.get_width()/2), int(pos[1] - surf.get_height()/2)))
 	def evaluateArgs(self):
 		args = parseArgs()
 		self.mapChoice = args.map_choice
@@ -194,11 +245,6 @@ class Game:
 			args.feel_index = randint(0, len(feels) - 1)
 		self.feelColor = feels[args.feel_index]
 		self.args = args
-	
-# class MapManager:
-# 	_man = None
-# 	def __init__(self):
-# 		MapManager._man = self
 
 ################################################################################ Map
 if True:
@@ -323,6 +369,7 @@ def createWorld():
 	if Game._game.args.map_ratio != -1:
 		imageChoice[1] = Game._game.args.map_ratio
 	
+	Game._game.mapChoice = imageChoice
 	makeGameMap(imageChoice)
 	makeGroundMap()
 
@@ -555,7 +602,7 @@ def splash(pos, vel):
 class Blast:
 	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
 	def __init__(self, pos, radius, smoke = 30, moving=0):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.timeCounter = 0
 		self.pos = pos + vectorUnitRandom() * moving
 		self.radius = radius
@@ -572,19 +619,19 @@ class Blast:
 			color = self._color[int(max(min(self.timeCounter, 5), 0))]
 			lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
 		if self.timeCounter >= 10:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			del self
 	def draw(self):
-		layersCircles[0].append((self._color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
-		layersCircles[1].append((self._color[int(max(min(self.timeCounter-1, 5), 0))], self.pos + self.rand, self.rad*0.6))
-		layersCircles[2].append((self._color[int(max(min(self.timeCounter-2, 5), 0))], self.pos + self.rand, self.rad*0.3))
+		Game._game.layersCircles[0].append((self._color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
+		Game._game.layersCircles[1].append((self._color[int(max(min(self.timeCounter-1, 5), 0))], self.pos + self.rand, self.rad*0.6))
+		Game._game.layersCircles[2].append((self._color[int(max(min(self.timeCounter-2, 5), 0))], self.pos + self.rand, self.rad*0.3))
 
 class FireBlast():
 	_color = [(255, 222, 3), (242, 74, 1), (255, 109, 10), (254, 153, 35)]
 	def __init__(self, pos, radius):
 		self.pos = vectorCopy(pos) + vectorUnitRandom() * randint(1, 5)
 		self.radius = radius
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.color = choice(self._color)
 	def step(self):
 		self.pos.y -= 2 - 0.4 * self.radius
@@ -592,16 +639,16 @@ class FireBlast():
 		if randint(0, 10) < 3:
 			self.radius -= 1
 		if self.radius < 0:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			del self
 	def draw(self):
 		if self.radius == 0:
 			win.set_at(point2world(self.pos), self.color)
-		layersCircles[2].append((self.color, self.pos, self.radius))
+		Game._game.layersCircles[2].append((self.color, self.pos, self.radius))
 
 class Explossion:
 	def __init__(self, pos, radius):	
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = pos
 		self.radius = radius
 		self.times = radius//5
@@ -610,7 +657,7 @@ class Explossion:
 		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7))
 		self.timeCounter += 1
 		if self.timeCounter == self.times:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			del self
 	def draw(self):
 		pass
@@ -841,6 +888,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 		
 		if counter > 8000:
 			# if too many iterations, girder place
+			print("problem with map", Game._game.mapChoice[0], "at ratio", Game._game.mapChoice[1])
 			if not girderPlace:
 				return None
 			for worm in PhysObj._worms:
@@ -849,7 +897,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 					break
 			if  not goodPlace:
 				continue
-			girder(place + Vector(0,20))
+			Game._game.girder(place + Vector(0,20))
 			return place
 		
 		# put place down
@@ -916,39 +964,6 @@ def placePlants(quantity = 1):
 def placeFlag():
 	place = giveGoodPlace(-1)
 	Flag(place)
-
-extra = [] #posx, posy, color, repeat
-def addExtra(pos, color = (255,255,255), delay = 5, absolute = False):
-	extra.append((pos[0], pos[1], color, delay, absolute))
-
-def drawExtra():
-	global extra
-	extraNext = []
-	for i in extra:
-		if not i[4]:
-			win.fill(i[2], (point2world((i[0], i[1])),(1,1)))
-		else:
-			win.fill(i[2], ((i[0], i[1]),(1,1)))
-		if i[3] > 0:
-			extraNext.append((i[0], i[1], i[2], i[3]-1, i[4]))
-	extra = extraNext
-
-layersCircles = [[],[],[]]
-layersLines = [] #color, start, end, width, delay
-def drawLayers():
-	global layersCircles, layersLines
-	layersLinesNext = []
-	
-	for i in layersLines:
-		pygame.draw.line(win, i[0], point2world(i[1]), point2world(i[2]), i[3])
-		if i[4]:
-			layersLinesNext.append((i[0], i[1], i[2], i[3], i[4]-1))
-	layersLines = layersLinesNext
-	
-	for j in layersCircles:
-		for i in j:
-			pygame.draw.circle(win, i[0], point2world(i[1]), int(i[2]))
-	layersCircles = [[],[],[]]
 	
 def clamp(value, upper, lower):
 	if value > upper:
@@ -1030,7 +1045,6 @@ if True:
 	imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
 	imageMjolnir.blit(sprites, (0,0), (100, 32, 24, 31))
 	weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
-	rainSprite = pygame.image.load("assets/rain.png").convert_alpha()
 
 def blitWeaponSprite(dest, pos, weapon):
 	index = weaponMan.weaponDict[weapon]
@@ -1279,10 +1293,10 @@ class TimeManager:
 		self.timeCounter = turnTime
 	def timeRemaining(self, amount):
 		self.timeCounter = amount
-nonPhys = []
+
 class FloatingText: #pos, text, color
 	def __init__(self, pos, text, color = (255,0,0)):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.surf = pixelFont5.render(str(text), False, color)
 		self.timeCounter = 0
@@ -1292,7 +1306,7 @@ class FloatingText: #pos, text, color
 		self.pos.y -= 0.5
 		self.pos.x += 0.25 * sin(0.1 * timeManager.timeOverall + self.phase)
 		if self.timeCounter == 50:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			del self
 	def draw(self):
 		win.blit(self.surf , (int(self.pos.x - camPos.x - self.surf.get_size()[0]/2), int(self.pos.y - camPos.y)))
@@ -2120,7 +2134,7 @@ class Fire(PhysObj):
 class Smoke:
 	smokeCount = 0
 	def __init__(self, pos, vel = None, color = None):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		Smoke.smokeCount += 1
 		if color:
 			self.color = color
@@ -2141,7 +2155,7 @@ class Smoke:
 		if self.timeCounter % 5 == 0:
 			self.radius -= 1
 			if self.radius == 0:
-				nonPhys.remove(self)
+				Game._game.nonPhys.remove(self)
 				Smoke.smokeCount -= 1
 				del self
 				return
@@ -2179,7 +2193,7 @@ def fireShotgun(start, direction, power=15):#6
 
 	for t in range(5,500):
 		testPos = start + direction * t
-		addExtra(testPos, (255, 204, 102), 3)
+		Game._game.addExtra(testPos, (255, 204, 102), 3)
 		
 		if testPos.y >= mapHeight - Water.level:
 			splash(testPos, Vector(10,0))
@@ -2195,28 +2209,6 @@ def fireShotgun(start, direction, power=15):#6
 				stain(testPos, imageBlood, imageBlood.get_size(), False)
 			boom(testPos, power)
 			break
-
-girderAngle = 0
-girderSize = 50
-def girder(pos):
-	surf = pygame.Surface((girderSize, 10)).convert_alpha()
-	for i in range(girderSize // 16 + 1):
-		surf.blit(sprites, (i * 16, 0), (64,80,16,16))
-	surfGround = pygame.transform.rotate(surf, girderAngle)
-	ground.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
-	surf.fill(GRD)
-	surfMap = pygame.transform.rotate(surf, girderAngle)
-	gameMap.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
-
-def drawGirderHint():#7
-	surf = pygame.Surface((girderSize, 10)).convert_alpha()
-	for i in range(girderSize // 16 + 1):
-		surf.blit(sprites, (i * 16, 0), (64,80,16,16))
-	surf.set_alpha(100)
-	surf = pygame.transform.rotate(surf, girderAngle)
-	pos = pygame.mouse.get_pos()
-	pos = Vector(pos[0]/scalingFactor , pos[1]/scalingFactor )
-	win.blit(surf, (int(pos[0] - surf.get_width()/2), int(pos[1] - surf.get_height()/2)))
 
 def fireFlameThrower(pos, direction):#8
 	offset = uniform(1,2)
@@ -2349,7 +2341,7 @@ class Baseball:
 	def __init__(self):	
 		global camTrack
 		self.direction = vectorFromAngle(objectUnderControl.shootAngle)
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.timer = 0
 		hitted = []
 		for t in range(5, 25):
@@ -2371,14 +2363,14 @@ class Baseball:
 	def step(self):
 		self.timer += 1
 		if self.timer >= 15:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 	def draw(self):
 		weaponSurf = pygame.transform.rotate(pygame.transform.flip(weaponHold, False, objectUnderControl.facing == LEFT), -degrees(objectUnderControl.shootAngle) + 180)
 		win.blit(weaponSurf, point2world(objectUnderControl.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
 
 class SickGas:
 	def __init__(self, pos, sickness = 1):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.color = (102, 255, 127, 100)
 		self.radius = randint(8,18)
 		self.pos = tup2vec(pos)
@@ -2395,7 +2387,7 @@ class SickGas:
 		if self.timeCounter % 8 == 0:
 			self.radius -= 1
 			if self.radius == 0:
-				nonPhys.remove(self)
+				Game._game.nonPhys.remove(self)
 				del self
 				return
 		self.acc.x = wind * 0.1 * windMult * uniform(0.2,1)
@@ -2626,7 +2618,7 @@ def fireGammaGun(start, direction):
 	normal = Vector(-direction.y, direction.x).normalize()
 	for t in range(5,500):
 		testPos = start + direction * t + normal * 1.5 * sin(t * 0.6) * (t + 1)/70
-		addExtra(testPos, (0,255,255), 10)
+		Game._game.addExtra(testPos, (0,255,255), 10)
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
@@ -2712,7 +2704,7 @@ class Earthquake:
 	earthquake = 0
 	def __init__(self, timer = 7 * fps, decorative = False, strength = 1):
 		self.timer = timer
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.stable = False
 		self.boomAffected = False
 		Earthquake.earthquake = strength
@@ -2726,7 +2718,7 @@ class Earthquake:
 					obj.vel += Vector(randint(-1,1), -uniform(0,1))
 		self.timer -= 1
 		if self.timer == 0:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			Earthquake.earthquake = 0
 			del self
 	def draw(self):
@@ -2751,7 +2743,7 @@ class Gemino(PhysObj):
 
 class Plant:
 	def __init__(self, pos, radius = 5, angle = -1, mode = 0):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		if angle == -1:
 			self.angle = uniform(0, 2*pi)
@@ -2780,7 +2772,7 @@ class Plant:
 		if randint(0, 100) <= 10:
 			leaf(self.pos, self.angle + 90, (55,self.green,40))
 		if self.radius == 0:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			if self.mode == PlantBomb.venus:
 				pygame.draw.circle(gameMap, GRD, (int(self.pos[0]), int(self.pos[1])), 3)
 				pygame.draw.circle(ground, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), 3)
@@ -3307,7 +3299,7 @@ def drawTarget(pos):
 class Vortex():
 	vortexRadius = 180
 	def __init__(self, pos):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.rot = 0
 		self.inhale = True
@@ -3341,7 +3333,7 @@ class Vortex():
 					worm.acc -= (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
 			
 		if not self.inhale and self.rot < 0:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			del self
 	def draw(self):
 		width = 50
@@ -3538,7 +3530,7 @@ class Artillery(PhysObj):
 class LongBow:
 	_sleep = False #0-regular 1-sleep
 	def __init__(self, pos, direction, sleep=False):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = vectorCopy(pos)
 		self.direction = direction
 		self.vel = direction.normalize() * 20
@@ -3550,7 +3542,7 @@ class LongBow:
 		for vec in self.triangle:
 			vec.rotate(self.direction.getAngle())
 	def destroy(self):
-		nonPhys.remove(self)
+		Game._game.nonPhys.remove(self)
 		del self
 	def step(self):
 		if not self.stuck:
@@ -3580,7 +3572,7 @@ class LongBow:
 						return
 				# check gameMap collision
 				if not isOnMap(testPos.vec2tupint()):
-					nonPhys.remove(self)
+					Game._game.nonPhys.remove(self)
 					return
 				if gameMap.get_at(testPos.vec2tupint()) == GRD:
 					self.stuck = vectorCopy(testPos)
@@ -3671,14 +3663,14 @@ def shootRope(start, direction):
 
 class Armageddon:
 	def __init__(self):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.stable = False
 		self.boomAffected = False
 		self.timer = 700
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			del self
 			return
 		if timeManager.timeOverall % 10 == 0:
@@ -3798,7 +3790,7 @@ def firePortal(start, direction):
 	steps = 500
 	for t in range(5,steps):
 		testPos = start + direction * t
-		addExtra(testPos, (255,255,255), 3)
+		Game._game.addExtra(testPos, (255,255,255), 3)
 		
 		# missed
 		if t == steps - 1:
@@ -3922,7 +3914,7 @@ class Venus:
 	hold = 2
 	release = 3
 	def __init__(self, pos, angle = -1):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		Venus._reg.append(self)
 		self.pos = pos
 		self.offset = Vector(25, 0)
@@ -3964,7 +3956,7 @@ class Venus:
 				pos = self.pos + self.direction * 25
 				for worm in PhysObj._worms:
 					if distus(worm.pos, pos) <= 625:
-						nonPhys.remove(self)
+						Game._game.nonPhys.remove(self)
 						Venus._reg.remove(self)
 						return
 			
@@ -4033,8 +4025,8 @@ class Venus:
 					self.explossive = False
 					for i in range(randint(6,14)):
 						s = Smoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
-						nonPhys.remove(s)
-						nonPhys.insert(0,s)
+						Game._game.nonPhys.remove(s)
+						Game._game.nonPhys.insert(0,s)
 		elif self.mode == Venus.release:
 			gameDistable()
 			self.snap -= 0.1
@@ -4045,13 +4037,13 @@ class Venus:
 		# check if self is destroyed
 		if isOnMap(self.pos.vec2tupint()):
 			if not gameMap.get_at(self.pos.vec2tupint()) == GRD:
-				nonPhys.remove(self)
+				Game._game.nonPhys.remove(self)
 				Venus._reg.remove(self)
 		else:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			Venus._reg.remove(self)
 		if self.pos.y >= mapHeight - Water.level:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			Venus._reg.remove(self)
 	def draw(self):
 		if self.scale < 1:
@@ -4433,9 +4425,9 @@ def fireLaser(start, direction):
 		# extra.append((testPos.x, testPos.y, (255,0,0), 3))
 		
 		if testPos.x >= mapWidth or testPos.y >= mapHeight or testPos.x < 0 or testPos.y < 0:
-			layersCircles[0].append((color, start, 5))
-			layersCircles[0].append((color, testPos, 5))
-			layersLines.append((color, start, testPos, 10, 1))
+			Game._game.layersCircles[0].append((color, start, 5))
+			Game._game.layersCircles[0].append((color, testPos, 5))
+			Game._game.layersLines.append((color, start, testPos, 10, 1))
 			continue
 			
 		# if hits worm:
@@ -4444,9 +4436,9 @@ def fireLaser(start, direction):
 				continue
 			if distus(testPos, worm.pos) < (worm.radius + 2) * (worm.radius + 2):
 				if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
-				layersCircles[0].append((color, start + direction * 5, 5))
-				layersCircles[0].append((color, testPos, 5))
-				layersLines.append((color, start + direction * 5, testPos, 10, 1))
+				Game._game.layersCircles[0].append((color, start + direction * 5, 5))
+				Game._game.layersCircles[0].append((color, testPos, 5))
+				Game._game.layersLines.append((color, start + direction * 5, testPos, 10, 1))
 				
 				boom(worm.pos + Vector(randint(-1,1),randint(-1,1)), 2, False, False, True)
 				# worm.damage(randint(1,5))
@@ -4465,9 +4457,9 @@ def fireLaser(start, direction):
 		# if hits gameMap:
 		if gameMap.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
-			layersCircles[0].append((color, start + direction * 5, 5))
-			layersCircles[0].append((color, testPos, 5))
-			layersLines.append((color, start + direction * 5, testPos, 10, 1))
+			Game._game.layersCircles[0].append((color, start + direction * 5, 5))
+			Game._game.layersCircles[0].append((color, testPos, 5))
+			Game._game.layersLines.append((color, start + direction * 5, testPos, 10, 1))
 			points = []
 			for i in square:
 				points.append((testPos + i).vec2tupint())
@@ -4637,7 +4629,7 @@ class ShootingTarget:
 	numTargets = 10
 	_reg = []
 	def __init__(self):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		ShootingTarget._reg.append(self)
 		self.pos = Vector(randint(10, mapWidth - 10), randint(10, mapHeight - 50))
 		self.radius = 10
@@ -4650,7 +4642,7 @@ class ShootingTarget:
 				return
 	def explode(self):
 		boom(self.pos, 15)
-		nonPhys.remove(self)
+		Game._game.nonPhys.remove(self)
 		ShootingTarget._reg.remove(self)
 		teamManager.currentTeam.points += 1
 		if len(ShootingTarget._reg) < ShootingTarget.numTargets:
@@ -4893,7 +4885,7 @@ class SnailShell(PhysObj):
 class Snail:
 	around = [Vector(1,0), Vector(1,-1), Vector(0,-1), Vector(-1,-1), Vector(-1,0), Vector(-1,1), Vector(0,1), Vector(1,1)]
 	def __init__(self, pos, anchor, clockwise=RIGHT):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = pos
 		self.pos.integer()
 		self.clockwise = clockwise
@@ -4923,7 +4915,7 @@ class Snail:
 				self.climb()
 		for worm in PhysObj._worms:
 			if distus(self.pos, worm.pos) < (3 + worm.radius) * (3 + worm.radius):
-				nonPhys.remove(self)
+				Game._game.nonPhys.remove(self)
 				boom(self.pos, 30)
 				return
 	def draw(self):
@@ -4934,7 +4926,7 @@ class Bubble:
 	cought = []
 	# to do: dont pick up fire and debrie, portal 
 	def __init__(self, pos, direction, energy):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = vectorCopy(pos)
 		self.acc = Vector()
 		self.vel = Vector(direction[0], direction[1]).rotate(uniform(-0.1, 0.1)) * energy * 5
@@ -4988,8 +4980,8 @@ class Bubble:
 		self.catch = None
 		pygame.draw.circle(gameMap, SKY, self.pos, self.radius)
 		pygame.draw.circle(ground, SKY, self.pos, self.radius)
-		if self in nonPhys:
-			nonPhys.remove(self)
+		if self in Game._game.nonPhys:
+			Game._game.nonPhys.remove(self)
 		for i in range(min(int(self.radius), 8)):
 			d = Debrie(self.pos, self.radius/5, [self.color], 1, False, True)
 			d.radius = 1
@@ -5067,7 +5059,7 @@ class Seeker:
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blitWeaponSprite(self.surf, (0,0), "seeker")
 	def initialize(self, pos, direction, energy):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = vectorCopy(pos)
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.acc = Vector()
@@ -5126,7 +5118,7 @@ class Seeker:
 		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
 	def deathResponse(self):
 		boom(self.pos, 30)
-		nonPhys.remove(self)
+		Game._game.nonPhys.remove(self)
 		HomingMissile.showTarget = False
 	def applyForce(self, force):
 		force.limit(self.maxForce)
@@ -5149,7 +5141,7 @@ class Seagull(Seeker):
 		self.removeFromGame()
 	def removeFromGame(self):
 		Seagull._reg.remove(self)
-		nonPhys.remove(self)
+		Game._game.nonPhys.remove(self)
 		self.chum.dead = True
 	def secondaryStep(self):
 		self.target = self.chum.pos
@@ -5320,7 +5312,7 @@ class MjolnirThrow(PhysObj):
 
 class MjolnirReturn:
 	def __init__(self, pos, angle):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.acc = Vector()
 		self.vel = Vector()
@@ -5338,7 +5330,7 @@ class MjolnirReturn:
 		self.angle += (0 - self.angle) * 0.1
 		gameDistable()
 		if distus(self.pos, objectUnderControl.pos) < objectUnderControl.radius * objectUnderControl.radius * 2:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			global holdArtifact
 			holdArtifact = True
 	def draw(self):
@@ -5457,7 +5449,7 @@ class MjolnirFly(PhysObj):
 class MjolnirStrike:
 	def __init__(self):
 		self.pos = objectUnderControl.pos
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		global holdArtifact
 		holdArtifact = False
 		self.stage = 0
@@ -5494,7 +5486,7 @@ class MjolnirStrike:
 			self.angle += -30
 			if self.timer >= fps * 0.25:
 				boom(self.pos, 40)
-				nonPhys.remove(self)
+				Game._game.nonPhys.remove(self)
 				objectUnderControl.boomAffected = True
 		self.timer += 1
 		gameDistable()
@@ -5555,7 +5547,7 @@ class MagicLeaf(PhysObj):
 
 class MagicBeanGrow:
 	def __init__(self, pos, vel):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		if vel.getMag() < 0.1:
 			vel = Vector(0, -1)
 		self.vel = vel
@@ -5612,7 +5604,7 @@ class MagicBeanGrow:
 		self.p3 = self.pos + growRadius * sin(self.timer * 0.1 + 4*pi/3) * self.vel.getNormal()
 
 		if self.timer >= 5 * fps:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			global playerMoveable
 			playerMoveable = True
 	def draw(self):
@@ -5680,14 +5672,14 @@ class RazorLeaf(PhysObj):
 
 class PlantControl:
 	def __init__(self):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.timer = 5 * fps
 		global playerMoveable
 		playerMoveable = False
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 			global playerMoveable
 			playerMoveable = True
 		if pygame.key.get_pressed()[pygame.K_LEFT]:
@@ -5702,7 +5694,7 @@ class PlantControl:
 
 class MasterOfPuppets:
 	def __init__(self):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.springs = []
 		self.timer = 0
 		for worm in PhysObj._worms:
@@ -5720,7 +5712,7 @@ class MasterOfPuppets:
 		self.timer += 1
 		if self.timer >= fps * 15:
 			self.springs.clear()
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 		for p in self.springs:
 			p.step()
 	def draw(self):
@@ -5757,7 +5749,7 @@ class Frost:
 		self.timer = fps * randint(2, 6)
 		if not mapGetAt(self.pos) == GRD:
 			return
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 	def step(self):
 		color = ground.get_at(self.pos)
 		r = color[0] + (256 - color[0]) // 2
@@ -5780,13 +5772,13 @@ class Frost:
 		
 		self.timer -= 1
 		if self.timer <= 0:
-			nonPhys.remove(self)
+			Game._game.nonPhys.remove(self)
 	def draw(self):
 		pass
 
 class Icicle(LongBow):
 	def __init__(self, pos, direction):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = vectorCopy(pos)
 		self.direction = direction
 		self.vel = direction.normalize() * 20
@@ -5799,7 +5791,7 @@ class Icicle(LongBow):
 		if randint(0,5) == 0:
 			Frost(self.pos + vectorUnitRandom() * 3)
 	def destroy(self):
-		nonPhys.remove(self)
+		Game._game.nonPhys.remove(self)
 		for i in range(8):
 			d = Debrie(self.pos, 5, [(200,200,255)], 1, False, True)
 		del self
@@ -5836,7 +5828,7 @@ class EarthSpike:
 	def __init__(self):
 		self.squareSize = Vector(16,32)
 		self.pos = checkPotential(objectUnderControl, 25)[-1]
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.timer = 0
 		self.surf = pygame.Surface((32, 32), pygame.SRCALPHA)
 		self.surf.blit(sprites, (0,0), ((32, 96), (32, 32)))
@@ -5882,7 +5874,7 @@ class EarthSpike:
 
 class FireBall(LongBow):
 	def __init__(self, pos, direction):
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.pos = vectorCopy(pos)
 		self.direction = direction
 		self.vel = direction.normalize() * 20
@@ -5904,7 +5896,7 @@ class FireBall(LongBow):
 		for i in range(40):
 			s = Fire(boomPos, 5)
 			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
-		nonPhys.remove(self)
+		Game._game.nonPhys.remove(self)
 	def stamp(self):
 		self.destroy()
 	def wormCollision(self, worm):
@@ -5919,7 +5911,7 @@ class Tornado:
 		self.width = 30
 		self.pos = objectUnderControl.pos + Vector(objectUnderControl.radius + self.width / 2, 0) * objectUnderControl.facing
 		self.facing = objectUnderControl.facing
-		nonPhys.append(self)
+		Game._game.nonPhys.append(self)
 		self.points = [Vector(0, 10 * i) for i in range(50)]
 		self.swirles = []
 		self.sizes = [self.width + randint(0,20) for i in self.points]
@@ -5949,7 +5941,7 @@ class Tornado:
 		if self.timer >= fps * 10 and len(self.swirles) > 0:
 			self.swirles.pop(-1)
 			if len(self.swirles) == 0:
-				nonPhys.remove(self)
+				Game._game.nonPhys.remove(self)
 		self.timer += 1
 	def draw(self):
 		for i, swirl in enumerate(self.swirles):
@@ -6184,7 +6176,7 @@ class WeaponManager:
 		if weaponMan.currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget:
 			drawTarget(HomingMissile.Target)
 		if weaponMan.currentWeapon == "girder" and state == PLAYER_CONTROL_1:
-			drawGirderHint()
+			Game._game.drawGirderHint()
 		if weaponMan.getBackColor(weaponMan.currentWeapon) == AIRSTRIKE:
 			mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 			win.blit(pygame.transform.flip(airStrikeSpr, False if airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(airStrikeSpr.get_size())/2))
@@ -6546,7 +6538,7 @@ def fireClickable():
 	addToUsed = True
 	
 	if weaponMan.currentWeapon == "girder":
-		girder(mousePosition)
+		Game._game.girder(mousePosition)
 	elif weaponMan.currentWeapon == "teleport":
 		objectUnderControl.pos = mousePosition
 		addToUsed = False
@@ -7460,7 +7452,7 @@ class Arena:
 	def wormsCheck(self):
 		for worm in PhysObj._worms:
 			checkPos = worm.pos + Vector(0, worm.radius * 2)
-			addExtra(checkPos, (255,255,255), 3)
+			# Game._game.addExtra(checkPos, (255,255,255), 3)
 			if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and checkPos.y > self.pos.y and checkPos.y < self.pos.y + self.size.y:
 				worm.team.points += 1
 
@@ -7717,7 +7709,6 @@ def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 	# BackGround._bg.lightningStrike(mouse)
 	TimeManager._tm.timeRemaining(1)
-
 
 ################################################################################ State machine
 if True:
@@ -8013,13 +8004,12 @@ def onKeyPressTab():
 		else:
 			FloatingText(objectUnderControl.pos + Vector(0,-5), "regular", (20,20,20))
 	elif weaponMan.currentWeapon == "girder":
-		global girderAngle, girderSize
-		girderAngle += 45
-		if girderAngle == 180:
-			girderSize = 100
-		if girderAngle == 360:
-			girderSize = 50
-			girderAngle = 0
+		Game._game.girderAngle += 45
+		if Game._game.girderAngle == 180:
+			Game._game.girderSize = 100
+		if Game._game.girderAngle == 360:
+			Game._game.girderSize = 50
+			Game._game.girderAngle = 0
 	elif weaponMan.getFused(weaponMan.currentWeapon):
 		global fuseTime
 		fuseTime += fps
@@ -8273,7 +8263,7 @@ if __name__ == "__main__":
 			p.step()
 			if not p.stable:
 				gameDistable()
-		for f in nonPhys: f.step()
+		for f in Game._game.nonPhys: f.step()
 		for t in Toast._toasts: t.step()
 		
 		if timeTravel: timeTravelRecord()
@@ -8305,7 +8295,7 @@ if __name__ == "__main__":
 		bg.draw()
 		drawLand()
 		for p in PhysObj._reg: p.draw()
-		for f in nonPhys: f.draw()
+		for f in Game._game.nonPhys: f.draw()
 		bg.drawSecondary()
 		for t in Toast._toasts: t.draw()
 
@@ -8328,8 +8318,8 @@ if __name__ == "__main__":
 				pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + vectorFromAngle(angle) * i))
 				i += 1
 		
-		drawExtra()
-		drawLayers()
+		Game._game.drawExtra()
+		Game._game.drawLayers()
 		
 		# HUD
 		drawWindIndicator()
@@ -8366,7 +8356,6 @@ if __name__ == "__main__":
 			for i, killed in enumerate(killList):
 				win.blit(killed[0], (5, winHeight - 14 - i * 8))
 		
-		drawExtra()
 		# debug:
 		if damageText[0] != Game._game.damageThisTurn: damageText = (Game._game.damageThisTurn, pixelFont5.render(str(int(Game._game.damageThisTurn)), False, HUDColor))
 		win.blit(damageText[1], ((int(5), int(winHeight-6))))
