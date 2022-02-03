@@ -467,8 +467,7 @@ def handleMenuEvents(event):
 						string += "1" + " "
 					continue
 				if key == "-map":
-					mapName = values[key].split("/")[-1]
-					string += key + " " + mapName + " "
+					string += key + " " + values[key] + " "
 					continue
 				if key == "-ratio" and values[key] == "auto":
 					continue

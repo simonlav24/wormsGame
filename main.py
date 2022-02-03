@@ -133,7 +133,9 @@ if True:
 # hedgehog that moves around catching worms
 # drop artifact option (shift - tab?)
 
-# tornado drawing
+# tornado drawing and stronger sucking
+# fire nerf to 3
+# cant load perlin maps
 
 # bugs:
 # time travel with correct sprite
@@ -318,35 +320,37 @@ def parseArgs():
 
 	return args
 	
-def grabMapsFrom(path):
-	if not os.path.exists(path):
-		return
+def grabMapsFrom(paths):
 	maps = []
-	for imageFile in os.listdir(path):
-		if imageFile[-4:] != ".png":
+	for path in paths:
+		if not os.path.isdir(path):
 			continue
-		string = path + "/" + imageFile
-		ratio = 512
-		if string.find("big") != -1:
-			ratio = 800
-		if string.find("big1.png") != -1:
-			ratio = 1000
-		elif string.find("big6.png") != -1:
-			ratio = 700
-		elif string.find("big13.png") != -1:
-			ratio = 1000
-		elif string.find("big16.png") != -1:
-			ratio = 2000
-		string = os.path.abspath(string)
-		maps.append([string, ratio])
+		for imageFile in os.listdir(path):
+			if imageFile[-4:] != ".png":
+				continue
+			string = path + "/" + imageFile
+			ratio = hardRatioValue(string)
+			string = os.path.abspath(string)
+			maps.append([string, ratio])
 	return maps
 
+def hardRatioValue(path):
+	"""hard coded ratio value for some maps"""
+	if path.find("big") != -1:
+		return 800
+	elif path.find("big1.png") != -1:
+		return 1000
+	elif path.find("big6.png") != -1:
+		return 700
+	elif path.find("big13.png") != -1:
+		return 1000
+	elif path.find("big16.png") != -1:
+		return 2000
+	return 512
+	
 def createWorld():
 	# choose map
-	maps = []
-	maps += grabMapsFrom("wormsMaps")
-	if os.path.exists("wormsMaps/moreMaps"):
-		maps += grabMapsFrom("wormsMaps/moreMaps")
+	maps = grabMapsFrom(["wormsMaps"])#, """wormsMaps/moreMaps"""])
 	
 	if Game._game.args.map_choice == "":
 		# no map chosen in arguments. pick one at random
@@ -361,6 +365,7 @@ def createWorld():
 			if Game._game.args.map_choice in m[0]:
 				imageChoice = m
 				break
+		imageChoice[1] = hardRatioValue(imageChoice[0])
 		# if not found, then custom map
 		if imageChoice[0] == None:
 			imageChoice[0] = Game._game.args.map_choice
@@ -601,7 +606,7 @@ def splash(pos, vel):
 
 class Blast:
 	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
-	def __init__(self, pos, radius, smoke = 30, moving=0):
+	def __init__(self, pos, radius, smoke = 30, moving=0, star=False):
 		Game._game.nonPhys.append(self)
 		self.timeCounter = 0
 		self.pos = pos + vectorUnitRandom() * moving
@@ -610,11 +615,14 @@ class Blast:
 		self.timeCounter = 0
 		self.smoke = smoke
 		self.rand = vectorUnitRandom() * randint(1, int(self.radius / 2))
+		self.star = star
 	def step(self):
 		if randint(0,self.smoke) == 0:
 			Smoke(self.pos)
 		self.timeCounter += 0.5
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
+		self.pos.x += 9.0 * wind / self.rad
+		self.pos.y -= 5.0 / self.rad
 		if Game._game.darkness:
 			color = self._color[int(max(min(self.timeCounter, 5), 0))]
 			lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
@@ -622,6 +630,16 @@ class Blast:
 			Game._game.nonPhys.remove(self)
 			del self
 	def draw(self):
+		if self.star and self.timeCounter < 1.0:
+			points = []
+			num = randint(10, 25) // 2
+			for i in range(num):
+				radius = self.rad * 0.1 if i % 2 == 0 else self.rad * 4
+				rand = Vector() if i % 2 == 0 else 5 * vectorUnitRandom()
+				radrand = 1.0 if i % 2 == 0 else uniform(0.8,3)
+				point = point2world(self.pos + vectorFromAngle((i/num) * 2 * pi, radius + radrand) + rand)
+				points.append(point)
+			pygame.draw.polygon(win, choice(self._color[0:2]), points)
 		Game._game.layersCircles[0].append((self._color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
 		Game._game.layersCircles[1].append((self._color[int(max(min(self.timeCounter-1, 5), 0))], self.pos + self.rand, self.rad*0.6))
 		Game._game.layersCircles[2].append((self._color[int(max(min(self.timeCounter-2, 5), 0))], self.pos + self.rand, self.rad*0.3))
@@ -651,10 +669,10 @@ class Explossion:
 		Game._game.nonPhys.append(self)
 		self.pos = pos
 		self.radius = radius
-		self.times = radius//5
+		self.times = int(radius * 0.35)
 		self.timeCounter = 0
 	def step(self):
-		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7))
+		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7), star=self.timeCounter==0)
 		self.timeCounter += 1
 		if self.timeCounter == self.times:
 			Game._game.nonPhys.remove(self)
@@ -5766,7 +5784,8 @@ class Frost:
 			checkPos = self.pos + direction
 			if mapGetAt(checkPos) == GRD and not checkPos in self.visited:
 				self.next.append(checkPos)
-		
+		if len(self.next) == 0:
+			Game._game.nonPhys.remove(self)
 		self.pos = choice(self.next)
 		self.next.remove(self.pos)
 		
