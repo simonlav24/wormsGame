@@ -329,48 +329,40 @@ def grabMapsFrom(paths):
 			if imageFile[-4:] != ".png":
 				continue
 			string = path + "/" + imageFile
-			ratio = hardRatioValue(string)
 			string = os.path.abspath(string)
-			maps.append([string, ratio])
+			maps.append(string)
 	return maps
 
 def hardRatioValue(path):
-	"""hard coded ratio value for some maps"""
-	if path.find("big") != -1:
-		return 800
-	elif path.find("big1.png") != -1:
-		return 1000
-	elif path.find("big6.png") != -1:
-		return 700
-	elif path.find("big13.png") != -1:
-		return 1000
-	elif path.find("big16.png") != -1:
-		return 2000
+	first = path.find("big")
+	if first != -1:
+		second = path.find(".", first)
+		if second != -1:
+			return int(path[first+3:second])
 	return 512
-	
+
 def createWorld():
 	# choose map
-	maps = grabMapsFrom(["wormsMaps"])#, """wormsMaps/moreMaps"""])
+	maps = grabMapsFrom(["wormsMaps", "wormsMaps/moreMaps"])
 	
+	imageChoice = [None, None] # path, ratio
 	if Game._game.args.map_choice == "":
 		# no map chosen in arguments. pick one at random
-		imageChoice = choice(maps)
+		imageChoice[0] = choice(maps)
 	else:
-		imageChoice = [None, None]
 		# if perlin map, recolor ground
 		if "PerlinMaps" in Game._game.args.map_choice:
 			Game._game.args.recolor_ground = True
 		# search for chosen map
 		for m in maps:
-			if Game._game.args.map_choice in m[0]:
-				imageChoice = m
+			if Game._game.args.map_choice in m:
+				imageChoice[0] = m
 				break
-		imageChoice[1] = hardRatioValue(imageChoice[0])
 		# if not found, then custom map
 		if imageChoice[0] == None:
 			imageChoice[0] = Game._game.args.map_choice
-			imageChoice[1] = randint(512, 600)
-		
+	
+	imageChoice[1] = hardRatioValue(imageChoice[0])
 	if Game._game.args.map_ratio != -1:
 		imageChoice[1] = Game._game.args.map_ratio
 	
@@ -906,7 +898,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 		
 		if counter > 8000:
 			# if too many iterations, girder place
-			print("problem with map", Game._game.mapChoice[0], "at ratio", Game._game.mapChoice[1])
+			# print("problem with map", Game._game.mapChoice[0], "at ratio", Game._game.mapChoice[1])
 			if not girderPlace:
 				return None
 			for worm in PhysObj._worms:
