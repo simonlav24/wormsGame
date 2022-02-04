@@ -1,7 +1,8 @@
 from math import cos, pow, log2
-import pygame, os, argparse, subprocess
+import pygame, os, argparse, subprocess, datetime
 from random import randint, choice
 from main import renderMountains, renderCloud, feels
+from perlinNoise import generateNoise
 from vector import *
 import tkinter
 from tkinter.filedialog import askopenfile 
@@ -442,8 +443,15 @@ def handleMenuEvents(event):
 		if filepath:
 			picture.setImage(filepath)
 	if key == "generate":
-		mapChoice = subprocess.check_output("python ./perlinNoise.py -d").decode('utf-8')[:-2]
-		picture.setImage(mapChoice)
+		# mapChoice = subprocess.check_output("python ./perlinNoise.py -d").decode('utf-8')[:-2]
+		width, height = 800, 300
+		noise = generateNoise(width, height)
+		x = datetime.datetime.now()
+		if not os.path.exists("wormsMaps/PerlinMaps"):
+			os.mkdir("wormsMaps/PerlinMaps")
+		imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
+		pygame.image.save(noise, imageString)
+		picture.setImage(imageString)
 	if key == "play":
 		values = evaluateMenuForm()
 		string = "main.py "

@@ -1,4 +1,4 @@
-from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, log, copysign, fmod, fabs
+from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fabs
 from random import shuffle ,randint, uniform, choice
 from vector import *
 from pygame import gfxdraw
@@ -135,7 +135,7 @@ if True:
 
 # tornado drawing and stronger sucking
 # fire nerf to 3
-# cant load perlin maps
+# winner in launcher and show record
 
 # bugs:
 # time travel with correct sprite
@@ -609,11 +609,11 @@ class Blast:
 		self.rand = vectorUnitRandom() * randint(1, int(self.radius / 2))
 		self.star = star
 	def step(self):
-		if randint(0,self.smoke) == 0:
+		if randint(0,self.smoke) == 0 and self.rad > 1:
 			Smoke(self.pos)
 		self.timeCounter += 0.5
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
-		self.pos.x += 9.0 * wind / self.rad
+		self.pos.x += 7.0 * wind / self.rad
 		self.pos.y -= 5.0 / self.rad
 		if Game._game.darkness:
 			color = self._color[int(max(min(self.timeCounter, 5), 0))]
@@ -621,6 +621,7 @@ class Blast:
 		if self.timeCounter >= 10:
 			Game._game.nonPhys.remove(self)
 			del self
+		
 	def draw(self):
 		if self.star and self.timeCounter < 1.0:
 			points = []
@@ -664,7 +665,7 @@ class Explossion:
 		self.times = int(radius * 0.35)
 		self.timeCounter = 0
 	def step(self):
-		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7), star=self.timeCounter==0)
+		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7))
 		self.timeCounter += 1
 		if self.timeCounter == self.times:
 			Game._game.nonPhys.remove(self)
@@ -2143,13 +2144,14 @@ class Fire(PhysObj):
 
 class Smoke:
 	smokeCount = 0
+	_smoke = []
 	def __init__(self, pos, vel = None, color = None):
 		Game._game.nonPhys.append(self)
 		Smoke.smokeCount += 1
 		if color:
 			self.color = color
 		else:
-			self.color = (randint(0,40), randint(0,40), randint(0,40), 50)
+			self.color = (20, 20, 20)
 		self.radius = randint(8,10)
 		self.pos = tup2vec(pos)
 		self.acc = Vector(0,0)
@@ -2159,8 +2161,10 @@ class Smoke:
 			self.vel = Vector(0,0)
 		self.timeCounter = 0
 	def draw(self):
-		pygame.gfxdraw.filled_circle(win, int(self.pos.x - camPos.x), int(self.pos.y - camPos.y), self.radius, self.color)
+		# pygame.gfxdraw.filled_circle(win, int(self.pos.x - camPos.x), int(self.pos.y - camPos.y), self.radius, self.color)
+		Smoke._smoke.append((self.pos, self.radius, self.color))
 	def step(self):
+		Smoke._smoke.clear()
 		self.timeCounter += 1
 		if self.timeCounter % 5 == 0:
 			self.radius -= 1
@@ -2173,6 +2177,15 @@ class Smoke:
 		self.acc.y = -0.1
 		self.vel += self.acc
 		self.pos += self.vel
+
+def drawSmoke():
+	if len(Smoke._smoke) == 0:
+		return
+	smokeSurf = pygame.Surface(win.get_size(), pygame.SRCALPHA)
+	for smoke in Smoke._smoke:
+		pygame.draw.circle(smokeSurf, smoke[2], point2world(smoke[0]), smoke[1])
+	smokeSurf.set_alpha(50)
+	win.blit(smokeSurf, (0,0))
 
 class TNT(PhysObj):#5
 	def __init__(self, pos):
@@ -3518,7 +3531,7 @@ class Artillery(PhysObj):
 			else:
 				self.timer = 0
 			if randint(0,5) == 0 and Smoke.smokeCount < 30:
-				Smoke(self.pos, None, (200,0,0,50))
+				Smoke(self.pos, None, (200,0,0))
 			self.stable = False
 			if self.timer == 50:
 				self.bombing = True
@@ -5033,7 +5046,7 @@ class Acid(PhysObj):
 					self.damageCooldown = 30
 		self.inGround = False
 		if randint(0,50) < 1:
-			Smoke(self.pos, color=(200,255,200,100))
+			Smoke(self.pos, color=(200,255,200))
 		gameDistable()
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius+1)
@@ -7719,7 +7732,7 @@ def lstepper():
 def testerFunc():
 	mouse = Vector(mousePos[0]/scalingFactor + camPos.x, mousePos[1]/scalingFactor + camPos.y)
 	# BackGround._bg.lightningStrike(mouse)
-	TimeManager._tm.timeRemaining(1)
+	# TimeManager._tm.timeRemaining(1)
 
 ################################################################################ State machine
 if True:
@@ -8238,12 +8251,14 @@ if __name__ == "__main__":
 				camTrack = Camera(camPos + Vector(winWidth, winHeight)/2 + scroll)
 		
 		# handle scale:
+		oldSize = (winWidth, winHeight)
 		winWidth += (1280 / scalingFactor - winWidth) * 0.2
 		winHeight += (720 / scalingFactor - (winHeight)) * 0.2
 		winWidth = int(winWidth)
 		winHeight = int(winHeight)
-			
-		win = pygame.Surface((winWidth, winHeight))
+		
+		if oldSize != (winWidth, winHeight):
+			win = pygame.Surface((winWidth, winHeight))
 		
 		# handle position:
 		if camTrack:
@@ -8309,12 +8324,12 @@ if __name__ == "__main__":
 		for f in Game._game.nonPhys: f.draw()
 		bg.drawSecondary()
 		for t in Toast._toasts: t.draw()
-
+		
 		if Game._game.darkness and darkMask: win.blit(darkMask, (-int(camPos.x), -int(camPos.y)))
 		
 		if Game._game.gameMode == TERMINATOR and victim and victim.alive: drawTarget(victim.pos)
 		if Arena._arena: Arena._arena.draw()
-			
+		drawSmoke()
 		# draw shooting indicator
 		if objectUnderControl and state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and objectUnderControl.health > 0:
 			objectUnderControl.drawCursor()

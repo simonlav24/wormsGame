@@ -105,7 +105,7 @@ def generateNoise(width, height):
 				noise_org.set_at((x,y), random_bw(0,128))
 	
 	pygame.draw.circle(noise_org, (255, 255, 255), (randint(5, size[0] - 5), randint(5, size[0] - 5)), size[1] //2 - randint(2,6))
-	surf = pygame.transform.smoothscale(noise_org, (winWidth, winHeight))
+	surf = pygame.transform.smoothscale(noise_org, (width, height))
 	threshold(surf, randint(100, 128))
 	return surf
 
