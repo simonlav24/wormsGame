@@ -1,4 +1,5 @@
 from math import cos, pow, log2
+from msilib.schema import Verb
 import pygame, os, argparse, subprocess, datetime
 from random import randint, choice
 from main import renderMountains, renderCloud, feels
@@ -91,17 +92,23 @@ class Menu:
 	_toggleColor = (0,255,0)
 	_selectedColor = (0,180,0)
 	_unicode = "|"
-	def __init__(self):
+	def __init__(self, pos=None, size=None, name="", orientation=VERTICAL, margin=1, register=False, customSize=None):
 		self.pos = [0,0]
+		if pos:
+			self.pos = pos
 		self.size = [0,0]
-		self.name = ""
+		if size:
+			self.size = size
+		self.name = name
 		self.elements = []
-		self.orientation = VERTICAL
+		self.orientation = orientation
 		self.event = None
-		self.margin = 1 # distance between elements
+		self.margin = margin # distance between elements
 		self.type = MENU_MENU
 		self.menu = None
-		self.customSize = None
+		self.customSize = customSize
+		if register:
+			Menu._reg.append(self)
 	def addElement(self, newElement):
 		newElement.menu = self
 		self.elements.append(newElement)
@@ -169,7 +176,47 @@ class Menu:
 	def draw(self):
 		for element in self.elements:
 			element.draw()
-		# pygame.draw.rect(win, (255,255,255), (self.pos, self.size), 1)
+	def insert(self, type=MENU_BUTTON, key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
+					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText=""):
+		if type == MENU_BUTTON:
+			b = MenuElementButton()
+		elif type == MENU_TOGGLE:
+			b = MenuElementToggle()
+		elif type == MENU_COMBOS:
+			b = MenuElementComboSwitch()
+			if items:
+				b.setItems(items)
+		elif type == MENU_UPDOWN:
+			b = MenuElementUpDown()
+			if stepSize:
+				b.stepSize = stepSize
+			b.limitMin = limitMin
+			b.limitMax = limitMax
+			b.limMin = limMin
+			b.limMax = limMax
+			if values:
+				b.values = values
+			b.showValue = showValue
+		elif type == MENU_INPUT:
+			b = MenuElementInput()
+			b.inputText = inputText
+		elif type == MENU_IMAGE:
+			b = MenuElementImage()
+			if image:
+				b.setImage(image)
+		elif type == MENU_MENU:
+			b = Menu()
+		elif type == MENU_TEXT:
+			b = MenuElementText()
+
+		b.key = key
+		b.value = value
+		if text:
+			b.renderSurf(text)
+		if customSize:
+			b.customSize = customSize
+		self.addElement(b)
+		return b
 
 class MenuElement:
 	def __init__(self):
@@ -500,205 +547,80 @@ def handleEvents(event):
 
 def initializeMenuOptions():
 	global picture
-	mainMenu = Menu()
-	mainMenu.name = "menu"
-	Menu._reg.append(mainMenu)
-	mainMenu.size = [winWidth - 80, 160]
-	mainMenu.pos = [40, 40]
+	mainMenu = Menu(name="menu", pos=[40,40], size=[winWidth - 80, 160], register=True)
+	mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 	
-	playButton = MenuElementButton()
-	playButton.key = "play"
-	playButton.renderSurf("play")
-	playButton.customSize = 16
-	mainMenu.addElement(playButton)
+	optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
 	
-	optionsMenu = Menu()
-	optionsMenu.name = "options"
-	optionsMenu.orientation = HORIZONTAL
-	
-	##### OPTIONS MENU
-	menu = Menu()
-	menu.name = "options"
+	# options vertical sub menu
+	optionsMenu = Menu(name="options")
 
-	subMode = Menu()
-	subMode.orientation = HORIZONTAL
+	subMode = Menu(orientation=HORIZONTAL, customSize=15)
+	subMode.insert(MENU_TEXT, text="game mode")
+	subMode.insert(MENU_COMBOS, key="--game_mode", text="battle", items=["battle", "points", "terminator", "targets", "david vs goliath", "ctf", "arena"])
+	optionsMenu.addElement(subMode)
 	
-	text = MenuElementText()
-	text.renderSurf("game mode")
-	subMode.addElement(text)
-	
-	button = MenuElementComboSwitch()
-	button.key = "--game_mode"
-	button.setItems(["battle", "points", "terminator", "targets", "david vs goliath", "ctf", "arena"])
-	subMode.addElement(button)
-	subMode.customSize = 15
-	
-	menu.addElement(subMode)
-	
+	# toggles
 	toggles = [("cool down", "-used", True), ("artifacts", "-art", True), ("closed map", "-closed", False), ("forts", "-f", False), ("digging", "-dig", False), ("darkness", "-dark", False)]
-	
 	for i in range(0, len(toggles) - 1, 2):
 		first = toggles[i]
 		second = toggles[i + 1]
-		subOpt = Menu()
-		subOpt.orientation = HORIZONTAL
-		
-		button = MenuElementToggle()
-		button.key = first[1]
-		button.value = first[2]
-		button.renderSurf(first[0])
-		subOpt.addElement(button)
-		
-		button = MenuElementToggle()
-		button.key = second[1]
-		button.value = second[2]
-		button.renderSurf(second[0])
-		subOpt.addElement(button)
-		subOpt.customSize = 15
-		
-		menu.addElement(subOpt)
+		subOpt = Menu(orientation = HORIZONTAL, customSize = 15)
+		subOpt.insert(MENU_TOGGLE, key=first[1], text=first[0], value=first[2])
+		subOpt.insert(MENU_TOGGLE, key=second[1], text=second[0], value=second[2])
+		optionsMenu.addElement(subOpt)
 	
+	# counters
 	counters = [("worms per team", 8, 1, 8, 1, "-wpt"), ("worm health", 100, 0, 1000, 50, "-ih"), ("packs", 1, 0, 10, 1, "-pm")]
-	
 	for c in counters:
-		subOpt = Menu()
-		subOpt.orientation = HORIZONTAL
-		
-		text = MenuElementText()
-		text.renderSurf(c[0])
-		subOpt.addElement(text)
-		
-		button = MenuElementUpDown()
-		button.value = c[1]
-		button.limitMax = True
-		button.limitMin = True
-		button.limMin = c[2]
-		button.limMax = c[3]
-		button.stepSize = c[4]
-		button.renderSurf(str(button.value))
-		button.key = c[5]
-		subOpt.addElement(button)
-		
-		menu.addElement(subOpt)
+		subOpt = Menu(orientation=HORIZONTAL)
+		subOpt.insert(MENU_TEXT, text=c[0])
+		subOpt.insert(MENU_UPDOWN, key=c[5], value=c[1], text=str(c[1]), limitMax=True, limitMin=True, limMin=c[2], limMax=c[3], stepSize=c[4])		
+		optionsMenu.addElement(subOpt)
 	
 	# random turns
-	subMode = Menu()
-	subMode.orientation = HORIZONTAL
-	
-	text = MenuElementText()
-	text.renderSurf("random turns")
-	subMode.addElement(text)
-	
-	button = MenuElementComboSwitch()
-	button.key = "-random"
-	button.setItems(["none", "in team", "complete"])
-	subMode.addElement(button)
-	
-	menu.addElement(subMode)
+	subMode = Menu(orientation=HORIZONTAL)
+	subMode.insert(MENU_TEXT, text="random turns")
+	subMode.insert(MENU_COMBOS, key="-random", items=["none", "in team", "complete"])	
+	optionsMenu.addElement(subMode)
 	
 	# sudden death
-	subMode = Menu()
-	subMode.orientation = HORIZONTAL
+	subMode = Menu(orientation=HORIZONTAL)
+	subMode.insert(MENU_TOGGLE, key="sudden death toggle", value=True, text="sudden death")
+	subMode.insert(MENU_UPDOWN, key="-sd", value=16, text="16", limitMin=True, limMin=0, customSize=19)
+	subMode.insert(MENU_COMBOS, key="sudden death style", items=["all", "tsunami", "plague"])
+	optionsMenu.addElement(subMode)
 	
-	button = MenuElementToggle()
-	button.key = "sudden death toggle"
-	button.value = True
-	button.renderSurf("sudden death")
-	subMode.addElement(button)
-	
-	button = MenuElementUpDown()
-	button.value = 16
-	button.limitMin = True
-	button.limMin = 0
-	button.renderSurf(str(button.value))
-	button.key = "-sd"
-	button.customSize = 19
-	subMode.addElement(button)
-	
-	button = MenuElementComboSwitch()
-	button.key = "sudden death style"
-	button.setItems(["all", "tsunami", "plague"])
-	subMode.addElement(button)
-	
-	menu.addElement(subMode)
-	
-	# map menu
-	optionsMenu.addElement(menu)
-	
-	mapMenu = Menu()
-	mapMenu.name = "map menu"
-	mapMenu.orientation = VERTICAL
-	
-	picture = MenuElementImage()
-	picture.key = "-map"
-	picture.setImage(choice(maps))
-	mapMenu.addElement(picture)
-	
-	subMap = Menu()
-	subMap.orientation = HORIZONTAL
+	optionsAndPictureMenu.addElement(optionsMenu)
+
+	# map options vertical sub menu
+	mapMenu = Menu(name="map menu", orientation=VERTICAL)
+	picture = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(maps))
 	
 	# map buttons
-	button = MenuElementButton()
-	button.renderSurf("random")
-	button.key = "random_image"
-	subMap.addElement(button)
-	
-	button = MenuElementButton()
-	button.renderSurf("browse")
-	button.key = "browse"
-	subMap.addElement(button)
-	
-	button = MenuElementButton()
-	button.renderSurf("generate")
-	button.key = "generate"
-	subMap.addElement(button)
-	subMap.customSize = 15
-	
+	subMap = Menu(orientation = HORIZONTAL, customSize=15)
+	subMap.insert(MENU_BUTTON, key="random_image", text="random")
+	subMap.insert(MENU_BUTTON, key="browse", text="browse")
+	subMap.insert(MENU_BUTTON, key="generate", text="generate")
+
 	mapMenu.addElement(subMap)
 	
 	# recolor & ratio
-	subMap = Menu()
-	subMap.orientation = HORIZONTAL
-	subMap.customSize = 15
-	
-	button = MenuElementToggle()
-	button.key = "-rg"
-	button.renderSurf("recolor")
-	subMap.addElement(button)
-	
-	text = MenuElementText()
-	text.renderSurf("ratio")
-	subMap.addElement(text)
-	
-	text = MenuElementInput()
-	text.key = "-ratio"
-	text.inputText = "auto"
-	text.renderSurf("auto")
-	subMap.addElement(text)
+	subMap = Menu(orientation = HORIZONTAL, customSize = 15)
+	subMap.insert(MENU_TOGGLE, key="-rg", text="recolor")
+	subMap.insert(MENU_TEXT, text="ratio")
+	subMap.insert(MENU_INPUT, key="-ratio", text="auto", inputText="auto")
 	
 	mapMenu.addElement(subMap)
-	
-	optionsMenu.addElement(mapMenu)
-	
-	mainMenu.addElement(optionsMenu)
+	optionsAndPictureMenu.addElement(mapMenu)
+	mainMenu.addElement(optionsAndPictureMenu)
 	
 	# background feel menu
-	bgMenu = Menu()
-	Menu._reg.append(bgMenu)
-	bgMenu.size = [20, 20]
-	bgMenu.pos = [winWidth - 20, winHeight - 20]
-	
-	button = MenuElementUpDown()
-	button.renderSurf("bg")
-	button.key = "-feel"
-	button.values = [i for i in range(len(feels))]
-	button.value = feelIndex
-	button.showValue = False
-	bgMenu.addElement(button)
+	bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
+	bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
 # setup
 initializeMenuOptions()
-# picture = widgets[0]
 
 bg = BackGround()
 
