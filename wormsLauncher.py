@@ -42,6 +42,8 @@ VERTICAL = 1
 trueFalse = ["-f", "-dig", "-dark", "-used", "-closed", "-warped", "-rg", "-place", "-art"]
 feelIndex = randint(0, len(feels) - 1)
 
+debug = True
+
 class BackGround:
 	def __init__(self):
 		self.feelIndex = feelIndex
@@ -209,8 +211,10 @@ class Menu:
 		elif type == MENU_TEXT:
 			b = MenuElementText()
 
-		b.key = key
-		b.value = value
+		if key != "key":
+			b.key = key
+		if value != "value":
+			b.value = value
 		if text:
 			b.renderSurf(text)
 		if customSize:
@@ -527,7 +531,7 @@ def handleMenuEvents(event):
 				if key == "-ratio" and values[key] == "auto":
 					continue
 				string += key + " " + str(values[key]) + " "
-		# print(string)
+		if debug: print(string)
 		subprocess.Popen(string, shell=True)
 		exit(0)
 
