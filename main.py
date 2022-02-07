@@ -106,13 +106,8 @@ if True:
 # hedgehog that moves around catching worms
 # drop artifact option (shift - tab?)
 
-# tornado drawing and stronger sucking
-# fire nerf to 3
 # winner in launcher and show record
-# arrows outside of map
 # sudden death pick in launcher
-# drill fire effect
-# ring when throwing granade, shell when using guns
 
 class Game:
 	_game = None
@@ -127,7 +122,10 @@ class Game:
 		self.damageThisTurn = 0
 		self.mostDamage = (0,None)
 
-		self.evaluateArgs(argumentsString.split())
+		if argumentsString:
+			self.evaluateArgs(argumentsString.split())
+		else:
+			self.evaluateArgs()
 
 		self.extra = []
 		self.layersCircles = [[],[],[]]
@@ -481,13 +479,14 @@ def parseArgs(arguments=None):
 	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
 	parser.add_argument("-art", "--artifacts", type=bool, nargs='?', const=True, default=False, help="artifacts mode")
 	parser.add_argument("-feel", "--feel_index", default=-1, help="choice of background feel color", type=int)
+	parser.add_argument("-nm", "--no-menu", type=bool, nargs='?', const=True, default=False, help="no main menu")
 	if arguments:
 		args = parser.parse_args(args=arguments)
 	else:
 		args = parser.parse_args()
 
 	return args
-	
+
 def drawLand():
 	if Game._game.mapWidth == 0:
 		return
@@ -1517,6 +1516,7 @@ class Grenade (PhysObj):#2
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 2
 		self.color = (0,100,0)
 		self.damp = 0.4
@@ -1545,6 +1545,7 @@ class Mortar (Grenade):#3
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 2
 		self.color = (0,50,0)
 		self.bounceBeforeDeath = -1
@@ -2154,8 +2155,7 @@ class TNT(PhysObj):#5
 			Blast(self.pos + Vector(-1, -5*(fps*4 - self.timer)/(fps*4) - 4), randint(3,6), 150)
 
 def fireShotgun(start, direction, power=15):#6
-	hit = False
-
+	GunShell(start + Vector(0, -4))
 	for t in range(5,500):
 		testPos = start + direction * t
 		Game._game.addExtra(testPos, (255, 204, 102), 3)
@@ -2185,6 +2185,7 @@ class StickyBomb (Grenade):#9
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 2
 		self.color = (117,47,7)
 		self.bounceBeforeDeath = -1
@@ -2367,6 +2368,7 @@ class GasGrenade(Grenade):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 2
 		self.color = (113,117,41)
 		self.bounceBeforeDeath = -1
@@ -2600,6 +2602,7 @@ class HolyGrenade(Grenade):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 3
 		self.color = (230, 230, 0)
 		self.damp = 0.5
@@ -3116,6 +3119,7 @@ class ElectricGrenade(PhysObj):
 		PhysObj._reg.insert(0,self)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 2
 		self.color = (120, 230, 230)
 		self.damp = 0.525
@@ -3317,6 +3321,7 @@ class VortexGrenade(Grenade):
 		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 3
 		self.color = (25, 102, 102)
 		self.damp = 0.5
@@ -3496,10 +3501,14 @@ class LongBow:
 		self.triangle = [Vector(0,3), Vector(6,0), Vector(0,-3)]
 		for vec in self.triangle:
 			vec.rotate(self.direction.getAngle())
+		self.timer = 0
 	def destroy(self):
 		Game._game.nonPhys.remove(self)
 		del self
 	def step(self):
+		self.timer += 1
+		if self.timer >= fps * 3:
+			self.vel.y += Game._game.globalGravity
 		if not self.stuck:
 			ppos = self.pos + self.vel
 			iterations = 15
@@ -3526,11 +3535,16 @@ class LongBow:
 						self.destroy()
 						return
 				# check Game._game.gameMap collision
-				if not isOnMap(testPos.vec2tupint()):
-					Game._game.nonPhys.remove(self)
+				if isOnMap(testPos.vec2tupint()):
+					if mapGetAt(testPos.vec2tupint()) == GRD:
+						self.stuck = vectorCopy(testPos)
+				if self.pos.y < 0:
+					self.destroy()
 					return
-				if Game._game.gameMap.get_at(testPos.vec2tupint()) == GRD:
-					self.stuck = vectorCopy(testPos)
+				if self.pos.y > Game._game.mapHeight - Water.level:
+					splash(self.pos, self.vel)
+					self.destroy()
+					return
 			self.pos = ppos
 		if self.stuck:
 			self.stamp()
@@ -3689,6 +3703,7 @@ class ElectroBoom(PhysObj):
 		PhysObj._reg.insert(0,self)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1)
 		self.radius = 2
 		self.color = (120, 230, 230)
 		self.damp = 0.6
@@ -5722,6 +5737,7 @@ class Icicle(LongBow):
 		self.ignore = None
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blitWeaponSprite(self.surf, (0,0), "icicle")
+		self.timer = 0
 	def secondaryStep(self):
 		if randint(0,5) == 0:
 			Frost(self.pos + vectorUnitRandom() * 3)
@@ -5817,6 +5833,7 @@ class FireBall(LongBow):
 		self.ignore = None
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blitWeaponSprite(self.surf, (0,0), "fire ball")
+		self.timer = 0
 	def secondaryStep(self):
 		if randint(0,2) == 0:
 			Fire(self.pos)
@@ -5846,7 +5863,8 @@ class Tornado:
 		self.pos = Game._game.objectUnderControl.pos + Vector(Game._game.objectUnderControl.radius + self.width / 2, 0) * Game._game.objectUnderControl.facing
 		self.facing = Game._game.objectUnderControl.facing
 		Game._game.nonPhys.append(self)
-		self.points = [Vector(0, 10 * i) for i in range(50)]
+		amount = Game._game.mapHeight // 10
+		self.points = [Vector(0, 10 * i) for i in range(amount)]
 		self.swirles = []
 		self.sizes = [self.width + randint(0,20) for i in self.points]
 		for point in self.points:
@@ -5870,8 +5888,8 @@ class Tornado:
 		for obj in PhysObj._reg:
 			if obj.pos.x > rect[0][0] and obj.pos.x <= rect[0][0] + rect[1][0]:
 				if obj.vel.y > -2:
-					obj.acc.y += -0.4
-				obj.acc.x += 0.4 * sin(self.timer/3)
+					obj.acc.y += -0.5
+				obj.acc.x += 0.5 * sin(self.timer/6)
 		if self.timer >= fps * 10 and len(self.swirles) > 0:
 			self.swirles.pop(-1)
 			if len(self.swirles) == 0:
@@ -5915,6 +5933,33 @@ class Avatar(PhysObj):
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 	def comment(self):
 		Commentator._com.que.append(("", ("who is the next avatar?", ""), Game._game.HUDColor))
+
+class GunShell(PhysObj):
+	def __init__(self, pos, vel=None, index=0):
+		self.initialize()
+		self.pos = pos
+		self.vel = Vector(-uniform(1,2.5) * Game._game.objectUnderControl.facing, uniform(-8,-5))
+		if vel:
+			self.vel = vel
+		self.radius = 2
+		self.bounceBeforeDeath = 4
+		self.index = index
+		self.damp = 0.2
+		if index == 0:
+			self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+			self.surf.blit(sprites, (0,0), (16,112,16,16))
+		self.angle = 0
+	def applyForce(self):
+		self.acc.y += Game._game.globalGravity * 2.5
+	def secondaryStep(self):
+		self.angle -= self.vel.x*4
+	def draw(self):
+		if self.index == 0:
+			angle = 45 * round(self.angle / 45)
+			surf = pygame.transform.rotate(self.surf, angle)
+			win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+		if self.index == 1:
+			pygame.draw.circle(win, (151,87,15), point2world(self.pos), 3, 1)
 
 ################################################################################ Weapons setup
 
@@ -6419,7 +6464,7 @@ def fire(weapon = None):
 	elif weapon == "fire ball":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 4
+			Game._game.shotCount = 3
 		w = FireBall(weaponOrigin + weaponDir * 5, weaponDir) # fire
 		w.ignore = Game._game.objectUnderControl
 		Game._game.shotCount -= 1
@@ -8229,6 +8274,8 @@ def GameMain(gameParameters=None):
 	pygame.quit()
 
 if __name__ == "__main__":
-	gameParameters = mainMenu()
+	args = parseArgs()
+
+	gameParameters = mainMenu(args)
 
 	GameMain(gameParameters)

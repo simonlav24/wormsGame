@@ -54,7 +54,6 @@ feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
 
 trueFalse = ["-f", "-dig", "-dark", "-used", "-closed", "-warped", "-rg", "-place", "-art"]
 feelIndex = randint(0, len(feels) - 1)
-
 debug = False
 
 def perlinNoise1D(count, seed, octaves, bias):
@@ -150,6 +149,8 @@ class BackGround:
 
 class MainMenu:
 	_mm = None
+	_picture = None
+	_maps = None
 	def __init__(self):
 		self.gameParameters = None
 		self.run = True
@@ -623,15 +624,15 @@ def handleMenuEvents(event):
 	key = event.key
 	# print(event.key, event.value)
 	if key == "random_image":
-		path = choice(maps)
-		picture.setImage(path)
+		path = choice(MainMenu._maps)
+		MainMenu._picture.setImage(path)
 	if key == "-feel":
 		bg.feelIndex = event.value
 		bg.recreate()
 	if key == "browse":
 		filepath = browseFile()
 		if filepath:
-			picture.setImage(filepath)
+			MainMenu._picture.setImage(filepath)
 	if key == "generate":
 		# mapChoice = subprocess.check_output("python ./perlinNoise.py -d").decode('utf-8')[:-2]
 		width, height = 800, 300
@@ -641,7 +642,7 @@ def handleMenuEvents(event):
 			os.mkdir("wormsMaps/PerlinMaps")
 		imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
 		pygame.image.save(noise, imageString)
-		picture.setImage(imageString)
+		MainMenu._picture.setImage(imageString)
 	if key == "play":
 		MenuAnimator(Menu._reg[0], Vector(0, -winHeight), True, playOnPress)
 
@@ -689,7 +690,7 @@ def handleEvents(event):
 		Menu._unicode += event.unicode
 		Menu._unicode += "|"
 
-def initializeMenuOptions(picturePointer):
+def initializeMenuOptions():
 	mainMenu = Menu(name="menu", pos=[40,40], size=[winWidth - 80, 160], register=True)
 	mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 	
@@ -738,8 +739,7 @@ def initializeMenuOptions(picturePointer):
 
 	# map options vertical sub menu
 	mapMenu = Menu(name="map menu", orientation=VERTICAL)
-	maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
-	picturePointer = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(maps))
+	MainMenu._picture = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(MainMenu._maps))
 	
 	# map buttons
 	subMap = Menu(orientation = HORIZONTAL, customSize=15)
@@ -763,10 +763,12 @@ def initializeMenuOptions(picturePointer):
 	bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
 	bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
-def mainMenu():
+def mainMenu(args):
+	if args.no_menu:
+		return
 	MainMenu()
-	picture = None
-	initializeMenuOptions(picture)
+	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
+	initializeMenuOptions()
 
 	bg = BackGround()
 
