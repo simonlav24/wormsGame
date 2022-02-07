@@ -1,8 +1,7 @@
-from math import cos, pow, log2
+from math import exp
 from msilib.schema import Verb
 import pygame, os, argparse, subprocess, datetime
-from random import randint, choice
-from main import renderMountains, renderCloud, feels
+from random import randint, choice, uniform
 from perlinNoise import generateNoise
 from vector import *
 import tkinter
@@ -39,16 +38,94 @@ MENU_INPUT	= 8
 HORIZONTAL = 0
 VERTICAL = 1
 
+# color feel 0:up 1:down 2:mountfar 3:mountclose
+feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
+		 [(122, 196, 233), (199, 233, 251), (116, 208, 186), (100, 173, 133)],
+		 [(110, 109, 166), (174, 95, 124), (68, 55, 101), (121, 93, 142)],
+		 [(35, 150, 197), (248, 182, 130), (165, 97, 62), (227, 150, 104)],
+		 [(121, 135, 174), (195, 190, 186), (101, 136, 174), (72, 113, 133)],
+		 [(68, 19, 136), (160, 100, 170), (63, 49, 124), (45, 29, 78)],
+		 [(40,40,30), (62, 19, 8), (20,20,26), (56, 41, 28)],
+		 [(0,38,95), (23, 199, 248), (2,113,194), (0, 66, 153)],
+		 [(252,255,186), (248, 243, 237), (165,176,194), (64, 97, 138)],
+		 [(37,145,184), (232, 213, 155), (85,179,191), (16, 160, 187)],
+		 [(246,153,121), (255, 205, 187), (252,117,92), (196, 78, 63)]
+		 ]
+
 trueFalse = ["-f", "-dig", "-dark", "-used", "-closed", "-warped", "-rg", "-place", "-art"]
 feelIndex = randint(0, len(feels) - 1)
 
-debug = True
+debug = False
+
+def perlinNoise1D(count, seed, octaves, bias):
+	output = []
+	for x in range(count):
+		noise = 0.0
+		scaleAcc = 0.0
+		scale = 1.0
+		
+		for o in range(octaves):
+			pitch = count >> o
+			sample1 = (x // pitch) * pitch
+			sample2 = (sample1 + pitch) % count
+			blend = (x - sample1) / pitch
+			sample = (1 - blend) * seed[int(sample1)] + blend * seed[int(sample2)]
+			scaleAcc += scale
+			noise += sample * scale
+			scale = scale / bias
+		output.append(noise / scaleAcc)
+	return output
+
+def renderMountains(dims, color):
+	mount = pygame.Surface(dims, pygame.SRCALPHA)
+	mount.fill((0,0,0,0))
+	
+	noiseSeed = []
+	
+	for i in range(dims[0]):
+		noiseSeed.append(uniform(0,1))
+	noiseSeed[0] = 0.5
+	surface = perlinNoise1D(dims[0], noiseSeed, 7, 2) # 8 , 2.0
+	
+	for x in range(0,dims[0]):
+		for y in range(0,dims[1]):
+			if y >= surface[x] * dims[1]:
+				mount.set_at((x,y), color)
+
+	return mount
+
+def renderCloud(colors=[(224, 233, 232), (192, 204, 220)]):
+	c1 = colors[0]
+	c2 = colors[1]
+	surf = pygame.Surface((170, 70), pygame.SRCALPHA)
+	circles = []
+	leng = randint(15,30)
+	space = 5
+	gpos = (20, 40) 
+	for i in range(leng):
+		pos = Vector(gpos[0] + i * space, gpos[1]) + vectorUnitRandom() * uniform(0, 10)
+		radius = max(20 * (exp(-(1/(5*leng)) * ((pos[0]-gpos[0])/space -leng/2)**2)), 5) * uniform(0.8,1.2)
+		circles.append((pos, radius))
+	circles.sort(key=lambda x: x[0][0])
+	for c in circles:
+		pygame.draw.circle(surf, c2, c[0], c[1])
+	for c in circles:
+		pygame.draw.circle(surf, c1, c[0] - Vector(1,1) * 0.7 * 0.2 * c[1], c[1] * 0.8)
+	for i in range(0,len(circles),int(len(circles)/4)):
+		pygame.draw.circle(surf, c2, circles[i][0], circles[i][1])
+	for i in range(0,len(circles),int(len(circles)/8)):
+		pygame.draw.circle(surf, c1, circles[i][0] - Vector(1,1) * 0.8 * 0.2 * circles[i][1], circles[i][1] * 0.8)
+	
+	return surf
 
 class BackGround:
+	_bg = None
 	def __init__(self):
+		BackGround._bg = self
 		self.feelIndex = feelIndex
 		self.recreate()
 		self.cloudsPos = [i * (winWidth + 170)/3 for i in range(3)]
+		self.animationStep = 0 # in
 	def recreate(self):
 		feel = feels[self.feelIndex]
 		self.imageMountain = renderMountains((180, 110), feel[3])
@@ -70,6 +147,26 @@ class BackGround:
 			if self.cloudsPos[i] > winWidth:
 				self.cloudsPos[i] = -170
 			win.blit(c, (self.cloudsPos[i] ,winHeight // 2))
+
+class MainMenu:
+	_mm = None
+	def __init__(self):
+		self.gameParameters = None
+		self.run = True
+		MainMenu._mm = self
+
+def grabMapsFrom(paths):
+	maps = []
+	for path in paths:
+		if not os.path.isdir(path):
+			continue
+		for imageFile in os.listdir(path):
+			if imageFile[-4:] != ".png":
+				continue
+			string = path + "/" + imageFile
+			string = os.path.abspath(string)
+			maps.append(string)
+	return maps
 
 def browseFile():
 	root = tkinter.Tk()
@@ -468,17 +565,59 @@ class MenuElementInput(MenuElementButton):
 			self.selected = False
 		return None
 
-def grabMapsFrom(path, maps):
-	for imageFile in os.listdir(path):
-		if imageFile[-4:] != ".png":
-			continue
-		string = path + "/" + imageFile
-		maps.append(string)
-
-maps = []
-grabMapsFrom('wormsMaps', maps)
-if os.path.exists('wormsMaps/moreMaps'):
-	grabMapsFrom('wormsMaps/moreMaps', maps)
+class MenuAnimator:
+	_reg = []
+	def __init__(self, menu, pos, out=False, trigger=None, args=None):
+		MenuAnimator._reg.append(self)
+		self.elementList = []
+		self.getElementList(menu)
+		self.firstPositions = []
+		self.finalPositions = []
+		for element in self.elementList:
+			if not out:
+				self.finalPositions.append(tup2vec(element.pos))
+				self.firstPositions.append(tup2vec(element.pos) + pos)
+			else:
+				self.finalPositions.append(tup2vec(element.pos) + pos)
+				self.firstPositions.append(tup2vec(element.pos))
+		self.timer = 0
+		self.fullTime = fps * 1
+		self.out = out
+		self.trigger = trigger
+		self.args = args
+	def easeIn(self, t):
+		return t * t
+	def easeOut(self, t):
+		return 1 - (1 - t) * (1 - t)
+	def step(self):
+		if not self.out:
+			ease = self.easeOut(self.timer / self.fullTime)
+		else:
+			ease = self.easeIn(self.timer / self.fullTime)
+		for i, element in enumerate(self.elementList):
+			element.pos = tup2vec(self.finalPositions[i]) * ease + (1 - ease) * tup2vec(self.firstPositions[i])
+		self.timer += 1
+		# print(ease)
+		if self.timer > self.fullTime:
+			self.finish()
+	def finish(self):
+		for i, element in enumerate(self.elementList):
+			element.pos = self.finalPositions[i]
+		MenuAnimator._reg.remove(self)
+		if self.trigger:
+			if self.args:
+				self.trigger(*self.args)
+			else:
+				self.trigger()
+		
+	def getElementList(self, menu):
+		# get all element of a list recursivly if the element is menu
+		# return a list of element
+		for element in menu.elements:
+			if element.type == MENU_MENU:
+				self.getElementList(element)
+			else:
+				self.elementList.append(element)
 
 def handleMenuEvents(event):
 	key = event.key
@@ -504,38 +643,39 @@ def handleMenuEvents(event):
 		pygame.image.save(noise, imageString)
 		picture.setImage(imageString)
 	if key == "play":
-		values = evaluateMenuForm()
-		string = "main.py "
-		for key in values.keys():
-			if key[0] == "-":
-				if key == "--game_mode":
-					modeDict = {"battle" : 0, "points" : 1, "terminator" : 2, "targets" : 3, "david vs goliath" : 4, "ctf" : 5, "arena" : 6}
-					string += key + " " + str(modeDict[values[key]]) + " "
-					continue
-				if key in trueFalse:
-					if values[key]:
-						string += key + " "
-					continue
-				if key == "-random":
-					if values[key] == "none":
-						continue
-					string += key + " "
-					if values[key] == "in team":
-						string += "2" + " "
-					else:
-						string += "1" + " "
-					continue
-				if key == "-map":
-					string += key + " " + values[key] + " "
-					continue
-				if key == "-ratio" and values[key] == "auto":
-					continue
-				string += key + " " + str(values[key]) + " "
-		if debug: print(string)
-		subprocess.Popen(string, shell=True)
-		exit(0)
+		MenuAnimator(Menu._reg[0], Vector(0, -winHeight), True, playOnPress)
 
-picture = None
+def playOnPress():
+	values = evaluateMenuForm()
+	string = ""#"main.py "
+	for key in values.keys():
+		if key[0] == "-":
+			if key == "--game_mode":
+				modeDict = {"battle" : 0, "points" : 1, "terminator" : 2, "targets" : 3, "david vs goliath" : 4, "ctf" : 5, "arena" : 6}
+				string += key + " " + str(modeDict[values[key]]) + " "
+				continue
+			if key in trueFalse:
+				if values[key]:
+					string += key + " "
+				continue
+			if key == "-random":
+				if values[key] == "none":
+					continue
+				string += key + " "
+				if values[key] == "in team":
+					string += "2" + " "
+				else:
+					string += "1" + " "
+				continue
+			if key == "-map":
+				string += key + " " + values[key] + " "
+				continue
+			if key == "-ratio" and values[key] == "auto":
+				continue
+			string += key + " " + str(values[key]) + " "
+	if debug: print(string)
+	MainMenu._mm.gameParameters = string
+	MainMenu._mm.run = False
 
 def handleEvents(event):
 	if event.type == pygame.MOUSEBUTTONDOWN:
@@ -549,8 +689,7 @@ def handleEvents(event):
 		Menu._unicode += event.unicode
 		Menu._unicode += "|"
 
-def initializeMenuOptions():
-	global picture
+def initializeMenuOptions(picturePointer):
 	mainMenu = Menu(name="menu", pos=[40,40], size=[winWidth - 80, 160], register=True)
 	mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 	
@@ -599,7 +738,8 @@ def initializeMenuOptions():
 
 	# map options vertical sub menu
 	mapMenu = Menu(name="map menu", orientation=VERTICAL)
-	picture = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(maps))
+	maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
+	picturePointer = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(maps))
 	
 	# map buttons
 	subMap = Menu(orientation = HORIZONTAL, customSize=15)
@@ -623,35 +763,39 @@ def initializeMenuOptions():
 	bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
 	bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
-# setup
-initializeMenuOptions()
+def mainMenu():
+	MainMenu()
+	picture = None
+	initializeMenuOptions(picture)
 
-bg = BackGround()
+	bg = BackGround()
 
-### main loop
+	MenuAnimator(Menu._reg[0], Vector(0, winHeight))
 
-run = True
-while run:
-	for event in pygame.event.get():
-		handleEvents(event)
-		if event.type == pygame.QUIT:
-			run = False
-	keys = pygame.key.get_pressed()
-	if keys[pygame.K_ESCAPE]:
-		run = False
+	while MainMenu._mm.run:
+		for event in pygame.event.get():
+			handleEvents(event)
+			if event.type == pygame.QUIT:
+				MainMenu._mm.run = False
+		keys = pygame.key.get_pressed()
+		if keys[pygame.K_ESCAPE]:
+			MainMenu._mm.run = False
+
+		# step
+		for menu in Menu._reg:
+			menu.step()
+
+		for animation in MenuAnimator._reg:
+			animation.step()
+
+		# draw
+		bg.draw()
+
+		for menu in Menu._reg:
+			menu.draw()
+
+		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
+		fpsClock.tick(fps)
+		pygame.display.update()
 	
-	# step
-	for menu in Menu._reg:
-		menu.step()
-
-	# draw
-	bg.draw()
-	
-	for menu in Menu._reg:
-		menu.draw()
-
-	screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-	pygame.display.update()
-	fpsClock.tick()
-  
-pygame.quit()
+	return MainMenu._mm.gameParameters

@@ -1,6 +1,7 @@
 from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fabs
 from random import shuffle ,randint, uniform, choice
 from vector import *
+from mainMenu import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu
 from pygame import gfxdraw
 import pygame
 import argparse
@@ -115,7 +116,7 @@ if True:
 
 class Game:
 	_game = None
-	def __init__(self):
+	def __init__(self, argumentsString=None):
 		Game._game = self
 
 		self.initiateGameSettings()
@@ -126,7 +127,7 @@ class Game:
 		self.damageThisTurn = 0
 		self.mostDamage = (0,None)
 
-		self.evaluateArgs()
+		self.evaluateArgs(argumentsString.split())
 
 		self.extra = []
 		self.layersCircles = [[],[],[]]
@@ -158,7 +159,6 @@ class Game:
 		self.playerControlPlacing = False
 		self.playerShootAble = False
 		self.gameStableCounter = 0
-
 	def createMapSurfaces(self, dims):
 		"""
 		create all map related surfaces
@@ -176,18 +176,6 @@ class Game:
 		self.groundSec = pygame.Surface((self.mapWidth, self.mapHeight)).convert_alpha()
 		if self.darkness:
 			self.darkMask = pygame.Surface((self.mapWidth, self.mapHeight)).convert_alpha()
-	def grabMapsFrom(self, paths):
-		maps = []
-		for path in paths:
-			if not os.path.isdir(path):
-				continue
-			for imageFile in os.listdir(path):
-				if imageFile[-4:] != ".png":
-					continue
-				string = path + "/" + imageFile
-				string = os.path.abspath(string)
-				maps.append(string)
-		return maps
 	def hardRatioValue(self, path):
 		first = path.find("big")
 		if first != -1:
@@ -197,7 +185,7 @@ class Game:
 		return 512
 	def createWorld(self):
 		# choose map
-		maps = self.grabMapsFrom(["wormsMaps", "wormsMaps/moreMaps"])
+		maps = grabMapsFrom(["wormsMaps", "wormsMaps/moreMaps"])
 
 		imageChoice = [None, None] # path, ratio
 		if self.args.map_choice == "":
@@ -399,8 +387,13 @@ class Game:
 		pos = pygame.mouse.get_pos()
 		pos = Vector(pos[0]/scalingFactor , pos[1]/scalingFactor )
 		win.blit(surf, (int(pos[0] - surf.get_width()/2), int(pos[1] - surf.get_height()/2)))
-	def evaluateArgs(self):
-		args = parseArgs()
+	# def evaluateParameters(self, parameters):
+	# 	print("evaluate:" + str(parameters))
+		
+	# 	parseArgs(parameters.split())
+
+	def evaluateArgs(self, argumentsString=None):
+		args = parseArgs(argumentsString)
 		self.mapChoice = args.map_choice
 		self.gameMode = args.game_mode
 		self.fortsMode = args.forts
@@ -431,7 +424,6 @@ class Game:
 		self.useList.append([pixelFont5.render(string, False, self.HUDColor), string])
 		if len(self.useList) > 4:
 			self.useList.pop(0)
-
 	def addToKillList(self):
 		"""add to kill list if points"""
 		amount = 1
@@ -464,22 +456,8 @@ class Game:
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 		pygame.display.update()
 ################################################################################ Map
-if True:
-	# color feel 0:up 1:down 2:mountfar 3:mountclose
-	feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
-			 [(122, 196, 233), (199, 233, 251), (116, 208, 186), (100, 173, 133)],
-			 [(110, 109, 166), (174, 95, 124), (68, 55, 101), (121, 93, 142)],
-			 [(35, 150, 197), (248, 182, 130), (165, 97, 62), (227, 150, 104)],
-			 [(121, 135, 174), (195, 190, 186), (101, 136, 174), (72, 113, 133)],
-			 [(68, 19, 136), (160, 100, 170), (63, 49, 124), (45, 29, 78)],
-			 [(40,40,30), (62, 19, 8), (20,20,26), (56, 41, 28)],
-			 [(0,38,95), (23, 199, 248), (2,113,194), (0, 66, 153)],
-			 [(252,255,186), (248, 243, 237), (165,176,194), (64, 97, 138)],
-			 [(37,145,184), (232, 213, 155), (85,179,191), (16, 160, 187)],
-			 [(246,153,121), (255, 205, 187), (252,117,92), (196, 78, 63)]
-			 ]
 
-def parseArgs():
+def parseArgs(arguments=None):
 	parser = argparse.ArgumentParser()
 	
 	parser.add_argument("-f", "--forts", type=bool, nargs='?', const=True, default=False, help="Activate forts mode")
@@ -503,7 +481,10 @@ def parseArgs():
 	parser.add_argument("-sdp", "--sudden_death_plague", type=bool, nargs='?', const=True, default=False, help="plague sudden death style")
 	parser.add_argument("-art", "--artifacts", type=bool, nargs='?', const=True, default=False, help="artifacts mode")
 	parser.add_argument("-feel", "--feel_index", default=-1, help="choice of background feel color", type=int)
-	args = parser.parse_args()
+	if arguments:
+		args = parser.parse_args(args=arguments)
+	else:
+		args = parser.parse_args()
 
 	return args
 	
@@ -1015,71 +996,9 @@ def clamp(value, upper, lower):
 	if value < lower:
 		value = lower
 	return value
-
-def renderMountains(dims, color):
-	
-	mount = pygame.Surface(dims, pygame.SRCALPHA)
-	mount.fill((0,0,0,0))
-	
-	noiseSeed = []
-	
-	for i in range(dims[0]):
-		noiseSeed.append(uniform(0,1))
-	noiseSeed[0] = 0.5
-	surface = perlinNoise1D(dims[0], noiseSeed, 7, 2) # 8 , 2.0
-	
-	for x in range(0,dims[0]):
-		for y in range(0,dims[1]):
-			if y >= surface[x] * dims[1]:
-				mount.set_at((x,y), color)
-
-	return mount
 	
 def createLandNoise(dims):
 	pass
-	
-def perlinNoise1D(count, seed, octaves, bias):
-	output = []
-	for x in range(count):
-		noise = 0.0
-		scaleAcc = 0.0
-		scale = 1.0
-		
-		for o in range(octaves):
-			pitch = count >> o
-			sample1 = (x // pitch) * pitch
-			sample2 = (sample1 + pitch) % count
-			blend = (x - sample1) / pitch
-			sample = (1 - blend) * seed[int(sample1)] + blend * seed[int(sample2)]
-			scaleAcc += scale
-			noise += sample * scale
-			scale = scale / bias
-		output.append(noise / scaleAcc)
-	return output
-
-def renderCloud(colors=[(224, 233, 232), (192, 204, 220)]):
-	c1 = colors[0]
-	c2 = colors[1]
-	surf = pygame.Surface((170, 70), pygame.SRCALPHA)
-	circles = []
-	leng = randint(15,30)
-	space = 5
-	gpos = (20, 40) 
-	for i in range(leng):
-		pos = Vector(gpos[0] + i * space, gpos[1]) + vectorUnitRandom() * uniform(0, 10)
-		radius = max(20 * (exp(-(1/(5*leng)) * ((pos[0]-gpos[0])/space -leng/2)**2)), 5) * uniform(0.8,1.2)
-		circles.append((pos, radius))
-	circles.sort(key=lambda x: x[0][0])
-	for c in circles:
-		pygame.draw.circle(surf, c2, c[0], c[1])
-	for c in circles:
-		pygame.draw.circle(surf, c1, c[0] - Vector(1,1) * 0.7 * 0.2 * c[1], c[1] * 0.8)
-	for i in range(0,len(circles),int(len(circles)/4)):
-		pygame.draw.circle(surf, c2, circles[i][0], circles[i][1])
-	for i in range(0,len(circles),int(len(circles)/8)):
-		pygame.draw.circle(surf, c1, circles[i][0] - Vector(1,1) * 0.8 * 0.2 * circles[i][1], circles[i][1] * 0.8)
-	
-	return surf
 
 # sprites
 if True:
@@ -7949,19 +7868,19 @@ def onKeyPressEnter():
 		Game._game.objectUnderControl.vel += Vector(cos(Game._game.objectUnderControl.shootAngle), sin(Game._game.objectUnderControl.shootAngle)) * 3
 		Game._game.objectUnderControl.stable = False
 
-def GameMain():
+def GameMain(gameParameters=None):
 	global winWidth, winHeight, scalingFactor, win
-	game = Game()
-	timeM = TimeManager()
-	weaponM = WeaponManager()
-	teamM = TeamManager()
+	Game(gameParameters)
+	TimeManager()
+	WeaponManager()
+	TeamManager()
 
-	bg = BackGround(Game._game.feelColor, game._game.darkness)
-	hb = HealthBar()
+	BackGround(Game._game.feelColor, Game._game.darkness)
+	HealthBar()
 	
 	damageText = (Game._game.damageThisTurn, pixelFont5.render(str(int(Game._game.damageThisTurn)), False, Game._game.HUDColor))
-	commentator = Commentator()
-	timeTravel = TimeTravel()
+	Commentator()
+	TimeTravel()
 
 	run = True
 	pause = False
@@ -8208,7 +8127,7 @@ def GameMain():
 		
 		# advance timer
 		TimeManager._tm.step()
-		bg.step()
+		BackGround._bg.step()
 		
 		if Arena._arena: Arena._arena.step()
 		
@@ -8220,11 +8139,11 @@ def GameMain():
 		Game._game.actionMove = False
 
 		# draw:
-		bg.draw()
+		BackGround._bg.draw()
 		drawLand()
 		for p in PhysObj._reg: p.draw()
 		for f in Game._game.nonPhys: f.draw()
-		bg.drawSecondary()
+		BackGround._bg.drawSecondary()
 		for t in Toast._toasts: t.draw()
 		
 		if Game._game.darkness and Game._game.darkMask: win.blit(Game._game.darkMask, (-int(Game._game.camPos.x), -int(Game._game.camPos.y)))
@@ -8309,6 +8228,7 @@ def GameMain():
 		
 	pygame.quit()
 
-
 if __name__ == "__main__":
-	GameMain()
+	gameParameters = mainMenu()
+
+	GameMain(gameParameters)
