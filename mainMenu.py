@@ -1,26 +1,11 @@
 from math import exp
-from msilib.schema import Verb
-import pygame, os, argparse, subprocess, datetime
+import pygame, os, datetime
+import globals
 from random import randint, choice, uniform
 from perlinNoise import generateNoise
 from vector import *
 import tkinter
 from tkinter.filedialog import askopenfile 
-
-pygame.init()
-pygame.font.init()
-font1 = pygame.font.Font("fonts\pixelFont.ttf", 5)
-fpsClock = pygame.time.Clock()
-fps = 30
-
-scalingFactor = 3
-winWidth = 1280 // scalingFactor
-winHeight = 720 // scalingFactor
-win = pygame.Surface((winWidth, winHeight))
-
-screenWidth = 1280
-screenHeight = 720
-screen = pygame.display.set_mode((screenWidth,screenHeight))
 
 WHITE = (255,255,255,255)
 BLACK = (0,0,0,255)
@@ -37,6 +22,10 @@ MENU_IMAGE	= 7
 MENU_INPUT	= 8
 HORIZONTAL = 0
 VERTICAL = 1
+
+win = None
+winWidth = 0
+winHeight = 0
 
 # color feel 0:up 1:down 2:mountfar 3:mountclose
 feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
@@ -177,7 +166,7 @@ def browseFile():
 		return file.name
 	
 def mouseInWin():
-	return (pygame.mouse.get_pos()[0] / scalingFactor, pygame.mouse.get_pos()[1] / scalingFactor)
+	return (pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
 
 def evaluateMenuForm():
 	outdict = {}
@@ -202,6 +191,7 @@ class Menu:
 		self.name = name
 		self.elements = []
 		self.orientation = orientation
+		self.focused = True
 		self.event = None
 		self.margin = margin # distance between elements
 		self.type = MENU_MENU
@@ -246,6 +236,8 @@ class Menu:
 			values[element.key] = element.value
 		return values
 	def step(self):
+		if not self.focused:
+			return
 		updated = False
 		event = None
 		for element in self.elements:
@@ -341,7 +333,7 @@ class MenuElement:
 	def renderSurf(self, text=None):
 		if text:
 			self.text = text
-		self.surf = font1.render(self.text, True, WHITE)
+		self.surf = globals.pixelFont5.render(self.text, True, WHITE)
 	def evaluate(self, dic):
 		dic[self.key] = self.value
 	def step(self):
@@ -449,7 +441,7 @@ class MenuElementComboSwitch(MenuElementButton):
 		self.forward = False
 	def setItems(self, strings):
 		for string in strings:
-			surf = font1.render(string, True, WHITE)
+			surf = globals.pixelFont5.render(string, True, WHITE)
 			self.items.append((string, surf))
 		self.value = self.items[self.currentIndex][0]
 	def step(self):
@@ -576,16 +568,21 @@ class MenuAnimator:
 		self.finalPositions = []
 		for element in self.elementList:
 			if not out:
+				# in
 				self.finalPositions.append(tup2vec(element.pos))
 				self.firstPositions.append(tup2vec(element.pos) + pos)
 			else:
+				# out
 				self.finalPositions.append(tup2vec(element.pos) + pos)
 				self.firstPositions.append(tup2vec(element.pos))
 		self.timer = 0
-		self.fullTime = fps * 1
+		self.fullTime = globals.fps * 1
 		self.out = out
 		self.trigger = trigger
 		self.args = args
+		# set first positions
+		for i, element in enumerate(self.elementList):
+			element.pos = tup2vec(self.firstPositions[i])
 	def easeIn(self, t):
 		return t * t
 	def easeOut(self, t):
@@ -627,14 +624,13 @@ def handleMenuEvents(event):
 		path = choice(MainMenu._maps)
 		MainMenu._picture.setImage(path)
 	if key == "-feel":
-		bg.feelIndex = event.value
-		bg.recreate()
+		BackGround._bg.feelIndex = event.value
+		BackGround._bg.recreate()
 	if key == "browse":
 		filepath = browseFile()
 		if filepath:
 			MainMenu._picture.setImage(filepath)
 	if key == "generate":
-		# mapChoice = subprocess.check_output("python ./perlinNoise.py -d").decode('utf-8')[:-2]
 		width, height = 800, 300
 		noise = generateNoise(width, height)
 		x = datetime.datetime.now()
@@ -644,11 +640,13 @@ def handleMenuEvents(event):
 		pygame.image.save(noise, imageString)
 		MainMenu._picture.setImage(imageString)
 	if key == "play":
-		MenuAnimator(Menu._reg[0], Vector(0, -winHeight), True, playOnPress)
-
+		MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, playOnPress)
+	if key == "continue":
+		MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, continueOnPress)
+		
 def playOnPress():
 	values = evaluateMenuForm()
-	string = ""#"main.py "
+	string = ""
 	for key in values.keys():
 		if key[0] == "-":
 			if key == "--game_mode":
@@ -677,6 +675,11 @@ def playOnPress():
 	if debug: print(string)
 	MainMenu._mm.gameParameters = string
 	MainMenu._mm.run = False
+
+def continueOnPress():
+	Menu._reg.clear()
+	initializeMenuOptions()
+	MenuAnimator(Menu._reg[0], Vector(0, winHeight))
 
 def handleEvents(event):
 	if event.type == pygame.MOUSEBUTTONDOWN:
@@ -763,25 +766,43 @@ def initializeMenuOptions():
 	bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
 	bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
-def mainMenu(args):
+def initializeEndGameMenu(parameters):
+	endMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
+	endMenu.insert(MENU_TEXT, text="Game Over")
+	endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
+	endMenu.insert(MENU_TEXT, text="most damage dealt: " + str(parameters["mostDamage"]) + " by " + parameters["damager"])
+	endMenu.insert(MENU_BUTTON, key="continue", text="continue")
+
+def mainMenu(args, fromGameParameters=None, toGameParameters=None):
+	global win, winWidth, winHeight
+	win = globals.win
+	winWidth = globals.winWidth
+	winHeight = globals.winHeight
+
 	if args.no_menu:
 		return
+	BackGround()
 	MainMenu()
 	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
-	initializeMenuOptions()
+	
+	# test:
+	# fromGameParameters = {"winner": "yellow", "damager": "flur", "mostDamage":256}
 
-	bg = BackGround()
-
-	MenuAnimator(Menu._reg[0], Vector(0, winHeight))
+	if fromGameParameters is None:
+		initializeMenuOptions()
+		MenuAnimator(Menu._reg[0], Vector(0, globals.winHeight))
+	else:
+		initializeEndGameMenu(fromGameParameters)
+		MenuAnimator(Menu._reg[0], Vector(0, globals.winHeight))
 
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
 			handleEvents(event)
 			if event.type == pygame.QUIT:
-				MainMenu._mm.run = False
+				globals.exitGame()
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_ESCAPE]:
-			MainMenu._mm.run = False
+			globals.exitGame()
 
 		# step
 		for menu in Menu._reg:
@@ -791,13 +812,15 @@ def mainMenu(args):
 			animation.step()
 
 		# draw
-		bg.draw()
+		BackGround._bg.draw()
 
 		for menu in Menu._reg:
 			menu.draw()
 
-		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-		fpsClock.tick(fps)
+		globals.screen.blit(pygame.transform.scale(win, globals.screen.get_rect().size), (0,0))
+		globals.fpsClock.tick(globals.fps)
 		pygame.display.update()
 	
-	return MainMenu._mm.gameParameters
+	Menu._reg.clear()
+	toGameParameters[0] = MainMenu._mm.gameParameters
+	return

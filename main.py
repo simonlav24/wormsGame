@@ -1,32 +1,29 @@
 from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fabs
 from random import shuffle ,randint, uniform, choice
 from vector import *
+import globals
 from mainMenu import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu
 from pygame import gfxdraw
 import pygame
 import argparse
 import xml.etree.ElementTree as ET
 import os
-import subprocess
-pygame.init()
 
-if True:
-	fpsClock = pygame.time.Clock()
-	fps = 30
-	
-	pygame.font.init()
-	pixelFont5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
-	pixelFont10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
-	
-	screenWidth = 1280
-	screenHeight = 720
-	scalingFactor = 3
-	winWidth = int(screenWidth / scalingFactor)
-	winHeight = int(screenHeight / scalingFactor)
-	win = pygame.Surface((winWidth, winHeight))
-	
-	pygame.display.set_caption("Simon's Worms")
-	screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
+def getGlobals():
+	global fpsClock, fps, pixelFont5, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
+	fpsClock = globals.fpsClock
+	fps = globals.fps
+	pixelFont5 = globals.pixelFont5
+	pixelFont10 = globals.pixelFont10
+	screenWidth = globals.screenWidth
+	screenHeight = globals.screenHeight
+	scalingFactor = globals.scalingFactor
+	winWidth = globals.winWidth
+	winHeight = globals.winHeight
+	win = globals.win
+	screen = globals.screen
+globals.globalsInit()
+getGlobals()
 
 # constants
 if True:
@@ -106,7 +103,8 @@ if True:
 # hedgehog that moves around catching worms
 # drop artifact option (shift - tab?)
 
-# winner in launcher and show record
+# switch feel color bug in main menu
+# winner show and back to main menu and show record
 # sudden death pick in launcher
 
 class Game:
@@ -157,6 +155,15 @@ class Game:
 		self.playerControlPlacing = False
 		self.playerShootAble = False
 		self.gameStableCounter = 0
+
+		self.endGameDict = None
+
+		self.imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
+		self.imageHole = pygame.image.load("assets/hole.png").convert_alpha()
+		self.sprites = pygame.image.load("assets/sprites.png").convert_alpha()
+		self.imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
+		self.imageMjolnir.blit(self.sprites, (0,0), (100, 32, 24, 31))
+		self.weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
 	def createMapSurfaces(self, dims):
 		"""
 		create all map related surfaces
@@ -370,7 +377,7 @@ class Game:
 	def girder(self, pos):
 		surf = pygame.Surface((self.girderSize, 10)).convert_alpha()
 		for i in range(self.girderSize // 16 + 1):
-			surf.blit(sprites, (i * 16, 0), (64,80,16,16))
+			surf.blit(Game._game.sprites, (i * 16, 0), (64,80,16,16))
 		surfGround = pygame.transform.rotate(surf, self.girderAngle)
 		self.ground.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
 		surf.fill(GRD)
@@ -379,7 +386,7 @@ class Game:
 	def drawGirderHint(self):
 		surf = pygame.Surface((self.girderSize, 10)).convert_alpha()
 		for i in range(self.girderSize // 16 + 1):
-			surf.blit(sprites, (i * 16, 0), (64,80,16,16))
+			surf.blit(Game._game.sprites, (i * 16, 0), (64,80,16,16))
 		surf.set_alpha(100)
 		surf = pygame.transform.rotate(surf, self.girderAngle)
 		pos = pygame.mouse.get_pos()
@@ -547,7 +554,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 			Earthquake(int(0.3 * fps), True, min(0.5, 0.02 * radius - 0.3))
 		
 	# draw burn:
-	stain(pos, imageHole, (int(radius*4),int(radius*4)), True)
+	stain(pos, Game._game.imageHole, (int(radius*4),int(radius*4)), True)
 	
 	pygame.draw.circle(Game._game.gameMap, SKY, pos.vec2tupint(), int(radius))
 	pygame.draw.circle(Game._game.ground, SKY, pos.vec2tupint(), int(radius))
@@ -995,25 +1002,22 @@ def clamp(value, upper, lower):
 	if value < lower:
 		value = lower
 	return value
-	
-def createLandNoise(dims):
-	pass
 
-# sprites
-if True:
-	imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
-	imageHole = pygame.image.load("assets/hole.png").convert_alpha()
-	sprites = pygame.image.load("assets/sprites.png").convert_alpha()
-	imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
-	imageMjolnir.blit(sprites, (0,0), (100, 32, 24, 31))
-	weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
+# Game._game.sprites
+# if True:
+# 	Game._game.imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
+# 	Game._game.imageHole = pygame.image.load("assets/hole.png").convert_alpha()
+# 	Game._game.sprites = pygame.image.load("assets/Game._game.sprites.png").convert_alpha()
+# 	Game._game.imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
+# 	Game._game.imageMjolnir.blit(Game._game.sprites, (0,0), (100, 32, 24, 31))
+# 	Game._game.weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
 
 def blitWeaponSprite(dest, pos, weapon):
 	index = WeaponManager._wm.weaponDict[weapon]
 	x = index % 8
 	y = 9 + index // 8
 	rect = (x * 16, y * 16, 16, 16)
-	dest.blit(sprites, pos, rect)
+	dest.blit(Game._game.sprites, pos, rect)
 
 def point2world(point):
 	return (int(point[0]) - int(Game._game.camPos[0]), int(point[1]) - int(Game._game.camPos[1]))
@@ -1372,7 +1376,7 @@ class PhysObj:
 				self.damage(magVel * 1.5 * Game._game.fallDamageMult, 1)
 				# blood
 				if self in PhysObj._worms:
-					stain(self.pos, imageBlood, imageBlood.get_size(), False)
+					stain(self.pos, Game._game.imageBlood, Game._game.imageBlood.get_size(), False)
 			self.stable = True
 			
 			response.normalize()
@@ -1569,7 +1573,7 @@ class Mortar (Grenade):#3
 					k.color = (0,50,0)
 					k.radius = 1.5
 					k.surf.fill((0,0,0,0))
-					k.surf.blit(sprites, (0,0), (0,96,16,16))
+					k.surf.blit(Game._game.sprites, (0,0), (0,96,16,16))
 					if j == 5:
 						Game._game.camTrack = k
 				return
@@ -1583,7 +1587,7 @@ class Mortar (Grenade):#3
 			m.color = (0,50,0)
 			m.radius = 1.5
 			m.surf.fill((0,0,0,0))
-			m.surf.blit(sprites, (0,0), (0,96,16,16))
+			m.surf.blit(Game._game.sprites, (0,0), (0,96,16,16))
 			if i == 0:
 				Game._game.camTrack = m
 
@@ -1649,7 +1653,7 @@ class Worm (PhysObj):
 		self.flagHolder = False
 		self.sleep = False
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (0,0,16,16))
+		self.surf.blit(Game._game.sprites, (0,0), (0,0,16,16))
 		self.surf.blit(self.team.hatSurf, (0,0))
 		self.angle = 0
 		self.stableCount = 0
@@ -1702,7 +1706,7 @@ class Worm (PhysObj):
 	def sicken(self, sickness = 1):
 		self.sick = sickness
 		self.surf.fill((0,0,0,0))
-		self.surf.blit(sprites, (0,0), (16,0,16,16))
+		self.surf.blit(Game._game.sprites, (0,0), (16,0,16,16))
 		self.surf.blit(self.team.hatSurf, (0,0))
 		self.color = (128, 189,66)
 	def heal(self, hp):
@@ -1712,7 +1716,7 @@ class Worm (PhysObj):
 		self.sick = 0
 		self.color = (255, 206, 167)
 		self.surf.fill((0,0,0,0))
-		self.surf.blit(sprites, (0,0), (0,0,16,16))
+		self.surf.blit(Game._game.sprites, (0,0), (0,0,16,16))
 		self.surf.blit(self.team.hatSurf, (0,0))
 	def toggleJetpack(self):
 		self.jetpacking = not self.jetpacking
@@ -1760,7 +1764,7 @@ class Worm (PhysObj):
 			pygame.draw.circle(Game._game.wormCol, GRD, self.pos.vec2tupint(), int(self.radius)+1)
 
 		if self.parachuting:
-			win.blit(sprites, point2world(self.pos - Vector(46,31)//2 + Vector(0,-15)), (80, 64, 46, 31))
+			win.blit(Game._game.sprites, point2world(self.pos - Vector(46,31)//2 + Vector(0,-15)), (80, 64, 46, 31))
 		if self.flagHolder:
 			pygame.draw.line(win, (51, 51, 0), point2world(self.pos), point2world(self.pos + Vector(0, -3 * self.radius)))
 			pygame.draw.rect(win, (220,0,0), (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
@@ -1770,7 +1774,7 @@ class Worm (PhysObj):
 			if self is Game._game.objectUnderControl and WeaponManager._wm.getCategory(WeaponManager._wm.currentWeapon) == CATEGORY_ARTIFACTS:
 				if WeaponManager._wm.currentArtifact() in self.team.artifacts:
 					if WeaponManager._wm.currentArtifact() == MJOLNIR:
-						win.blit(imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(imageMjolnir.get_size())/2))
+						win.blit(Game._game.imageMjolnir, point2world(self.pos + Vector(self.facing * 3, -5) - tup2vec(Game._game.imageMjolnir.get_size())/2))
 
 		# draw worm sprite
 		angle = 45 * int(self.angle / 45)
@@ -1780,7 +1784,7 @@ class Worm (PhysObj):
 			rotated = pygame.transform.flip(rotated, False, True)
 		if self.jetpacking:
 			blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "jet pack")
-			# win.blit(sprites, point2world(self.pos - Vector(8,8)), (48, 96, 16, 16))
+			# win.blit(Game._game.sprites, point2world(self.pos - Vector(8,8)), (48, 96, 16, 16))
 		win.blit(rotated, point2world(self.pos - tup2vec(rotated.get_size())//2))
 		
 		# draw name
@@ -1809,7 +1813,7 @@ class Worm (PhysObj):
 				
 		# draw holding weapon
 		if self is Game._game.objectUnderControl and Game._game.state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
-			weaponSurf = pygame.transform.rotate(pygame.transform.flip(weaponHold, False, self.facing == LEFT), -degrees(self.shootAngle))
+			weaponSurf = pygame.transform.rotate(pygame.transform.flip(Game._game.weaponHold, False, self.facing == LEFT), -degrees(self.shootAngle))
 			win.blit(weaponSurf, point2world(self.pos - tup2vec(weaponSurf.get_size())/2 + Vector(0, 5)))
 	def __str__(self):
 		return self.nameStr
@@ -1824,8 +1828,8 @@ class Worm (PhysObj):
 		self.alive = False
 		self.color = (167,167,167)
 		self.surf.fill((0,0,0,0))
-		self.surf.blit(sprites, (0,0), (32,0,16,16))
-		# self.surf.blit(sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
+		self.surf.blit(Game._game.sprites, (0,0), (32,0,16,16))
+		# self.surf.blit(Game._game.sprites, (0,0), (16 * self.team.hatIndex,0,16,16))
 		self.name = pixelFont5.render(self.nameStr, False, grayen(self.team.color))
 
 		# insert to kill list:
@@ -2171,7 +2175,7 @@ def fireShotgun(start, direction, power=15):#6
 		at = (int(testPos.x), int(testPos.y))
 		if Game._game.gameMap.get_at(at) == GRD or Game._game.wormCol.get_at(at) != (0,0,0) or Game._game.extraCol.get_at(at) != (0,0,0):
 			if Game._game.wormCol.get_at(at) != (0,0,0):
-				stain(testPos, imageBlood, imageBlood.get_size(), False)
+				stain(testPos, Game._game.imageBlood, Game._game.imageBlood.get_size(), False)
 			boom(testPos, power)
 			break
 
@@ -2228,7 +2232,7 @@ class PetrolCan(PhysObj):
 		self.health = 5
 		self.extraCollider = True
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (64, 96, 16, 16))
+		self.surf.blit(Game._game.sprites, (0,0), (64, 96, 16, 16))
 	def deathResponse(self):
 		boom(self.pos, 20)
 		pygame.draw.rect(Game._game.extraCol, SKY, (int(self.pos.x -3),int(self.pos.y -5), 7,10))
@@ -2330,13 +2334,13 @@ class Baseball:
 		if self.timer >= 15:
 			Game._game.nonPhys.remove(self)
 	def draw(self):
-		weaponSurf = pygame.transform.rotate(pygame.transform.flip(weaponHold, False, Game._game.objectUnderControl.facing == LEFT), -degrees(Game._game.objectUnderControl.shootAngle) + 180)
+		weaponSurf = pygame.transform.rotate(pygame.transform.flip(Game._game.weaponHold, False, Game._game.objectUnderControl.facing == LEFT), -degrees(Game._game.objectUnderControl.shootAngle) + 180)
 		win.blit(weaponSurf, point2world(Game._game.objectUnderControl.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
 
 class SickGas:
 	def __init__(self, pos, sickness = 1):
 		Game._game.nonPhys.append(self)
-		self.color = (102, 255, 127, 100)
+		self.color = (102, 255, 127)
 		self.radius = randint(8,18)
 		self.pos = tup2vec(pos)
 		self.acc = Vector(0,0)
@@ -2346,7 +2350,8 @@ class SickGas:
 		self.timeCounter = 0
 		self.sickness = sickness
 	def draw(self):
-		pygame.gfxdraw.filled_circle(win, int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y), self.radius, self.color)
+		# pygame.gfxdraw.filled_circle(win, int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y), self.radius, self.color)
+		Smoke._smoke.append((self.pos, self.radius, self.color))
 	def step(self):
 		self.timeCounter += 1
 		if self.timeCounter % 8 == 0:
@@ -2401,7 +2406,7 @@ class HealthPack(PetrolCan):
 		self.fallAffected = False
 		self.windAffected = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (112, 96, 16, 16))
+		self.surf.blit(Game._game.sprites, (0,0), (112, 96, 16, 16))
 	def draw(self):
 		win.blit(self.surf , point2world(self.pos - tup2vec(self.surf.get_size())/2))
 	def secondaryStep(self):
@@ -2429,7 +2434,7 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.windAffected = 0
 		self.box = choice(["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel", "jet pack", "portal gun", "travel kit", "ender pearls"])
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (96, 96, 16, 16))
+		self.surf.blit(Game._game.sprites, (0,0), (96, 96, 16, 16))
 	def effect(self, worm):
 		if Game._game.unlimitedMode:
 			return
@@ -2462,7 +2467,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 			weaponsInBox .append("mine strike")
 		self.box = choice(weaponsInBox)
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (80, 96, 16, 16))
+		self.surf.blit(Game._game.sprites, (0,0), (80, 96, 16, 16))
 	def effect(self, worm):
 		if Game._game.unlimitedMode:
 			return
@@ -2670,7 +2675,7 @@ class Earthquake:
 	def step(self):
 		if not self.decorative:
 			for obj in PhysObj._reg:
-				if obj == self or obj in Portal._reg:
+				if obj == self:
 					continue
 				if randint(0,5) == 1:
 					obj.vel += Vector(randint(-1,1), -uniform(0,1))
@@ -2805,7 +2810,7 @@ class SentryGun(PhysObj):
 		self.angle = 0
 		self.angle2for = uniform(0, 2*pi)
 		self.surf = pygame.Surface((17, 26), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (80, 32, 17, 26))
+		self.surf.blit(Game._game.sprites, (0,0), (80, 32, 17, 26))
 		self.electrified = False
 		pygame.draw.circle(self.surf, self.teamColor, tup2vec(self.surf.get_size())//2, 2)
 	def fire(self):
@@ -3273,8 +3278,6 @@ class Vortex():
 		
 		if self.inhale:
 			for worm in PhysObj._reg:
-				if worm in Portal._reg:
-					continue
 				if distus(self.pos, worm.pos) < Vortex.vortexRadius * Vortex.vortexRadius:
 					worm.acc += (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
 					if randint(0,20) == 1:
@@ -3284,8 +3287,6 @@ class Vortex():
 						worm.damage(randint(1,8))
 		else:
 			for worm in PhysObj._reg:
-				if worm in Portal._reg:
-					continue
 				if distus(self.pos, worm.pos) < Vortex.vortexRadius * Vortex.vortexRadius:
 					worm.acc -= (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
 			
@@ -3556,7 +3557,7 @@ class LongBow:
 		Game._game.camTrack = worm
 		if self.sleep: worm.sleep = True
 		self.destroy()
-		stain(worm.pos, imageBlood, imageBlood.get_size(), False)
+		stain(worm.pos, Game._game.imageBlood, Game._game.imageBlood.get_size(), False)
 	def secondaryStep(self):
 		pass
 	def stamp(self):
@@ -3801,7 +3802,7 @@ class Portal:
 	radiusOfRelease = 10
 	def __init__(self, pos, direction):
 		Portal._reg.append(self)
-		PhysObj._reg.append(self)
+		Game._game.nonPhys.append(self)
 		self.direction = direction
 		self.dirNeg = direction * -1
 		self.pos = pos - direction * 5
@@ -3826,11 +3827,11 @@ class Portal:
 		self.posBro = Vector()
 	def step(self):
 		if not Game._game.gameMap.get_at(self.holdPos.vec2tupint()) == GRD:
-			PhysObj._reg.remove(self)
+			Game._game.nonPhys.remove(self)
 			Portal._reg.remove(self)
 			
 			if self.brother:
-				PhysObj._reg.remove(self.brother)
+				Game._game.nonPhys.remove(self.brother)
 				Portal._reg.remove(self.brother)
 			
 				del self.brother
@@ -3839,7 +3840,7 @@ class Portal:
 			return
 			
 		if Game._game.state == PLAYER_CONTROL_1 and not self.brother:
-			PhysObj._reg.remove(self)
+			Game._game.nonPhys.remove(self)
 			Portal._reg.remove(self)
 			del self
 			return
@@ -3910,7 +3911,7 @@ class Venus:
 		self.p2 = Vector()
 		
 		self.surf = pygame.Surface((48, 16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (0, 64, 48, 16))
+		self.surf.blit(Game._game.sprites, (0,0), (0, 64, 48, 16))
 	def step(self):
 		self.gap = 5*(self.snap + pi/2)/(pi/2)
 		self.d1 = self.direction.normal()
@@ -3965,7 +3966,7 @@ class Venus:
 					self.desired = (closest.pos - self.pos).getAngle()
 			listToCheck = PhysObj._reg + Seagull._reg
 			for worm in listToCheck:
-				if worm in Debrie._debries or worm in Portal._reg or worm in Flag.flags:
+				if worm in Debrie._debries or worm in Flag.flags:
 					continue
 				if worm in PhysObj._worms and PLANT_MASTER in worm.team.artifacts:
 					continue
@@ -4339,7 +4340,7 @@ class GreenShell(PhysObj):
 				self.facing *= -1
 				
 			for worm in PhysObj._reg:
-				if worm == self or worm in self.ignore or worm in Portal._reg:
+				if worm == self or worm in self.ignore:
 					continue
 				if distus(worm.pos, self.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
 					self.ignore.append(worm)
@@ -4379,7 +4380,7 @@ class GreenShell(PhysObj):
 			index = int((self.timer*(self.speed/3) % 12)/3)
 		else:
 			index = 0	
-		win.blit(sprites, point2world(self.pos - Vector(16,16)/2), ((index*16, 48), (16,16)))
+		win.blit(Game._game.sprites, point2world(self.pos - Vector(16,16)/2), ((index*16, 48), (16,16)))
 
 def fireLaser(start, direction):
 	hit = False
@@ -4673,31 +4674,31 @@ class Raon(PhysObj):
 		self.color = (255, 204, 0)
 		self.damp = 0.2
 		self.target = None
-		self.Game._game.state = Raon.wait
+		self.state = Raon.wait
 		self.timer = 10
 		self.facing = RIGHT
 	def secondaryStep(self):
-		if self.Game._game.state == Raon.wait:
+		if self.state == Raon.wait:
 			self.timer -= 1
 			if self.timer == 0:
-				self.Game._game.state = Raon.idle
+				self.state = Raon.idle
 			else:
 				return
-		if not self.Game._game.state == Raon.advancing:
+		if not self.state == Raon.advancing:
 			self.search()
-		if self.Game._game.state == Raon.pointing:
+		if self.state == Raon.pointing:
 			if distus(self.pos, self.target.pos) > 10000:
-				self.Game._game.state = Raon.idle
+				self.state = Raon.idle
 				self.target = None
 			if self.proximity():
 				self.dead = True
 				Raon._raons.remove(self)
-		if self.Game._game.state == Raon.advancing:
+		if self.state == Raon.advancing:
 			gameDistable()
 			moved = move(self)
 			self.timer -= 1
 			if self.timer == 0:
-				self.Game._game.state = Raon.pointing
+				self.state = Raon.pointing
 			if self.proximity():
 				self.dead = True
 				Raon._raons.remove(self)
@@ -4716,15 +4717,15 @@ class Raon(PhysObj):
 				closest = [worm, distance]
 		if closest[1] < 100:
 			self.target = closest[0]
-			self.Game._game.state = Raon.pointing
+			self.state = Raon.pointing
 			self.facing = RIGHT if self.target.pos.x > self.pos.x else LEFT
 		else:
-			self.Game._game.state = Raon.idle
+			self.state = Raon.idle
 	def advance(self):
 		self.facing = RIGHT if self.target.pos.x > self.pos.x else LEFT
-		if not self.Game._game.state == Raon.pointing:
+		if not self.state == Raon.pointing:
 			return False
-		self.Game._game.state = Raon.advancing
+		self.state = Raon.advancing
 		self.timer = 20
 		return True
 	def electrified(self):
@@ -4736,11 +4737,11 @@ class Raon(PhysObj):
 		pygame.draw.line(win, (0,0,0), point2world(self.pos + Vector(0, self.radius - 1)), point2world(self.pos + Vector(0, self.radius + 2)))
 		pygame.draw.line(win, (0,0,0), point2world(self.pos + Vector(-2, self.radius - 1)), point2world(self.pos + Vector(-2, self.radius + 2)))
 		pygame.draw.line(win, (0,0,0), point2world(self.pos + Vector(2, self.radius - 1)), point2world(self.pos + Vector(2, self.radius + 2)))
-		if self.Game._game.state == Raon.pointing or self.Game._game.state == Raon.advancing:
+		if self.state == Raon.pointing or self.state == Raon.advancing:
 			#pygame.draw.line(win, (255,0,0), point2world(self.pos), point2world(self.pos + (self.target.pos - self.pos)*0.5))
 			pygame.draw.circle(win, (255,255,255), point2world(self.pos + Vector(self.facing * self.radius/2,0)), 2)
 			win.set_at(point2world(self.pos + Vector(self.facing * (self.radius/2), -1)), (0,0,0))
-		if self.Game._game.state == Raon.idle or self.Game._game.state == Raon.wait:
+		if self.state == Raon.idle or self.state == Raon.wait:
 			pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 			win.set_at(point2world(self.pos), (0,0,0))
 
@@ -4801,7 +4802,7 @@ class Spear(PhysObj):
 		pygame.draw.polygon(Game._game.ground, (230,235,240), [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
 		
 		if len(self.worms) > 0:
-			stain(self.pos, imageBlood, imageBlood.get_size(), False)
+			stain(self.pos, Game._game.imageBlood, Game._game.imageBlood.get_size(), False)
 		if len(self.worms) > 1:
 			Commentator.que.append((Game._game.objectUnderControl.nameStr, ("", " the impaler!"), Game._game.objectUnderControl.team.color))
 	def draw(self):
@@ -4822,7 +4823,7 @@ class SnailShell(PhysObj):
 		self.clockwise = Game._game.objectUnderControl.facing
 		self.timer = 0
 		self.surf = pygame.Surface((6,6), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (64,48, 6,6))
+		self.surf.blit(Game._game.sprites, (0,0), (64,48, 6,6))
 	def collisionRespone(self, ppos):
 		finalPos = vectorCopy(self.pos)
 		finalAnchor = None
@@ -4855,7 +4856,7 @@ class Snail:
 		self.anchor = anchor
 		self.life = 0
 		self.surf = pygame.Surface((6,6), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (70,48,6,6))
+		self.surf.blit(Game._game.sprites, (0,0), (70,48,6,6))
 		if self.clockwise == LEFT:
 			self.surf = pygame.transform.flip(self.surf, True, False)
 	def climb(self):
@@ -4913,7 +4914,7 @@ class Bubble:
 			
 		if not self.catch:
 			for worm in PhysObj._reg:
-				if worm == Game._game.objectUnderControl or worm in Bubble.cought or worm in Portal._reg or worm in Debrie._debries:
+				if worm == Game._game.objectUnderControl or worm in Bubble.cought or worm in Debrie._debries:
 					continue
 				if dist(worm.pos, self.pos) < worm.radius + self.radius:
 					self.catch = worm
@@ -5112,7 +5113,7 @@ class Seagull(Seeker):
 		height = 13
 		frame = TimeManager._tm.timeOverall//2 % 3
 		surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		surf.blit(sprites, (0,0), (frame * 16,80, 16, 16))
+		surf.blit(Game._game.sprites, (0,0), (frame * 16,80, 16, 16))
 		win.blit(pygame.transform.flip(surf, dir, False), point2world(self.pos - Vector(width//2, height//2)))
 
 class Covid19(Seeker):
@@ -5155,7 +5156,7 @@ class Covid19(Seeker):
 		width = 16
 		height = 16
 		frame = TimeManager._tm.timeOverall//2 % 5
-		win.blit(sprites, point2world(self.pos - Vector(8, 8)), ((frame * 16, 32), (16, 16)) )
+		win.blit(Game._game.sprites, point2world(self.pos - Vector(8, 8)), ((frame * 16, 32), (16, 16)) )
 
 class Chum(Grenade):
 	_chums = []
@@ -5266,7 +5267,7 @@ class MjolnirThrow(PhysObj):
 	def draw(self):
 		for worm in self.worms:
 			drawLightning(self, worm)
-		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class MjolnirReturn:
@@ -5291,7 +5292,7 @@ class MjolnirReturn:
 			Game._game.nonPhys.remove(self)
 			Game._game.holdArtifact = True
 	def draw(self):
-		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class Mjolnir(PhysObj):
@@ -5334,7 +5335,7 @@ class Mjolnir(PhysObj):
 		elif vel < 1:
 			self.vel *= 0
 	def draw(self):
-		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 	def comment(self):
 		Commentator._com.que.append(("", ("a gift from the gods", ""), Game._game.HUDColor))
@@ -5397,7 +5398,7 @@ class MjolnirFly(PhysObj):
 		MjolnirFly.flying = False
 		Game._game.holdArtifact = True
 	def draw(self):
-		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 class MjolnirStrike:
@@ -5444,7 +5445,7 @@ class MjolnirStrike:
 		self.timer += 1
 		gameDistable()
 	def draw(self):
-		surf = pygame.transform.rotate(imageMjolnir, self.angle)
+		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		surf = pygame.transform.flip(surf, self.facing == LEFT, False)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2 + Vector(0, -5)))
 		drawLightning(Camera(Vector(self.pos.x, 0)), self)
@@ -5462,7 +5463,7 @@ class MagicLeaf(PhysObj):
 		self.turbulance = vectorUnitRandom()
 		self.angle = 0
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (48, 64, 16,16))
+		self.surf.blit(Game._game.sprites, (0,0), (48, 64, 16,16))
 	def secondaryStep(self):
 		if self.vel.getMag() > 0.25:
 			self.angle += self.vel.x*4
@@ -5781,7 +5782,7 @@ class EarthSpike:
 		Game._game.nonPhys.append(self)
 		self.timer = 0
 		self.surf = pygame.Surface((32, 32), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), ((32, 96), (32, 32)))
+		self.surf.blit(Game._game.sprites, (0,0), ((32, 96), (32, 32)))
 		if randint(0, 1) == 0:
 			self.surf = pygame.transform.flip(self.surf, True, False)
 		self.colors = [(139, 140, 123), (91, 92, 75), (208, 195, 175), (48, 35, 34)]
@@ -5796,7 +5797,7 @@ class EarthSpike:
 			surf = pygame.transform.scale(self.surf, (32, 16))
 			rectPos = self.pos + Vector(-surf.get_width() // 2, 3 - surf.get_height())
 			win.blit(surf, point2world(rectPos))
-			stain(self.pos - Vector(0, 3), imageHole, (32,32), True)
+			stain(self.pos - Vector(0, 3), Game._game.imageHole, (32,32), True)
 			
 		if self.timer == 6:
 			rectPos = self.pos + Vector(-self.surf.get_width() // 2, 3 - self.surf.get_height())
@@ -5910,7 +5911,7 @@ class Avatar(PhysObj):
 		self.angle = 0
 		Game._game.camTrack = self
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		self.surf.blit(sprites, (0,0), (0,112,16,16))
+		self.surf.blit(Game._game.sprites, (0,0), (0,112,16,16))
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
 		# pick up
@@ -5947,7 +5948,7 @@ class GunShell(PhysObj):
 		self.damp = 0.2
 		if index == 0:
 			self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-			self.surf.blit(sprites, (0,0), (16,112,16,16))
+			self.surf.blit(Game._game.sprites, (0,0), (16,112,16,16))
 		self.angle = 0
 	def applyForce(self):
 		self.acc.y += Game._game.globalGravity * 2.5
@@ -6089,24 +6090,26 @@ class WeaponManager:
 		self.currentWeapon = string
 		self.renderWeaponCount()
 
-		weaponHold.fill((0,0,0,0))
+		Game._game.weaponHold.fill((0,0,0,0))
 		if canShoot():
 			if self.getBackColor(string) in [GRENADES, GUNS, TOOLS, LEGENDARY, FIREY, BOMBS] or string in [""]:
 				if string in ["covid 19", "parachute", "earthquake"]:
 					return
 				if string == "gemino mine":
-					blitWeaponSprite(weaponHold, (0,0), "mine")
+					blitWeaponSprite(Game._game.weaponHold, (0,0), "mine")
 					return
-				blitWeaponSprite(weaponHold, (0,0), string)
+				blitWeaponSprite(Game._game.weaponHold, (0,0), string)
 				return
 			if string in ["flare", "artillery assist"]:
-				blitWeaponSprite(weaponHold, (0,0), "flare")
+				blitWeaponSprite(Game._game.weaponHold, (0,0), "flare")
 				return
+			if self.getBackColor(string) in [MISSILES]:
+				Game._game.weaponHold.blit(Game._game.sprites, (0,0), (64,112,16,16))
 			if self.getBackColor(string) in [AIRSTRIKE]:
 				if string == "chum bucket":
-					weaponHold.blit(sprites, (0,0), (16,96,16,16))
+					Game._game.weaponHold.blit(Game._game.sprites, (0,0), (16,96,16,16))
 					return
-				weaponHold.blit(sprites, (0,0), (64,64,16,16))
+				Game._game.weaponHold.blit(Game._game.sprites, (0,0), (64,64,16,16))
 	def addArtifactMoves(self, artifact):
 		# when team pick up artifact add them to weaponCounter
 		for w in self.weapons[self.weaponCount + self.utilityCount:]:
@@ -6594,7 +6597,7 @@ class Team:
 		self.hatSurf = None
 	def makeHat(self, index):
 		self.hatSurf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.hatSurf.blit(sprites, (0,0), (16 * (index % 8),16 * (index // 8),16,16))
+		self.hatSurf.blit(Game._game.sprites, (0,0), (16 * (index % 8),16 * (index // 8),16,16))
 		pixels = pygame.PixelArray(self.hatSurf)
 		color = desaturate(self.color)
 		pixels.replace((101, 101, 101), color)
@@ -6773,6 +6776,7 @@ def checkWinners():
 			Commentator._com.que.append(("", ("Its a"," Tie!"), Game._game.HUDColor))
 			print("Tie!")
 		
+		Game._game.endGameDict = dic
 		Game._game.nextState = WIN
 		pygame.image.save(Game._game.ground, "lastWormsGround.png")
 	return end
@@ -6832,7 +6836,7 @@ def cycleWorms():
 	isTherePointing = False
 	if len(Raon._raons) > 0 and not Game._game.raoning:
 		for raon in Raon._raons:
-			if raon.Game._game.state == Raon.pointing:
+			if raon.state == Raon.pointing:
 				isTherePointing = True
 				break
 		if isTherePointing:
@@ -7345,20 +7349,20 @@ class Toast:
 		else:
 			self.anchor = Vector(winWidth//2, winHeight//2) - tup2vec(self.surf.get_size())/2
 		self.pos = Vector()
-		self.Game._game.state = 0
+		self.state = 0
 		Toast.toastCount += 1
 		
 	def step(self):
 		if self.mode == Toast.bottom:
-			if self.Game._game.state == 0:
+			if self.state == 0:
 				self.pos.y -= 3
 				if self.pos.y < -self.surf.get_height():
-					self.Game._game.state = 1
-			if self.Game._game.state == 1:
+					self.state = 1
+			if self.state == 1:
 				self.time += 1
 				if self.time == fps * 3:
-					self.Game._game.state = 2
-			if self.Game._game.state == 2:
+					self.state = 2
+			if self.state == 2:
 				self.pos.y += 3
 				if self.pos.y > 0:
 					Toast._toasts.remove(self)
@@ -7620,7 +7624,7 @@ def testerFunc():
 	mousePos = pygame.mouse.get_pos()
 	mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
 	# BackGround._bg.lightningStrike(mouse)
-	# TimeManager._tm.timeRemaining(1)
+	TimeManager._tm.timeRemaining(1)
 
 ################################################################################ State machine
 
@@ -7913,7 +7917,7 @@ def onKeyPressEnter():
 		Game._game.objectUnderControl.vel += Vector(cos(Game._game.objectUnderControl.shootAngle), sin(Game._game.objectUnderControl.shootAngle)) * 3
 		Game._game.objectUnderControl.stable = False
 
-def GameMain(gameParameters=None):
+def gameMain(gameParameters=None):
 	global winWidth, winHeight, scalingFactor, win
 	Game(gameParameters)
 	TimeManager()
@@ -7934,7 +7938,7 @@ def GameMain(gameParameters=None):
 		# events
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				run = False
+				globals.exitGame()
 			# mouse click event
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # left click (main)
 				#mouse position:
@@ -8073,7 +8077,8 @@ def GameMain(gameParameters=None):
 				if event.key == pygame.K_SPACE:
 					onKeyReleaseSpace()
 		keys = pygame.key.get_pressed()
-		if keys[pygame.K_ESCAPE]: run = False	
+		if keys[pygame.K_ESCAPE]:
+			globals.exitGame()
 		#key hold:
 		if Game._game.objectUnderControl and Game._game.playerControl and Game._game.playerMoveable:
 			if keys[pygame.K_RIGHT]:
@@ -8270,12 +8275,35 @@ def GameMain(gameParameters=None):
 
 		pygame.display.update()
 		fpsClock.tick(fps)
+
+def splashScreen():
+	splashImage = pygame.image.load("assets/simeGames.png")
+	timer = 2 * fps
+	run = True
+	while run:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				run = False
+			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+				run = False
+		keys = pygame.key.get_pressed()
+		if keys[pygame.K_ESCAPE]:
+			run = False
 		
-	pygame.quit()
+		timer -= 1
+		if timer <= 0:
+			break
+
+		win.fill((11,126,193))
+		win.blit(splashImage, ((winWidth/2 - splashImage.get_width()/2, winHeight/2 - splashImage.get_height()/2)))
+		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
+		pygame.display.update()
+		fpsClock.tick(fps)
 
 if __name__ == "__main__":
 	args = parseArgs()
-
-	gameParameters = mainMenu(args)
-
-	GameMain(gameParameters)
+	gameParameters = [None]
+	# splashScreen()
+	while True:
+		mainMenu(args, Game._game.endGameDict if Game._game else None, gameParameters)
+		gameMain(gameParameters[0])
