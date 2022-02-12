@@ -865,6 +865,12 @@ def playOnPress():
 			if key == "-ratio" and values[key] == "":
 				continue
 			string += key + " " + str(values[key]) + " "
+		if key == "sudden death style":
+			if values[key] == "tsunami":
+				string += "-sdt "
+			if values[key] == "plague":
+				string += "-sdp "
+
 	if debug: print(string)
 	MainMenu._mm.gameParameters = string
 	MainMenu._mm.run = False

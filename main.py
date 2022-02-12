@@ -96,9 +96,6 @@ if True:
 
 # improvements:
 # seagulls to not spawn on top of world
-# convert fire (and more ?) collisions with worms to square/surface collision for better performance. maybe a constant fire will be a thing
-# drop artifact option (shift - tab?)
-# sudden death pick in main menu
 
 class Game:
 	_game = None
