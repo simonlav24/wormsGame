@@ -2,13 +2,13 @@ from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fab
 from random import shuffle ,randint, uniform, choice
 from vector import *
 import globals
-from mainMenu import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu
+from mainMenu import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu, pauseMenu
 from pygame import gfxdraw
 import pygame
 import argparse
 import xml.etree.ElementTree as ET
 import os
-
+ 
 def getGlobals():
 	global fpsClock, fps, pixelFont5, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
 	fpsClock = globals.fpsClock
@@ -97,20 +97,15 @@ if True:
 # improvements:
 # seagulls to not spawn on top of world
 # convert fire (and more ?) collisions with worms to square/surface collision for better performance. maybe a constant fire will be a thing
-# bungee using spring dynamics
-# call ship that comes through sea and blast cannons
-# golden snitch for points game ?
-# hedgehog that moves around catching worms
 # drop artifact option (shift - tab?)
-
-# switch feel color bug in main menu
-# winner show and back to main menu and show record
-# sudden death pick in launcher
+# sudden death pick in main menu
 
 class Game:
 	_game = None
 	def __init__(self, argumentsString=None):
 		Game._game = self
+
+		self.clearLists()
 
 		self.initiateGameSettings()
 		self.initiateGameVariables()
@@ -164,6 +159,25 @@ class Game:
 		self.imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
 		self.imageMjolnir.blit(self.sprites, (0,0), (100, 32, 24, 31))
 		self.weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
+	def clearLists(self):
+		# clear lists
+		PhysObj._reg.clear()
+		PhysObj._worms.clear()
+		PhysObj._mines.clear()
+		Debrie._debries.clear()
+		Smoke._smoke.clear()
+		SentryGun._sentries.clear()
+		Portal._reg.clear()
+		Venus._reg.clear()
+		GreenShell._shells.clear()
+		Flare._flares.clear()
+		Flag.flags.clear()
+		ShootingTarget._reg.clear()
+		Raon._raons.clear()
+		Seagull._reg.clear()
+		Chum._chums.clear()
+		Water.layersA.clear()
+		Water.layersB.clear()
 	def createMapSurfaces(self, dims):
 		"""
 		create all map related surfaces
@@ -1002,15 +1016,6 @@ def clamp(value, upper, lower):
 	if value < lower:
 		value = lower
 	return value
-
-# Game._game.sprites
-# if True:
-# 	Game._game.imageBlood = pygame.image.load("assets/blood.png").convert_alpha()
-# 	Game._game.imageHole = pygame.image.load("assets/hole.png").convert_alpha()
-# 	Game._game.sprites = pygame.image.load("assets/Game._game.sprites.png").convert_alpha()
-# 	Game._game.imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
-# 	Game._game.imageMjolnir.blit(Game._game.sprites, (0,0), (100, 32, 24, 31))
-# 	Game._game.weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
 
 def blitWeaponSprite(dest, pos, weapon):
 	index = WeaponManager._wm.weaponDict[weapon]
@@ -5949,7 +5954,7 @@ class GunShell(PhysObj):
 		if index == 0:
 			self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 			self.surf.blit(Game._game.sprites, (0,0), (16,112,16,16))
-		self.angle = 0
+		self.angle = uniform(0, 2*pi)
 	def applyForce(self):
 		self.acc.y += Game._game.globalGravity * 2.5
 	def secondaryStep(self):
@@ -5960,7 +5965,7 @@ class GunShell(PhysObj):
 			surf = pygame.transform.rotate(self.surf, angle)
 			win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 		if self.index == 1:
-			pygame.draw.circle(win, (151,87,15), point2world(self.pos), 3, 1)
+			pygame.draw.circle(win, (25,25,25), point2world(self.pos), 3, 1)
 
 ################################################################################ Weapons setup
 
@@ -6776,6 +6781,11 @@ def checkWinners():
 			Commentator._com.que.append(("", ("Its a"," Tie!"), Game._game.HUDColor))
 			print("Tie!")
 		
+		# add teams to dic
+		dic["teams"] = {}
+		for team in TeamManager._tm.teams:
+			dic["teams"][team.name] = [team.color, team.points]
+
 		Game._game.endGameDict = dic
 		Game._game.nextState = WIN
 		pygame.image.save(Game._game.ground, "lastWormsGround.png")
@@ -6807,7 +6817,7 @@ def cycleWorms():
 		Commentator.que.append((Game._game.objectUnderControl.nameStr, choice([("good shot ", "!"), ("nicely done ","")]), Game._game.objectUnderControl.team.color))
 	
 	TeamManager._tm.currentTeam.damage += Game._game.damageThisTurn
-	if Game._game.gameMode == POINTS:
+	if Game._game.gameMode in [POINTS, BATTLE]:
 		TeamManager._tm.currentTeam.points = TeamManager._tm.currentTeam.damage + 50 * TeamManager._tm.currentTeam.killCount
 	Game._game.damageThisTurn = 0
 	if checkWinners():
@@ -7714,6 +7724,9 @@ def stateMachine():
 							team.worms[i].health = (Game._game.initialHealth//2)
 							team.worms[i].healthStr = pixelFont5.render(str(team.worms[i].health), False, team.worms[i].team.color)
 				Game._game.initialHealth = TeamManager._tm.teams[0].worms[0].health
+			# disable points in battle
+			if Game._game.gameMode == BATTLE:
+				HealthBar.drawPoints = False
 			if Game._game.darkness:
 				Game._game.HUDColor = WHITE
 				WeaponManager._wm.renderWeaponCount()
@@ -7917,6 +7930,8 @@ def onKeyPressEnter():
 		Game._game.objectUnderControl.vel += Vector(cos(Game._game.objectUnderControl.shootAngle), sin(Game._game.objectUnderControl.shootAngle)) * 3
 		Game._game.objectUnderControl.stable = False
 
+################################################################################ Main
+
 def gameMain(gameParameters=None):
 	global winWidth, winHeight, scalingFactor, win
 	Game(gameParameters)
@@ -8090,15 +8105,16 @@ def gameMain(gameParameters=None):
 				onKeyHoldSpace()
 		
 		if pause:
-			pos = (winWidth/2 - Game._game.pauseSurf.get_width()/2, winHeight/2 - Game._game.pauseSurf.get_height()/2)
-			win.blit(Game._game.pauseSurf, pos)
-			screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-			pygame.display.update()
+			result = [0]
+			pauseMenu({"showPoints": HealthBar._healthBar.drawPoints, "teams":TeamManager._tm.teams}, result)
+			pause = not pause
+			if result[0] == 1:
+				run = False
 			continue
 		
 		result = stateMachine()
 		if result == 1:
-			run=False
+			run = False
 
 		if Game._game.state in [RESET, GENERATE_MAP]:
 			continue
@@ -8196,11 +8212,11 @@ def gameMain(gameParameters=None):
 		BackGround._bg.drawSecondary()
 		for t in Toast._toasts: t.draw()
 		
-		if Game._game.darkness and Game._game.darkMask: win.blit(Game._game.darkMask, (-int(Game._game.camPos.x), -int(Game._game.camPos.y)))
-		
 		if Game._game.gameMode == TERMINATOR and Game._game.victim and Game._game.victim.alive: drawTarget(Game._game.victim.pos)
 		if Arena._arena: Arena._arena.draw()
 		drawSmoke()
+
+		if Game._game.darkness and Game._game.darkMask: win.blit(Game._game.darkMask, (-int(Game._game.camPos.x), -int(Game._game.camPos.y)))
 		# draw shooting indicator
 		if Game._game.objectUnderControl and Game._game.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and Game._game.objectUnderControl.health > 0:
 			Game._game.objectUnderControl.drawCursor()

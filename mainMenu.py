@@ -20,6 +20,7 @@ MENU_TEXT   = 5
 MENU_DIV	= 6
 MENU_IMAGE	= 7
 MENU_INPUT	= 8
+MENU_LOADBAR = 9
 HORIZONTAL = 0
 VERTICAL = 1
 
@@ -145,6 +146,152 @@ class MainMenu:
 		self.run = True
 		MainMenu._mm = self
 
+	def initializeEndGameMenu(self, parameters):
+		endMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
+		endMenu.insert(MENU_TEXT, text="Game Over", customSize=15)
+		endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
+		endMenu.insert(MENU_TEXT, text="most damage dealt: " + str(parameters["mostDamage"]) + " by " + parameters["damager"], customSize=15)
+
+		maxpoints = max([parameters["teams"][i][1] for i in parameters["teams"]])
+		for team in parameters["teams"].keys():
+			teamScore = Menu(orientation=HORIZONTAL, customSize=15)
+			teamScore.insert(MENU_TEXT, text=team, customSize=50)
+			bar = teamScore.insert(MENU_LOADBAR, value = 0, color=parameters["teams"][team][0], maxValue=maxpoints)
+			endMenu.addElement(teamScore)
+			ElementAnimator(bar, 0, parameters["teams"][team][1], duration = globals.fps, timeOffset=2 * globals.fps)
+
+		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
+	
+	def initializeMenuOptions(self):
+		mainMenu = Menu(name="menu", pos=[40,40], size=[winWidth - 80, 160], register=True)
+		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
+
+		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
+
+		# options vertical sub menu
+		optionsMenu = Menu(name="options")
+
+		subMode = Menu(orientation=HORIZONTAL, customSize=15)
+		subMode.insert(MENU_TEXT, text="game mode")
+		subMode.insert(MENU_COMBOS, key="--game_mode", text="battle", items=["battle", "points", "terminator", "targets", "david vs goliath", "ctf", "arena"])
+		optionsMenu.addElement(subMode)
+
+		# toggles
+		toggles = [("cool down", "-used", True), ("artifacts", "-art", True), ("closed map", "-closed", False), ("forts", "-f", False), ("digging", "-dig", False), ("darkness", "-dark", False)]
+		for i in range(0, len(toggles) - 1, 2):
+			first = toggles[i]
+			second = toggles[i + 1]
+			subOpt = Menu(orientation = HORIZONTAL, customSize = 15)
+			subOpt.insert(MENU_TOGGLE, key=first[1], text=first[0], value=first[2])
+			subOpt.insert(MENU_TOGGLE, key=second[1], text=second[0], value=second[2])
+			optionsMenu.addElement(subOpt)
+
+		# counters
+		counters = [("worms per team", 8, 1, 8, 1, "-wpt"), ("worm health", 100, 0, 1000, 50, "-ih"), ("packs", 1, 0, 10, 1, "-pm")]
+		for c in counters:
+			subOpt = Menu(orientation=HORIZONTAL)
+			subOpt.insert(MENU_TEXT, text=c[0])
+			subOpt.insert(MENU_UPDOWN, key=c[5], value=c[1], text=str(c[1]), limitMax=True, limitMin=True, limMin=c[2], limMax=c[3], stepSize=c[4])		
+			optionsMenu.addElement(subOpt)
+
+		# random turns
+		subMode = Menu(orientation=HORIZONTAL)
+		subMode.insert(MENU_TEXT, text="random turns")
+		subMode.insert(MENU_COMBOS, key="-random", items=["none", "in team", "complete"])	
+		optionsMenu.addElement(subMode)
+
+		# sudden death
+		subMode = Menu(orientation=HORIZONTAL)
+		subMode.insert(MENU_TOGGLE, key="sudden death toggle", value=True, text="sudden death")
+		subMode.insert(MENU_UPDOWN, key="-sd", value=16, text="16", limitMin=True, limMin=0, customSize=19)
+		subMode.insert(MENU_COMBOS, key="sudden death style", items=["all", "tsunami", "plague"])
+		optionsMenu.addElement(subMode)
+
+		optionsAndPictureMenu.addElement(optionsMenu)
+
+		# map options vertical sub menu
+		mapMenu = Menu(name="map menu", orientation=VERTICAL)
+		MainMenu._picture = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(MainMenu._maps))
+
+		# map buttons
+		subMap = Menu(orientation = HORIZONTAL, customSize=15)
+		subMap.insert(MENU_BUTTON, key="random_image", text="random")
+		subMap.insert(MENU_BUTTON, key="browse", text="browse")
+		subMap.insert(MENU_BUTTON, key="generate", text="generate")
+
+		mapMenu.addElement(subMap)
+
+		# recolor & ratio
+		subMap = Menu(orientation = HORIZONTAL, customSize = 15)
+		subMap.insert(MENU_TOGGLE, key="-rg", text="recolor")
+		subMap.insert(MENU_TEXT, text="ratio")
+		subMap.insert(MENU_INPUT, key="-ratio", text="enter ratio")
+
+		mapMenu.addElement(subMap)
+		optionsAndPictureMenu.addElement(mapMenu)
+		mainMenu.addElement(optionsAndPictureMenu)
+
+		# background feel menu
+		bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
+		bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
+
+	def handleMainMenu(self, event):
+		key = event.key
+		# print(event.key, event.value)
+		if key == "random_image":
+			path = choice(MainMenu._maps)
+			MainMenu._picture.setImage(path)
+		if key == "-feel":
+			BackGround._bg.feelIndex = event.value
+			BackGround._bg.recreate()
+		if key == "browse":
+			filepath = browseFile()
+			if filepath:
+				MainMenu._picture.setImage(filepath)
+		if key == "generate":
+			width, height = 800, 300
+			noise = generateNoise(width, height)
+			x = datetime.datetime.now()
+			if not os.path.exists("wormsMaps/PerlinMaps"):
+				os.mkdir("wormsMaps/PerlinMaps")
+			imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
+			pygame.image.save(noise, imageString)
+			MainMenu._picture.setImage(imageString)
+		if key == "play":
+			MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, playOnPress)
+		if key == "continue":
+			MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, continueOnPress)
+
+class PauseMenu:
+	_pm = None
+	def __init__(self):
+		self.run = True
+		PauseMenu._pm = self
+	def initializePauseMenu(self, args):
+		pauseMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
+		pauseMenu.insert(MENU_TEXT, text="Game paused")
+
+		if args["showPoints"]:
+			maxPoints = max([team.points for team in args["teams"]])
+			if maxPoints == 0:
+				maxPoints = 1
+			for team in args["teams"]:
+				teamScore = Menu(orientation=HORIZONTAL, customSize=15)
+				teamScore.insert(MENU_TEXT, text=team.name, customSize=50)
+				teamScore.insert(MENU_LOADBAR, value = team.points, color=team.color, maxValue=maxPoints)
+				pauseMenu.addElement(teamScore)
+
+		pauseMenu.insert(MENU_BUTTON, key="resume", text="resume")
+		pauseMenu.insert(MENU_BUTTON, key="toMainMenu", text="back to main menu")
+
+	def handlePauseMenu(self, event):
+		key = event.key
+		if key == "resume":
+			self.run = False
+		if key == "toMainMenu":
+			self.run = False
+			self.result[0] = 1
+
 def grabMapsFrom(paths):
 	maps = []
 	for path in paths:
@@ -174,20 +321,28 @@ def evaluateMenuForm():
 		menu.evaluate(outdict)
 	return outdict
 
+def clearMenu():
+	Menu._reg.clear()
+	MenuElementInput._reg.clear()
+
 class Menu:
 	_reg = []
 	_buttonColor = (82,65,60)
 	_textElementColor = (62,45,40)
 	_toggleColor = (0,255,0)
 	_selectedColor = (0,180,0)
-	_unicode = "|"
+	_subButtonColor = (182,165,160)
+	_subSelectColor = (255,255,255)
+	_dragging = False
+	_offsetDrag = Vector()
+	
 	def __init__(self, pos=None, size=None, name="", orientation=VERTICAL, margin=1, register=False, customSize=None):
-		self.pos = [0,0]
+		self.pos = Vector()
 		if pos:
-			self.pos = pos
-		self.size = [0,0]
+			self.pos = tup2vec(pos)
+		self.size = Vector()
 		if size:
-			self.size = size
+			self.size = tup2vec(size)
 		self.name = name
 		self.elements = []
 		self.orientation = orientation
@@ -260,8 +415,7 @@ class Menu:
 		elif self.event.type == MENU_UPDOWN:
 			self.event.advance()
 		elif self.event.type == MENU_INPUT:
-			self.event.focus = True
-			Menu._unicode = "|"
+			self.event.mode = "editing"
 	def evaluate(self, dic):
 		for element in self.elements:
 			element.evaluate(dic)
@@ -269,7 +423,8 @@ class Menu:
 		for element in self.elements:
 			element.draw()
 	def insert(self, type=MENU_BUTTON, key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
-					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText=""):
+					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText="",
+					color = WHITE, maxValue=100):
 		if type == MENU_BUTTON:
 			b = MenuElementButton()
 		elif type == MENU_TOGGLE:
@@ -300,6 +455,10 @@ class Menu:
 			b = Menu()
 		elif type == MENU_TEXT:
 			b = MenuElementText()
+		elif type == MENU_LOADBAR:
+			b = MenuElementLoadBar()
+			b.color = color
+			b.maxValue = maxValue
 
 		if key != "key":
 			b.key = key
@@ -314,8 +473,8 @@ class Menu:
 
 class MenuElement:
 	def __init__(self):
-		self.pos = [0,0]
-		self.size = [0,0]
+		self.pos = Vector()
+		self.size = Vector()
 		self.name = "element"
 		self.customSize = None
 		self.color = Menu._buttonColor
@@ -331,6 +490,8 @@ class MenuElement:
 	def setIndex(self, num):
 		self.index = num
 	def renderSurf(self, text=None):
+		if text == "":
+			text="input"
 		if text:
 			self.text = text
 		self.surf = globals.pixelFont5.render(self.text, True, WHITE)
@@ -398,7 +559,7 @@ class MenuElementUpDown(MenuElementButton):
 		posInButton = (mousePos[0] - self.pos[0], mousePos[1] - self.pos[1])
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			self.selected = True
-			if posInButton[1] > posInButton[0]: # need replacement
+			if posInButton[1] > posInButton[0] * (self.size[1] / self.size[0]): # need replacement
 				self.mode = -1
 			else:
 				self.mode = 1
@@ -413,8 +574,10 @@ class MenuElementUpDown(MenuElementButton):
 		arrowSize = self.size[1] // 2
 		color = Menu._selectedColor if self.selected else self.color
 		pygame.draw.rect(win, color, (self.pos, self.size))
-		pygame.draw.polygon(win, WHITE, [(self.pos[0] + self.size[0] - arrowSize, self.pos[1] + border), (self.pos[0] + self.size[0] - border - 1, self.pos[1] + border), (self.pos[0] + self.size[0] - border - 1, self.pos[1] + arrowSize)])
-		pygame.draw.polygon(win, WHITE, [(self.pos[0] + border ,self.pos[1] + self.size[1] - arrowSize), (self.pos[0] + border, self.pos[1] + self.size[1] - border - 1), (self.pos[0] + arrowSize, self.pos[1] + self.size[1] - border - 1)])
+		rightColor = Menu._subSelectColor if self.selected and self.mode == 1 else Menu._subButtonColor
+		leftColor = Menu._subSelectColor if self.selected and not self.mode == 1 else Menu._subButtonColor
+		pygame.draw.polygon(win, rightColor, [(self.pos[0] + self.size[0] - arrowSize, self.pos[1] + border), (self.pos[0] + self.size[0] - border - 1, self.pos[1] + border), (self.pos[0] + self.size[0] - border - 1, self.pos[1] + arrowSize)])
+		pygame.draw.polygon(win, leftColor, [(self.pos[0] + border ,self.pos[1] + self.size[1] - arrowSize), (self.pos[0] + border, self.pos[1] + self.size[1] - border - 1), (self.pos[0] + arrowSize, self.pos[1] + self.size[1] - border - 1)])
 		win.blit(self.surf, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2, self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementToggle(MenuElementButton):
@@ -474,8 +637,10 @@ class MenuElementComboSwitch(MenuElementButton):
 		arrowSize = self.size[1]
 		polygonRight = [Vector(self.size[0] - arrowSize / 2, arrowBorder), Vector(self.size[0] - arrowBorder, self.size[1] / 2), Vector(self.size[0] - arrowSize / 2, self.size[1] - arrowBorder)]
 		polygonLeft = [Vector(arrowSize / 2, arrowBorder), Vector(arrowBorder, self.size[1] / 2), Vector(arrowSize / 2, self.size[1] - arrowBorder)]
-		pygame.draw.polygon(win, WHITE, [tup2vec(self.pos) + i for i in polygonRight])
-		pygame.draw.polygon(win, WHITE, [tup2vec(self.pos) + i for i in polygonLeft])
+		rightColor = Menu._subSelectColor if self.selected and self.forward else Menu._subButtonColor
+		leftColor = Menu._subSelectColor if self.selected and not self.forward else Menu._subButtonColor
+		pygame.draw.polygon(win, rightColor, [tup2vec(self.pos) + i for i in polygonRight])
+		pygame.draw.polygon(win, leftColor, [tup2vec(self.pos) + i for i in polygonLeft])
 
 class MenuElementDivider(MenuElement):
 	def initialize(self):
@@ -484,7 +649,7 @@ class MenuElementDivider(MenuElement):
 	def draw(self):
 		pass
 
-class MenuElementImage(MenuElement): #make it movable ? :)
+class MenuElementImage(MenuElement):
 	def initialize(self):
 		self.type = MENU_IMAGE
 		self.imageSurf = None
@@ -518,37 +683,45 @@ class MenuElementImage(MenuElement): #make it movable ? :)
 				vel = pygame.mouse.get_rel()
 				if abs(vel[0]) > 100:
 					return
-				self.dragDx += vel[0] / 2
+				self.dragDx += vel[0] / globals.scalingFactor
 				if self.imageSurf.get_width() < self.size[0]:
 					return
 				if self.dragDx > -self.size[0] // 2:
 					self.dragDx = -self.size[0] // 2
 				elif self.dragDx < -self.imageSurf.get_width() + self.size[0] // 2:
 					self.dragDx = -self.imageSurf.get_width() + self.size[0] // 2
-					
 
 				self.recalculateImage()
 
 class MenuElementInput(MenuElementButton):
+	_reg = []
 	def initialize(self):
-		self.focus = False
-		self.inputText = "auto"
+		MenuElementInput._reg.append(self)
+		self.mode = "fixed"
+		self.inputText = ""
+		self.oldInputText = ""
 		self.value = self.inputText
 		self.type = MENU_INPUT
 		self.surf = None
-	def typing(self):
-		if self.inputText != Menu._unicode:
-			self.inputText = Menu._unicode
-			self.renderSurf(self.inputText)
-
+		self.cursorSpeed = globals.fps // 4
+		self.showCursor = False
+		self.timer = 0
+		self.cursor = globals.pixelFont5.render("|", True, (255,255,255))
+	def processKey(self, event):
+		if event.key == pygame.K_BACKSPACE:
+			self.inputText = self.inputText[:-1]
+		else:
+			self.inputText += event.unicode
+		self.value = self.inputText
 	def step(self):
-		if not self.menu.event is self:
-			if self.focus:
-				self.value = self.inputText[:-1]
-				self.renderSurf(self.value)
-			self.focus = False
-		if self.focus:
-			self.typing()
+		if self.mode == "editing":
+			self.timer += 1
+			if self.timer >= self.cursorSpeed:
+				self.showCursor = not self.showCursor
+				self.timer = 0
+			if self.inputText != self.oldInputText:
+				self.renderSurf(self.inputText)
+				self.oldInputText = self.inputText
 		mousePos = mouseInWin()
 		posInButton = (mousePos[0] - self.pos[0], mousePos[1] - self.pos[1])
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
@@ -557,6 +730,33 @@ class MenuElementInput(MenuElementButton):
 		else:
 			self.selected = False
 		return None
+	def draw(self):
+		color = Menu._selectedColor if self.selected else self.color
+		pygame.draw.rect(win, color, (self.pos, self.size))
+		win.blit(self.surf, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2, self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+		if self.mode == "editing" and self.showCursor:
+			win.blit(self.cursor, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+
+class MenuElementLoadBar(MenuElement):
+	def initialize(self):
+		self.type = MENU_LOADBAR
+		self.color = (255,255,0)
+		self.value = 0
+		self.maxValue = 100
+		self.direction = 1
+	def draw(self):
+		pygame.draw.rect(win, Menu._textElementColor, (self.pos, self.size))
+		# calculate size
+		size = Vector(self.size[0] * (self.value / self.maxValue), self.size[1])
+
+		# draw bar left to right direction
+		if self.direction == 1:
+			pygame.draw.rect(win, Menu._textElementColor, (self.pos, self.size), 2)
+			pygame.draw.rect(win, self.color, (self.pos + Vector(2,2), size - Vector(4,4)))
+		# draw bar right to left direction
+		else:
+			pygame.draw.rect(win, Menu._textElementColor, (self.pos + Vector(self.size[0] - size[0], 0), size), 2)
+			pygame.draw.rect(win, self.color, (self.pos + Vector(self.size[0] - size[0] + 2, 2), size - Vector(4,4)))
 
 class MenuAnimator:
 	_reg = []
@@ -617,32 +817,25 @@ class MenuAnimator:
 			else:
 				self.elementList.append(element)
 
-def handleMenuEvents(event):
-	key = event.key
-	# print(event.key, event.value)
-	if key == "random_image":
-		path = choice(MainMenu._maps)
-		MainMenu._picture.setImage(path)
-	if key == "-feel":
-		BackGround._bg.feelIndex = event.value
-		BackGround._bg.recreate()
-	if key == "browse":
-		filepath = browseFile()
-		if filepath:
-			MainMenu._picture.setImage(filepath)
-	if key == "generate":
-		width, height = 800, 300
-		noise = generateNoise(width, height)
-		x = datetime.datetime.now()
-		if not os.path.exists("wormsMaps/PerlinMaps"):
-			os.mkdir("wormsMaps/PerlinMaps")
-		imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
-		pygame.image.save(noise, imageString)
-		MainMenu._picture.setImage(imageString)
-	if key == "play":
-		MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, playOnPress)
-	if key == "continue":
-		MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, continueOnPress)
+class ElementAnimator:
+	def __init__(self, element, start, end, duration = -1, timeOffset=0):
+		MenuAnimator._reg.append(self)
+		self.element = element
+		self.start = start
+		self.end = end
+		self.timer = -timeOffset
+		self.fullTime = duration
+		if self.fullTime == -1:
+			self.duration = globals.fps * 1
+		
+	def step(self):
+		self.timer += 1
+		if self.timer < 0:
+			return
+		self.element.value = self.start + (self.end - self.start) * (self.timer / self.fullTime)
+		if self.timer > self.fullTime:
+			self.element.value = self.end
+			MenuAnimator._reg.remove(self)
 		
 def playOnPress():
 	values = evaluateMenuForm()
@@ -669,7 +862,7 @@ def playOnPress():
 			if key == "-map":
 				string += key + " " + values[key] + " "
 				continue
-			if key == "-ratio" and values[key] == "auto":
+			if key == "-ratio" and values[key] == "":
 				continue
 			string += key + " " + str(values[key]) + " "
 	if debug: print(string)
@@ -678,100 +871,24 @@ def playOnPress():
 
 def continueOnPress():
 	Menu._reg.clear()
-	initializeMenuOptions()
+	MainMenu._mm.initializeMenuOptions()
 	MenuAnimator(Menu._reg[0], Vector(0, winHeight))
 
-def handleEvents(event):
+def handleEvents(event, handleMenuEvents):
 	if event.type == pygame.MOUSEBUTTONDOWN:
+		for inp in MenuElementInput._reg:
+			inp.mode = "fixed"
 		if event.button == 1:
 			for menu in Menu._reg:
 				if menu.event:
 					menu.processInternalEvents()
 					handleMenuEvents(menu.event)
+
 	if event.type == pygame.KEYDOWN:
-		Menu._unicode = Menu._unicode[:-1]
-		Menu._unicode += event.unicode
-		Menu._unicode += "|"
-
-def initializeMenuOptions():
-	mainMenu = Menu(name="menu", pos=[40,40], size=[winWidth - 80, 160], register=True)
-	mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
-	
-	optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
-	
-	# options vertical sub menu
-	optionsMenu = Menu(name="options")
-
-	subMode = Menu(orientation=HORIZONTAL, customSize=15)
-	subMode.insert(MENU_TEXT, text="game mode")
-	subMode.insert(MENU_COMBOS, key="--game_mode", text="battle", items=["battle", "points", "terminator", "targets", "david vs goliath", "ctf", "arena"])
-	optionsMenu.addElement(subMode)
-	
-	# toggles
-	toggles = [("cool down", "-used", True), ("artifacts", "-art", True), ("closed map", "-closed", False), ("forts", "-f", False), ("digging", "-dig", False), ("darkness", "-dark", False)]
-	for i in range(0, len(toggles) - 1, 2):
-		first = toggles[i]
-		second = toggles[i + 1]
-		subOpt = Menu(orientation = HORIZONTAL, customSize = 15)
-		subOpt.insert(MENU_TOGGLE, key=first[1], text=first[0], value=first[2])
-		subOpt.insert(MENU_TOGGLE, key=second[1], text=second[0], value=second[2])
-		optionsMenu.addElement(subOpt)
-	
-	# counters
-	counters = [("worms per team", 8, 1, 8, 1, "-wpt"), ("worm health", 100, 0, 1000, 50, "-ih"), ("packs", 1, 0, 10, 1, "-pm")]
-	for c in counters:
-		subOpt = Menu(orientation=HORIZONTAL)
-		subOpt.insert(MENU_TEXT, text=c[0])
-		subOpt.insert(MENU_UPDOWN, key=c[5], value=c[1], text=str(c[1]), limitMax=True, limitMin=True, limMin=c[2], limMax=c[3], stepSize=c[4])		
-		optionsMenu.addElement(subOpt)
-	
-	# random turns
-	subMode = Menu(orientation=HORIZONTAL)
-	subMode.insert(MENU_TEXT, text="random turns")
-	subMode.insert(MENU_COMBOS, key="-random", items=["none", "in team", "complete"])	
-	optionsMenu.addElement(subMode)
-	
-	# sudden death
-	subMode = Menu(orientation=HORIZONTAL)
-	subMode.insert(MENU_TOGGLE, key="sudden death toggle", value=True, text="sudden death")
-	subMode.insert(MENU_UPDOWN, key="-sd", value=16, text="16", limitMin=True, limMin=0, customSize=19)
-	subMode.insert(MENU_COMBOS, key="sudden death style", items=["all", "tsunami", "plague"])
-	optionsMenu.addElement(subMode)
-	
-	optionsAndPictureMenu.addElement(optionsMenu)
-
-	# map options vertical sub menu
-	mapMenu = Menu(name="map menu", orientation=VERTICAL)
-	MainMenu._picture = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(MainMenu._maps))
-	
-	# map buttons
-	subMap = Menu(orientation = HORIZONTAL, customSize=15)
-	subMap.insert(MENU_BUTTON, key="random_image", text="random")
-	subMap.insert(MENU_BUTTON, key="browse", text="browse")
-	subMap.insert(MENU_BUTTON, key="generate", text="generate")
-
-	mapMenu.addElement(subMap)
-	
-	# recolor & ratio
-	subMap = Menu(orientation = HORIZONTAL, customSize = 15)
-	subMap.insert(MENU_TOGGLE, key="-rg", text="recolor")
-	subMap.insert(MENU_TEXT, text="ratio")
-	subMap.insert(MENU_INPUT, key="-ratio", text="auto", inputText="auto")
-	
-	mapMenu.addElement(subMap)
-	optionsAndPictureMenu.addElement(mapMenu)
-	mainMenu.addElement(optionsAndPictureMenu)
-	
-	# background feel menu
-	bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
-	bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
-
-def initializeEndGameMenu(parameters):
-	endMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
-	endMenu.insert(MENU_TEXT, text="Game Over")
-	endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
-	endMenu.insert(MENU_TEXT, text="most damage dealt: " + str(parameters["mostDamage"]) + " by " + parameters["damager"])
-	endMenu.insert(MENU_BUTTON, key="continue", text="continue")
+		for inp in MenuElementInput._reg:
+			if inp.mode == "editing":
+				inp.processKey(event)
+				break
 
 def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 	global win, winWidth, winHeight
@@ -786,18 +903,18 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
 	
 	# test:
-	# fromGameParameters = {"winner": "yellow", "damager": "flur", "mostDamage":256}
+	# fromGameParameters = {"teams": {"yellow":[(255,255,0), 25], "red":[(255,0,0),66], "green":[(0,255,0),50], "blue":[(0,0,255),80]},"winner": "yellow", "damager": "flur", "mostDamage":256}
 
 	if fromGameParameters is None:
-		initializeMenuOptions()
+		MainMenu._mm.initializeMenuOptions()
 		MenuAnimator(Menu._reg[0], Vector(0, globals.winHeight))
 	else:
-		initializeEndGameMenu(fromGameParameters)
+		MainMenu._mm.initializeEndGameMenu(fromGameParameters)
 		MenuAnimator(Menu._reg[0], Vector(0, globals.winHeight))
 
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
-			handleEvents(event)
+			handleEvents(event, MainMenu._mm.handleMainMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
 		keys = pygame.key.get_pressed()
@@ -821,6 +938,33 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 		globals.fpsClock.tick(globals.fps)
 		pygame.display.update()
 	
-	Menu._reg.clear()
+	clearMenu()
 	toGameParameters[0] = MainMenu._mm.gameParameters
+	return
+
+def pauseMenu(args, result=None):
+	PauseMenu()
+	PauseMenu._pm.initializePauseMenu(args)
+	PauseMenu._pm.result = result
+	while PauseMenu._pm.run:
+		for event in pygame.event.get():
+			handleEvents(event, PauseMenu._pm.handlePauseMenu)
+			if event.type == pygame.QUIT:
+				globals.exitGame()
+			if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+				PauseMenu._pm.run = False
+		keys = pygame.key.get_pressed()
+		if keys[pygame.K_ESCAPE]:
+			globals.exitGame()
+
+		for menu in Menu._reg:
+			menu.step()
+
+		for menu in Menu._reg:
+			menu.draw()
+
+		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
+		pygame.display.update()
+		globals.fpsClock.tick(globals.fps)
+	clearMenu()
 	return
