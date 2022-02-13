@@ -1,11 +1,13 @@
 from math import exp
-import pygame, os, datetime
+import pygame, os, datetime, ast
 import globals
 from random import randint, choice, uniform
 from perlinNoise import generateNoise
 from vector import *
+import graphObject
 import tkinter
-from tkinter.filedialog import askopenfile 
+from tkinter.filedialog import askopenfile
+import xml.etree.ElementTree as ET
 
 WHITE = (255,255,255,255)
 BLACK = (0,0,0,255)
@@ -21,6 +23,7 @@ MENU_DIV	= 6
 MENU_IMAGE	= 7
 MENU_INPUT	= 8
 MENU_LOADBAR = 9
+MENU_SURF = 10
 HORIZONTAL = 0
 VERTICAL = 1
 
@@ -163,7 +166,7 @@ class MainMenu:
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
 	def initializeMenuOptions(self):
-		mainMenu = Menu(name="menu", pos=[40,40], size=[winWidth - 80, 160], register=True)
+		mainMenu = Menu(name="menu", pos=[40,30], size=[winWidth - 80, 180], register=True)
 		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 
 		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
@@ -231,10 +234,38 @@ class MainMenu:
 		optionsAndPictureMenu.addElement(mapMenu)
 		mainMenu.addElement(optionsAndPictureMenu)
 
+		mainMenu.insert(MENU_BUTTON, key="scoreboard", text="score board", customSize=14)
+
 		# background feel menu
 		bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
 		bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
+	def initializeRecordMenu(self):
+		# clear graphs
+		graphObject.Graph._reg.clear()
+
+		recordMenu = Menu(name="record menu", pos=[winWidth//2  - winWidth//4, 30], size=[winWidth // 2, 180], register=True)
+		recordMenu.insert(MENU_TEXT, text="worms game records", customSize=15)
+		b = recordMenu.insert(MENU_SURF)
+		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
+	
+		graph = graphObject.Graph(b.getSuperPos(), b.size, globals.pixelFont5, False)
+		graph._reg[0].draw()
+		b.setSurf(graph.surf)
+
+		self.graphteams, self.graphcount = countWin()
+		self.graphtime = [i for i in range(self.graphcount)]
+
+		y_average = 0
+		for key in self.graphteams.keys():
+			y_average += self.graphteams[key][1][-1]
+		y_average /= len(self.graphteams)
+
+		x = self.graphtime[-1]
+
+		pos = (x,y_average)
+		graph.setCam(Vector(pos[0]*5, -pos[1]*5)) # arbitrary '5' that works for some reason
+		
 	def handleMainMenu(self, event):
 		key = event.key
 		# print(event.key, event.value)
@@ -261,6 +292,19 @@ class MainMenu:
 			MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, playOnPress)
 		if key == "continue":
 			MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, continueOnPress)
+		if key == "scoreboard":
+			# create the scoreboard menu
+			self.initializeRecordMenu()
+			# animate record menu in
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, globals.winHeight), Menu._reg[-1].pos)
+			# animate main menu out
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -globals.winHeight))
+		if key == "back":
+			# animate record menu out
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos, Menu._reg[-1].pos + Vector(0, globals.winHeight))
+			# animate main menu in
+			endPos = Menu._reg[0].pos + Vector(0, globals.winHeight)
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, endPos, trigger=menuPop)
 
 class PauseMenu:
 	_pm = None
@@ -313,7 +357,7 @@ def browseFile():
 		return file.name
 	
 def mouseInWin():
-	return (pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
+	return Vector(pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
 
 def evaluateMenuForm():
 	outdict = {}
@@ -324,6 +368,9 @@ def evaluateMenuForm():
 def clearMenu():
 	Menu._reg.clear()
 	MenuElementInput._reg.clear()
+
+def menuPop():
+	Menu._reg.pop()
 
 class Menu:
 	_reg = []
@@ -352,8 +399,13 @@ class Menu:
 		self.type = MENU_MENU
 		self.menu = None
 		self.customSize = customSize
+		self.offset = None
 		if register:
 			Menu._reg.append(self)
+	def getSuperPos(self):
+		if self.menu:
+			return self.menu.getSuperPos() + self.pos
+		return self.pos
 	def addElement(self, newElement):
 		newElement.menu = self
 		self.elements.append(newElement)
@@ -365,22 +417,18 @@ class Menu:
 		emptySpace = self.size[self.orientation] - CustomSizedPortion - (numElements - 1) * self.margin
 		if numElements - len(customSizedElements) != 0:
 			sizePerElem = emptySpace / (numElements - len(customSizedElements))
-		
 		accSize = 0
-		for i, element in enumerate(self.elements):
+		for element in self.elements:
 			element.size[0] = self.size[0]
 			element.size[1] = self.size[1]
 			if element.customSize:
 				element.size[self.orientation] = element.customSize
 			else:
 				element.size[self.orientation] = sizePerElem
-			
-			element.pos[0] = self.pos[0]
-			element.pos[1] = self.pos[1]
-			element.pos[self.orientation] = self.pos[self.orientation] + accSize
-			accSize += element.size[self.orientation] + self.margin
 
-		for i, element in enumerate(self.elements):
+			element.pos[self.orientation] = accSize
+			accSize += element.size[self.orientation] + self.margin
+		for element in self.elements:
 			if element.type == MENU_MENU:
 				element.recalculate()
 			if element.type == MENU_IMAGE:
@@ -424,7 +472,7 @@ class Menu:
 			element.draw()
 	def insert(self, type=MENU_BUTTON, key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
 					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText="",
-					color = WHITE, maxValue=100):
+					color = WHITE, maxValue=100, draggable=True):
 		if type == MENU_BUTTON:
 			b = MenuElementButton()
 		elif type == MENU_TOGGLE:
@@ -451,6 +499,7 @@ class Menu:
 			b = MenuElementImage()
 			if image:
 				b.setImage(image)
+			b.draggable = draggable
 		elif type == MENU_MENU:
 			b = Menu()
 		elif type == MENU_TEXT:
@@ -459,7 +508,8 @@ class Menu:
 			b = MenuElementLoadBar()
 			b.color = color
 			b.maxValue = maxValue
-
+		elif type == MENU_SURF:
+			b = MenuElementSurf()
 		if key != "key":
 			b.key = key
 		if value != "value":
@@ -485,6 +535,8 @@ class MenuElement:
 		self.type = MENU_ELEMENT
 		self.surf = None
 		self.initialize()
+	def getSuperPos(self):
+		return self.menu.getSuperPos()
 	def initialize(self):
 		pass
 	def setIndex(self, num):
@@ -500,10 +552,11 @@ class MenuElement:
 	def step(self):
 		pass
 	def draw(self):
+		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (self.pos, self.size))
+		pygame.draw.rect(win, color, (buttonPos, self.size))
 		if self.surf:
-			win.blit(self.surf, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2, self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+			win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementText(MenuElement):
 	def initialize(self):
@@ -516,7 +569,8 @@ class MenuElementButton(MenuElement):
 		self.type = MENU_BUTTON
 	def step(self):
 		mousePos = mouseInWin()
-		posInButton = (mousePos[0] - self.pos[0], mousePos[1] - self.pos[1])
+		buttonPos = self.getSuperPos() + self.pos
+		posInButton = mousePos - buttonPos
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			self.selected = True
 			return self
@@ -524,9 +578,10 @@ class MenuElementButton(MenuElement):
 			self.selected = False
 		return None
 	def draw(self):
+		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (self.pos, self.size))
-		win.blit(self.surf, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2, self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+		pygame.draw.rect(win, color, (buttonPos, self.size))
+		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 	
 class MenuElementUpDown(MenuElementButton):
 	def initialize(self):
@@ -556,7 +611,8 @@ class MenuElementUpDown(MenuElementButton):
 		self.value = pot
 	def step(self):
 		mousePos = mouseInWin()
-		posInButton = (mousePos[0] - self.pos[0], mousePos[1] - self.pos[1])
+		buttonPos = self.getSuperPos() + self.pos
+		posInButton = mousePos - buttonPos
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			self.selected = True
 			if posInButton[1] > posInButton[0] * (self.size[1] / self.size[0]): # need replacement
@@ -570,15 +626,16 @@ class MenuElementUpDown(MenuElementButton):
 			self.selected = False
 		return None
 	def draw(self):
+		buttonPos = self.getSuperPos() + self.pos
 		border = 1
 		arrowSize = self.size[1] // 2
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (self.pos, self.size))
+		pygame.draw.rect(win, color, (buttonPos, self.size))
 		rightColor = Menu._subSelectColor if self.selected and self.mode == 1 else Menu._subButtonColor
 		leftColor = Menu._subSelectColor if self.selected and not self.mode == 1 else Menu._subButtonColor
-		pygame.draw.polygon(win, rightColor, [(self.pos[0] + self.size[0] - arrowSize, self.pos[1] + border), (self.pos[0] + self.size[0] - border - 1, self.pos[1] + border), (self.pos[0] + self.size[0] - border - 1, self.pos[1] + arrowSize)])
-		pygame.draw.polygon(win, leftColor, [(self.pos[0] + border ,self.pos[1] + self.size[1] - arrowSize), (self.pos[0] + border, self.pos[1] + self.size[1] - border - 1), (self.pos[0] + arrowSize, self.pos[1] + self.size[1] - border - 1)])
-		win.blit(self.surf, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2, self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+		pygame.draw.polygon(win, rightColor, [(buttonPos[0] + self.size[0] - arrowSize, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + arrowSize)])
+		pygame.draw.polygon(win, leftColor, [(buttonPos[0] + border ,buttonPos[1] + self.size[1] - arrowSize), (buttonPos[0] + border, buttonPos[1] + self.size[1] - border - 1), (buttonPos[0] + arrowSize, buttonPos[1] + self.size[1] - border - 1)])
+		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementToggle(MenuElementButton):
 	def initialize(self):
@@ -589,10 +646,11 @@ class MenuElementToggle(MenuElementButton):
 		self.border = 1
 	def draw(self):
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (self.pos, self.size))
+		buttonPos = self.getSuperPos() + self.pos
+		pygame.draw.rect(win, color, (buttonPos, self.size))
 		if self.value:
-			pygame.draw.rect(win, Menu._toggleColor, ((self.pos[0] + self.border, self.pos[1] + self.border), (self.size[0] - 2 * self.border, self.size[1] - 2 * self.border)))
-		win.blit(self.surf, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2, self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+			pygame.draw.rect(win, Menu._toggleColor, ((buttonPos[0] + self.border, buttonPos[1] + self.border), (self.size[0] - 2 * self.border, self.size[1] - 2 * self.border)))
+		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementComboSwitch(MenuElementButton):
 	def initialize(self):
@@ -609,7 +667,8 @@ class MenuElementComboSwitch(MenuElementButton):
 		self.value = self.items[self.currentIndex][0]
 	def step(self):
 		mousePos = mouseInWin()
-		posInButton = (mousePos[0] - self.pos[0], mousePos[1] - self.pos[1])
+		buttonPos = self.getSuperPos() + self.pos
+		posInButton = (mousePos[0] - buttonPos[0], mousePos[1] - buttonPos[1])
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			self.selected = True
 			if posInButton[0] > self.size[0] // 2:
@@ -626,28 +685,22 @@ class MenuElementComboSwitch(MenuElementButton):
 		self.value = self.items[self.currentIndex][0]
 	def draw(self):
 		border = 5
+		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (self.pos, self.size))
+		pygame.draw.rect(win, color, (buttonPos, self.size))
 		if self.currentIndex == -1:
 			surf = self.surf
 		else:
 			surf = self.items[self.currentIndex][1]
-		win.blit(surf, (self.pos[0] + self.size[0]/2 - surf.get_width()/2, self.pos[1] + self.size[1]/2 - surf.get_height()/2))
+		win.blit(surf, (buttonPos[0] + self.size[0]/2 - surf.get_width()/2, buttonPos[1] + self.size[1]/2 - surf.get_height()/2))
 		arrowBorder = 3
 		arrowSize = self.size[1]
 		polygonRight = [Vector(self.size[0] - arrowSize / 2, arrowBorder), Vector(self.size[0] - arrowBorder, self.size[1] / 2), Vector(self.size[0] - arrowSize / 2, self.size[1] - arrowBorder)]
 		polygonLeft = [Vector(arrowSize / 2, arrowBorder), Vector(arrowBorder, self.size[1] / 2), Vector(arrowSize / 2, self.size[1] - arrowBorder)]
 		rightColor = Menu._subSelectColor if self.selected and self.forward else Menu._subButtonColor
 		leftColor = Menu._subSelectColor if self.selected and not self.forward else Menu._subButtonColor
-		pygame.draw.polygon(win, rightColor, [tup2vec(self.pos) + i for i in polygonRight])
-		pygame.draw.polygon(win, leftColor, [tup2vec(self.pos) + i for i in polygonLeft])
-
-class MenuElementDivider(MenuElement):
-	def initialize(self):
-		self.type = MENU_DIV
-		self.divSize = 5
-	def draw(self):
-		pass
+		pygame.draw.polygon(win, rightColor, [buttonPos + i for i in polygonRight])
+		pygame.draw.polygon(win, leftColor, [buttonPos + i for i in polygonLeft])
 
 class MenuElementImage(MenuElement):
 	def initialize(self):
@@ -655,6 +708,7 @@ class MenuElementImage(MenuElement):
 		self.imageSurf = None
 		self.imagePath = None
 		self.dragDx = 0
+		self.draggable = True
 	def setImage(self, path):
 		if self.size[0] < 0 or self.size[1] < 0:
 			return
@@ -669,29 +723,43 @@ class MenuElementImage(MenuElement):
 		self.dragDx = - self.imageSurf.get_width() // 2
 		self.recalculateImage()
 	def draw(self):
-		win.blit(self.surf, self.pos)
-		pygame.draw.rect(win, Menu._buttonColor, (self.pos, self.surf.get_size()), 2)
+		buttonPos = self.getSuperPos() + self.pos
+		win.blit(self.surf, buttonPos)
+		pygame.draw.rect(win, Menu._buttonColor, (buttonPos, self.surf.get_size()), 2)
 	def recalculateImage(self):
 		self.surf.fill((0,0,0,0))
 		self.surf.blit(self.imageSurf, (self.size[0] // 2  + self.dragDx, 0))
 	def step(self):
 		mousePos = mouseInWin()
-		posInButton = (mousePos[0] - self.pos[0], mousePos[1] - self.pos[1])
-		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
-			# if pygame mouse pressed
-			if pygame.mouse.get_pressed()[0]:
-				vel = pygame.mouse.get_rel()
-				if abs(vel[0]) > 100:
-					return
-				self.dragDx += vel[0] / globals.scalingFactor
-				if self.imageSurf.get_width() < self.size[0]:
-					return
-				if self.dragDx > -self.size[0] // 2:
-					self.dragDx = -self.size[0] // 2
-				elif self.dragDx < -self.imageSurf.get_width() + self.size[0] // 2:
-					self.dragDx = -self.imageSurf.get_width() + self.size[0] // 2
+		buttonPos = self.getSuperPos() + self.pos
+		posInButton = (mousePos[0] - buttonPos[0], mousePos[1] - buttonPos[1])
+		if self.draggable:
+			if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
+				# if pygame mouse pressed
+				if pygame.mouse.get_pressed()[0]:
+					vel = pygame.mouse.get_rel()
+					if abs(vel[0]) > 100:
+						return
+					self.dragDx += vel[0] / globals.scalingFactor
+					if self.imageSurf.get_width() < self.size[0]:
+						return
+					if self.dragDx > -self.size[0] // 2:
+						self.dragDx = -self.size[0] // 2
+					elif self.dragDx < -self.imageSurf.get_width() + self.size[0] // 2:
+						self.dragDx = -self.imageSurf.get_width() + self.size[0] // 2
 
-				self.recalculateImage()
+					self.recalculateImage()
+
+class MenuElementSurf(MenuElement):
+	def initialize(self):
+		self.type = MENU_SURF
+		self.surf = None
+	def setSurf(self, surf):
+		self.surf = surf
+	def draw(self):
+		buttonPos = self.getSuperPos() + self.pos
+		win.blit(self.surf, buttonPos)
+		pygame.draw.rect(win, Menu._buttonColor, (buttonPos, self.surf.get_size()), 2)
 
 class MenuElementInput(MenuElementButton):
 	_reg = []
@@ -723,7 +791,8 @@ class MenuElementInput(MenuElementButton):
 				self.renderSurf(self.inputText)
 				self.oldInputText = self.inputText
 		mousePos = mouseInWin()
-		posInButton = (mousePos[0] - self.pos[0], mousePos[1] - self.pos[1])
+		buttonPos = self.getSuperPos() + self.pos
+		posInButton = (mousePos[0] - buttonPos[0], mousePos[1] - buttonPos[1])
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			self.selected = True
 			return self
@@ -731,11 +800,12 @@ class MenuElementInput(MenuElementButton):
 			self.selected = False
 		return None
 	def draw(self):
+		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (self.pos, self.size))
-		win.blit(self.surf, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2, self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+		pygame.draw.rect(win, color, (buttonPos, self.size))
+		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 		if self.mode == "editing" and self.showCursor:
-			win.blit(self.cursor, (self.pos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), self.pos[1] + self.size[1]/2 - self.surf.get_height()/2))
+			win.blit(self.cursor, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementLoadBar(MenuElement):
 	def initialize(self):
@@ -745,77 +815,62 @@ class MenuElementLoadBar(MenuElement):
 		self.maxValue = 100
 		self.direction = 1
 	def draw(self):
-		pygame.draw.rect(win, Menu._textElementColor, (self.pos, self.size))
+		buttonPos = self.getSuperPos() + self.pos
+		pygame.draw.rect(win, Menu._textElementColor, (buttonPos, self.size))
 		# calculate size
 		size = Vector(self.size[0] * (self.value / self.maxValue), self.size[1])
 
 		# draw bar left to right direction
 		if self.direction == 1:
-			pygame.draw.rect(win, Menu._textElementColor, (self.pos, self.size), 2)
-			pygame.draw.rect(win, self.color, (self.pos + Vector(2,2), size - Vector(4,4)))
+			pygame.draw.rect(win, Menu._textElementColor, (buttonPos, self.size), 2)
+			pygame.draw.rect(win, self.color, (buttonPos + Vector(2,2), size - Vector(4,4)))
 		# draw bar right to left direction
 		else:
-			pygame.draw.rect(win, Menu._textElementColor, (self.pos + Vector(self.size[0] - size[0], 0), size), 2)
-			pygame.draw.rect(win, self.color, (self.pos + Vector(self.size[0] - size[0] + 2, 2), size - Vector(4,4)))
+			pygame.draw.rect(win, Menu._textElementColor, (buttonPos + Vector(self.size[0] - size[0], 0), size), 2)
+			pygame.draw.rect(win, self.color, (buttonPos + Vector(self.size[0] - size[0] + 2, 2), size - Vector(4,4)))
 
 class MenuAnimator:
 	_reg = []
-	def __init__(self, menu, pos, out=False, trigger=None, args=None):
+	def __init__(self, menu, posStart, posEnd, trigger=None, args=None, ease="inout"):
 		MenuAnimator._reg.append(self)
-		self.elementList = []
-		self.getElementList(menu)
-		self.firstPositions = []
-		self.finalPositions = []
-		for element in self.elementList:
-			if not out:
-				# in
-				self.finalPositions.append(tup2vec(element.pos))
-				self.firstPositions.append(tup2vec(element.pos) + pos)
-			else:
-				# out
-				self.finalPositions.append(tup2vec(element.pos) + pos)
-				self.firstPositions.append(tup2vec(element.pos))
+		self.posStart = posStart
+		self.posEnd = posEnd
 		self.timer = 0
 		self.fullTime = globals.fps * 1
-		self.out = out
 		self.trigger = trigger
 		self.args = args
 		# set first positions
-		for i, element in enumerate(self.elementList):
-			element.pos = tup2vec(self.firstPositions[i])
+		self.menu = menu
+		self.ease = ease
+		menu.pos = posStart
 	def easeIn(self, t):
 		return t * t
 	def easeOut(self, t):
 		return 1 - (1 - t) * (1 - t)
-	def step(self):
-		if not self.out:
-			ease = self.easeOut(self.timer / self.fullTime)
+	def easeInOut(self, t):
+		if t < 0.5:
+			return 2 * t * t
 		else:
+			return 1 - (2 * (1 - t)) * (1 - t)
+	def step(self):
+		if self.ease == "in":
+			ease = self.easeOut(self.timer / self.fullTime)
+		elif self.ease == "out":
 			ease = self.easeIn(self.timer / self.fullTime)
-		for i, element in enumerate(self.elementList):
-			element.pos = tup2vec(self.finalPositions[i]) * ease + (1 - ease) * tup2vec(self.firstPositions[i])
+		elif self.ease == "inout":
+			ease = self.easeInOut(self.timer / self.fullTime)
+		self.menu.pos = self.posEnd * ease + (1 - ease) * self.posStart
 		self.timer += 1
-		# print(ease)
 		if self.timer > self.fullTime:
 			self.finish()
 	def finish(self):
-		for i, element in enumerate(self.elementList):
-			element.pos = self.finalPositions[i]
+		self.menu.pos = self.posEnd
 		MenuAnimator._reg.remove(self)
 		if self.trigger:
 			if self.args:
 				self.trigger(*self.args)
 			else:
 				self.trigger()
-		
-	def getElementList(self, menu):
-		# get all element of a list recursivly if the element is menu
-		# return a list of element
-		for element in menu.elements:
-			if element.type == MENU_MENU:
-				self.getElementList(element)
-			else:
-				self.elementList.append(element)
 
 class ElementAnimator:
 	def __init__(self, element, start, end, duration = -1, timeOffset=0):
@@ -875,6 +930,29 @@ def playOnPress():
 	MainMenu._mm.gameParameters = string
 	MainMenu._mm.run = False
 
+def drawRecordGraph():
+	for key in MainMenu._mm.graphteams.keys():
+		graphObject.Graph._reg[0].drawGraph2(MainMenu._mm.graphtime, MainMenu._mm.graphteams[key][1], ast.literal_eval(MainMenu._mm.graphteams[key][0]))
+
+def countWin():
+	if not os.path.exists("wormsRecord.xml"):
+		return
+	teams = {}
+	
+	# find teams:
+	for teamsData in ET.parse('wormsTeams.xml').getroot():
+		teams[teamsData.attrib["name"]] = [teamsData.attrib["color"], [0]]
+	
+	count = 1
+	for game in ET.parse('wormsRecord.xml').getroot():
+		for key in teams.keys():
+			if key == game.attrib["winner"]:
+				teams[key][1].append(teams[key][1][-1] + 1)
+			else:
+				teams[key][1].append(teams[key][1][-1])
+		count += 1
+	return (teams, count)
+
 def continueOnPress():
 	Menu._reg.clear()
 	MainMenu._mm.initializeMenuOptions()
@@ -902,6 +980,9 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 	winWidth = globals.winWidth
 	winHeight = globals.winHeight
 
+	# clear menus
+	Menu._reg.clear()
+
 	if args.no_menu:
 		return
 	BackGround()
@@ -913,13 +994,18 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()
-		MenuAnimator(Menu._reg[0], Vector(0, globals.winHeight))
+		endPos = Menu._reg[0].pos
+		MenuAnimator(Menu._reg[0], endPos + Vector(0, globals.winHeight), endPos)
 	else:
 		MainMenu._mm.initializeEndGameMenu(fromGameParameters)
-		MenuAnimator(Menu._reg[0], Vector(0, globals.winHeight))
+		endPos = Menu._reg[0].pos
+		MenuAnimator(Menu._reg[0], endPos + Vector(0, globals.winHeight), endPos)
 
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
+			mousePos = pygame.mouse.get_pos()
+			for g in graphObject.Graph._reg:
+				g.handleGraphEvent(event, Vector(mousePos[0] // globals.scalingFactor, mousePos[1] // globals.scalingFactor))
 			handleEvents(event, MainMenu._mm.handleMainMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
@@ -930,6 +1016,11 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 		# step
 		for menu in Menu._reg:
 			menu.step()
+		
+		for g in graphObject.Graph._reg:
+			mousePos = pygame.mouse.get_pos()
+			# print(g.pos, g.size)
+			g.step(Vector(mousePos[0] // globals.scalingFactor, mousePos[1] // globals.scalingFactor))
 
 		for animation in MenuAnimator._reg:
 			animation.step()
@@ -939,6 +1030,10 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 
 		for menu in Menu._reg:
 			menu.draw()
+
+		for g in graphObject.Graph._reg:
+			g.draw()
+			drawRecordGraph()
 
 		globals.screen.blit(pygame.transform.scale(win, globals.screen.get_rect().size), (0,0))
 		globals.fpsClock.tick(globals.fps)
