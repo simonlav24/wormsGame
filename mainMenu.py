@@ -289,9 +289,13 @@ class MainMenu:
 			pygame.image.save(noise, imageString)
 			MainMenu._picture.setImage(imageString)
 		if key == "play":
-			MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, playOnPress)
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -globals.winHeight), trigger=playOnPress)
 		if key == "continue":
-			MenuAnimator(Menu._reg[0], Vector(0, -globals.winHeight), True, continueOnPress)
+			self.initializeMenuOptions()
+			MenuAnimator(Menu._reg[1], Menu._reg[1].pos + Vector(0, -globals.winHeight), Menu._reg[1].pos)
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, globals.winHeight), trigger=continueOnPress)
+			# remove the end menu
+			# Menu._reg.pop(0)
 		if key == "scoreboard":
 			# create the scoreboard menu
 			self.initializeRecordMenu()
@@ -954,9 +958,7 @@ def countWin():
 	return (teams, count)
 
 def continueOnPress():
-	Menu._reg.clear()
-	MainMenu._mm.initializeMenuOptions()
-	MenuAnimator(Menu._reg[0], Vector(0, winHeight))
+	Menu._reg.pop(0)
 
 def handleEvents(event, handleMenuEvents):
 	if event.type == pygame.MOUSEBUTTONDOWN:
@@ -982,6 +984,7 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 
 	# clear menus
 	Menu._reg.clear()
+	graphObject.Graph._reg.clear()
 
 	if args.no_menu:
 		return

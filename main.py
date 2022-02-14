@@ -7631,7 +7631,7 @@ def testerFunc():
 	mousePos = pygame.mouse.get_pos()
 	mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
 	# BackGround._bg.lightningStrike(mouse)
-	TimeManager._tm.timeRemaining(1)
+	# TimeManager._tm.timeRemaining(1)
 
 ################################################################################ State machine
 
