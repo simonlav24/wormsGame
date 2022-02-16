@@ -375,6 +375,7 @@ def clearMenu():
 
 def menuPop():
 	Menu._reg.pop()
+	graphObject.Graph._reg.clear()
 
 class Menu:
 	_reg = []

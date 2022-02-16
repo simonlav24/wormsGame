@@ -642,10 +642,11 @@ class Blast:
 	def step(self):
 		if randint(0,self.smoke) == 0 and self.rad > 1:
 			Smoke(self.pos)
+			# Smokes._smoker.addSmoke(self.pos)
 		self.timeCounter += 0.5
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
-		self.pos.x += 7.0 * Game._game.wind / self.rad
-		self.pos.y -= 5.0 / self.rad
+		self.pos.x += 4.0 * Game._game.wind / self.rad
+		self.pos.y -= 2.0 / self.rad
 		if Game._game.darkness:
 			color = self._color[int(max(min(self.timeCounter, 5), 0))]
 			Game._game.lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
@@ -1786,7 +1787,7 @@ class Worm (PhysObj):
 			rotated = pygame.transform.flip(rotated, False, True)
 		if self.jetpacking:
 			blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "jet pack")
-			# win.blit(Game._game.sprites, point2world(self.pos - Vector(8,8)), (48, 96, 16, 16))
+		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius + 1)
 		win.blit(rotated, point2world(self.pos - tup2vec(rotated.get_size())//2))
 		
 		# draw name
@@ -2038,16 +2039,6 @@ class Worm (PhysObj):
 		if Game._game.actionMove:
 			if Game._game.objectUnderControl == self and self.health > 0 and not self.jetpacking and not self.rope:
 				move(self)
-	def saveStr(self):
-		string = ""
-		string += str(self.nameStr) + ":\n"
-		string += list2str(self.pos) + "\n"
-		string += str(self.facing) + "\n"
-		string += str(self.shootAngle) + "\n"
-		string += str(self.health) + "\n"
-		string += str(self.sick) + "\n"
-		string += str(self.gravity) + "\n"
-		return string
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
@@ -2135,7 +2126,7 @@ def drawSmoke():
 	smokeSurf = pygame.Surface(win.get_size(), pygame.SRCALPHA)
 	for smoke in Smoke._smoke:
 		pygame.draw.circle(smokeSurf, smoke[2], point2world(smoke[0]), smoke[1])
-	smokeSurf.set_alpha(50)
+	smokeSurf.set_alpha(100)
 	win.blit(smokeSurf, (0,0))
 
 class TNT(PhysObj):#5
@@ -5494,8 +5485,6 @@ class MagicLeaf(PhysObj):
 		Game._game.worldArtifacts.append(PLANT_MASTER)
 	def draw(self):
 		surf = self.surf
-		if self.vel.x > 0:
-			surf = pygame.transform.flip(surf, True, False)
 		surf = pygame.transform.rotate(surf, self.angle)
 		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())/2))
 	def comment(self):
@@ -6087,13 +6076,13 @@ class WeaponManager:
 			return CATEGORY_UTILITIES
 		else:
 			return CATEGORY_ARTIFACTS
-	def switchWeapon(self, string):
+	def switchWeapon(self, string, force=False):
 		""" switch weapon and draw weapon sprite """
 		self.currentWeapon = string
 		self.renderWeaponCount()
 
 		Game._game.weaponHold.fill((0,0,0,0))
-		if canShoot():
+		if canShoot() or force:
 			if self.getBackColor(string) in [GRENADES, GUNS, TOOLS, LEGENDARY, FIREY, BOMBS] or string in [""]:
 				if string in ["covid 19", "parachute", "earthquake"]:
 					return
@@ -6946,7 +6935,7 @@ def cycleWorms():
 		if not worm.sick == 0 and worm.health > 5:
 			worm.damage(min(int(5/Game._game.damageMult)+1, int((worm.health-5)/Game._game.damageMult) +1), 2)
 	
-	WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon)
+	
 	
 	# select next team
 	index = TeamManager._tm.teams.index(TeamManager._tm.currentTeam)
@@ -6989,6 +6978,7 @@ def cycleWorms():
 	
 		Game._game.objectUnderControl = w
 		Game._game.camTrack = Game._game.objectUnderControl
+		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon, force=True)
 
 def switchWorms():
 	currentWorm = TeamManager._tm.currentTeam.worms.index(Game._game.objectUnderControl)
@@ -7759,7 +7749,7 @@ def stateMachine():
 		if Game._game.gameMode == TERMINATOR: pickVictim()
 		Game._game.camTrack = w
 		TimeManager._tm.timeReset()
-
+		WeaponManager._wm.switchWeapon(WeaponManager._wm.weapons[0][0], force=True)
 		Game._game.nextState = PLAYER_CONTROL_1
 		Game._game.state = Game._game.nextState
 	elif Game._game.state == PLAYER_CONTROL_1:
@@ -7790,6 +7780,7 @@ def stateMachine():
 				Game._game.state = Game._game.nextState
 
 		Game._game.nextState = PLAYER_CONTROL_1
+
 	elif Game._game.state == FIRE_MULTIPLE:
 		Game._game.playerControlPlacing = False
 		Game._game.playerControl = True #can play
@@ -8175,7 +8166,6 @@ def gameMain(gameParameters=None):
 			f.step()
 		for t in Toast._toasts:
 			t.step()
-		
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
 			
@@ -8284,8 +8274,7 @@ def gameMain(gameParameters=None):
 			pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((Game._game.lstep/Game._game.lstepmax)*Game._game.loadingSurf.get_width(), Game._game.loadingSurf.get_height())))
 				
 		# screen manegement
-		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-
+		pygame.transform.scale(win, screen.get_rect().size, screen)
 		pygame.display.update()
 		fpsClock.tick(fps)
 
