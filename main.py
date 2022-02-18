@@ -162,7 +162,7 @@ class Game:
 		PhysObj._worms.clear()
 		PhysObj._mines.clear()
 		Debrie._debries.clear()
-		Smoke._smoke.clear()
+		# Smoke._smoke.clear()
 		SentryGun._sentries.clear()
 		Portal._reg.clear()
 		Venus._reg.clear()
@@ -641,8 +641,8 @@ class Blast:
 		self.star = star
 	def step(self):
 		if randint(0,self.smoke) == 0 and self.rad > 1:
-			Smoke(self.pos)
-			# Smokes._smoker.addSmoke(self.pos)
+			# Smoke(self.pos)
+			SmokeParticles._sp.addSmoke(self.pos, Vector())
 		self.timeCounter += 0.5
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
 		self.pos.x += 4.0 * Game._game.wind / self.rad
@@ -2009,7 +2009,7 @@ class Worm (PhysObj):
 		# virus
 		if self.sick == 2 and self.health > 0 and not Game._game.state == WAIT_STABLE:
 			if randint(1,200) == 1:
-				SickGas(self.pos, 2)
+				SmokeParticles._sp.addSmoke(self.pos, color=(102, 255, 127), sick=2)
 		
 		# shooting angle
 		self.shootVel = clamp(self.shootVel + self.shootAcc, 0.1, -0.1)
@@ -2063,7 +2063,8 @@ class Fire(PhysObj):
 		if randint(0,10) < 3:
 			FireBlast(self.pos + vectorUnitRandom(), randint(self.radius,4))
 		if randint(0,50) < 1:
-			Smoke(self.pos)
+			SmokeParticles._sp.addSmoke(self.pos)
+			# Smoke(self.pos)
 		self.timer += 1
 		if self.fallen:
 			self.life -= 1
@@ -2084,50 +2085,54 @@ class Fire(PhysObj):
 		self.yellow = int(sin(0.3*TimeManager._tm.timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
 		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y)), radius)
 
-class Smoke:
-	smokeCount = 0
-	_smoke = []
-	def __init__(self, pos, vel = None, color = None):
-		Game._game.nonPhys.append(self)
-		Smoke.smokeCount += 1
-		if color:
-			self.color = color
+class SmokeParticles:
+	_sp = None
+	_particles = []
+	_sickParticles = []
+	def __init__(self):
+		SmokeParticles._sp = self
+	def addSmoke(self, pos, vel=None, color=None, sick=0):
+		if not color:
+			color = (20, 20, 20)
+		radius = randint(8,10)
+		pos = tup2vec(pos)
+		timeCounter = 0
+		if not vel:
+			vel = Vector()
+		particle = [pos, vel, color, radius, timeCounter]
+		if sick == 0:
+			SmokeParticles._particles.append(particle)
 		else:
-			self.color = (20, 20, 20)
-		self.radius = randint(8,10)
-		self.pos = tup2vec(pos)
-		self.acc = Vector(0,0)
-		if vel:
-			self.vel = vel
-		else:
-			self.vel = Vector(0,0)
-		self.timeCounter = 0
-	def draw(self):
-		# pygame.gfxdraw.filled_circle(win, int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y), self.radius, self.color)
-		Smoke._smoke.append((self.pos, self.radius, self.color))
+			particle[3] = randint(8,18)
+			particle.append(sick)
+			SmokeParticles._sickParticles.append(particle)
 	def step(self):
-		Smoke._smoke.clear()
-		self.timeCounter += 1
-		if self.timeCounter % 5 == 0:
-			self.radius -= 1
-			if self.radius == 0:
-				Game._game.nonPhys.remove(self)
-				Smoke.smokeCount -= 1
-				del self
-				return
-		self.acc.x = Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1)
-		self.acc.y = -0.1
-		self.vel += self.acc
-		self.pos += self.vel
+		for particle in SmokeParticles._particles:
+			particle[4] += 1
+			if particle[4] % 5 == 0:
+				particle[3] -= 1
+				if particle[3] <= 0:
+					SmokeParticles._particles.remove(particle)
+			particle[1] += Vector(Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1), -0.1)
+			particle[0] += particle[1]
 
-def drawSmoke():
-	if len(Smoke._smoke) == 0:
-		return
-	smokeSurf = pygame.Surface(win.get_size(), pygame.SRCALPHA)
-	for smoke in Smoke._smoke:
-		pygame.draw.circle(smokeSurf, smoke[2], point2world(smoke[0]), smoke[1])
-	smokeSurf.set_alpha(100)
-	win.blit(smokeSurf, (0,0))
+		for particle in SmokeParticles._sickParticles:
+			particle[4] += 1
+			if particle[4] % 8 == 0:
+				particle[3] -= 1
+				if particle[3] <= 0:
+					SmokeParticles._sickParticles.remove(particle)
+			particle[1] += Vector(Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1), -0.1)
+			particle[0] += particle[1]
+			for worm in PhysObj._worms:
+				if distus(particle[0], worm.pos) < (particle[3] + worm.radius) * (particle[3] + worm.radius):
+					worm.sicken(particle[5])
+	def draw(self):
+		smokeSurf = pygame.Surface(win.get_size(), pygame.SRCALPHA)
+		for particle in SmokeParticles._particles + SmokeParticles._sickParticles:
+			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
+		smokeSurf.set_alpha(100)
+		win.blit(smokeSurf, (0,0))
 
 class TNT(PhysObj):#5
 	def __init__(self, pos):
@@ -2330,37 +2335,6 @@ class Baseball:
 		weaponSurf = pygame.transform.rotate(pygame.transform.flip(Game._game.weaponHold, False, Game._game.objectUnderControl.facing == LEFT), -degrees(Game._game.objectUnderControl.shootAngle) + 180)
 		win.blit(weaponSurf, point2world(Game._game.objectUnderControl.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
 
-class SickGas:
-	def __init__(self, pos, sickness = 1):
-		Game._game.nonPhys.append(self)
-		self.color = (102, 255, 127)
-		self.radius = randint(8,18)
-		self.pos = tup2vec(pos)
-		self.acc = Vector(0,0)
-		self.vel = Vector(0,0)
-		self.stable = False
-		self.boomAffected = False
-		self.timeCounter = 0
-		self.sickness = sickness
-	def draw(self):
-		# pygame.gfxdraw.filled_circle(win, int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y), self.radius, self.color)
-		Smoke._smoke.append((self.pos, self.radius, self.color))
-	def step(self):
-		self.timeCounter += 1
-		if self.timeCounter % 8 == 0:
-			self.radius -= 1
-			if self.radius == 0:
-				Game._game.nonPhys.remove(self)
-				del self
-				return
-		self.acc.x = Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1)
-		self.acc.y = -0.1
-		self.vel += self.acc
-		self.pos += self.vel
-		for worm in PhysObj._worms:
-			if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
-				worm.sicken(self.sickness)
-
 class GasGrenade(Grenade):
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -2378,15 +2352,15 @@ class GasGrenade(Grenade):
 	def deathResponse(self):
 		boom(self.pos, 20)
 		for i in range(40):
-			s = SickGas(self.pos)
-			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1,1.5)
+			vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1,1.5)
+			SmokeParticles._sp.addSmoke(self.pos, vel, color=(102, 255, 127), sick=1)
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
 		self.timer += 1
 		if self.timer == Game._game.fuseTime:
 			self.dead = True
 		if self.timer > 20 and self.timer % 5 == 0:
-			SickGas(self.pos)
+			SmokeParticles._sp.addSmoke(self.pos, color=(102, 255, 127), sick=1)
 
 class HealthPack(PetrolCan):
 	def __init__(self, pos = (0,0)):
@@ -3462,8 +3436,8 @@ class Artillery(PhysObj):
 				self.timer += 1
 			else:
 				self.timer = 0
-			if randint(0,5) == 0 and Smoke.smokeCount < 30:
-				Smoke(self.pos, None, (200,0,0))
+			if randint(0, 5) == 0:
+				SmokeParticles._sp.addSmoke(self.pos, color=(200,0,0))
 			self.stable = False
 			if self.timer == 50:
 				self.bombing = True
@@ -3986,9 +3960,10 @@ class Venus:
 				if self.explossive:
 					self.explossive = False
 					for i in range(randint(6,14)):
-						s = Smoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
-						Game._game.nonPhys.remove(s)
-						Game._game.nonPhys.insert(0,s)
+						# s = Smoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
+						SmokeParticles._sp.addSmoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
+						# Game._game.nonPhys.remove(s)
+						# Game._game.nonPhys.insert(0,s)
 		elif self.mode == Venus.release:
 			gameDistable()
 			self.snap -= 0.1
@@ -4978,7 +4953,8 @@ class Acid(PhysObj):
 					self.damageCooldown = 30
 		self.inGround = False
 		if randint(0,50) < 1:
-			Smoke(self.pos, color=(200,255,200))
+			# Smoke(self.pos, color=(200,255,200))
+			SmokeParticles._sp.addSmoke(self.pos, color=(200,255,200))
 		gameDistable()
 	def draw(self):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius+1)
@@ -6082,7 +6058,7 @@ class WeaponManager:
 		self.renderWeaponCount()
 
 		Game._game.weaponHold.fill((0,0,0,0))
-		if canShoot() or force:
+		if canShoot(force):
 			if self.getBackColor(string) in [GRENADES, GUNS, TOOLS, LEGENDARY, FIREY, BOMBS] or string in [""]:
 				if string in ["covid 19", "parachute", "earthquake"]:
 					return
@@ -6934,9 +6910,7 @@ def cycleWorms():
 	for worm in PhysObj._worms:
 		if not worm.sick == 0 and worm.health > 5:
 			worm.damage(min(int(5/Game._game.damageMult)+1, int((worm.health-5)/Game._game.damageMult) +1), 2)
-	
-	
-	
+		
 	# select next team
 	index = TeamManager._tm.teams.index(TeamManager._tm.currentTeam)
 	index = (index + 1) % TeamManager._tm.totalTeams
@@ -7569,7 +7543,7 @@ def gameDistable():
 	Game._game.gameStable = False
 	Game._game.gameStableCounter = 0
 
-def canShoot():
+def canShoot(force=False):
 	# if no ammo
 	if TeamManager._tm.currentTeam.ammo(WeaponManager._wm.currentWeapon) == 0:
 		return False
@@ -7579,6 +7553,8 @@ def canShoot():
 	# if in use list
 	if Game._game.useListMode and Game._game.inUsedList(WeaponManager._wm.currentWeapon):
 		return False
+	if force:
+		return True
 	if (not Game._game.playerControl) or (not Game._game.playerMoveable) or (not Game._game.playerShootAble):
 		return False
 	return True
@@ -7620,7 +7596,6 @@ def drawDirInd(pos):
 def testerFunc():
 	mousePos = pygame.mouse.get_pos()
 	mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
-	# BackGround._bg.lightningStrike(mouse)
 	# TimeManager._tm.timeRemaining(1)
 
 ################################################################################ State machine
@@ -7929,6 +7904,7 @@ def gameMain(gameParameters=None):
 
 	BackGround(Game._game.feelColor, Game._game.darkness)
 	HealthBar()
+	SmokeParticles()
 	
 	damageText = (Game._game.damageThisTurn, pixelFont5.render(str(int(Game._game.damageThisTurn)), False, Game._game.HUDColor))
 	Commentator()
@@ -8166,6 +8142,7 @@ def gameMain(gameParameters=None):
 			f.step()
 		for t in Toast._toasts:
 			t.step()
+		SmokeParticles._sp.step()
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
 			
@@ -8201,7 +8178,8 @@ def gameMain(gameParameters=None):
 		
 		if Game._game.gameMode == TERMINATOR and Game._game.victim and Game._game.victim.alive: drawTarget(Game._game.victim.pos)
 		if Arena._arena: Arena._arena.draw()
-		drawSmoke()
+		# drawSmoke()
+		SmokeParticles._sp.draw()
 
 		if Game._game.darkness and Game._game.darkMask: win.blit(Game._game.darkMask, (-int(Game._game.camPos.x), -int(Game._game.camPos.y)))
 		# draw shooting indicator
