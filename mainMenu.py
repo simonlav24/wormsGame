@@ -823,6 +823,9 @@ class MenuElementLoadBar(MenuElement):
 		buttonPos = self.getSuperPos() + self.pos
 		pygame.draw.rect(win, Menu._textElementColor, (buttonPos, self.size))
 		# calculate size
+		if self.maxValue == 0:
+			print("division by zero error")
+			return
 		size = Vector(self.size[0] * (self.value / self.maxValue), self.size[1])
 
 		# draw bar left to right direction

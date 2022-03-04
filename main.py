@@ -6131,7 +6131,8 @@ class WeaponManager:
 			win.blit(pygame.transform.flip(Game._game.airStrikeSpr, False if Game._game.airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(Game._game.airStrikeSpr.get_size())/2))
 		if WeaponManager._wm.currentWeapon == "earth spike" and Game._game.state == PLAYER_CONTROL_1 and TeamManager._tm.currentTeam.ammo("earth spike") != 0:
 			pot = checkPotential(Game._game.objectUnderControl, 25)
-			drawTarget(pot[-1])
+			if len(pot) > 0:
+				drawTarget(pot[-1])
 
 def fire(weapon = None):
 	global decrease
