@@ -7034,6 +7034,8 @@ class HealthBar:
 		self.teamHealthMod = [0] * TeamManager._tm.totalTeams
 		self.teamHealthAct = [0] * TeamManager._tm.totalTeams
 		self.maxHealth = 0
+		HealthBar.drawBar = True
+		HealthBar.drawPoints = True
 		if Game._game.diggingMatch:
 			HealthBar.drawBar = False
 	def calculateInit(self):
@@ -7359,8 +7361,8 @@ def toastInfo():
 		return
 	if Toast.toastCount > 0:
 		Toast._toasts[0].time = 0
-		if Toast._toasts[0].Game._game.state == 2:
-			Toast._toasts[0].Game._game.state = 0
+		if Toast._toasts[0].state == 2:
+			Toast._toasts[0].state = 0
 		return
 	toastWidth = 100
 	surfs = []
