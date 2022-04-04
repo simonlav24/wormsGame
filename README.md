@@ -18,6 +18,9 @@ game development practice in python for educational purposes and fun.
 
 # :crossed_swords: Weapons
 ## :rocket: Missiles
+
+![](.\assets\anims\missile.gif)
+
 - **MISSILE** - shoot a missile, wind sensitive.
 - **GRAVITY MISSILE** - shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
 - **BUNKER BUSTER** - shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
@@ -25,6 +28,9 @@ game development practice in python for educational purposes and fun.
 - **SEEKER** - target seeking missile.
 
 ## :comet: Grenades
+
+![](.\assets\anims\grenade.gif)
+
 - **GRENADE** - throw a grenade. all grenades delay time can be changed by pressing tab.
 - **MORTAR** - throw a mortar grenade. release cluster on explosion.
 - **STICKY BOMB** - a sticky grenade.
@@ -33,6 +39,9 @@ game development practice in python for educational purposes and fun.
 - **RAON LAUNCHER** - shoot two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
 
 ## :gun: Guns
+
+![](.\assets\anims\minigun.gif)
+
 - **SHOTGUN** - fire shotgun. 3 rounds.
 - **LONG BOW** - shoot arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
 - **MINIGUN** - fire minigun.
@@ -42,10 +51,15 @@ game development practice in python for educational purposes and fun.
 - **BUBBLE GUN** - shoot bubbles that captures worms and more
 
 ## :fire: Incendiary
+
+![](.\assets\anims\fire.gif)
+
 - **PETROL BOMB** - explosive fire spreader.
 - **FLAME THROWER** - it werfs flammen
 
 ## :bomb: Bombs and Animals
+
+![](.\assets\anims\snail.gif)
 
 - **TNT** - explosive TNT bomb.
 - **MINE** - mine.
@@ -57,6 +71,8 @@ game development practice in python for educational purposes and fun.
 
 ## :wrench: Tools
 
+![](.\assets\anims\tools.gif)
+
 - **BASEBALL** - home running worms away.
 - **GIRDER** - place a girder. press tab for rotation and scaling.
 - **ROPE** - swing your way to action.
@@ -66,6 +82,9 @@ game development practice in python for educational purposes and fun.
 - **ENDER PEARL** - throw and teleport to where it lands. obtainable by utility crate.
 
 ## :small_airplane: Aerial
+
+![](.\assets\anims\airstrike.gif)
+
 - **ARTILLERY ASSISTANCE** - throw a flare to mark area for bombing.
 - **CHUM BUCKET** - throw chum. attracts seagulls. *experimental*
 - **AIRSTRIKE** - missile strike, wind sensitive.
@@ -73,6 +92,9 @@ game development practice in python for educational purposes and fun.
 - **MINE STRIKE** - mine strike.
 
 ## :hot_pepper: Super weapons
+
+![](.\assets\anims\electro.gif)
+
  Legendary weapons can be obtained by weapon crates marked with "W".
 - **HOLY GRENADE** - feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
 - **BANANA** - multiplying banana of mass destruction.
@@ -88,6 +110,9 @@ game development practice in python for educational purposes and fun.
 - **GUIDED MISSILE** - controllable missile. use RIGHT KEY and LEFT KEY to control.
 
 # :hammer: Utilities:
+
+![](.\assets\anims\jetpack.gif)
+
  Utilities can be obtained by utility crates marked with "?".
 - **moon gravity** - big step for wormanity.
 - **double damage** - twice as fun.
@@ -100,6 +125,8 @@ game development practice in python for educational purposes and fun.
 - **traveling kit** - more ropes and parachutes.
 
 ## :moyai: Artifacts
+
+![](.\assets\anims\mjolnir.gif)
 
 Artifacts is a game option that unlocks magical items and weapons. the artifacts will randomly spawn in the map and must be collected to activate their abilities.
 

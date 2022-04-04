@@ -7599,7 +7599,37 @@ def drawDirInd(pos):
 def testerFunc():
 	mousePos = pygame.mouse.get_pos()
 	mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
-	# TimeManager._tm.timeRemaining(1)
+
+class Anim:
+	_a = None
+	def __init__(self):
+		Anim._a = self
+		Game._game.nonPhys.append(self)
+		num = -1
+		for folder in os.listdir("./anims"):
+			if not os.path.isdir("./anims/" + folder):
+				continue
+			try:
+				folderNum = int(folder)
+			except:
+				continue
+			if folderNum > num:
+				num = folderNum
+		self.folder = "./anims/" + str(num + 1)
+		# create folder
+		if not os.path.isdir(self.folder):
+			os.mkdir(self.folder)
+		self.time = 0
+		print("record Start")
+	def step(self):
+		pygame.image.save(win, self.folder + "/" + str(self.time).zfill(3) + ".png")
+		self.time += 1
+		if self.time == 5 * fps:
+			Anim._a = None
+			Game._game.nonPhys.remove(self)
+			print("record End")
+	def draw(self):
+		pass
 
 ################################################################################ State machine
 
