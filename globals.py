@@ -26,7 +26,7 @@ def globalsInit():
     win = pygame.Surface((winWidth, winHeight))
         
     pygame.display.set_caption("Simon's Worms")
-    screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
+    screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF | pygame.NOFRAME)
 
 def exitGame():
     pygame.quit()

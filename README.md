@@ -144,6 +144,9 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
   * **Earth Spike** - bend the earth into a spike to shoot nearby emenies and objects to space
   * **Fire Ball** - a flying blast of fire ball exploding into flames
   * **Air Tornado** - send a violently rotating column of air
+* **Minecraft** - become a minecraft builder
+  * **Pick Axe** - use a diamond pickaxe to mine the ground
+  * **Build** - ability to place dirt blocks around you
 
 ## :hammer_and_pick: Game modes
 

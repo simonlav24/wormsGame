@@ -118,6 +118,7 @@ class BackGround:
 		self.recreate()
 		self.cloudsPos = [i * (winWidth + 170)/3 for i in range(3)]
 		self.animationStep = 0 # in
+		self.fireworks = None
 	def recreate(self):
 		feel = feels[self.feelIndex]
 		self.imageMountain = renderMountains((180, 110), feel[3])
@@ -127,6 +128,9 @@ class BackGround:
 		pygame.draw.line(colorRect, feel[1], (0,1), (2,1))
 		self.imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
 		self.clouds = [renderCloud() for i in range(3)]
+	def step(self):
+		if self.fireworks:
+			pass
 	def draw(self):
 		win.blit(self.imageSky, (0,0))
 		x = 0
@@ -140,6 +144,34 @@ class BackGround:
 				self.cloudsPos[i] = -170
 			win.blit(c, (self.cloudsPos[i] ,winHeight // 2))
 
+class fireWork:
+	_reg = []
+	def __init__(self, pos, color):
+		fireWork._reg.append(self)
+		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
+		self.pos = Vector(pos[0], pos[1])
+		self.acc = Vector()
+		self.color = color
+		self.radius = 3
+		
+		self.lights = []
+		self.time = 0
+	def step(self):
+		self.acc.y += 2.5 * 0.2
+		self.vel += self.acc
+		
+		self.pos += self.vel
+		self.lights.append([self.pos.vec2tupint(), self.radius, 100])
+		
+		for light in self.lights:
+			light[2] -= 1
+		self.lights = [l for l in self.lights if l[2] > 0]
+		self.time += 1
+		if self.time == 30 * 3:
+			fireWork._reg.remove(self)
+	def draw(self):
+		pygame.draw.circle(win, self.color, self.pos, self.radius)
+
 class MainMenu:
 	_mm = None
 	_picture = None
@@ -152,8 +184,12 @@ class MainMenu:
 	def initializeEndGameMenu(self, parameters):
 		endMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
 		endMenu.insert(MENU_TEXT, text="Game Over", customSize=15)
-		endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
-		endMenu.insert(MENU_TEXT, text="most damage dealt: " + str(parameters["mostDamage"]) + " by " + parameters["damager"], customSize=15)
+		if "winner" in parameters.keys():
+			endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
+		else:
+			endMenu.insert(MENU_TEXT, text="its a tie!")
+		if "mostDamage" in parameters.keys():
+			endMenu.insert(MENU_TEXT, text="most damage dealt: " + str(parameters["mostDamage"]) + " by " + parameters["damager"], customSize=15)
 
 		maxpoints = max([parameters["teams"][i][1] for i in parameters["teams"]])
 		for team in parameters["teams"].keys():
@@ -1021,6 +1057,8 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 			globals.exitGame()
 
 		# step
+		BackGround._bg.step()
+		
 		for menu in Menu._reg:
 			menu.step()
 		

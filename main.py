@@ -93,6 +93,7 @@ if True:
 	MJOLNIR = 0
 	PLANT_MASTER = 1
 	AVATAR = 2
+	MINECRAFT = 3
 
 # improvements:
 # seagulls to not spawn on top of world
@@ -340,7 +341,7 @@ class Game:
 		self.cheatCode = "" # cheat code
 		self.HUDColor = BLACK # color of HUD
 		self.holdArtifact = True # whether to hold artifact
-		self.worldArtifacts = [MJOLNIR, PLANT_MASTER, AVATAR] # world artifacts
+		self.worldArtifacts = [MJOLNIR, PLANT_MASTER, AVATAR, MINECRAFT] # world artifacts
 		self.trigerArtifact = False # whether to trigger artifact drop next turn
 		self.shotCount = 0 # number of gun shots fired
 
@@ -653,7 +654,6 @@ class Blast:
 		if self.timeCounter >= 10:
 			Game._game.nonPhys.remove(self)
 			del self
-		
 	def draw(self):
 		if self.star and self.timeCounter < 1.0:
 			points = []
@@ -1492,6 +1492,32 @@ class Debrie (PhysObj):
 		points = [point2world(self.pos + rotateVector(i, -self.angle)) for i in self.rect]
 		pygame.draw.polygon(win, self.color, points)
 
+class fireWork:
+	_reg = []
+	def __init__(self, pos, color):
+		fireWork._reg.append(self)
+		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
+		self.pos = Vector(pos[0], pos[1])
+		self.acc = Vector()
+		self.color = color
+		self.radius = 3
+		
+		self.lights = []
+		self.time = 0
+	def step(self):
+		self.acc.y += 2.5 * 0.2
+		self.vel += self.acc
+		
+		self.pos += self.vel
+		self.lights.append([self.pos.vec2tupint(), self.radius, 100])
+		
+		for light in self.lights:
+			light[2] -= 1
+		self.lights = [l for l in self.lights if l[2] > 0]
+		self.time += 1
+		if self.time == 30 * 3:
+			fireWork._reg.remove(self)
+	
 class Missile (PhysObj):#1
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -5464,7 +5490,7 @@ class MagicLeaf(PhysObj):
 		surf = pygame.transform.rotate(surf, self.angle)
 		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())/2))
 	def comment(self):
-		Commentator._com.que.append(("", ("a leaf from the gods", ""), Game._game.HUDColor))
+		Commentator._com.que.append(("", ("a leaf of heavens tree", ""), Game._game.HUDColor))
 
 class MagicBeanGrow:
 	def __init__(self, pos, vel):
@@ -5929,6 +5955,142 @@ class GunShell(PhysObj):
 		if self.index == 1:
 			pygame.draw.circle(win, (25,25,25), point2world(self.pos), 3, 1)
 
+class PickAxe:
+	_pa = None
+	def __init__(self):
+		PickAxe._pa = self
+		Game._game.nonPhys.append(self)
+		self.count = 6
+		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "pick axe")
+		self.animating = 0
+	def mine(self):
+		worm = Game._game.objectUnderControl
+		position = worm.pos + vectorFromAngle(worm.shootAngle, 20)
+		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
+
+		colors = []
+		for i in range(10):
+			sample = (position + Vector(8,8) + vectorUnitRandom() * uniform(0,8)).vec2tupint()
+			if isOnMap(sample):
+				color = Game._game.ground.get_at(sample)
+				if not color == SKY:
+					colors.append(color)
+		if len(colors) == 0:
+			colors = Blast._color
+
+		for i in range(16):
+			d = Debrie(position + Vector(8,8), 8, colors, 2, False)
+			d.radius = choice([2,1])
+
+		pygame.draw.rect(Game._game.gameMap, SKY, (position, Vector(16,16)))
+		pygame.draw.rect(Game._game.ground, SKY, (position, Vector(16,16)))
+
+		self.animating = 90
+
+		self.count -= 1
+		if self.count == 0:
+			return True
+		return False
+	def step(self):
+		if self.count == 0:
+			Game._game.nonPhys.remove(self)
+			PickAxe._pa = None
+		if self.animating > 0:
+			self.animating -= 5
+			if self.animating < 0:
+				self.animating = 0
+		if not Game._game.objectUnderControl.alive:
+			Game._game.nonPhys.remove(self)
+			PickAxe._pa = None
+	def draw(self):
+		worm = Game._game.objectUnderControl
+		position = worm.pos + vectorFromAngle(worm.shootAngle, 20)
+		# closest grid of 16
+		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
+		pygame.draw.rect(win, (255,255,255), (point2world(position), Vector(16,16)), 1)
+
+		angle = - self.animating * worm.facing
+
+		weaponSurf = pygame.transform.rotate(pygame.transform.flip(self.surf, worm.facing == LEFT, False), angle)
+		win.blit(weaponSurf, point2world(worm.pos - tup2vec(weaponSurf.get_size())/2 + Vector(worm.facing * 9, -4)))
+
+class MineBuild:
+	_mb = None
+	def __init__(self):
+		MineBuild._mb = self
+		Game._game.nonPhys.append(self)
+		self.count = 6
+		self.locations = []
+	def build(self):
+		worm = Game._game.objectUnderControl
+		position = worm.pos + vectorFromAngle(worm.shootAngle, 20)
+		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
+
+		pygame.draw.rect(Game._game.gameMap, GRD, (position, Vector(16,16)))
+		if position + Vector(0,16) in self.locations:
+			blitWeaponSprite(Game._game.ground, position, "build")
+			Game._game.ground.blit(Game._game.sprites, position + Vector(0,16), (80,112,16,16))
+		elif position + Vector(0,-16) in self.locations:
+			Game._game.ground.blit(Game._game.sprites, position, (80,112,16,16))
+		else:
+			blitWeaponSprite(Game._game.ground, position, "build")
+
+		self.locations.append(position)
+		
+		self.count -= 1
+		if self.count == 0:
+			return True
+		return False
+	def step(self):
+		if self.count == 0:
+			Game._game.nonPhys.remove(self)
+			MineBuild._mb = None
+			
+		if not Game._game.objectUnderControl.alive:
+			Game._game.nonPhys.remove(self)
+			MineBuild._mb = None
+	def draw(self):
+		worm = Game._game.objectUnderControl
+		position = worm.pos + vectorFromAngle(worm.shootAngle, 20)
+		# closest grid of 16
+		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
+		pygame.draw.rect(win, (255,255,255), (point2world(position), Vector(16,16)), 1)
+
+class PickAxeArtifact(PhysObj):
+	def __init__(self, pos):
+		self.initialize()
+		self.pos = pos
+		self.vel = Vector(randint(-2,2), 0)
+		self.radius = 3
+		self.damp = 0.2
+		self.angle = 0
+		Game._game.camTrack = self
+		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+		blitWeaponSprite(self.surf, (0,0), "pick axe")
+	def secondaryStep(self):
+		self.angle -= self.vel.x*4
+		# pick up
+		if dist(Game._game.objectUnderControl.pos, self.pos) < self.radius + Game._game.objectUnderControl.radius + 5 and not Game._game.objectUnderControl.health <= 0\
+			and not len(Game._game.objectUnderControl.team.artifacts) > 0: 
+			PhysObj._reg.remove(self)
+			Commentator._com.que.append(("mining", ("its ", " time!"), TeamManager._tm.currentTeam.color))
+			TeamManager._tm.currentTeam.artifacts.append(MINECRAFT)
+			# add artifacts moves:
+			WeaponManager._wm.addArtifactMoves(MINECRAFT)
+			del self
+			return 
+	def removeFromGame(self):
+		if self in PhysObj._reg:
+			PhysObj._reg.remove(self)
+		Game._game.worldArtifacts.append(MINECRAFT)
+	def draw(self):
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+	def comment(self):
+		Commentator._com.que.append(("", ("a game changer", ""), Game._game.HUDColor))
+
 ################################################################################ Weapons setup
 
 class WeaponManager:
@@ -6016,6 +6178,9 @@ class WeaponManager:
 		self.weapons.append(["earth spike",			PUTABLE,	0,	ARTIFACTS,	False,	0,	AVATAR])
 		self.weapons.append(["fire ball",			GUN,		0,	ARTIFACTS,	False,	0,	AVATAR])
 		self.weapons.append(["air tornado",			PUTABLE,	0,	ARTIFACTS,	False,	0,	AVATAR])
+
+		self.weapons.append(["pick axe",			PUTABLE,	0,	ARTIFACTS,	False,	0, 	MINECRAFT])
+		self.weapons.append(["build",				PUTABLE,	0,	ARTIFACTS,	False,	0, 	MINECRAFT])
 		
 		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
 
@@ -6031,7 +6196,7 @@ class WeaponManager:
 		self.surf = pixelFont5.render(self.currentWeapon, False, Game._game.HUDColor)
 		self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
 		
-		self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf, AVATAR: Avatar}
+		self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf, AVATAR: Avatar, MINECRAFT: PickAxeArtifact}
 	def getStyle(self, string):
 		return self.weapons[self.weaponDict[string]][1]
 	def getCurrentStyle(self):
@@ -6081,7 +6246,7 @@ class WeaponManager:
 		# when team pick up artifact add them to weaponCounter
 		for w in self.weapons[self.weaponCount + self.utilityCount:]:
 			if w[6] == artifact:
-				if w[0] == "magic bean":
+				if w[0] in ["magic bean", "pick axe", "build"]:
 					TeamManager._tm.currentTeam.ammo(w[0], 1, True)
 					continue
 				if w[0] == "fly":
@@ -6447,7 +6612,21 @@ def fire(weapon = None):
 		avail = False
 	elif weapon == "air tornado":
 		w = Tornado()
-	
+	elif weapon == "pick axe":
+		if PickAxe._pa:
+			decrease = PickAxe._pa.mine()
+		else:
+			PickAxe()
+			decrease = False
+		Game._game.nextState = PLAYER_CONTROL_1
+	elif weapon == "build":
+		if MineBuild._mb:
+			decrease = MineBuild._mb.build()
+		else:
+			MineBuild()
+			decrease = False
+		Game._game.nextState = PLAYER_CONTROL_1
+
 	if w and not TimeTravel._tt.timeTravelFire: Game._game.camTrack = w	
 	
 	# position to available position
@@ -6497,7 +6676,7 @@ def fireClickable():
 		fireMineStrike(mousePosition)
 	elif WeaponManager._wm.currentWeapon == "napalm strike":
 		fireNapalmStrike(mousePosition)
-	
+
 	if decrease and TeamManager._tm.currentTeam.ammo(WeaponManager._wm.currentWeapon) != -1:
 		TeamManager._tm.currentTeam.ammo(WeaponManager._wm.currentWeapon, -1)
 	
@@ -6723,12 +6902,12 @@ def checkWinners():
 	# regular win:
 	else:
 		winningTeam = lastTeam
-		print("[last team standing is", winningTeam.name, "]")
+		if winningTeam:
+			print("[last team standing is", winningTeam.name, "]")
 		if Game._game.gameMode == DAVID_AND_GOLIATH:
 			dic["mode"] = "davidVsGoliath"
 	
 	if end:
-		print("[winning team is", winningTeam.name, "]")
 		if winningTeam != None:
 			print("Team", winningTeam.name, "won!")
 			dic["time"] = str(TimeManager._tm.timeOverall//fps)
@@ -6851,8 +7030,11 @@ def cycleWorms():
 		for team in TeamManager._tm.teams:
 			if PLANT_MASTER in team.artifacts:
 				team.ammo("magic bean", 1, True)
-			if MJOLNIR in team.artifacts:
+			elif MJOLNIR in team.artifacts:
 				team.ammo("fly", 3, True)
+			elif MINECRAFT in team.artifacts:
+				team.ammo("pick axe", 1, True)
+				team.ammo("build", 1, True)
 		
 		if len(Game._game.worldArtifacts) > 0 and not Game._game.deployingArtifact:
 			chance = randint(0,10)
@@ -7541,7 +7723,10 @@ def cheatActive(code):
 		MasterOfPuppets()
 	if code == "artifact":
 		Game._game.trigerArtifact = True
-	
+	if code == "minecraft":
+		mousePos = pygame.mouse.get_pos()
+		PickAxeArtifact(Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
+
 def gameDistable(): 
 	Game._game.gameStable = False
 	Game._game.gameStableCounter = 0
