@@ -19,7 +19,7 @@ game development practice in python for educational purposes and fun.
 # :crossed_swords: Weapons
 ## :rocket: Missiles
 
-![](.\assets\anims\missile.gif)
+![](/assets/anims/missile.gif)
 
 - **MISSILE** - shoot a missile, wind sensitive.
 - **GRAVITY MISSILE** - shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
@@ -29,7 +29,7 @@ game development practice in python for educational purposes and fun.
 
 ## :comet: Grenades
 
-![](.\assets\anims\grenade.gif)
+![](/assets/anims/grenade.gif)
 
 - **GRENADE** - throw a grenade. all grenades delay time can be changed by pressing tab.
 - **MORTAR** - throw a mortar grenade. release cluster on explosion.
@@ -40,7 +40,7 @@ game development practice in python for educational purposes and fun.
 
 ## :gun: Guns
 
-![](.\assets\anims\minigun.gif)
+![](/assets/anims/minigun.gif)
 
 - **SHOTGUN** - fire shotgun. 3 rounds.
 - **LONG BOW** - shoot arrows. 3 arrows. press tab for sleeping poison. sleeping worms will lose their next turn.
@@ -52,14 +52,14 @@ game development practice in python for educational purposes and fun.
 
 ## :fire: Incendiary
 
-![](.\assets\anims\fire.gif)
+![](/assets/anims/fire.gif)
 
 - **PETROL BOMB** - explosive fire spreader.
 - **FLAME THROWER** - it werfs flammen
 
 ## :bomb: Bombs and Animals
 
-![](.\assets\anims\snail.gif)
+![](/assets/anims/snail.gif)
 
 - **TNT** - explosive TNT bomb.
 - **MINE** - mine.
@@ -71,7 +71,7 @@ game development practice in python for educational purposes and fun.
 
 ## :wrench: Tools
 
-![](.\assets\anims\tools.gif)
+![](/assets/anims/tools.gif)
 
 - **BASEBALL** - home running worms away.
 - **GIRDER** - place a girder. press tab for rotation and scaling.
@@ -83,7 +83,7 @@ game development practice in python for educational purposes and fun.
 
 ## :small_airplane: Aerial
 
-![](.\assets\anims\airstrike.gif)
+![](/assets/anims/airstrike.gif)
 
 - **ARTILLERY ASSISTANCE** - throw a flare to mark area for bombing.
 - **CHUM BUCKET** - throw chum. attracts seagulls. *experimental*
@@ -93,7 +93,7 @@ game development practice in python for educational purposes and fun.
 
 ## :hot_pepper: Super weapons
 
-![](.\assets\anims\electro.gif)
+![](/assets/anims/electro.gif)
 
  Legendary weapons can be obtained by weapon crates marked with "W".
 - **HOLY GRENADE** - feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
@@ -111,7 +111,7 @@ game development practice in python for educational purposes and fun.
 
 # :hammer: Utilities:
 
-![](.\assets\anims\jetpack.gif)
+![](/assets/anims/jetpack.gif)
 
  Utilities can be obtained by utility crates marked with "?".
 - **moon gravity** - big step for wormanity.
@@ -126,7 +126,7 @@ game development practice in python for educational purposes and fun.
 
 ## :moyai: Artifacts
 
-![](.\assets\anims\mjolnir.gif)
+![](/assets/anims/mjolnir.gif)
 
 Artifacts is a game option that unlocks magical items and weapons. the artifacts will randomly spawn in the map and must be collected to activate their abilities.
 
