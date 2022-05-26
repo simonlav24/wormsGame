@@ -5711,6 +5711,7 @@ class Frost:
 				self.next.append(checkPos)
 		if len(self.next) == 0:
 			Game._game.nonPhys.remove(self)
+			return
 		self.pos = choice(self.next)
 		self.next.remove(self.pos)
 		
