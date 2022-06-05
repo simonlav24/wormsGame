@@ -157,6 +157,8 @@ class Game:
 		self.imageMjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
 		self.imageMjolnir.blit(self.sprites, (0,0), (100, 32, 24, 31))
 		self.weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
+
+		self.dt = 1
 	def clearLists(self):
 		# clear lists
 		PhysObj._reg.clear()
@@ -644,10 +646,10 @@ class Blast:
 		if randint(0,self.smoke) == 0 and self.rad > 1:
 			# Smoke(self.pos)
 			SmokeParticles._sp.addSmoke(self.pos, Vector())
-		self.timeCounter += 0.5
+		self.timeCounter += 0.5 * Game._game.dt
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
-		self.pos.x += 4.0 * Game._game.wind / self.rad
-		self.pos.y -= 2.0 / self.rad
+		self.pos.x += (4.0 * Game._game.wind / self.rad) * Game._game.dt
+		self.pos.y -= (2.0 / self.rad) * Game._game.dt
 		if Game._game.darkness:
 			color = self._color[int(max(min(self.timeCounter, 5), 0))]
 			Game._game.lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
@@ -677,10 +679,10 @@ class FireBlast():
 		Game._game.nonPhys.append(self)
 		self.color = choice(self._color)
 	def step(self):
-		self.pos.y -= 2 - 0.4 * self.radius
-		self.pos.x += Game._game.wind
+		self.pos.y -= (2 - 0.4 * self.radius) * Game._game.dt
+		self.pos.x += Game._game.wind * Game._game.dt
 		if randint(0, 10) < 3:
-			self.radius -= 1
+			self.radius -= 1 * Game._game.dt
 		if self.radius < 0:
 			Game._game.nonPhys.remove(self)
 			del self
@@ -804,9 +806,9 @@ class Cloud:
 		self.randomness = uniform(0.97, 1.02)
 	def step(self):
 		self.acc.x = Game._game.wind
-		self.vel += self.acc
+		self.vel += self.acc * Game._game.dt
 		self.vel *= 0.85 * self.randomness
-		self.pos += self.vel
+		self.pos += self.vel * Game._game.dt
 		
 		if self.pos.x > Game._game.camPos.x + winWidth + 100 or self.pos.x < Game._game.camPos.x - 100 - self.cWidth:
 			self._reg.remove(self)
@@ -1028,16 +1030,16 @@ def point2world(point):
 def move(obj):
 	dir = obj.facing
 	if checkFreePos(obj, obj.pos + Vector(dir, 0)):
-		obj.pos += Vector(dir, 0)
+		obj.pos += Vector(dir, 0) * Game._game.dt
 		return True
 	else:
 		for i in range(1,5):
 			if checkFreePos(obj, obj.pos + Vector(dir, -i)):
-				obj.pos += Vector(dir, -i)
+				obj.pos += Vector(dir, -i) * Game._game.dt
 				return True
 		for i in range(1,5):
 			if checkFreePos(obj, obj.pos + Vector(dir, i)):
-				obj.pos += Vector(dir, i)
+				obj.pos += Vector(dir, i) * Game._game.dt
 				return True
 	return False
 
@@ -1310,10 +1312,10 @@ class PhysObj:
 		self.applyForce()
 		
 		# velocity
-		self.vel += self.acc
+		self.vel += self.acc * Game._game.dt
 		self.limitVel()
 		# position
-		ppos = self.pos + self.vel
+		ppos = self.pos + self.vel * Game._game.dt
 		
 		# reset forces
 		self.acc *= 0
@@ -1563,9 +1565,9 @@ class Grenade (PhysObj):#2
 			rad *= 2
 		boom(self.pos, rad)
 	def secondaryStep(self):
-		self.angle -= self.vel.x*4
-		self.timer += 1
-		if self.timer == Game._game.fuseTime:
+		self.angle -= self.vel.x * 4 * Game._game.dt
+		self.timer += 1 * Game._game.dt
+		if self.timer >= Game._game.fuseTime:
 			self.dead = True
 		self.stable = False
 	def draw(self):
@@ -2091,7 +2093,7 @@ class Fire(PhysObj):
 		if randint(0,50) < 1:
 			SmokeParticles._sp.addSmoke(self.pos)
 			# Smoke(self.pos)
-		self.timer += 1
+		self.timer += 1 * Game._game.dt
 		if self.fallen:
 			self.life -= 1
 		if Game._game.darkness:
@@ -2136,11 +2138,11 @@ class SmokeParticles:
 		for particle in SmokeParticles._particles:
 			particle[4] += 1
 			if particle[4] % 5 == 0:
-				particle[3] -= 1
+				particle[3] -= 1 * Game._game.dt
 				if particle[3] <= 0:
 					SmokeParticles._particles.remove(particle)
-			particle[1] += Vector(Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1), -0.1)
-			particle[0] += particle[1]
+			particle[1] += Vector(Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1) * Game._game.dt, -0.1)
+			particle[0] += particle[1] * Game._game.dt
 
 		for particle in SmokeParticles._sickParticles:
 			particle[4] += 1
@@ -2262,9 +2264,10 @@ class PetrolCan(PhysObj):
 		pygame.draw.rect(Game._game.extraCol, SKY, (int(self.pos.x -3),int(self.pos.y -5), 7,10))
 		for i in range(40):
 			f = Fire(self.pos)
-			f.vel.x = (i-20)*0.1*1.5
-			f.vel.y = uniform(-2,-0.4)
-		PhysObj._reg.remove(self)
+			f.vel.x = (i - 20) * 0.1 * 1.5
+			f.vel.y = uniform(-2, -0.4)
+		if self in PhysObj._reg:
+			PhysObj._reg.remove(self)
 		if self in PetrolCan._cans:
 			PetrolCan._cans.remove(self)
 	def secondaryStep(self):
@@ -2354,7 +2357,7 @@ class Baseball:
 						worm.vel += self.direction * 8
 						Game._game.camTrack = worm
 	def step(self):
-		self.timer += 1
+		self.timer += 1 * Game._game.dt
 		if self.timer >= 15:
 			Game._game.nonPhys.remove(self)
 	def draw(self):
@@ -2672,8 +2675,8 @@ class Earthquake:
 					continue
 				if randint(0,5) == 1:
 					obj.vel += Vector(randint(-1,1), -uniform(0,1))
-		self.timer -= 1
-		if self.timer == 0:
+		self.timer -= 1 * Game._game.dt
+		if self.timer <= 0:
 			Game._game.nonPhys.remove(self)
 			Earthquake.earthquake = 0
 			del self
@@ -3013,13 +3016,13 @@ class BunkerBuster(PhysObj):
 				self.vel = self.drillVel
 				self.vel.setMag(2)
 			else:
-				self.vel += self.acc
+				self.vel += self.acc * Game._game.dt
 				self.vel.limit(5)
 		else:
-			self.vel += self.acc
+			self.vel += self.acc * Game._game.dt
 		
 		# position
-		ppos = self.pos + self.vel
+		ppos = self.pos + self.vel * Game._game.dt
 		
 		# reset forces
 		self.acc *= 0
@@ -3035,14 +3038,14 @@ class BunkerBuster(PhysObj):
 				self.inGround = True
 				self.drillVel = vectorCopy(self.vel)
 		if self.inGround:
-			self.timer += 1
+			self.timer += 1 * Game._game.dt
 					
 		checkPos = (self.pos + direction*(self.radius + 2)).vec2tupint()
 		if not(checkPos[0] >= Game._game.mapWidth or checkPos[0] < 0 or checkPos[1] >= Game._game.mapHeight or checkPos[1] < 0):
 			if not Game._game.gameMap.get_at(checkPos) == GRD and self.inGround:
 				self.dead = True
 				
-		if self.timer == fps*2:
+		if self.timer >= fps*2:
 			self.dead = True
 			
 		self.lastPos.x, self.lastPos.y = self.pos.x, self.pos.y
@@ -6092,6 +6095,25 @@ class PickAxeArtifact(PhysObj):
 	def comment(self):
 		Commentator._com.que.append(("", ("a game changer", ""), Game._game.HUDColor))
 
+class TimeSlow:
+	def __init__(self):
+		Game._game.nonPhys.append(self)
+		self.time = 0
+		self.state = "slow"
+	def step(self):
+		self.time += 1
+		if self.state == "slow":
+			Game._game.dt *= 0.9
+			if Game._game.dt < 0.1:
+				self.state = "fast"
+		elif self.state == "fast":
+			Game._game.dt *= 1.1
+			if Game._game.dt > 1:
+				Game._game.dt = 1
+				Game._game.nonPhys.remove(self)
+	def draw(self):
+		pass
+
 ################################################################################ Weapons setup
 
 class WeaponManager:
@@ -8260,6 +8282,8 @@ def gameMain(gameParameters=None):
 								worm.healthStr = pixelFont5.render(str(worm.health), False, worm.team.color)
 					if event.key == pygame.K_F3:
 						Game._game.drawGroundSec = not Game._game.drawGroundSec
+					if event.key == pygame.K_m:
+						TimeSlow()
 					if event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
 						scalingFactor = 3
 						if Game._game.camTrack == None:
