@@ -6121,91 +6121,36 @@ class WeaponManager:
 	def __init__(self):
 		WeaponManager._wm = self
 		self.weapons = [] #	  name					style	amount	category	fused	delay
-		self.weapons.append(["missile",				CHARGABLE,	-1,	MISSILES,	False,	0])
-		self.weapons.append(["gravity missile",		CHARGABLE,	5,	MISSILES,	False,	0])
-		self.weapons.append(["bunker buster",		CHARGABLE,	2,	MISSILES,	False,	0])
-		self.weapons.append(["homing missile",		CHARGABLE,	2,	MISSILES,	False,	0])
-		self.weapons.append(["seeker",				CHARGABLE,	1,	MISSILES,	False,	0])
-		self.weapons.append(["grenade",				CHARGABLE,	5,	GRENADES,	True,	0])
-		self.weapons.append(["mortar",				CHARGABLE,	3,	GRENADES,	True,	0])
-		self.weapons.append(["sticky bomb",			CHARGABLE,	3,	GRENADES,	True,	0])
-		self.weapons.append(["gas grenade",			CHARGABLE,	5,	GRENADES,	True,	0])
-		self.weapons.append(["electric grenade",	CHARGABLE,	3,	GRENADES,	True,	0])
-		self.weapons.append(["raon launcher",		CHARGABLE,	2,	GRENADES,	False,	0])
-		self.weapons.append(["shotgun",				GUN,		5,	GUNS,		False,	0])
-		self.weapons.append(["long bow",			GUN,		3,	GUNS,		False,	0])
-		self.weapons.append(["minigun",				GUN,		5,	GUNS,		False,	0])
-		self.weapons.append(["gamma gun",			GUN,		3,	GUNS,		False,	0])
-		self.weapons.append(["spear",				CHARGABLE,	2,	GUNS,		False,	0])
-		self.weapons.append(["laser gun",			GUN,		3,	GUNS,		False,	0])
-		self.weapons.append(["bubble gun",			GUN,		1,	GUNS,		False,	2])
-		self.weapons.append(["petrol bomb",			CHARGABLE,	5,	FIREY,		False,	0])
-		self.weapons.append(["flame thrower",		PUTABLE,	5,	FIREY,		False,	0])
-		self.weapons.append(["TNT",					PUTABLE,	1,	BOMBS,		False,	0])
-		self.weapons.append(["mine",				PUTABLE,	5,	BOMBS,		False,	0])
-		self.weapons.append(["acid bottle",			CHARGABLE,	1,	BOMBS,		False,	0])
-		self.weapons.append(["sheep",				PUTABLE,	1,	BOMBS,		False,	0])
-		self.weapons.append(["snail",				CHARGABLE,	2,	BOMBS,		False,	0])
-		self.weapons.append(["venus fly trap",		CHARGABLE,	1,	BOMBS,		False,	0])
-		self.weapons.append(["covid 19",			PUTABLE,	0,	BOMBS,		False,	0])
-		self.weapons.append(["baseball",			PUTABLE,	3,	TOOLS,		False,	0])
-		self.weapons.append(["girder",				CLICKABLE,	-1,	TOOLS,		False,	0])
-		self.weapons.append(["rope",				PUTABLE,	3,	TOOLS,		False,	0])
-		self.weapons.append(["parachute",			PUTABLE,	3,	TOOLS,		False,	0])
-		self.weapons.append(["sentry turret",		PUTABLE,	0,	TOOLS,		False,	0])
-		self.weapons.append(["portal gun",			GUN,		0,	TOOLS,		False,	0])
-		self.weapons.append(["ender pearl",			CHARGABLE,	0,	TOOLS,		False,	0])
-		self.weapons.append(["airstrike",			CLICKABLE,	1,	AIRSTRIKE,	False,	8])
-		self.weapons.append(["napalm strike",		CLICKABLE,	1,	AIRSTRIKE,	False,	8])
-		self.weapons.append(["mine strike",			CLICKABLE,	0,	AIRSTRIKE,	False,	1])
-		self.weapons.append(["artillery assist",	CHARGABLE,	1,	AIRSTRIKE,	False,	0])
-		self.weapons.append(["chum bucket",			CHARGABLE,	1,	AIRSTRIKE,	False,	0])
-		self.weapons.append(["holy grenade",		CHARGABLE,	0,	LEGENDARY,	True,	1])
-		self.weapons.append(["banana",				CHARGABLE,	0,	LEGENDARY,	True,	1])
-		self.weapons.append(["earthquake",			PUTABLE,	0,	LEGENDARY,	False,	1])
-		self.weapons.append(["gemino mine",			CHARGABLE,	0,	LEGENDARY,	False,	1])
-		self.weapons.append(["bee hive",			CHARGABLE,	0,	LEGENDARY,	False,	1])
-		self.weapons.append(["vortex grenade",		CHARGABLE,	0,	LEGENDARY,	True,	1])
-		self.weapons.append(["chilli pepper",		CHARGABLE,	0,	LEGENDARY,	False,	1])
-		self.weapons.append(["raging bull",			PUTABLE,	0,	LEGENDARY,	False,	1])
-		self.weapons.append(["electro boom",		CHARGABLE,	0,	LEGENDARY,	True,	1])
-		self.weapons.append(["pokeball",			CHARGABLE,	0,	LEGENDARY,	True,	1])
-		self.weapons.append(["green shell",			PUTABLE,	0,	LEGENDARY,	False,	1])
-		self.weapons.append(["guided missile",		PUTABLE,	0,	LEGENDARY,	False,	1])
-		# self.weapons.append(["distorter",			CHARGABLE,	0,	TOOLS,		True,	0])
-		# self.weapons.append(["fus ro duh",		PUTABLE,	0,	TOOLS,		False,	0])
-		
-		self.weaponCount = len(self.weapons)
-		
-		self.weapons.append(["moon gravity"	,		UTILITY,	0,	UTILITIES,	False,	0])
-		self.weapons.append(["double damage",		UTILITY,	0,	UTILITIES,	False,	0])
-		self.weapons.append(["aim aid",				UTILITY,	0,	UTILITIES,	False,	0])
-		self.weapons.append(["teleport",			CLICKABLE,	0,	UTILITIES,	False,	0])
-		self.weapons.append(["switch worms",		UTILITY,	0,	UTILITIES,	False,	0])
-		self.weapons.append(["time travel",			UTILITY,	0,	UTILITIES,	False,	0])
-		self.weapons.append(["jet pack",			UTILITY,	0,	UTILITIES,	False,	0])
-		self.weapons.append(["flare",				CHARGABLE,	0,	UTILITIES,	False,	0])
-		
-		self.utilityCount = len(self.weapons) - self.weaponCount
-		
-		self.weapons.append(["mjolnir strike",		PUTABLE,	0,	ARTIFACTS,	False,	0,	MJOLNIR])
-		self.weapons.append(["mjolnir throw",		CHARGABLE,	0,	ARTIFACTS,	False,	0,	MJOLNIR])
-		self.weapons.append(["fly",					CHARGABLE,	0,	ARTIFACTS,	False,	0,	MJOLNIR])
 
-		self.weapons.append(["control plants",		PUTABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
-		self.weapons.append(["magic bean",			CHARGABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
-		self.weapons.append(["mine plant",			CHARGABLE,	0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
-		self.weapons.append(["razor leaf",			GUN,		0,	ARTIFACTS,	False,	0,	PLANT_MASTER])
-		
-		self.weapons.append(["icicle",				GUN,		0,	ARTIFACTS,	False,	0,	AVATAR])
-		self.weapons.append(["earth spike",			PUTABLE,	0,	ARTIFACTS,	False,	0,	AVATAR])
-		self.weapons.append(["fire ball",			GUN,		0,	ARTIFACTS,	False,	0,	AVATAR])
-		self.weapons.append(["air tornado",			PUTABLE,	0,	ARTIFACTS,	False,	0,	AVATAR])
+		styleDict = {"CHARGABLE": CHARGABLE, "GUN": GUN, "PUTABLE": PUTABLE, "CLICKABLE": CLICKABLE, "UTILITY": UTILITY}
+		categDict = {"MISSILES": MISSILES, "GRENADES": GRENADES, "GUNS": GUNS, "FIREY": FIREY, "BOMBS": BOMBS, "TOOLS": TOOLS,
+						"AIRSTRIKE": AIRSTRIKE, "LEGENDARY": LEGENDARY}
+		artifDict = {"MJOLNIR": MJOLNIR, "PLANT_MASTER": PLANT_MASTER, "AVATAR": AVATAR, "MINECRAFT": MINECRAFT}
 
-		self.weapons.append(["pick axe",			PUTABLE,	0,	ARTIFACTS,	False,	0, 	MINECRAFT])
-		self.weapons.append(["build",				PUTABLE,	0,	ARTIFACTS,	False,	0, 	MINECRAFT])
-		
-		self.artifactCount = len(self.weapons) - self.weaponCount - self.utilityCount
+		groups = ET.parse('weapons.xml').getroot().getchildren()
+		for weapon in groups[0]:
+			name = weapon.attrib["name"]
+			style = styleDict[weapon.attrib["style"]]
+			amount = int(weapon.attrib["amount"])
+			category = categDict[weapon.attrib["category"]]
+			fused = True if weapon.attrib["fused"] == "True" else False
+			delay = int(weapon.attrib["delay"])
+			self.weapons.append([name, style, amount, category, fused, delay])
+
+		for weapon in groups[1]:
+			name = weapon.attrib["name"]
+			style = styleDict[weapon.attrib["style"]]
+			self.weapons.append([name, style, 0, UTILITIES, False, 0])
+
+		for weapon in groups[2]:
+			name = weapon.attrib["name"]
+			style = styleDict[weapon.attrib["style"]]
+			artifact = artifDict[weapon.attrib["artifact"]]
+			self.weapons.append([name, style, 0, ARTIFACTS, False, 0, artifact])
+
+		self.weaponCount = len(groups[0])
+		self.utilityCount = len(groups[1])
+		self.artifactCount = len(groups[2])
 
 		self.weaponDict = {}
 		self.basicSet = []

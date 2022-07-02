@@ -27,10 +27,11 @@ MENU_TOGGLE = 3
 MENU_COMBOS = 4
 MENU_TEXT   = 5
 MENU_DIV	= 6
-MENU_IMAGE	= 7
+MENU_DRAGIMAGE	= 7
 MENU_INPUT	= 8
 MENU_LOADBAR = 9
 MENU_SURF = 10
+MENU_IMAGE = 11
 HORIZONTAL = 0
 VERTICAL = 1
 
@@ -208,6 +209,11 @@ class MainMenu:
 
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
+	def initializeWeaponMenu(self):
+		wepMenu = Menu(name="weapons", pos=[40, (winHeight - 180)//2], size=[winWidth - 80, 180], register=True)
+		# 4 colums
+		
+
 	def initializeMenuOptions(self):
 		mainMenu = Menu(name="menu", pos=[40, (winHeight - 180)//2], size=[winWidth - 80, 180], register=True)
 		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
@@ -257,7 +263,7 @@ class MainMenu:
 
 		# map options vertical sub menu
 		mapMenu = Menu(name="map menu", orientation=VERTICAL)
-		MainMenu._picture = mapMenu.insert(MENU_IMAGE, key="-map", image=choice(MainMenu._maps))
+		MainMenu._picture = mapMenu.insert(MENU_DRAGIMAGE, key="-map", image=choice(MainMenu._maps))
 
 		# map buttons
 		subMap = Menu(orientation = HORIZONTAL, customSize=15)
@@ -484,7 +490,7 @@ class Menu:
 		for element in self.elements:
 			if element.type == MENU_MENU:
 				element.recalculate()
-			if element.type == MENU_IMAGE:
+			if element.type == MENU_DRAGIMAGE:
 				element.setImage(element.imagePath)
 	def getValues(self):
 		values = {}
@@ -548,8 +554,8 @@ class Menu:
 		elif type == MENU_INPUT:
 			b = MenuElementInput()
 			b.inputText = inputText
-		elif type == MENU_IMAGE:
-			b = MenuElementImage()
+		elif type == MENU_DRAGIMAGE:
+			b = MenuElementDragImage()
 			if image:
 				b.setImage(image)
 			b.draggable = draggable
@@ -759,6 +765,17 @@ class MenuElementImage(MenuElement):
 	def initialize(self):
 		self.type = MENU_IMAGE
 		self.imageSurf = None
+	def setImage(self, image, rect):
+		self.imageSurf = pygame.Surface((rect[2], rect[3]))
+		self.imageSurf.blit(image, (0, 0), rect)
+	def draw(self):
+		buttonPos = self.getSuperPos() + self.pos
+		win.blit(self.imageSurf, (buttonPos[0], buttonPos[1]))
+
+class MenuElementDragImage(MenuElement):
+	def initialize(self):
+		self.type = MENU_DRAGIMAGE
+		self.imageSurf = None
 		self.imagePath = None
 		self.dragDx = 0
 		self.draggable = True
@@ -947,7 +964,7 @@ class ElementAnimator:
 		if self.timer > self.fullTime:
 			self.element.value = self.end
 			MenuAnimator._reg.remove(self)
-		
+
 def playOnPress():
 	values = evaluateMenuForm()
 	string = ""

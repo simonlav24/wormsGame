@@ -1,0 +1,82 @@
+<data>
+    <weapons>
+        <weapon name="missile"          style="CHARGABLE"   amount="-1"     category="MISSILES"     fused="False" delay="0"/>
+        <weapon name="gravity missile"  style="CHARGABLE"   amount="5"      category="MISSILES"     fused="False" delay="0"/>
+        <weapon name="bunker buster"    style="CHARGABLE"   amount="2"      category="MISSILES"     fused="False" delay="0"/>
+        <weapon name="homing missile"   style="CHARGABLE"   amount="2"      category="MISSILES"     fused="False" delay="0"/>
+        <weapon name="seeker"           style="CHARGABLE"   amount="1"      category="MISSILES"     fused="False" delay="0"/>
+        <weapon name="grenade"          style="CHARGABLE"   amount="5"      category="GRENADES"     fused="True"  delay="0"/>
+        <weapon name="mortar"           style="CHARGABLE"   amount="3"      category="GRENADES"     fused="True"  delay="0"/>
+        <weapon name="sticky bomb"      style="CHARGABLE"   amount="3"      category="GRENADES"     fused="True"  delay="0"/>
+        <weapon name="gas grenade"      style="CHARGABLE"   amount="5"      category="GRENADES"     fused="True"  delay="0"/>
+        <weapon name="electric grenade" style="CHARGABLE"   amount="3"      category="GRENADES"     fused="True"  delay="0"/>
+        <weapon name="raon launcher"    style="CHARGABLE"   amount="2"      category="GRENADES"     fused="False" delay="0"/>
+        <weapon name="shotgun"          style="GUN"         amount="5"      category="GUNS"         fused="False" delay="0"/>
+        <weapon name="long bow"         style="GUN"         amount="3"      category="GUNS"         fused="False" delay="0"/>
+        <weapon name="minigun"          style="GUN"         amount="5"      category="GUNS"         fused="False" delay="0"/>
+        <weapon name="gamma gun"        style="GUN"         amount="3"      category="GUNS"         fused="False" delay="0"/>
+        <weapon name="spear"            style="CHARGABLE"   amount="2"      category="GUNS"         fused="False" delay="0"/>
+        <weapon name="laser gun"        style="GUN"         amount="3"      category="GUNS"         fused="False" delay="0"/>
+        <weapon name="bubble gun"       style="GUN"         amount="1"      category="GUNS"         fused="False" delay="2"/>
+        <weapon name="petrol bomb"      style="CHARGABLE"   amount="5"      category="FIREY"        fused="False" delay="0"/>
+        <weapon name="flame thrower"    style="PUTABLE"     amount="5"      category="FIREY"        fused="False" delay="0"/>
+        <weapon name="TNT"              style="PUTABLE"     amount="1"      category="BOMBS"        fused="False" delay="0"/>
+        <weapon name="mine"             style="PUTABLE"     amount="5"      category="BOMBS"        fused="False" delay="0"/>
+        <weapon name="acid bottle"      style="CHARGABLE"   amount="1"      category="BOMBS"        fused="False" delay="0"/>
+        <weapon name="sheep"            style="PUTABLE"     amount="1"      category="BOMBS"        fused="False" delay="0"/>
+        <weapon name="snail"            style="CHARGABLE"   amount="2"      category="BOMBS"        fused="False" delay="0"/>
+        <weapon name="venus fly trap"   style="CHARGABLE"   amount="1"      category="BOMBS"        fused="False" delay="0"/>
+        <weapon name="covid 19"         style="PUTABLE"     amount="0"      category="BOMBS"        fused="False" delay="0"/>
+        <weapon name="baseball"         style="PUTABLE"     amount="3"      category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="girder"           style="CLICKABLE"   amount="-1"     category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="rope"             style="PUTABLE"     amount="3"      category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="parachute"        style="PUTABLE"     amount="3"      category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="sentry turret"    style="PUTABLE"     amount="0"      category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="portal gun"       style="GUN"         amount="0"      category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="ender pearl"      style="CHARGABLE"   amount="0"      category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="airstrike"        style="CLICKABLE"   amount="1"      category="AIRSTRIKE"    fused="False" delay="8"/>
+        <weapon name="napalm strike"    style="CLICKABLE"   amount="1"      category="AIRSTRIKE"    fused="False" delay="8"/>
+        <weapon name="mine strike"      style="CLICKABLE"   amount="0"      category="AIRSTRIKE"    fused="False" delay="1"/>
+        <weapon name="artillery assist" style="CHARGABLE"   amount="1"      category="AIRSTRIKE"    fused="False" delay="0"/>
+        <weapon name="chum bucket"      style="CHARGABLE"   amount="1"      category="AIRSTRIKE"    fused="False" delay="0"/>
+        <weapon name="holy grenade"     style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="True"  delay="1"/>
+        <weapon name="banana"           style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="True"  delay="1"/>
+        <weapon name="earthquake"       style="PUTABLE"     amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <weapon name="gemino mine"      style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <weapon name="bee hive"         style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <weapon name="vortex grenade"   style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="True"  delay="1"/>
+        <weapon name="chilli pepper"    style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <weapon name="raging bull"      style="PUTABLE"     amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <weapon name="electro boom"     style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="True"  delay="1"/>
+        <weapon name="pokeball"         style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="True"  delay="1"/>
+        <weapon name="green shell"      style="PUTABLE"     amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <weapon name="guided missile"   style="PUTABLE"     amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <!-- <weapon name="distorter"        style="CHARGABLE"   amount="0"      category="TOOLS"        fused="True" delay="0"/> -->
+        <!-- <weapon name="fus ro duh"       style="PUTABLE"     amount="0"      category="TOOLS"        fused="False" delay="0"/> -->
+    </weapons>
+    <utilities>
+        <weapon name="moon gravity"     style="UTILITY"/>
+        <weapon name="double damage"    style="UTILITY"/>
+        <weapon name="aim aid"          style="UTILITY"/>
+        <weapon name="teleport"         style="CLICKABLE"/>
+        <weapon name="switch worms"     style="UTILITY"/>
+        <weapon name="time travel"      style="UTILITY"/>
+        <weapon name="jet pack"         style="UTILITY"/>
+        <weapon name="flare"            style="CHARGABLE"/>
+    </utilities>
+    <artifacts>
+        <weapon name="mjolnir strike"   style="PUTABLE"     artifact="MJOLNIR"/>
+        <weapon name="mjolnir throw"    style="CHARGABLE"   artifact="MJOLNIR"/>
+        <weapon name="fly"              style="CHARGABLE"   artifact="MJOLNIR"/>
+        <weapon name="control plants"   style="PUTABLE"     artifact="PLANT_MASTER"/>
+        <weapon name="magic bean"       style="CHARGABLE"   artifact="PLANT_MASTER"/>
+        <weapon name="mine plant"       style="CHARGABLE"   artifact="PLANT_MASTER"/>
+        <weapon name="razor leaf"       style="GUN"         artifact="PLANT_MASTER"/>
+        <weapon name="icicle"           style="GUN"         artifact="AVATAR"/>
+        <weapon name="earth spike"      style="PUTABLE"     artifact="AVATAR"/>
+        <weapon name="fire ball"        style="GUN"         artifact="AVATAR"/>
+        <weapon name="air tornado"      style="PUTABLE"     artifact="AVATAR"/>
+        <weapon name="pick axe"         style="PUTABLE"     artifact="MINECRAFT"/>
+        <weapon name="build"            style="PUTABLE"     artifact="MINECRAFT"/>
+    </artifacts>
+</data>
