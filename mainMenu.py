@@ -4,6 +4,13 @@ import globals
 from random import randint, choice, uniform
 from perlinNoise import generateNoise
 from vector import *
+if not os.path.exists("graphObject.py"):
+	print("fetching graphObject")
+	import urllib.request
+	with urllib.request.urlopen('https://raw.githubusercontent.com/simonlav24/Graph-plotter/master/graphObject.py') as f:
+		text = f.read().decode('utf-8')
+		with open("graphObject.py", "w+") as graphpy:
+			graphpy.write(text)
 import graphObject
 import tkinter
 from tkinter.filedialog import askopenfile
@@ -289,9 +296,14 @@ class MainMenu:
 		graph._reg[0].draw()
 		b.setSurf(graph.surf)
 
-		self.graphteams, self.graphcount = countWin()
+		readRecord = countWin()
+		if readRecord is None:
+			self.graphteams = None
+			return
+		
+		self.graphteams, self.graphcount = readRecord[0], readRecord[1]
 		self.graphtime = [i for i in range(self.graphcount)]
-
+			
 		y_average = 0
 		for key in self.graphteams.keys():
 			y_average += self.graphteams[key][1][-1]
@@ -975,12 +987,14 @@ def playOnPress():
 	MainMenu._mm.run = False
 
 def drawRecordGraph():
+	if MainMenu._mm.graphteams is None:
+		return
 	for key in MainMenu._mm.graphteams.keys():
 		graphObject.Graph._reg[0].drawGraph2(MainMenu._mm.graphtime, MainMenu._mm.graphteams[key][1], ast.literal_eval(MainMenu._mm.graphteams[key][0]))
 
 def countWin():
 	if not os.path.exists("wormsRecord.xml"):
-		return
+		return None
 	teams = {}
 	
 	# find teams:
@@ -1033,7 +1047,7 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
 	
 	# test:
-	fromGameParameters = {"teams": {"yellow":[(255,255,0), 25], "red":[(255,0,0),66], "green":[(0,255,0),50], "blue":[(0,0,255),80]},"winner": "yellow", "damager": "flur", "mostDamage":256}
+	# fromGameParameters = {"teams": {"yellow":[(255,255,0), 25], "red":[(255,0,0),66], "green":[(0,255,0),50], "blue":[(0,0,255),80]},"winner": "yellow", "damager": "flur", "mostDamage":256}
 
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()
