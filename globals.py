@@ -8,6 +8,7 @@ scalingFactor = 0
 
 def globalsInit():
     global fpsClock, fps, pixelFont5, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
+    global scalingMax, scalingMin
 
     pygame.init()
 
@@ -18,13 +19,17 @@ def globalsInit():
     pixelFont5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
     pixelFont10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
 
-    screenWidth = 1280
-    screenHeight = 720
+    screenWidth = 1920
+    screenHeight = 1080
+    
     scalingFactor = 3
+    scalingMax = 3
+    scalingMin = 1
+    
     winWidth = int(screenWidth / scalingFactor)
     winHeight = int(screenHeight / scalingFactor)
     win = pygame.Surface((winWidth, winHeight))
-        
+    
     pygame.display.set_caption("Simon's Worms")
     screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF | pygame.NOFRAME)
 

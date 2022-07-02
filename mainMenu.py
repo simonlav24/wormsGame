@@ -182,7 +182,7 @@ class MainMenu:
 		MainMenu._mm = self
 
 	def initializeEndGameMenu(self, parameters):
-		endMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
+		endMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, (winHeight - 160)//2], size=[winWidth // 2, 160], register=True)
 		endMenu.insert(MENU_TEXT, text="Game Over", customSize=15)
 		if "winner" in parameters.keys():
 			endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
@@ -202,7 +202,7 @@ class MainMenu:
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
 	def initializeMenuOptions(self):
-		mainMenu = Menu(name="menu", pos=[40,30], size=[winWidth - 80, 180], register=True)
+		mainMenu = Menu(name="menu", pos=[40, (winHeight - 180)//2], size=[winWidth - 80, 180], register=True)
 		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 
 		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
@@ -280,7 +280,7 @@ class MainMenu:
 		# clear graphs
 		graphObject.Graph._reg.clear()
 
-		recordMenu = Menu(name="record menu", pos=[winWidth//2  - winWidth//4, 30], size=[winWidth // 2, 180], register=True)
+		recordMenu = Menu(name="record menu", pos=[winWidth//2  - winWidth//4, (winHeight - 180)//2], size=[winWidth // 2, 180], register=True)
 		recordMenu.insert(MENU_TEXT, text="worms game records", customSize=15)
 		b = recordMenu.insert(MENU_SURF)
 		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
@@ -1033,7 +1033,7 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
 	
 	# test:
-	# fromGameParameters = {"teams": {"yellow":[(255,255,0), 25], "red":[(255,0,0),66], "green":[(0,255,0),50], "blue":[(0,0,255),80]},"winner": "yellow", "damager": "flur", "mostDamage":256}
+	fromGameParameters = {"teams": {"yellow":[(255,255,0), 25], "red":[(255,0,0),66], "green":[(0,255,0),50], "blue":[(0,0,255),80]},"winner": "yellow", "damager": "flur", "mostDamage":256}
 
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()

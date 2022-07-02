@@ -8192,13 +8192,13 @@ def gameMain(gameParameters=None):
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down
 				if not RadialMenu.menu:
 					scalingFactor *= 1.1
-					if scalingFactor >= 3:
-						scalingFactor = 3
+					if scalingFactor >= globals.scalingMax:
+						scalingFactor = globals.scalingMax
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll up
 				if not RadialMenu.menu:
 					scalingFactor *= 0.9
-					if scalingFactor <= 1:
-						scalingFactor = 1
+					if scalingFactor <= globals.scalingMin:
+						scalingFactor = globals.scalingMin
 	
 			# key press
 			if event.type == pygame.KEYDOWN:
@@ -8285,7 +8285,7 @@ def gameMain(gameParameters=None):
 					if event.key == pygame.K_m:
 						TimeSlow()
 					if event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
-						scalingFactor = 3
+						scalingFactor = globals.scalingMax
 						if Game._game.camTrack == None:
 							Game._game.camTrack = Game._game.objectUnderControl
 					# if event.key == pygame.K_n:
@@ -8343,8 +8343,8 @@ def gameMain(gameParameters=None):
 		
 		# handle scale:
 		oldSize = (winWidth, winHeight)
-		winWidth += (1280 / scalingFactor - winWidth) * 0.2
-		winHeight += (720 / scalingFactor - winHeight) * 0.2
+		winWidth += (globals.screenWidth / scalingFactor - winWidth) * 0.2
+		winHeight += (globals.screenHeight / scalingFactor - winHeight) * 0.2
 		winWidth = int(winWidth)
 		winHeight = int(winHeight)
 		
@@ -8356,7 +8356,7 @@ def gameMain(gameParameters=None):
 			# actual position target:
 			### Game._game.camPos = Game._game.camTrack.pos - Vector(winWidth, winHeight)/2
 			# with smooth transition:
-			Game._game.camPos += ((Game._game.camTrack.pos - Vector(int(1280 / scalingFactor), int(720 / scalingFactor))/2) - Game._game.camPos) * 0.2
+			Game._game.camPos += ((Game._game.camTrack.pos - Vector(int(globals.screenWidth / scalingFactor), int(globals.screenHeight / scalingFactor))/2) - Game._game.camPos) * 0.2
 		
 		# constraints:
 		if Game._game.camPos.y < 0: Game._game.camPos.y = 0
