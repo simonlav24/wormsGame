@@ -8481,7 +8481,7 @@ def splashScreen():
 if __name__ == "__main__":
 	args = parseArgs()
 	gameParameters = [None]
-	# splashScreen()
+	splashScreen()
 	while True:
 		mainMenu(args, Game._game.endGameDict if Game._game else None, gameParameters)
 		gameMain(gameParameters[0])
