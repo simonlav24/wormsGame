@@ -1,5 +1,5 @@
 <data>
-    <weapons>
+    <weapons set="default">
         <weapon name="missile"          style="CHARGABLE"   amount="-1"     category="MISSILES"     fused="False" delay="0"/>
         <weapon name="gravity missile"  style="CHARGABLE"   amount="5"      category="MISSILES"     fused="False" delay="0"/>
         <weapon name="bunker buster"    style="CHARGABLE"   amount="2"      category="MISSILES"     fused="False" delay="0"/>

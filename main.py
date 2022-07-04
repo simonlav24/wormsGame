@@ -501,6 +501,7 @@ def parseArgs(arguments=None):
 	parser.add_argument("-art", "--artifacts", type=bool, nargs='?', const=True, default=False, help="artifacts mode")
 	parser.add_argument("-feel", "--feel_index", default=-1, help="choice of background feel color", type=int)
 	parser.add_argument("-nm", "--no-menu", type=bool, nargs='?', const=True, default=False, help="no main menu")
+	parser.add_argument("-ws", "--weapon-set", default="", help="weapon set name")
 	if arguments:
 		args = parser.parse_args(args=arguments)
 	else:
@@ -6165,6 +6166,15 @@ class WeaponManager:
 		self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
 		
 		self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf, AVATAR: Avatar, MINECRAFT: PickAxeArtifact}
+
+		# read weapon set
+		if Game._game.args.weapon_set != "":
+			weaponSet = ET.parse('./assets/weaponsSets/' + Game._game.args.weapon_set + '.xml').getroot().getchildren()
+			for weapon in weaponSet:
+				name = weapon.attrib["name"]
+				amount = int(weapon.attrib["amount"])
+				self.basicSet[self.weaponDict[name]] = amount
+
 	def getStyle(self, string):
 		return self.weapons[self.weaponDict[string]][1]
 	def getCurrentStyle(self):

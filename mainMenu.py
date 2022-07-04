@@ -35,6 +35,17 @@ MENU_IMAGE = 11
 HORIZONTAL = 0
 VERTICAL = 1
 
+MISSILES = (255, 255, 255)
+GRENADES = (204, 255, 204)
+GUNS = (255, 204, 153)
+FIREY = (255, 204, 204)
+TOOLS = (224, 224, 235)
+BOMBS = (200, 255, 200)
+AIRSTRIKE = (204, 255, 255)
+LEGENDARY = (255, 255, 102)
+UTILITIES = (254, 254, 254)
+ARTIFACTS = (255, 255, 101)
+
 win = None
 winWidth = 0
 winHeight = 0
@@ -117,6 +128,9 @@ def renderCloud(colors=[(224, 233, 232), (192, 204, 220)]):
 		pygame.draw.circle(surf, c1, circles[i][0] - Vector(1,1) * 0.8 * 0.2 * circles[i][1], circles[i][1] * 0.8)
 	
 	return surf
+
+def spriteIndex2rect(index):
+	return (index % 8) * 16, (index // 8) * 16, 16, 16
 
 class BackGround:
 	_bg = None
@@ -209,13 +223,54 @@ class MainMenu:
 
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
-	def initializeWeaponMenu(self):
-		wepMenu = Menu(name="weapons", pos=[40, (winHeight - 180)//2], size=[winWidth - 80, 180], register=True)
-		# 4 colums
+	def initializeWeaponMenu(self, zero=False):
+		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (winHeight - 180)//2], size=[winWidth - 80, 180], register=True)
 		
+		weapons = ET.parse('weapons.xml').getroot().getchildren()[0]
+		weaponCount = len(weapons)
+		weaponSprites = pygame.image.load("./assets/sprites.png")
+		weaponIndex = 0
+		indexOffset = 72
+
+		categDict = {"MISSILES": MISSILES, "GRENADES": GRENADES, "GUNS": GUNS, "FIREY": FIREY, "BOMBS": BOMBS, "TOOLS": TOOLS,
+						"AIRSTRIKE": AIRSTRIKE, "LEGENDARY": LEGENDARY}
+
+		items = ["-1"] + [str(i) for i in range(11)]
+		mapping = {"-1":"inf"}
+
+		while weaponIndex < weaponCount:
+			sub = Menu(orientation=HORIZONTAL, customSize=16)
+			for j in range(6):
+				pic = MenuElementImage()
+				pic.customSize = 16
+				bgColor = categDict[weapons[weaponIndex].attrib["category"]]
+				pic.setImage(weaponSprites, spriteIndex2rect(weaponIndex + indexOffset), background=bgColor)
+
+				sub.addElement(pic)
+				amount = weapons[weaponIndex].attrib["amount"]
+				if zero:
+					amount = "0"
+				sub.insert(MENU_COMBOS, key=weapons[weaponIndex].attrib["name"], items=items, text=amount, comboMap=mapping)
+				weaponIndex += 1
+				if weaponIndex >= weaponCount:
+					break
+
+			wepMenu.addElement(sub)
+
+		sub = Menu(orientation=HORIZONTAL)
+		sub.insert(MENU_TEXT, text="weapon set name:")
+		sub.insert(MENU_INPUT, key="filename", text="enter name")
+		sub.insert(MENU_BUTTON, key="saveweapons", text="save")
+		wepMenu.addElement(sub)
+
+		sub = Menu(orientation=HORIZONTAL)
+		sub.insert(MENU_BUTTON, key="back", text="back")
+		sub.insert(MENU_BUTTON, key="defaultweapons", text="default")
+		sub.insert(MENU_BUTTON, key="zeroweapons", text="zero")
+		wepMenu.addElement(sub)
 
 	def initializeMenuOptions(self):
-		mainMenu = Menu(name="menu", pos=[40, (winHeight - 180)//2], size=[winWidth - 80, 180], register=True)
+		mainMenu = Menu(name="menu", pos=[40, (winHeight - 196)//2], size=[winWidth - 80, 196], register=True)
 		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 
 		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
@@ -283,7 +338,20 @@ class MainMenu:
 		optionsAndPictureMenu.addElement(mapMenu)
 		mainMenu.addElement(optionsAndPictureMenu)
 
-		mainMenu.insert(MENU_BUTTON, key="scoreboard", text="score board", customSize=14)
+		subweapons = Menu(orientation=HORIZONTAL, customSize=14)
+		subweapons.insert(MENU_BUTTON, key="weaponssetup", text="weapons setup")
+		weaponsSets = ['default']
+		# for every file in "./assets/weaponsSets"
+		for file in os.listdir("./assets/weaponsSets"):
+			weaponsSets.append(file.split(".")[0])
+		print(weaponsSets)
+		subweapons.insert(MENU_TEXT, text="weapons set:")
+		subweapons.insert(MENU_COMBOS, key="weapon set", items=weaponsSets)
+		mainMenu.addElement(subweapons)
+
+		subMore = Menu(orientation=HORIZONTAL, customSize=14)
+		subMore.insert(MENU_BUTTON, key="scoreboard", text="score board")
+		mainMenu.addElement(subMore)
 
 		# background feel menu
 		bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
@@ -363,6 +431,27 @@ class MainMenu:
 			# animate main menu in
 			endPos = Menu._reg[0].pos + Vector(0, globals.winHeight)
 			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, endPos, trigger=menuPop)
+		if key == "weaponssetup":
+			# create the weapons menu
+			self.initializeWeaponMenu()
+			# animate weapons menu in
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, globals.winHeight), Menu._reg[-1].pos)
+			# animate main menu out
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -globals.winHeight))
+		if key == "defaultweapons":
+			wepmenu = getMenubyName("weapons")
+			Menu._reg.remove(wepmenu)
+			self.initializeWeaponMenu()
+		if key == "zeroweapons":
+			wepmenu = getMenubyName("weapons")
+			Menu._reg.remove(wepmenu)
+			self.initializeWeaponMenu(zero=True)
+		if key == "saveweapons":
+			wepmenu = getMenubyName("weapons")
+			values = {}
+			wepmenu.evaluate(values)
+			print(values)
+			saveWeaponsXml(values, values["filename"])
 
 class PauseMenu:
 	_pm = None
@@ -407,6 +496,22 @@ def grabMapsFrom(paths):
 			maps.append(string)
 	return maps
 
+def saveWeaponsXml(values, filename):
+	weaponsStrings = []
+	weapons = ET.parse('weapons.xml').getroot().getchildren()[0]
+	for w in weapons:
+		weaponsStrings.append(w.attrib["name"])
+
+	filename = filename.replace(" ", "_")
+	file = open("./assets/weaponsSets/" + filename + ".xml", "w")
+	file.write("<weapons>\n")
+	for key in values:
+		if key not in weaponsStrings:
+			continue
+		file.write("\t<weapon name=\"" + key + "\" amount=\"" + str(values[key]) + "\" />\n")
+	file.write("</weapons>\n")
+	file.close()
+
 def browseFile():
 	root = tkinter.Tk()
 	root.withdraw()
@@ -430,6 +535,12 @@ def clearMenu():
 def menuPop():
 	Menu._reg.pop()
 	graphObject.Graph._reg.clear()
+
+def getMenubyName(name):
+	for menu in Menu._reg:
+		if menu.name == name:
+			return menu
+	return None
 
 class Menu:
 	_reg = []
@@ -531,7 +642,7 @@ class Menu:
 			element.draw()
 	def insert(self, type=MENU_BUTTON, key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
 					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText="",
-					color = WHITE, maxValue=100, draggable=True):
+					color = WHITE, maxValue=100, draggable=True, comboMap={}):
 		if type == MENU_BUTTON:
 			b = MenuElementButton()
 		elif type == MENU_TOGGLE:
@@ -539,7 +650,8 @@ class Menu:
 		elif type == MENU_COMBOS:
 			b = MenuElementComboSwitch()
 			if items:
-				b.setItems(items)
+				b.setItems(items, mapping=comboMap)
+				b.setCurrentItem(text)
 		elif type == MENU_UPDOWN:
 			b = MenuElementUpDown()
 			if stepSize:
@@ -559,6 +671,10 @@ class Menu:
 			if image:
 				b.setImage(image)
 			b.draggable = draggable
+		elif type == MENU_IMAGE:
+			b = MenuElementImage()
+			if image:
+				b.setImage(image)
 		elif type == MENU_MENU:
 			b = Menu()
 		elif type == MENU_TEXT:
@@ -719,10 +835,21 @@ class MenuElementComboSwitch(MenuElementButton):
 		self.type = MENU_COMBOS
 		self.items = []
 		self.forward = False
-	def setItems(self, strings):
+		self.mapping = {}
+	def setItems(self, strings, mapping={}):
+		self.mapping = mapping
 		for string in strings:
-			surf = globals.pixelFont5.render(string, True, WHITE)
+			stringToRender = string
+			if string in self.mapping.keys():
+				stringToRender = self.mapping[string]
+			surf = globals.pixelFont5.render(stringToRender, True, WHITE)
 			self.items.append((string, surf))
+		self.value = self.items[self.currentIndex][0]
+	def setCurrentItem(self, item):
+		for i, it in enumerate(self.items):
+			if it[0] == item:
+				self.currentIndex = i
+				break
 		self.value = self.items[self.currentIndex][0]
 	def step(self):
 		mousePos = mouseInWin()
@@ -765,8 +892,10 @@ class MenuElementImage(MenuElement):
 	def initialize(self):
 		self.type = MENU_IMAGE
 		self.imageSurf = None
-	def setImage(self, image, rect):
-		self.imageSurf = pygame.Surface((rect[2], rect[3]))
+	def setImage(self, image, rect=None, background=None):
+		self.imageSurf = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA)
+		if background:
+			self.imageSurf.fill(background)
 		self.imageSurf.blit(image, (0, 0), rect)
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
@@ -873,6 +1002,7 @@ class MenuElementInput(MenuElementButton):
 		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
 		pygame.draw.rect(win, color, (buttonPos, self.size))
+
 		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 		if self.mode == "editing" and self.showCursor:
 			win.blit(self.cursor, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
@@ -998,6 +1128,10 @@ def playOnPress():
 				string += "-sdt "
 			if values[key] == "plague":
 				string += "-sdp "
+		if key == "weapon set":
+			if values[key] == "default":
+				continue
+			string += "-ws " + values[key] + " "
 
 	if debug: print(string)
 	MainMenu._mm.gameParameters = string
