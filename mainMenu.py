@@ -344,7 +344,6 @@ class MainMenu:
 		# for every file in "./assets/weaponsSets"
 		for file in os.listdir("./assets/weaponsSets"):
 			weaponsSets.append(file.split(".")[0])
-		print(weaponsSets)
 		subweapons.insert(MENU_TEXT, text="weapons set:")
 		subweapons.insert(MENU_COMBOS, key="weapon set", items=weaponsSets)
 		mainMenu.addElement(subweapons)
@@ -450,7 +449,6 @@ class MainMenu:
 			wepmenu = getMenubyName("weapons")
 			values = {}
 			wepmenu.evaluate(values)
-			print(values)
 			saveWeaponsXml(values, values["filename"])
 
 class PauseMenu:
@@ -1229,7 +1227,6 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 		
 		for g in graphObject.Graph._reg:
 			mousePos = pygame.mouse.get_pos()
-			# print(g.pos, g.size)
 			g.step(Vector(mousePos[0] // globals.scalingFactor, mousePos[1] // globals.scalingFactor))
 
 		for animation in MenuAnimator._reg:
