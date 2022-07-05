@@ -280,7 +280,7 @@ class MainMenu:
 
 		subMode = Menu(orientation=HORIZONTAL, customSize=15)
 		subMode.insert(MENU_TEXT, text="game mode")
-		subMode.insert(MENU_COMBOS, key="--game_mode", text="battle", items=["battle", "points", "terminator", "targets", "david vs goliath", "ctf", "arena"])
+		subMode.insert(MENU_COMBOS, key="--game_mode", text="battle", items=["battle", "points", "terminator", "targets", "david vs goliath", "ctf", "arena", "missions"])
 		optionsMenu.addElement(subMode)
 
 		# toggles
@@ -460,7 +460,7 @@ class PauseMenu:
 		pauseMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
 		pauseMenu.insert(MENU_TEXT, text="Game paused")
 
-		if args["showPoints"]:
+		if "showPoints" in args.keys() and args["showPoints"]:
 			maxPoints = max([team.points for team in args["teams"]])
 			if maxPoints == 0:
 				maxPoints = 1
@@ -469,6 +469,11 @@ class PauseMenu:
 				teamScore.insert(MENU_TEXT, text=team.name, customSize=50)
 				teamScore.insert(MENU_LOADBAR, value = team.points, color=team.color, maxValue=maxPoints)
 				pauseMenu.addElement(teamScore)
+
+		if "missions" in args.keys():
+			pauseMenu.insert(MENU_TEXT, text="- missions -")
+			for mission in args["missions"]:
+				pauseMenu.insert(MENU_TEXT, text=mission)
 
 		pauseMenu.insert(MENU_BUTTON, key="resume", text="resume")
 		pauseMenu.insert(MENU_BUTTON, key="toMainMenu", text="back to main menu")
@@ -1099,7 +1104,7 @@ def playOnPress():
 	for key in values.keys():
 		if key[0] == "-":
 			if key == "--game_mode":
-				modeDict = {"battle" : 0, "points" : 1, "terminator" : 2, "targets" : 3, "david vs goliath" : 4, "ctf" : 5, "arena" : 6}
+				modeDict = {"battle": 0, "points": 1, "terminator": 2, "targets": 3, "david vs goliath": 4, "ctf": 5, "arena": 6, "missions": 7}
 				string += key + " " + str(modeDict[values[key]]) + " "
 				continue
 			if key in trueFalse:

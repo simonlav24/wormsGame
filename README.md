@@ -157,6 +157,7 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 - Terminator - each turn you have a targeted worm. Hitting the target = 1 point. Terminating the target = 2 points.
 - David vs Goliath - starter worm receives 50% of all teammate's health.
 - Arena - worms get points for standing on top of the arena at the end of each turn. The team with the most points wins.
+- Missions (tbd) - each worm is assinged three renewable missions. upon completing a mission the worm receives points. The team with the most points wins.
 
 ## :gear: Options
 
