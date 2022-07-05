@@ -46,7 +46,7 @@ LEGENDARY = (255, 255, 102)
 UTILITIES = (254, 254, 254)
 ARTIFACTS = (255, 255, 101)
 
-win = None
+globals.win = None
 winWidth = 0
 winHeight = 0
 
@@ -154,17 +154,17 @@ class BackGround:
 		if self.fireworks:
 			pass
 	def draw(self):
-		win.blit(self.imageSky, (0,0))
+		globals.win.blit(self.imageSky, (0,0))
 		x = 0
 		while x < winWidth:
-			win.blit(self.imageMountain, (x, winHeight - self.imageMountain.get_height()))
-			win.blit(self.imageMountain2, (x, winHeight - self.imageMountain.get_height()))
+			globals.win.blit(self.imageMountain, (x, winHeight - self.imageMountain.get_height()))
+			globals.win.blit(self.imageMountain2, (x, winHeight - self.imageMountain.get_height()))
 			x += self.imageMountain.get_width()
 		for i, c in enumerate(self.clouds):
 			self.cloudsPos[i] = self.cloudsPos[i] + 0.1
 			if self.cloudsPos[i] > winWidth:
 				self.cloudsPos[i] = -170
-			win.blit(c, (self.cloudsPos[i] ,winHeight // 2))
+			globals.win.blit(c, (self.cloudsPos[i] ,winHeight // 2))
 
 class fireWork:
 	_reg = []
@@ -192,7 +192,7 @@ class fireWork:
 		if self.time == 30 * 3:
 			fireWork._reg.remove(self)
 	def draw(self):
-		pygame.draw.circle(win, self.color, self.pos, self.radius)
+		pygame.draw.circle(globals.win, self.color, self.pos, self.radius)
 
 class MainMenu:
 	_mm = None
@@ -732,9 +732,9 @@ class MenuElement:
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (buttonPos, self.size))
+		pygame.draw.rect(globals.win, color, (buttonPos, self.size))
 		if self.surf:
-			win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+			globals.win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementText(MenuElement):
 	def initialize(self):
@@ -758,8 +758,8 @@ class MenuElementButton(MenuElement):
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (buttonPos, self.size))
-		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+		pygame.draw.rect(globals.win, color, (buttonPos, self.size))
+		globals.win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 	
 class MenuElementUpDown(MenuElementButton):
 	def initialize(self):
@@ -808,12 +808,12 @@ class MenuElementUpDown(MenuElementButton):
 		border = 1
 		arrowSize = self.size[1] // 2
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (buttonPos, self.size))
+		pygame.draw.rect(globals.win, color, (buttonPos, self.size))
 		rightColor = Menu._subSelectColor if self.selected and self.mode == 1 else Menu._subButtonColor
 		leftColor = Menu._subSelectColor if self.selected and not self.mode == 1 else Menu._subButtonColor
-		pygame.draw.polygon(win, rightColor, [(buttonPos[0] + self.size[0] - arrowSize, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + arrowSize)])
-		pygame.draw.polygon(win, leftColor, [(buttonPos[0] + border ,buttonPos[1] + self.size[1] - arrowSize), (buttonPos[0] + border, buttonPos[1] + self.size[1] - border - 1), (buttonPos[0] + arrowSize, buttonPos[1] + self.size[1] - border - 1)])
-		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+		pygame.draw.polygon(globals.win, rightColor, [(buttonPos[0] + self.size[0] - arrowSize, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + arrowSize)])
+		pygame.draw.polygon(globals.win, leftColor, [(buttonPos[0] + border ,buttonPos[1] + self.size[1] - arrowSize), (buttonPos[0] + border, buttonPos[1] + self.size[1] - border - 1), (buttonPos[0] + arrowSize, buttonPos[1] + self.size[1] - border - 1)])
+		globals.win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementToggle(MenuElementButton):
 	def initialize(self):
@@ -825,10 +825,10 @@ class MenuElementToggle(MenuElementButton):
 	def draw(self):
 		color = Menu._selectedColor if self.selected else self.color
 		buttonPos = self.getSuperPos() + self.pos
-		pygame.draw.rect(win, color, (buttonPos, self.size))
+		pygame.draw.rect(globals.win, color, (buttonPos, self.size))
 		if self.value:
-			pygame.draw.rect(win, Menu._toggleColor, ((buttonPos[0] + self.border, buttonPos[1] + self.border), (self.size[0] - 2 * self.border, self.size[1] - 2 * self.border)))
-		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+			pygame.draw.rect(globals.win, Menu._toggleColor, ((buttonPos[0] + self.border, buttonPos[1] + self.border), (self.size[0] - 2 * self.border, self.size[1] - 2 * self.border)))
+		globals.win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementComboSwitch(MenuElementButton):
 	def initialize(self):
@@ -876,20 +876,20 @@ class MenuElementComboSwitch(MenuElementButton):
 		border = 5
 		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (buttonPos, self.size))
+		pygame.draw.rect(globals.win, color, (buttonPos, self.size))
 		if self.currentIndex == -1:
 			surf = self.surf
 		else:
 			surf = self.items[self.currentIndex][1]
-		win.blit(surf, (buttonPos[0] + self.size[0]/2 - surf.get_width()/2, buttonPos[1] + self.size[1]/2 - surf.get_height()/2))
+		globals.win.blit(surf, (buttonPos[0] + self.size[0]/2 - surf.get_width()/2, buttonPos[1] + self.size[1]/2 - surf.get_height()/2))
 		arrowBorder = 3
 		arrowSize = self.size[1]
 		polygonRight = [Vector(self.size[0] - arrowSize / 2, arrowBorder), Vector(self.size[0] - arrowBorder, self.size[1] / 2), Vector(self.size[0] - arrowSize / 2, self.size[1] - arrowBorder)]
 		polygonLeft = [Vector(arrowSize / 2, arrowBorder), Vector(arrowBorder, self.size[1] / 2), Vector(arrowSize / 2, self.size[1] - arrowBorder)]
 		rightColor = Menu._subSelectColor if self.selected and self.forward else Menu._subButtonColor
 		leftColor = Menu._subSelectColor if self.selected and not self.forward else Menu._subButtonColor
-		pygame.draw.polygon(win, rightColor, [buttonPos + i for i in polygonRight])
-		pygame.draw.polygon(win, leftColor, [buttonPos + i for i in polygonLeft])
+		pygame.draw.polygon(globals.win, rightColor, [buttonPos + i for i in polygonRight])
+		pygame.draw.polygon(globals.win, leftColor, [buttonPos + i for i in polygonLeft])
 
 class MenuElementImage(MenuElement):
 	def initialize(self):
@@ -902,7 +902,7 @@ class MenuElementImage(MenuElement):
 		self.imageSurf.blit(image, (0, 0), rect)
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
-		win.blit(self.imageSurf, (buttonPos[0], buttonPos[1]))
+		globals.win.blit(self.imageSurf, (buttonPos[0], buttonPos[1]))
 
 class MenuElementDragImage(MenuElement):
 	def initialize(self):
@@ -926,8 +926,8 @@ class MenuElementDragImage(MenuElement):
 		self.recalculateImage()
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
-		win.blit(self.surf, buttonPos)
-		pygame.draw.rect(win, Menu._buttonColor, (buttonPos, self.surf.get_size()), 2)
+		globals.win.blit(self.surf, buttonPos)
+		pygame.draw.rect(globals.win, Menu._buttonColor, (buttonPos, self.surf.get_size()), 2)
 	def recalculateImage(self):
 		self.surf.fill((0,0,0,0))
 		self.surf.blit(self.imageSurf, (self.size[0] // 2  + self.dragDx, 0))
@@ -960,8 +960,8 @@ class MenuElementSurf(MenuElement):
 		self.surf = surf
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
-		win.blit(self.surf, buttonPos)
-		pygame.draw.rect(win, Menu._buttonColor, (buttonPos, self.surf.get_size()), 2)
+		globals.win.blit(self.surf, buttonPos)
+		pygame.draw.rect(globals.win, Menu._buttonColor, (buttonPos, self.surf.get_size()), 2)
 
 class MenuElementInput(MenuElementButton):
 	_reg = []
@@ -1004,11 +1004,11 @@ class MenuElementInput(MenuElementButton):
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
 		color = Menu._selectedColor if self.selected else self.color
-		pygame.draw.rect(win, color, (buttonPos, self.size))
+		pygame.draw.rect(globals.win, color, (buttonPos, self.size))
 
-		win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+		globals.win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 		if self.mode == "editing" and self.showCursor:
-			win.blit(self.cursor, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+			globals.win.blit(self.cursor, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementLoadBar(MenuElement):
 	def initialize(self):
@@ -1019,7 +1019,7 @@ class MenuElementLoadBar(MenuElement):
 		self.direction = 1
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos
-		pygame.draw.rect(win, Menu._textElementColor, (buttonPos, self.size))
+		pygame.draw.rect(globals.win, Menu._textElementColor, (buttonPos, self.size))
 		# calculate size
 		if self.maxValue == 0:
 			print("division by zero error")
@@ -1028,12 +1028,12 @@ class MenuElementLoadBar(MenuElement):
 
 		# draw bar left to right direction
 		if self.direction == 1:
-			pygame.draw.rect(win, Menu._textElementColor, (buttonPos, self.size), 2)
-			pygame.draw.rect(win, self.color, (buttonPos + Vector(2,2), size - Vector(4,4)))
+			pygame.draw.rect(globals.win, Menu._textElementColor, (buttonPos, self.size), 2)
+			pygame.draw.rect(globals.win, self.color, (buttonPos + Vector(2,2), size - Vector(4,4)))
 		# draw bar right to left direction
 		else:
-			pygame.draw.rect(win, Menu._textElementColor, (buttonPos + Vector(self.size[0] - size[0], 0), size), 2)
-			pygame.draw.rect(win, self.color, (buttonPos + Vector(self.size[0] - size[0] + 2, 2), size - Vector(4,4)))
+			pygame.draw.rect(globals.win, Menu._textElementColor, (buttonPos + Vector(self.size[0] - size[0], 0), size), 2)
+			pygame.draw.rect(globals.win, self.color, (buttonPos + Vector(self.size[0] - size[0] + 2, 2), size - Vector(4,4)))
 
 class MenuAnimator:
 	_reg = []
@@ -1185,8 +1185,7 @@ def handleEvents(event, handleMenuEvents):
 				break
 
 def mainMenu(args, fromGameParameters=None, toGameParameters=None):
-	global win, winWidth, winHeight
-	win = globals.win
+	global winWidth, winHeight
 	winWidth = globals.winWidth
 	winHeight = globals.winHeight
 
@@ -1247,7 +1246,7 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 			g.draw()
 			drawRecordGraph()
 
-		globals.screen.blit(pygame.transform.scale(win, globals.screen.get_rect().size), (0,0))
+		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
 		globals.fpsClock.tick(globals.fps)
 		pygame.display.update()
 	

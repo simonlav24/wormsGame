@@ -439,9 +439,8 @@ class Game:
 		self.useList.append([pixelFont5.render(string, False, self.HUDColor), string])
 		if len(self.useList) > 4:
 			self.useList.pop(0)
-	def addToKillList(self):
+	def addToKillList(self, amount=1):
 		"""add to kill list if points"""
-		amount = 1
 		if len(self.killList) > 0 and self.killList[0][1] == self.objectUnderControl.nameStr:
 			amount += self.killList[0][2]
 			self.killList.pop(0)
@@ -1737,6 +1736,7 @@ class Worm (PhysObj):
 		self.surf.blit(Game._game.sprites, (0,0), (16,0,16,16))
 		self.surf.blit(self.team.hatSurf, (0,0))
 		self.color = (128, 189,66)
+		if MissionManager._mm: MissionManager._mm.notifySick(self)
 	def heal(self, hp):
 		self.health += hp
 		if self.healthMode == 1:
@@ -7096,9 +7096,6 @@ def cycleWorms():
 	if Game._game.gameMode == ARENA:
 		Arena._arena.wormsCheck()
 	
-	if Game._game.gameMode == MISSIONS:
-		MissionManager._mm.cycle()
-
 	Game._game.damageThisTurn = 0
 	if Game._game.nextState == PLAYER_CONTROL_1:
 	
@@ -7127,7 +7124,7 @@ def cycleWorms():
 		Game._game.camTrack = Game._game.objectUnderControl
 		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon, force=True)
 		if Game._game.gameMode == MISSIONS:
-			MissionManager._mm.assignMissions(w)
+			MissionManager._mm.cycle()
 
 def switchWorms():
 	currentWorm = TeamManager._tm.currentTeam.worms.index(Game._game.objectUnderControl)
@@ -7584,10 +7581,10 @@ class MissionManager:
 			"triple kill": 3,
 			"hit highest worm": 1,
 			"hit distant worm": 1,
-			"fly a worm above 300": 2,
+			# "fly a worm above 300": 2,
 			"hit 5 worms": 2, 
 			"sicken 5 worms": 2, 
-			"water bounce": 2,
+			# "water bounce": 2,
 		}
 		self.worms = {}
 		self.hitTargets = {}
@@ -7595,9 +7592,14 @@ class MissionManager:
 		self.teamTargets = {}
 		self.killedThisTurn = []
 		self.hitThisTurn = []
+		self.sickThisTurn = []
+		self.marker = None
+
+		self.displayList = []
 	def assignMissions(self, worm):
 		# choose 3 missions from availableMissions
 		if worm in self.worms:
+			self.evaluateMissions()
 			return
 		
 		wormMissions = []
@@ -7605,7 +7607,9 @@ class MissionManager:
 		for i in range(3):
 			newMission = self.assignOneMission(worm)
 			wormMissions.append(newMission)
-	
+	def evaluateMissions(self):
+		# TODO check if the worm can still do his missions and replace if necesary
+		pass
 	def assignOneMission(self, worm, oldMission=None):
 		# choose 1 mission that the worm not have
 		availableMissions = list(self.availableMissions.keys())
@@ -7623,9 +7627,14 @@ class MissionManager:
 				self.teamTargets[worm] = self.chooseTeamTarget()
 			elif "hit" in chosenMission:
 				self.hitTargets[worm] = self.chooseTarget()
+		
+		if chosenMission == "reach marker":
+			self.createMarker()
 		return chosenMission
-
 	
+	def createMarker(self):
+		place = giveGoodPlace(-1, True)
+		self.marker = place
 	def calculateArgs(self):
 		currentWorm = Game._game.objectUnderControl
 		args = {}
@@ -7669,8 +7678,8 @@ class MissionManager:
 				if len(self.killedThisTurn) > 0:
 					self.missionCompleted(mission)
 			elif mission == "reach marker":
-				# TODO
-				pass
+				self.missionCompleted(mission)
+				self.marker = None
 			elif mission == "double kill":
 				if len(self.killedThisTurn) > 1:
 					self.missionCompleted(mission)
@@ -7680,8 +7689,7 @@ class MissionManager:
 			elif mission == "hit highest worm":
 				self.missionCompleted(mission)
 			elif mission == "hit distant worm":
-				# TODO
-				pass
+				self.missionCompleted(mission)
 			elif mission == "fly a worm above 300":
 				# TODO
 				pass
@@ -7689,8 +7697,8 @@ class MissionManager:
 				if len(self.hitThisTurn) > 4:
 					self.missionCompleted(mission)
 			elif mission == "sicken 5 worms":
-				# TODO
-				pass
+				if len(self.sickThisTurn) > 4:
+					self.missionCompleted(mission)
 			elif mission == "water bounce":
 				# TODO
 				pass
@@ -7717,11 +7725,13 @@ class MissionManager:
 			string = string.replace("_", args)
 		Commentator._com.que.append((string, ("mission "," passed"), Game._game.objectUnderControl.team.color))
 		Game._game.objectUnderControl.team.points += self.availableMissions[mission]
+		Game._game.addToKillList(self.availableMissions[mission])
 
 		# remove mission
 		self.worms[Game._game.objectUnderControl].remove(mission)
 		newMission = self.assignOneMission(Game._game.objectUnderControl, mission)
 		self.worms[Game._game.objectUnderControl].append(newMission)
+		self.updateDisplay()
 
 	def notifyKill(self, worm):
 		if worm == Game._game.objectUnderControl:
@@ -7732,18 +7742,63 @@ class MissionManager:
 		if worm in self.hitThisTurn or worm == Game._game.objectUnderControl:
 			return
 		self.hitThisTurn.append(worm)
-		self.checkMission(["hit a worm from _", "hit _", "hit 5 worms", "hit distant worm"])
+		self.checkMission(["hit a worm from _", "hit _", "hit 5 worms"])
+		# check highest
 		highestWorm = min(PhysObj._worms, key=lambda w: w.pos.y)
 		if worm == highestWorm:
 			self.checkMission(["hit highest worm"])
+		# check distance
+		if distus(worm.pos, Game._game.objectUnderControl.pos) > 300 * 300:
+			self.checkMission(["hit distant worm"])
+	def notifySick(self, worm):
+		if worm in self.sickThisTurn or worm == Game._game.objectUnderControl:
+			return
+		self.sickThisTurn.append(worm)
+		self.checkMission(["sicken 5 worms"])
 	def cycle(self):
+		self.assignMissions(Game._game.objectUnderControl)
+		self.updateDisplay()
 		self.killedThisTurn = []
 		self.hitThisTurn = []
+		self.sickThisTurn = []
+		self.marker = None
+
+		if "reach marker" in self.worms[Game._game.objectUnderControl]:
+			self.createMarker()
+	def updateDisplay(self):
+		self.displayList = []
+		args = self.calculateArgs()
+		for mission in args["missions"]:
+			self.displayList.append(pixelFont5.render(mission, False, (0,0,0)))
+
 	def step(self):
-		pass
+		if self.marker:
+			if distus(self.marker, Game._game.objectUnderControl.pos) < 20 * 20:
+				self.checkMission(["reach marker"])
 	def draw(self):
-		# TODO draw missions gui in lower right of screen
-		pass
+		currentWorm = Game._game.objectUnderControl
+		# draw missions gui in lower right of screen
+		yOffset = 0
+		for i, surf in enumerate(self.displayList):
+			win.blit(surf, (winWidth - surf.get_width() - 10, winHeight - surf.get_height() - 10 - yOffset))
+			yOffset += surf.get_height() + 5
+		
+		# draw distance indicator
+		if not currentWorm:
+			return
+		if "hit distant worm" in self.worms[currentWorm]:
+			radius = 300
+			pygame.draw.circle(win, (255,0,0), point2world(currentWorm.pos), radius, 1)
+		# draw marker
+		if self.marker:
+			offset = sin(TimeManager._tm.timeOverall / 5) * 5
+			pygame.draw.circle(win, (255,0,0), point2world(self.marker), 10 + offset, 1)
+			drawDirInd(self.marker)
+		# draw indicators
+		if currentWorm in self.hitTargets.keys():
+			drawDirInd(self.hitTargets[currentWorm].pos)
+		if currentWorm in self.killTargets.keys():
+			drawDirInd(self.killTargets[currentWorm].pos)
 
 def list2str(_list):
 	string = ""
@@ -8111,7 +8166,7 @@ def stateMachine():
 		if Game._game.gameMode == TERMINATOR:
 			pickVictim()
 		if Game._game.gameMode == MISSIONS: 
-			MissionManager._mm.assignMissions(w)
+			MissionManager._mm.cycle()
 		Game._game.camTrack = w
 		TimeManager._tm.timeReset()
 		WeaponManager._wm.switchWeapon(WeaponManager._wm.weapons[0][0], force=True)
@@ -8501,6 +8556,7 @@ def gameMain(gameParameters=None):
 		
 		if oldSize != (winWidth, winHeight):
 			win = pygame.Surface((winWidth, winHeight))
+			globals.win = win
 		
 		# handle position:
 		if Game._game.camTrack:
@@ -8554,6 +8610,7 @@ def gameMain(gameParameters=None):
 		BackGround._bg.step()
 		
 		if Arena._arena: Arena._arena.step()
+		if MissionManager._mm: MissionManager._mm.step()
 		
 		# menu step
 		if RadialMenu.menu:
@@ -8570,7 +8627,6 @@ def gameMain(gameParameters=None):
 		BackGround._bg.drawSecondary()
 		for t in Toast._toasts: t.draw()
 		
-		if Game._game.gameMode == TERMINATOR and Game._game.victim and Game._game.victim.alive: drawTarget(Game._game.victim.pos)
 		if Arena._arena: Arena._arena.draw()
 		# drawSmoke()
 		SmokeParticles._sp.draw()
@@ -8605,6 +8661,7 @@ def gameMain(gameParameters=None):
 		if not Game._game.state in [RESET, GENERATE_MAP, PLACING_WORMS, CHOOSE_STARTER] and Game._game.drawHealthBar: HealthBar._healthBar.step()
 		if not Game._game.state in [RESET, GENERATE_MAP, PLACING_WORMS, CHOOSE_STARTER] and Game._game.drawHealthBar: HealthBar._healthBar.draw() # teamHealthDraw()
 		if Game._game.gameMode == TERMINATOR and Game._game.victim and Game._game.victim.alive:
+			drawTarget(Game._game.victim.pos)
 			drawDirInd(Game._game.victim.pos)
 		if Game._game.gameMode == TARGETS and Game._game.objectUnderControl:
 			for target in ShootingTarget._reg:
@@ -8625,7 +8682,7 @@ def gameMain(gameParameters=None):
 		if RadialMenu.menu:
 			RadialMenu.menu.draw()
 		# draw kill list
-		if Game._game.gameMode in [POINTS, TARGETS, TERMINATOR]:
+		if Game._game.gameMode in [POINTS, TARGETS, TERMINATOR, MISSIONS]:
 			while len(Game._game.killList) > 8:
 				Game._game.killList.pop(-1)
 			for i, killed in enumerate(Game._game.killList):
