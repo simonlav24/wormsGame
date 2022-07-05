@@ -2,7 +2,7 @@ from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fab
 from random import shuffle ,randint, uniform, choice, sample
 from vector import *
 import globals
-from mainMenu import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu, pauseMenu
+from mainMenu import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu, pauseMenu, initGui
 from pygame import gfxdraw
 import pygame
 import argparse
@@ -23,6 +23,7 @@ def getGlobals():
 	win = globals.win
 	screen = globals.screen
 globals.globalsInit()
+initGui()
 getGlobals()
 
 # constants
