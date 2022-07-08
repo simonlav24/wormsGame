@@ -3256,8 +3256,12 @@ class HomingMissile(PhysObj):
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 def drawTarget(pos):
-	pygame.draw.line(win, (180,0,0), point2world((pos.x - 10, pos.y - 8)) , point2world((pos.x + 10, pos.y + 8)), 2)
-	pygame.draw.line(win, (180,0,0), point2world((pos.x + 10, pos.y - 8)) , point2world((pos.x - 10, pos.y + 8)), 2)
+	offset = sin(TimeManager._tm.timeOverall / 5) * 4 + 3
+	triangle = [Vector(5 + offset,0), Vector(10 + offset,-2), Vector(10 + offset,2)]
+	for i in range(4):
+		angle = i * pi / 2
+		triangle = [triangle[0].rotate(angle), triangle[1].rotate(angle), triangle[2].rotate(angle)]
+		pygame.draw.polygon(win, (255,0,0), [point2world(pos + j) for j in triangle])
 
 class Vortex():
 	vortexRadius = 180
@@ -3363,7 +3367,7 @@ class TimeAgent:
 			
 		self.timeCounter += 1
 	def draw(self):
-		# pygame.draw.circle(win, self.color, point2world(self.pos), 3+1)
+		pygame.draw.circle(win, Game._game.objectUnderControl.color, point2world(self.pos), 3+1)
 		win.blit(self.surf, point2world(tup2vec(self.pos) - tup2vec(self.surf.get_size()) / 2))
 		win.blit(self.nameSurf , ((int(self.pos[0]) - int(Game._game.camPos.x) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(Game._game.camPos.y) - 21)))
 		pygame.draw.rect(win, (220,220,220),(int(self.pos[0]) -10 -int(Game._game.camPos.x), int(self.pos[1]) -15 -int(Game._game.camPos.y), 20,3))
@@ -7617,10 +7621,13 @@ class MissionManager:
 		replaceMissions = []
 		if worm in self.hitTargets.keys() and not self.hitTargets[worm].alive:
 			replaceMissions.append("hit _")
+			self.hitTargets.pop(worm)
 		if worm in self.killTargets.keys() and not self.killTargets[worm].alive:
 			replaceMissions.append("kill _")
+			self.killTargets.pop(worm)
 		if worm in self.teamTargets.keys() and len(self.teamTargets[worm]) == 0:
 			replaceMissions.append("hit a worm from _")
+			self.teamTargets.pop(worm)
 
 		# count alive worms from other teams
 		aliveWorms = 0
@@ -7708,8 +7715,9 @@ class MissionManager:
 			return None
 		return choice(teams)
 	def checkMission(self, missions):
+		currentWorm = Game._game.objectUnderControl
 		for mission in missions:
-			if mission not in self.worms[Game._game.objectUnderControl]:
+			if mission not in self.worms[currentWorm]:
 				continue
 			elif mission == "kill a worm":
 				if len(self.killedThisTurn) > 0:
@@ -7734,21 +7742,23 @@ class MissionManager:
 				if len(self.sickThisTurn) > 4:
 					self.missionCompleted(mission)
 			elif mission == "kill _":
-				target = self.killTargets[Game._game.objectUnderControl]
+				target = self.killTargets[currentWorm]
 				if target in self.killedThisTurn:
 					self.missionCompleted(mission, target.nameStr)
-					self.killTargets.pop(Game._game.objectUnderControl)
+					self.killTargets.pop(currentWorm)
 			elif mission == "hit a worm from _":
-				team = self.teamTargets[Game._game.objectUnderControl]
+				team = self.teamTargets[currentWorm]
 				for worm in self.hitThisTurn:
 					if worm.team == team:
 						self.missionCompleted(mission, team.name)
-						self.teamTargets.pop(Game._game.objectUnderControl)
+						if currentWorm in self.teamTargets.keys():
+							self.teamTargets.pop(currentWorm)
 			elif mission == "hit _":
-				target = self.hitTargets[Game._game.objectUnderControl]
+				target = self.hitTargets[currentWorm]
 				if target in self.hitThisTurn:
 					self.missionCompleted(mission, target.nameStr)
-					self.hitTargets.pop(Game._game.objectUnderControl)
+					if currentWorm in self.hitTargets.keys():
+						self.hitTargets.pop(currentWorm)
 
 	def missionCompleted(self, mission, args=None):
 		string = mission
@@ -7776,7 +7786,12 @@ class MissionManager:
 		self.hitThisTurn.append(worm)
 		self.checkMission(["hit a worm from _", "hit _", "hit 5 worms"])
 		# check highest
-		highestWorm = min(PhysObj._worms, key=lambda w: w.pos.y)
+		worms = []
+		for w in PhysObj._worms:
+			if w.alive and w.team != Game._game.objectUnderControl.team:
+				worms.append(w)
+		
+		highestWorm = min(worms, key=lambda w: w.pos.y)
 		if worm == highestWorm:
 			self.checkMission(["hit highest worm"])
 		# check distance
@@ -7836,8 +7851,10 @@ class MissionManager:
 		# draw indicators
 		if currentWorm in self.hitTargets.keys():
 			drawDirInd(self.hitTargets[currentWorm].pos)
+			drawTarget(self.hitTargets[currentWorm].pos)
 		if currentWorm in self.killTargets.keys():
 			drawDirInd(self.killTargets[currentWorm].pos)
+			drawTarget(self.killTargets[currentWorm].pos)
 
 def list2str(_list):
 	string = ""
@@ -8181,6 +8198,7 @@ def stateMachine():
 				Arena()
 			if Game._game.gameMode == MISSIONS:
 				MissionManager()
+				Game._game.turnTime = Game._game.turnTime + 10
 			Game._game.state = Game._game.nextState
 	elif Game._game.state == CHOOSE_STARTER:
 		Game._game.playerControlPlacing = False
@@ -8759,7 +8777,7 @@ def gameMain(gameParameters=None):
 
 def splashScreen():
 	splashImage = pygame.image.load("assets/simeGames.png")
-	timer = 1 * fps
+	timer = 1 * fps // 2
 	run = True
 	while run:
 		for event in pygame.event.get():

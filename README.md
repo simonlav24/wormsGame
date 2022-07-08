@@ -150,26 +150,26 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 
 ## :hammer_and_pick: Game modes
 
-- Battle - last team standing wins.
-- Points - damage = points. The team with the most points wins.
-- Targets - shoot targets to get points. The team with the most points wins.
-- Capture the flag - the team that holds the flag at the end of the turn wins a point. The team with the most points wins.
-- Terminator - each turn you have a targeted worm. Hitting the target = 1 point. Terminating the target = 2 points.
-- David vs Goliath - starter worm receives 50% of all teammate's health.
-- Arena - worms get points for standing on top of the arena at the end of each turn. The team with the most points wins.
-- Missions (tbd) - each worm is assinged three renewable missions. upon completing a mission the worm receives points. The team with the most points wins.
+- **Battle** - last team standing wins.
+- **Points** - damage = points. The team with the most points wins.
+- **Targets** - shoot targets to get points. The team with the most points wins.
+- **Capture the flag** - the team that holds the flag at the end of the turn wins a point. The team with the most points wins.
+- **Terminator** - each turn you have a targeted worm. Hitting the target = 1 point. Terminating the target = 2 points.
+- **David vs Goliath** - starter worm receives 50% of all teammate's health.
+- **Arena** - worms get points for standing on top of the arena at the end of each turn. The team with the most points wins.
+- **Missions** - each worm is assinged three renewable missions. upon completing a mission the worm receives points. The team with the most points wins.
 
 ## :gear: Options
 
-- Cooldown - weapons have a cooldown for 4 turns.
-- Warped - horizontal map warp. *experimental*
-- Random - the worm of the next turn is randomly picked. "Complete" means completely random worm and team. "In Team" means random worm but team cycle regularly.
-- Manual placing - place worms manually.
-- Darkness - dark game mode. use flares to illuminate areas near you.
-- Closed map - cant exit the map bounding box.
-- Forts - teammates spawn in cluster.
-- Digging - worms are underground. dig your way around. recommended with darkness.
-- Artifacts - enable artifacts in the games.
+- **Cooldown** - weapons have a cooldown for 4 turns.
+- **Warped** - horizontal map warp. *experimental*
+- **Random** - the worm of the next turn is randomly picked. "Complete" means completely random worm and team. "In Team" means random worm but team cycle regularly.
+- **Manual placing** - place worms manually.
+- **Darkness** - dark game mode. use flares to illuminate areas near you.
+- **Closed map** - cant exit the map bounding box.
+- **Forts** - teammates spawn in cluster.
+- **Digging** - worms are underground. dig your way around. recommended with darkness.
+- **Artifacts** - enable artifacts in the games.
 
 ### :ocean: Sudden Death
 
