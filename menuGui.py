@@ -9,6 +9,19 @@ class Gui:
 		self.font = font
 		self.scalingFactor = scalingFactor
 		self.fps = fps
+		self.toaster = Toaster()
+	def updateWindow(self, window):
+		self.win = window
+	def step(self):
+		for menu in Menu._reg:
+			menu.step()
+		for animation in MenuAnimator._reg:
+			animation.step()
+		self.toaster.step()
+	def draw(self):
+		for menu in Menu._reg:
+			menu.draw()
+		self.toaster.draw()
 
 MENU_ELEMENT = -1
 MENU_MENU   = 0
@@ -159,7 +172,7 @@ class Menu:
 			element.draw()
 	def insert(self, type=MENU_BUTTON, key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
 					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText="",
-					color = WHITE, maxValue=100, draggable=True, comboMap={}):
+					color = WHITE, maxValue=100, draggable=True, comboMap={}, tooltip=None):
 		if type == MENU_BUTTON:
 			b = MenuElementButton()
 		elif type == MENU_TOGGLE:
@@ -210,6 +223,8 @@ class Menu:
 			b.renderSurf(text)
 		if customSize:
 			b.customSize = customSize
+		if tooltip:
+			b.tooltip = tooltip
 		self.addElement(b)
 		return b
 
@@ -226,6 +241,7 @@ class MenuElement:
 		self.menu = None
 		self.type = MENU_ELEMENT
 		self.surf = None
+		self.tooltip = None
 		self.initialize()
 	def getSuperPos(self):
 		return self.menu.getSuperPos()
@@ -259,14 +275,21 @@ class MenuElementButton(MenuElement):
 		self.text = "Bu"
 		self.surf = None
 		self.type = MENU_BUTTON
+		self.mouseInButton = False
 	def step(self):
 		mousePos = mouseInWin()
 		buttonPos = self.getSuperPos() + self.pos
 		posInButton = mousePos - buttonPos
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
+			if not self.mouseInButton:
+				# mouse enters button
+				if self.tooltip:
+					Gui._instance.toaster.showToolTip(self)
+			self.mouseInButton = True
 			self.selected = True
 			return self
 		else:
+			self.mouseInButton = False
 			self.selected = False
 		return None
 	def draw(self):
@@ -405,10 +428,11 @@ class MenuElementComboSwitch(MenuElementButton):
 		pygame.draw.polygon(Gui._instance.win, rightColor, [buttonPos + i for i in polygonRight])
 		pygame.draw.polygon(Gui._instance.win, leftColor, [buttonPos + i for i in polygonLeft])
 
-class MenuElementImage(MenuElement):
+class MenuElementImage(MenuElementButton):
 	def initialize(self):
 		self.type = MENU_IMAGE
 		self.imageSurf = None
+		self.tooltip = None
 	def setImage(self, image, rect=None, background=None):
 		self.imageSurf = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA)
 		if background:
@@ -611,3 +635,61 @@ class ElementAnimator:
 		if self.timer > self.fullTime:
 			self.element.value = self.end
 			MenuAnimator._reg.remove(self)
+
+class Toaster:
+	def __init__(self):
+		self.toastSurf = None
+		self.timer = 0
+		self.toastState = "none"
+		self.toastPos = Vector(0,0)
+
+		self.tooltipSurf = None
+		self.tooltipElement = None
+	def showToolTip(self, element):
+		textSurf = Gui._instance.font.render(element.tooltip, True, (255,255,255), (0,0,0))
+		self.tooltipSurf = pygame.Surface((textSurf.get_width() + 2, textSurf.get_height() + 2))
+		self.tooltipSurf.fill((0,0,0))
+		self.tooltipSurf.blit(textSurf, (1,1))
+		self.tooltipElement = element
+	def hideToolTip(self):
+		self.tooltipSurf = None
+	def toast(self, text):
+		textSurf = Gui._instance.font.render(text, True, (255,255,255), (0,0,0))
+		self.toastSurf = pygame.Surface((textSurf.get_width() + 2, textSurf.get_height() + 2))
+		self.toastSurf.fill((0,0,0))
+		self.toastSurf.blit(textSurf, (1,1))
+
+		self.toastPos = Vector(Gui._instance.win.get_width() // 2 - self.toastSurf.get_width() // 2, Gui._instance.win.get_height())
+		self.toastState = "opening"
+	def step(self):
+		# toast
+		if self.toastState == "opening":
+			self.toastPos.y -= 1
+			if self.toastPos.y <= Gui._instance.win.get_height() - 10 - self.toastSurf.get_height():
+				self.toastState = "showing"
+				self.timer = 0
+		elif self.toastState == "showing":
+			self.timer += 1
+			if self.timer >= Gui._instance.fps * 2:
+				self.toastState = "closing"
+		elif self.toastState == "closing":
+			self.toastPos.y += 1
+			if self.toastPos.y >= Gui._instance.win.get_height():
+				self.toastState = "none"
+				self.toastSurf = None
+				self.timer = 0
+
+		# tooltip
+		if self.tooltipElement:
+			if not self.tooltipElement.selected:
+				self.hideToolTip()
+				self.tooltipElement = None
+	def draw(self):
+		# toast
+		if self.toastSurf:
+			Gui._instance.win.blit(self.toastSurf, self.toastPos)
+
+		# tooltip
+		if self.tooltipSurf:
+			mousePos = mouseInWin()
+			Gui._instance.win.blit(self.tooltipSurf, mousePos + Vector(5,5))

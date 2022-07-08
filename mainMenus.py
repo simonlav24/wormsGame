@@ -28,10 +28,6 @@ LEGENDARY = (255, 255, 102)
 UTILITIES = (254, 254, 254)
 ARTIFACTS = (255, 255, 101)
 
-globals.win = None
-winWidth = 0
-winHeight = 0
-
 # color feel 0:up 1:down 2:mountfar 3:mountclose
 feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
 		 [(122, 196, 233), (199, 233, 251), (116, 208, 186), (100, 173, 133)],
@@ -52,6 +48,10 @@ debug = False
 
 def initGui():
 	Gui(globals.win, globals.pixelFont5, globals.scalingFactor, globals.fps)
+
+def updateWin(win, scalingFactor):
+	Gui._instance.updateWindow(win)
+	Gui._instance.scalingFactor = scalingFactor
 
 def perlinNoise1D(count, seed, octaves, bias):
 	output = []
@@ -123,7 +123,7 @@ class BackGround:
 		BackGround._bg = self
 		self.feelIndex = feelIndex
 		self.recreate()
-		self.cloudsPos = [i * (winWidth + 170)/3 for i in range(3)]
+		self.cloudsPos = [i * (globals.winWidth + 170)/3 for i in range(3)]
 		self.animationStep = 0 # in
 		self.fireworks = None
 	def recreate(self):
@@ -133,7 +133,7 @@ class BackGround:
 		colorRect = pygame.Surface((2,2))
 		pygame.draw.line(colorRect, feel[0], (0,0), (2,0))
 		pygame.draw.line(colorRect, feel[1], (0,1), (2,1))
-		self.imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
+		self.imageSky = pygame.transform.smoothscale(colorRect, (globals.winWidth, globals.winHeight))
 		self.clouds = [renderCloud() for i in range(3)]
 	def step(self):
 		if self.fireworks:
@@ -141,43 +141,15 @@ class BackGround:
 	def draw(self):
 		globals.win.blit(self.imageSky, (0,0))
 		x = 0
-		while x < winWidth:
-			globals.win.blit(self.imageMountain, (x, winHeight - self.imageMountain.get_height()))
-			globals.win.blit(self.imageMountain2, (x, winHeight - self.imageMountain.get_height()))
+		while x < globals.winWidth:
+			globals.win.blit(self.imageMountain, (x, globals.winWidth - self.imageMountain.get_height()))
+			globals.win.blit(self.imageMountain2, (x, globals.winWidth - self.imageMountain.get_height()))
 			x += self.imageMountain.get_width()
 		for i, c in enumerate(self.clouds):
 			self.cloudsPos[i] = self.cloudsPos[i] + 0.1
-			if self.cloudsPos[i] > winWidth:
+			if self.cloudsPos[i] > globals.winWidth:
 				self.cloudsPos[i] = -170
-			globals.win.blit(c, (self.cloudsPos[i] ,winHeight // 2))
-
-class fireWork:
-	_reg = []
-	def __init__(self, pos, color):
-		fireWork._reg.append(self)
-		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
-		self.pos = Vector(pos[0], pos[1])
-		self.acc = Vector()
-		self.color = color
-		self.radius = 3
-		
-		self.lights = []
-		self.time = 0
-	def step(self):
-		self.acc.y += 2.5 * 0.2
-		self.vel += self.acc
-		
-		self.pos += self.vel
-		self.lights.append([self.pos.vec2tupint(), self.radius, 100])
-		
-		for light in self.lights:
-			light[2] -= 1
-		self.lights = [l for l in self.lights if l[2] > 0]
-		self.time += 1
-		if self.time == 30 * 3:
-			fireWork._reg.remove(self)
-	def draw(self):
-		pygame.draw.circle(globals.win, self.color, self.pos, self.radius)
+			globals.win.blit(c, (self.cloudsPos[i] ,globals.winWidth // 2))
 
 class MainMenu:
 	_mm = None
@@ -189,7 +161,7 @@ class MainMenu:
 		MainMenu._mm = self
 
 	def initializeEndGameMenu(self, parameters):
-		endMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, (winHeight - 160)//2], size=[winWidth // 2, 160], register=True)
+		endMenu = Menu(name="endMenu", pos=[globals.winWidth//2  - globals.winWidth//4, (globals.winHeight - 160)//2], size=[globals.winWidth // 2, 160], register=True)
 		endMenu.insert(MENU_TEXT, text="Game Over", customSize=15)
 		if "winner" in parameters.keys():
 			endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
@@ -209,7 +181,7 @@ class MainMenu:
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
 	def initializeWeaponMenu(self, zero=False):
-		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (winHeight - 180)//2], size=[winWidth - 80, 180], register=True)
+		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (globals.winHeight - 180)//2], size=[globals.winWidth - 80, 180], register=True)
 		
 		weapons = ET.parse('weapons.xml').getroot().getchildren()[0]
 		weaponCount = len(weapons)
@@ -230,6 +202,7 @@ class MainMenu:
 				pic.customSize = 16
 				bgColor = categDict[weapons[weaponIndex].attrib["category"]]
 				pic.setImage(weaponSprites, spriteIndex2rect(weaponIndex + indexOffset), background=bgColor)
+				pic.tooltip = weapons[weaponIndex].attrib["name"]
 
 				sub.addElement(pic)
 				amount = weapons[weaponIndex].attrib["amount"]
@@ -255,7 +228,7 @@ class MainMenu:
 		wepMenu.addElement(sub)
 
 	def initializeMenuOptions(self):
-		mainMenu = Menu(name="menu", pos=[40, (winHeight - 196)//2], size=[winWidth - 80, 196], register=True)
+		mainMenu = Menu(name="menu", pos=[40, (globals.winHeight - 196)//2], size=[globals.winWidth - 80, 196], register=True)
 		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 
 		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
@@ -338,14 +311,14 @@ class MainMenu:
 		mainMenu.addElement(subMore)
 
 		# background feel menu
-		bgMenu = Menu(pos=[winWidth - 20, winHeight - 20], size=[20, 20], register=True)
+		bgMenu = Menu(pos=[globals.winWidth - 20, globals.winHeight - 20], size=[20, 20], register=True)
 		bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
 	def initializeRecordMenu(self):
 		# clear graphs
 		graphObject.Graph._reg.clear()
 
-		recordMenu = Menu(name="record menu", pos=[winWidth//2  - winWidth//4, (winHeight - 180)//2], size=[winWidth // 2, 180], register=True)
+		recordMenu = Menu(name="record menu", pos=[globals.winWidth//2  - globals.winWidth//4, (globals.winHeight - 180)//2], size=[globals.winWidth // 2, 180], register=True)
 		recordMenu.insert(MENU_TEXT, text="worms game records", customSize=15)
 		b = recordMenu.insert(MENU_SURF)
 		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
@@ -435,6 +408,7 @@ class MainMenu:
 			values = {}
 			wepmenu.evaluate(values)
 			saveWeaponsXml(values, values["filename"])
+			Gui._instance.toaster.toast("weapons set " + values["filename"] + " saved")
 
 class PauseMenu:
 	_pm = None
@@ -442,7 +416,7 @@ class PauseMenu:
 		self.run = True
 		PauseMenu._pm = self
 	def initializePauseMenu(self, args):
-		pauseMenu = Menu(name="endMenu", pos=[winWidth//2  - winWidth//4, 40], size=[winWidth // 2, 160], register=True)
+		pauseMenu = Menu(name="endMenu", pos=[globals.winWidth//2  - globals.winWidth//4, 40], size=[globals.winWidth // 2, 160], register=True)
 		pauseMenu.insert(MENU_TEXT, text="Game paused")
 
 		if "showPoints" in args.keys() and args["showPoints"]:
@@ -588,9 +562,6 @@ def continueOnPress():
 	Menu._reg.pop(0)
 
 def mainMenu(args, fromGameParameters=None, toGameParameters=None):
-	global winWidth, winHeight
-	winWidth = globals.winWidth
-	winHeight = globals.winHeight
 
 	# clear menus
 	Menu._reg.clear()
@@ -629,21 +600,16 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 		# step
 		BackGround._bg.step()
 		
-		for menu in Menu._reg:
-			menu.step()
+		Gui._instance.step()
 		
 		for g in graphObject.Graph._reg:
 			mousePos = pygame.mouse.get_pos()
 			g.step(Vector(mousePos[0] // globals.scalingFactor, mousePos[1] // globals.scalingFactor))
 
-		for animation in MenuAnimator._reg:
-			animation.step()
-
 		# draw
 		BackGround._bg.draw()
 
-		for menu in Menu._reg:
-			menu.draw()
+		Gui._instance.draw()
 
 		for g in graphObject.Graph._reg:
 			g.draw()

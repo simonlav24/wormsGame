@@ -2,7 +2,7 @@ from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fab
 from random import shuffle ,randint, uniform, choice, sample
 from vector import *
 import globals
-from mainMenu import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu, pauseMenu, initGui
+from mainMenus import renderMountains, renderCloud, feels, grabMapsFrom, mainMenu, pauseMenu, initGui, updateWin
 from pygame import gfxdraw
 import pygame
 import argparse
@@ -113,7 +113,7 @@ class Game:
 		self.suddenDeathStyle = []
 		self.roundCounter = 0
 		self.damageThisTurn = 0
-		self.mostDamage = (0,None)
+		self.mostDamage = (0, None)
 
 		if argumentsString:
 			self.evaluateArgs(argumentsString.split())
@@ -121,7 +121,7 @@ class Game:
 			self.evaluateArgs()
 
 		self.extra = []
-		self.layersCircles = [[],[],[]]
+		self.layersCircles = [[], [], []]
 		self.layersLines = [] #color, start, end, width, delay
 
 		self.nonPhys = []
@@ -143,7 +143,6 @@ class Game:
 		self.state = RESET
 		self.nextState = RESET
 		self.loadingSurf = pixelFont10.render("Simon's Worms Loading", False, WHITE)
-		self.pauseSurf = pixelFont10.render("Game Paused", False, WHITE)
 		self.gameStable = False
 		self.playerControl = False
 		self.playerMoveable = True
@@ -327,6 +326,7 @@ class Game:
 		self.radiusMult = 1 # radius multiplier
 		self.dampMult = 1.5 # dampening multiplier
 		self.initialWaterLevel = 50 # initial water level height
+		self.weaponSet = "default"
 	def initiateGameVariables(self):
 		self.deployPacks = True # whether to deploy packs 
 		self.drawHealthBar = True # whether to draw health bar
@@ -1495,7 +1495,7 @@ class fireWork:
 	_reg = []
 	def __init__(self, pos, color):
 		fireWork._reg.append(self)
-		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
+		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) #* blast
 		self.pos = Vector(pos[0], pos[1])
 		self.acc = Vector()
 		self.color = color
@@ -7133,6 +7133,8 @@ def switchWorms():
 	currentWorm = (currentWorm + 1) % totalWorms
 	Game._game.objectUnderControl = TeamManager._tm.currentTeam.worms[currentWorm]
 	Game._game.camTrack = Game._game.objectUnderControl
+	if Game._game.gameMode == MISSIONS:
+		MissionManager._mm.cycle()
 
 def isGroundAround(place, radius = 5):
 	for i in range(8):
@@ -7574,17 +7576,17 @@ class MissionManager:
 		MissionManager._mm = self
 		self.availableMissions = {
 			"kill a worm": 1,
-			"kill _": 2,
+			"kill _": 3,
 			"hit a worm from _": 1,
 			"hit _": 2,
 			"reach marker": 1,
-			"double kill": 2,
-			"triple kill": 3,
+			"double kill": 3,
+			"triple kill": 4,
 			"hit highest worm": 1,
 			"hit distant worm": 1,
 			# "fly a worm above 300": 2,
 			"hit 5 worms": 2, 
-			"sicken 5 worms": 2, 
+			# "sicken 5 worms": 2, 
 			# "water bounce": 2,
 		}
 		self.worms = {}
@@ -7600,7 +7602,7 @@ class MissionManager:
 	def assignMissions(self, worm):
 		# choose 3 missions from availableMissions
 		if worm in self.worms:
-			self.evaluateMissions()
+			self.evaluateMissions(worm)
 			return
 		
 		wormMissions = []
@@ -7608,9 +7610,34 @@ class MissionManager:
 		for i in range(3):
 			newMission = self.assignOneMission(worm)
 			wormMissions.append(newMission)
-	def evaluateMissions(self):
-		# TODO check if the worm can still do his missions and replace if necesary
-		pass
+	def evaluateMissions(self, worm):
+		replaceMissions = []
+		if worm in self.hitTargets.keys() and not self.hitTargets[worm].alive:
+			replaceMissions.append("hit _")
+		if worm in self.killTargets.keys() and not self.killTargets[worm].alive:
+			replaceMissions.append("kill _")
+		if worm in self.teamTargets.keys() and len(self.teamTargets[worm]) == 0:
+			replaceMissions.append("hit a worm from _")
+
+		# count alive worms from other teams
+		aliveWorms = 0
+		for w in PhysObj._worms:
+			if w.alive and w.team != worm.team:
+				aliveWorms += 1
+		
+		if aliveWorms < 5:
+			replaceMissions.append("hit 5 worms")
+		if aliveWorms < 3:
+			replaceMissions.append("triple kill")
+		if aliveWorms < 2:
+			replaceMissions.append("double kill")
+
+		for mission in replaceMissions:
+			if mission in self.worms[worm]:
+				self.worms[worm].remove(mission)
+				newMission = self.assignOneMission(worm)
+				self.worms[worm].append(newMission)
+		
 	def assignOneMission(self, worm, oldMission=None):
 		# choose 1 mission that the worm not have
 		availableMissions = list(self.availableMissions.keys())
@@ -7661,6 +7688,8 @@ class MissionManager:
 		for worm in PhysObj._worms:
 			if worm.team == notFromTeam:
 				continue
+			if not worm.alive:
+				continue
 			worms.append(worm)
 		return choice(worms)
 	def chooseTeamTarget(self):
@@ -7669,7 +7698,11 @@ class MissionManager:
 		for team in TeamManager._tm.teams:
 			if team == notFromTeam:
 				continue
+			if len(team.worms) == 0:
+				continue
 			teams.append(team)
+		if len(teams) == 0:
+			return None
 		return choice(teams)
 	def checkMission(self, missions):
 		for mission in missions:
@@ -7691,18 +7724,12 @@ class MissionManager:
 				self.missionCompleted(mission)
 			elif mission == "hit distant worm":
 				self.missionCompleted(mission)
-			elif mission == "fly a worm above 300":
-				# TODO
-				pass
 			elif mission == "hit 5 worms":
 				if len(self.hitThisTurn) > 4:
 					self.missionCompleted(mission)
 			elif mission == "sicken 5 worms":
 				if len(self.sickThisTurn) > 4:
 					self.missionCompleted(mission)
-			elif mission == "water bounce":
-				# TODO
-				pass
 			elif mission == "kill _":
 				target = self.killTargets[Game._game.objectUnderControl]
 				if target in self.killedThisTurn:
@@ -7729,9 +7756,10 @@ class MissionManager:
 		Game._game.addToKillList(self.availableMissions[mission])
 
 		# remove mission
-		self.worms[Game._game.objectUnderControl].remove(mission)
-		newMission = self.assignOneMission(Game._game.objectUnderControl, mission)
-		self.worms[Game._game.objectUnderControl].append(newMission)
+		if mission in self.worms[Game._game.objectUnderControl]:
+			self.worms[Game._game.objectUnderControl].remove(mission)
+			newMission = self.assignOneMission(Game._game.objectUnderControl, mission)
+			self.worms[Game._game.objectUnderControl].append(newMission)
 		self.updateDisplay()
 
 	def notifyKill(self, worm):
@@ -7789,7 +7817,14 @@ class MissionManager:
 			return
 		if "hit distant worm" in self.worms[currentWorm]:
 			radius = 300
-			pygame.draw.circle(win, (255,0,0), point2world(currentWorm.pos), radius, 1)
+			da = 2 * pi / 40
+			time = da * int(TimeManager._tm.timeOverall / 2)
+			timeAngles = [time + i * pi/2 for i in range(4)]
+			for ta in timeAngles:
+				for i in range(9):
+					size = int(i / 3)
+					pos = currentWorm.pos + vectorFromAngle(ta + i * da, radius)
+					pygame.draw.circle(win, (255,0,0), point2world(pos), size)
 		# draw marker
 		if self.marker:
 			offset = sin(TimeManager._tm.timeOverall / 5) * 5
@@ -8396,13 +8431,17 @@ def gameMain(gameParameters=None):
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down
 				if not RadialMenu.menu:
 					scalingFactor *= 1.1
+					globals.scalingFactor = scalingFactor
 					if scalingFactor >= globals.scalingMax:
 						scalingFactor = globals.scalingMax
+						globals.scalingFactor = scalingFactor
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll up
 				if not RadialMenu.menu:
 					scalingFactor *= 0.9
+					globals.scalingFactor = scalingFactor
 					if scalingFactor <= globals.scalingMin:
 						scalingFactor = globals.scalingMin
+						globals.scalingFactor = scalingFactor
 	
 			# key press
 			if event.type == pygame.KEYDOWN:
@@ -8490,6 +8529,7 @@ def gameMain(gameParameters=None):
 						TimeSlow()
 					if event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
 						scalingFactor = globals.scalingMax
+						globals.scalingFactor = scalingFactor
 						if Game._game.camTrack == None:
 							Game._game.camTrack = Game._game.objectUnderControl
 					# if event.key == pygame.K_n:
@@ -8556,8 +8596,11 @@ def gameMain(gameParameters=None):
 		winHeight = int(winHeight)
 		
 		if oldSize != (winWidth, winHeight):
-			win = pygame.Surface((winWidth, winHeight))
-			globals.win = win
+			globals.win = pygame.Surface((winWidth, winHeight))
+			win = globals.win
+			globals.winWidth = winWidth
+			globals.winHeight = winHeight
+			updateWin(win, scalingFactor)
 		
 		# handle position:
 		if Game._game.camTrack:
