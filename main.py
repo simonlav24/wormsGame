@@ -6173,6 +6173,9 @@ class WeaponManager:
 
 		# read weapon set
 		if Game._game.args.weapon_set != "":
+			# zero out basicSet
+			self.basicSet = [0 for i in self.basicSet]
+
 			weaponSet = ET.parse('./assets/weaponsSets/' + Game._game.args.weapon_set + '.xml').getroot().getchildren()
 			for weapon in weaponSet:
 				name = weapon.attrib["name"]
@@ -8756,7 +8759,7 @@ def gameMain(gameParameters=None):
 
 def splashScreen():
 	splashImage = pygame.image.load("assets/simeGames.png")
-	timer = 2 * fps
+	timer = 1 * fps
 	run = True
 	while run:
 		for event in pygame.event.get():

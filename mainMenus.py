@@ -149,7 +149,7 @@ class BackGround:
 			self.cloudsPos[i] = self.cloudsPos[i] + 0.1
 			if self.cloudsPos[i] > globals.winWidth:
 				self.cloudsPos[i] = -170
-			globals.win.blit(c, (self.cloudsPos[i] ,globals.winWidth // 2))
+			globals.win.blit(c, (self.cloudsPos[i] ,globals.winHeight // 2))
 
 class MainMenu:
 	_mm = None
@@ -296,6 +296,7 @@ class MainMenu:
 		optionsAndPictureMenu.addElement(mapMenu)
 		mainMenu.addElement(optionsAndPictureMenu)
 
+		# weapons setup
 		subweapons = Menu(orientation=HORIZONTAL, customSize=14)
 		subweapons.insert(MENU_BUTTON, key="weaponssetup", text="weapons setup")
 		weaponsSets = ['default']
@@ -303,7 +304,7 @@ class MainMenu:
 		for file in os.listdir("./assets/weaponsSets"):
 			weaponsSets.append(file.split(".")[0])
 		subweapons.insert(MENU_TEXT, text="weapons set:")
-		subweapons.insert(MENU_COMBOS, key="weapon set", items=weaponsSets)
+		subweapons.insert(MENU_COMBOS, name="weapon_combo", key="weapon set", items=weaponsSets)
 		mainMenu.addElement(subweapons)
 
 		subMore = Menu(orientation=HORIZONTAL, customSize=14)
@@ -344,7 +345,14 @@ class MainMenu:
 
 		pos = (x,y_average)
 		graph.setCam(Vector(pos[0]*5, -pos[1]*5)) # arbitrary '5' that works for some reason
-		
+	
+	def updateWeaponSets(self):
+		weaponSetCombo = getElementByName("weapon_combo")
+		weaponsSets = ['default']
+		for file in os.listdir("./assets/weaponsSets"):
+			weaponsSets.append(file.split(".")[0])
+		weaponSetCombo.setItems(weaponsSets)
+
 	def handleMainMenu(self, event):
 		key = event.key
 		# print(event.key, event.value)
@@ -388,6 +396,7 @@ class MainMenu:
 			# animate main menu in
 			endPos = Menu._reg[0].pos + Vector(0, globals.winHeight)
 			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, endPos, trigger=menuPop)
+			self.updateWeaponSets()
 		if key == "weaponssetup":
 			# create the weapons menu
 			self.initializeWeaponMenu()
@@ -459,16 +468,18 @@ def grabMapsFrom(paths):
 	return maps
 
 def saveWeaponsXml(values, filename):
-	weaponsStrings = []
+	weaponsStrings = {}
 	weapons = ET.parse('weapons.xml').getroot().getchildren()[0]
 	for w in weapons:
-		weaponsStrings.append(w.attrib["name"])
+		weaponsStrings[w.attrib["name"]] = w.attrib["amount"]
 
 	filename = filename.replace(" ", "_")
 	file = open("./assets/weaponsSets/" + filename + ".xml", "w")
 	file.write("<weapons>\n")
 	for key in values:
-		if key not in weaponsStrings:
+		if key not in weaponsStrings.keys():
+			continue
+		if values[key] == 0:
 			continue
 		file.write("\t<weapon name=\"" + key + "\" amount=\"" + str(values[key]) + "\" />\n")
 	file.write("</weapons>\n")

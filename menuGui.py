@@ -56,6 +56,11 @@ def getMenubyName(name):
 			return menu
 	return None
 
+def getElementByName(name):
+	for menu in Menu._reg:
+		return menu.getElementByName(name)
+	return None
+
 def handleEvents(event, handleMenuEvents):
 	if event.type == pygame.MOUSEBUTTONDOWN:
 		for inp in MenuElementInput._reg:
@@ -110,6 +115,18 @@ class Menu:
 		newElement.menu = self
 		self.elements.append(newElement)
 		self.recalculate()
+	def getElementByName(self, name):
+		for element in self.elements:
+			if element.type == MENU_MENU:
+				if element.name == name:
+					return element
+				else:
+					found = element.getElementByName(name)
+					if found:
+						return found
+			if element.name == name:
+				return element
+		return None
 	def recalculate(self):
 		numElements = len(self.elements)
 		customSizedElements = [i for i in self.elements if i.customSize]
@@ -170,7 +187,7 @@ class Menu:
 	def draw(self):
 		for element in self.elements:
 			element.draw()
-	def insert(self, type=MENU_BUTTON, key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
+	def insert(self, type=MENU_BUTTON, name="element", key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
 					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText="",
 					color = WHITE, maxValue=100, draggable=True, comboMap={}, tooltip=None):
 		if type == MENU_BUTTON:
@@ -225,6 +242,7 @@ class Menu:
 			b.customSize = customSize
 		if tooltip:
 			b.tooltip = tooltip
+		b.name = name
 		self.addElement(b)
 		return b
 
@@ -377,6 +395,7 @@ class MenuElementComboSwitch(MenuElementButton):
 		self.forward = False
 		self.mapping = {}
 	def setItems(self, strings, mapping={}):
+		self.items = []
 		self.mapping = mapping
 		for string in strings:
 			stringToRender = string
