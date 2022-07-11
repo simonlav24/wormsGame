@@ -300,9 +300,10 @@ class MainMenu:
 		subweapons = Menu(orientation=HORIZONTAL, customSize=14)
 		subweapons.insert(MENU_BUTTON, key="weaponssetup", text="weapons setup")
 		weaponsSets = ['default']
-		# for every file in "./assets/weaponsSets"
-		for file in os.listdir("./assets/weaponsSets"):
-			weaponsSets.append(file.split(".")[0])
+
+		if os.path.exists("./assets/weaponsSets"):
+			for file in os.listdir("./assets/weaponsSets"):
+				weaponsSets.append(file.split(".")[0])
 		subweapons.insert(MENU_TEXT, text="weapons set:")
 		subweapons.insert(MENU_COMBOS, name="weapon_combo", key="weapon set", items=weaponsSets)
 		mainMenu.addElement(subweapons)
@@ -349,8 +350,9 @@ class MainMenu:
 	def updateWeaponSets(self):
 		weaponSetCombo = getElementByName("weapon_combo")
 		weaponsSets = ['default']
-		for file in os.listdir("./assets/weaponsSets"):
-			weaponsSets.append(file.split(".")[0])
+		if os.path.exists("./assets/weaponsSets"):
+			for file in os.listdir("./assets/weaponsSets"):
+				weaponsSets.append(file.split(".")[0])
 		weaponSetCombo.setItems(weaponsSets)
 
 	def handleMainMenu(self, event):

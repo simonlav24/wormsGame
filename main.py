@@ -7573,7 +7573,6 @@ class Arena:
 	def wormsCheck(self):
 		for worm in PhysObj._worms:
 			checkPos = worm.pos + Vector(0, worm.radius * 2)
-			# Game._game.addExtra(checkPos, (255,255,255), 3)
 			if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and checkPos.y > self.pos.y and checkPos.y < self.pos.y + self.size.y:
 				worm.team.points += 1
 
@@ -7657,6 +7656,12 @@ class MissionManager:
 		if oldMission:
 			availableMissions.remove(oldMission)
 
+		# check if worms or teams exist
+		if len(self.getAliveWormsFromOtherTeams()) == 0:
+			availableMissions.remove("hit a worm from _")
+			availableMissions.remove("kill _")
+			availableMissions.remove("hit _")
+		
 		chosenMission = choice(availableMissions)
 		if "_" in chosenMission:
 			if "kill" in chosenMission:
@@ -7670,6 +7675,17 @@ class MissionManager:
 			self.createMarker()
 		return chosenMission
 	
+	def getAliveWormsFromOtherTeams(self):
+		notFromTeam = Game._game.objectUnderControl.team
+		worms = []
+		for worm in PhysObj._worms:
+			if worm.team == notFromTeam:
+				continue
+			if not worm.alive:
+				continue
+			worms.append(worm)
+		return worms
+
 	def createMarker(self):
 		place = giveGoodPlace(-1, True)
 		self.marker = place
@@ -7679,11 +7695,11 @@ class MissionManager:
 		missionsToDisplay = []
 		for mission in self.worms[currentWorm]:
 			if "_" in mission:
-				if "kill" in mission:
+				if "kill" in mission and self.killTargets[currentWorm]:
 					string = "kill " + self.killTargets[currentWorm].nameStr + " (" + str(self.availableMissions[mission]) + ")"
-				elif "from" in mission:
+				elif "from" in mission and self.teamTargets[currentWorm]:
 					string = "hit a worm from " + self.teamTargets[currentWorm].name + " (" + str(self.availableMissions[mission]) + ")"
-				elif "hit" in mission:
+				elif "hit" in mission and self.hitTargets[currentWorm]:
 					string = "hit " + self.hitTargets[currentWorm].nameStr + " (" + str(self.availableMissions[mission]) + ")"
 				missionsToDisplay.append(string)
 			else:
@@ -7694,13 +7710,7 @@ class MissionManager:
 		return args
 	def chooseTarget(self):
 		notFromTeam = Game._game.objectUnderControl.team
-		worms = []
-		for worm in PhysObj._worms:
-			if worm.team == notFromTeam:
-				continue
-			if not worm.alive:
-				continue
-			worms.append(worm)
+		worms = self.getAliveWormsFromOtherTeams()
 		return choice(worms)
 	def chooseTeamTarget(self):
 		notFromTeam = Game._game.objectUnderControl.team

@@ -10,6 +10,10 @@ class Gui:
 		self.scalingFactor = scalingFactor
 		self.fps = fps
 		self.toaster = Toaster()
+		self.focusElement = None
+	def showCursor(self, cursor, element):
+		self.focusElement = element
+		pygame.mouse.set_cursor(cursor)
 	def updateWindow(self, window):
 		self.win = window
 	def step(self):
@@ -17,6 +21,10 @@ class Gui:
 			menu.step()
 		for animation in MenuAnimator._reg:
 			animation.step()
+		if self.focusElement:
+			if not self.focusElement.selected:
+				pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+				self.focusElement = None
 		self.toaster.step()
 	def draw(self):
 		for menu in Menu._reg:
@@ -303,6 +311,7 @@ class MenuElementButton(MenuElement):
 				# mouse enters button
 				if self.tooltip:
 					Gui._instance.toaster.showToolTip(self)
+				Gui._instance.showCursor(pygame.SYSTEM_CURSOR_HAND, self)
 			self.mouseInButton = True
 			self.selected = True
 			return self
@@ -348,6 +357,9 @@ class MenuElementUpDown(MenuElementButton):
 		posInButton = mousePos - buttonPos
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			self.selected = True
+			if self.tooltip:
+				Gui._instance.toaster.showToolTip(self)
+			Gui._instance.showCursor(pygame.SYSTEM_CURSOR_HAND, self)
 			if posInButton[1] > posInButton[0] * (self.size[1] / self.size[0]): # need replacement
 				self.mode = -1
 			else:
@@ -416,6 +428,9 @@ class MenuElementComboSwitch(MenuElementButton):
 		posInButton = (mousePos[0] - buttonPos[0], mousePos[1] - buttonPos[1])
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			self.selected = True
+			if self.tooltip:
+				Gui._instance.toaster.showToolTip(self)
+			Gui._instance.showCursor(pygame.SYSTEM_CURSOR_HAND, self)
 			if posInButton[0] > self.size[0] // 2:
 				self.forward = True
 			else:
@@ -494,6 +509,9 @@ class MenuElementDragImage(MenuElement):
 		posInButton = (mousePos[0] - buttonPos[0], mousePos[1] - buttonPos[1])
 		if self.draggable:
 			if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
+				# if self.tooltip:
+				# 	Gui._instance.toaster.showToolTip(self)
+				# Gui._instance.showCursor(pygame.SYSTEM_CURSOR_CROSSHAIR, self)
 				# if pygame mouse pressed
 				if pygame.mouse.get_pressed()[0]:
 					vel = pygame.mouse.get_rel()
@@ -553,6 +571,9 @@ class MenuElementInput(MenuElementButton):
 		buttonPos = self.getSuperPos() + self.pos
 		posInButton = (mousePos[0] - buttonPos[0], mousePos[1] - buttonPos[1])
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
+			if self.tooltip:
+				Gui._instance.toaster.showToolTip(self)
+			Gui._instance.showCursor(pygame.SYSTEM_CURSOR_IBEAM, self)
 			self.selected = True
 			return self
 		else:
