@@ -268,6 +268,7 @@ class MenuElement:
 		self.type = MENU_ELEMENT
 		self.surf = None
 		self.tooltip = None
+		self.cursor = pygame.SYSTEM_CURSOR_ARROW
 		self.initialize()
 	def getSuperPos(self):
 		return self.menu.getSuperPos()
@@ -302,6 +303,7 @@ class MenuElementButton(MenuElement):
 		self.surf = None
 		self.type = MENU_BUTTON
 		self.mouseInButton = False
+		self.cursor = pygame.SYSTEM_CURSOR_HAND
 	def step(self):
 		mousePos = mouseInWin()
 		buttonPos = self.getSuperPos() + self.pos
@@ -311,7 +313,7 @@ class MenuElementButton(MenuElement):
 				# mouse enters button
 				if self.tooltip:
 					Gui._instance.toaster.showToolTip(self)
-				Gui._instance.showCursor(pygame.SYSTEM_CURSOR_HAND, self)
+				Gui._instance.showCursor(self.cursor, self)
 			self.mouseInButton = True
 			self.selected = True
 			return self
@@ -389,6 +391,7 @@ class MenuElementToggle(MenuElementButton):
 		self.value = False
 		self.type = MENU_TOGGLE
 		self.border = 1
+		self.cursor = pygame.SYSTEM_CURSOR_HAND
 	def draw(self):
 		color = Menu._selectedColor if self.selected else self.color
 		buttonPos = self.getSuperPos() + self.pos
@@ -551,7 +554,8 @@ class MenuElementInput(MenuElementButton):
 		self.cursorSpeed = Gui._instance.fps // 4
 		self.showCursor = False
 		self.timer = 0
-		self.cursor = Gui._instance.font.render("|", True, (255,255,255))
+		self.cursorText = Gui._instance.font.render("|", True, (255,255,255))
+		self.cursor = pygame.SYSTEM_CURSOR_IBEAM
 	def processKey(self, event):
 		if event.key == pygame.K_BACKSPACE:
 			self.inputText = self.inputText[:-1]
@@ -573,7 +577,7 @@ class MenuElementInput(MenuElementButton):
 		if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
 			if self.tooltip:
 				Gui._instance.toaster.showToolTip(self)
-			Gui._instance.showCursor(pygame.SYSTEM_CURSOR_IBEAM, self)
+			Gui._instance.showCursor(self.cursor, self)
 			self.selected = True
 			return self
 		else:
@@ -586,7 +590,7 @@ class MenuElementInput(MenuElementButton):
 
 		Gui._instance.win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 		if self.mode == "editing" and self.showCursor:
-			Gui._instance.win.blit(self.cursor, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+			Gui._instance.win.blit(self.cursorText, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementLoadBar(MenuElement):
 	def initialize(self):
