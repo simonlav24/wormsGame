@@ -97,9 +97,6 @@ if True:
 	AVATAR = 2
 	MINECRAFT = 3
 
-# improvements:
-# seagulls to not spawn on top of world
-
 class Game:
 	_game = None
 	def __init__(self, argumentsString=None):
@@ -629,7 +626,7 @@ def splash(pos, vel):
 
 class Blast:
 	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
-	def __init__(self, pos, radius, smoke = 30, moving=0, star=False):
+	def __init__(self, pos, radius, smoke = 30, moving=0, star=False, color=None):
 		Game._game.nonPhys.append(self)
 		self.timeCounter = 0
 		self.pos = pos + vectorUnitRandom() * moving
@@ -639,6 +636,13 @@ class Blast:
 		self.smoke = smoke
 		self.rand = vectorUnitRandom() * randint(1, int(self.radius / 2))
 		self.star = star
+		if color:
+			self.color = [(255,255,255), color]
+			for i in range(4):
+				color = darken(color)
+				self.color.append(color)
+		else:
+			self.color = Blast._color
 	def step(self):
 		if randint(0,self.smoke) == 0 and self.rad > 1:
 			# Smoke(self.pos)
@@ -648,7 +652,7 @@ class Blast:
 		self.pos.x += (4.0 * Game._game.wind / self.rad) * Game._game.dt
 		self.pos.y -= (2.0 / self.rad) * Game._game.dt
 		if Game._game.darkness:
-			color = self._color[int(max(min(self.timeCounter, 5), 0))]
+			color = self.color[int(max(min(self.timeCounter, 5), 0))]
 			Game._game.lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
 		if self.timeCounter >= 10:
 			Game._game.nonPhys.remove(self)
@@ -663,10 +667,10 @@ class Blast:
 				radrand = 1.0 if i % 2 == 0 else uniform(0.8,3)
 				point = point2world(self.pos + vectorFromAngle((i/num) * 2 * pi, radius + radrand) + rand)
 				points.append(point)
-			pygame.draw.polygon(win, choice(self._color[0:2]), points)
-		Game._game.layersCircles[0].append((self._color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
-		Game._game.layersCircles[1].append((self._color[int(max(min(self.timeCounter-1, 5), 0))], self.pos + self.rand, self.rad*0.6))
-		Game._game.layersCircles[2].append((self._color[int(max(min(self.timeCounter-2, 5), 0))], self.pos + self.rand, self.rad*0.3))
+			pygame.draw.polygon(win, choice(self.color[0:2]), points)
+		Game._game.layersCircles[0].append((self.color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
+		Game._game.layersCircles[1].append((self.color[int(max(min(self.timeCounter-1, 5), 0))], self.pos + self.rand, self.rad*0.6))
+		Game._game.layersCircles[2].append((self.color[int(max(min(self.timeCounter-2, 5), 0))], self.pos + self.rand, self.rad*0.3))
 
 class FireBlast():
 	_color = [(255, 222, 3), (242, 74, 1), (255, 109, 10), (254, 153, 35)]
@@ -1490,32 +1494,6 @@ class Debrie (PhysObj):
 			return
 		points = [point2world(self.pos + rotateVector(i, -self.angle)) for i in self.rect]
 		pygame.draw.polygon(win, self.color, points)
-
-class fireWork:
-	_reg = []
-	def __init__(self, pos, color):
-		fireWork._reg.append(self)
-		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) #* blast
-		self.pos = Vector(pos[0], pos[1])
-		self.acc = Vector()
-		self.color = color
-		self.radius = 3
-		
-		self.lights = []
-		self.time = 0
-	def step(self):
-		self.acc.y += 2.5 * 0.2
-		self.vel += self.acc
-		
-		self.pos += self.vel
-		self.lights.append([self.pos.vec2tupint(), self.radius, 100])
-		
-		for light in self.lights:
-			light[2] -= 1
-		self.lights = [l for l in self.lights if l[2] > 0]
-		self.time += 1
-		if self.time == 30 * 3:
-			fireWork._reg.remove(self)
 	
 class Missile (PhysObj):#1
 	def __init__(self, pos, direction, energy):
@@ -2463,7 +2441,7 @@ class WeaponPack(HealthPack):# Weapon Pack
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = 0
-		weaponsInBox = ["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "raging bull", "electro boom", "pokeball", "green shell", "guided missile"]
+		weaponsInBox = ["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "raging bull", "electro boom", "pokeball", "green shell", "guided missile", "fireworks"]
 		if Game._game.allowAirStrikes:
 			weaponsInBox .append("mine strike")
 		self.box = choice(weaponsInBox)
@@ -2598,7 +2576,7 @@ def fireGammaGun(start, direction):
 		# if hits plant:
 		for plant in Venus._reg:
 			if distus(testPos, plant.pos + plant.direction * 25) <= 625:
-				plant.mutant = True
+				plant.mutate()
 		for target in ShootingTarget._reg:
 			if distus(testPos, target.pos) < target.radius * target.radius:
 				target.explode()
@@ -4020,14 +3998,18 @@ class Venus:
 		if self.pos.y >= Game._game.mapHeight - Water.level:
 			Game._game.nonPhys.remove(self)
 			Venus._reg.remove(self)
+	def mutate(self):
+		if self.mutant:
+			return
+		self.mutant = True
+		self.surf.fill((0, 125, 255, 100), special_flags=pygame.BLEND_MULT)
 	def draw(self):
 		if self.scale < 1:
 			if self.scale == 0:
 				return
 			image = pygame.transform.scale(self.surf, (tup2vec(self.surf.get_size()) * self.scale).vec2tupint())
-		else: image = self.surf.copy()
-		if self.mutant: image.fill((0, 125, 255, 100), special_flags=pygame.BLEND_MULT)
-			
+		else: image = self.surf
+
 		rotated_image = pygame.transform.rotate(image, -degrees(self.angle - self.snap))
 		rotated_offset = rotateVector(self.offset, self.angle - self.snap)
 		rect = rotated_image.get_rect(center=(self.p2 + rotated_offset).vec2tupint())
@@ -5890,7 +5872,7 @@ class Tornado:
 				swirl[1] = min(self.timer / 3, 10)
 		self.pos.x += self.speed * self.facing
 		for swirl in self.swirles:
-			swirl[2] += 0.1
+			swirl[2] += 0.1 * uniform(0.8, 1.2)
 		rect = (Vector(self.pos.x - self.width / 2, 0), Vector(self.width, Game._game.mapHeight))
 		for obj in PhysObj._reg:
 			if obj.pos.x > rect[0][0] and obj.pos.x <= rect[0][0] + rect[1][0]:
@@ -6120,6 +6102,92 @@ class TimeSlow:
 			if Game._game.dt > 1:
 				Game._game.dt = 1
 				Game._game.nonPhys.remove(self)
+	def draw(self):
+		pass
+
+class FireWorkRockets:
+	_fw = None
+	def __init__(self):
+		Game._game.nonPhys.append(self)
+		FireWorkRockets._fw = self
+		self.objects = []
+		self.state = "tag"
+		self.timer = 0
+		self.picked = 0
+	def step(self):
+		if self.state == "thrusting":
+			self.timer += 1
+			if self.timer > 1.5 * fps:
+				self.state = "exploding"
+			for obj in self.objects:
+				obj.acc += Vector(0, -0.34)
+				Blast(obj.pos + Vector(0, obj.radius*1.5) + vectorUnitRandom()*2, randint(5,8), 80)
+		elif self.state == "exploding":
+			for obj in self.objects:
+				FireWork(obj.pos, Game._game.objectUnderControl.team.color)
+				boom(obj.pos, 22)
+			self.done()
+	def done(self):
+		if self in Game._game.nonPhys:
+			Game._game.nonPhys.remove(self)
+		FireWorkRockets._fw = None
+	def fire(self):
+		"""return true if fired"""
+		if self.state == "tag":
+			for obj in PhysObj._reg:
+				if obj == Game._game.objectUnderControl or obj in self.objects:
+					continue
+				if distus(obj.pos, Game._game.objectUnderControl.pos) < 15*15:
+					self.objects.append(obj)
+			self.picked += 1
+			if self.picked == 3:
+				self.state = "ready"
+		elif self.state == "ready":
+			self.state = "thrusting"
+			for obj in self.objects:
+				obj.vel += Vector(randint(-3,3), -2)
+			if len(self.objects) > 0:
+				Game._game.camTrack = choice(self.objects)
+			return True
+		return False
+	def draw(self):
+		if self.state in ["tag"]:
+			for obj in PhysObj._reg:
+				if obj == Game._game.objectUnderControl:
+					continue
+				if distus(obj.pos, Game._game.objectUnderControl.pos) < 15*15:
+					drawTarget(obj.pos)
+		
+		for obj in self.objects:
+			blitWeaponSprite(win, point2world(obj.pos - Vector(8,8)), "fireworks")
+
+class FireWork:
+	_reg = []
+	def __init__(self, pos, color):
+		Game._game.nonPhys.append(self)
+		self.pos = Vector(pos[0], pos[1])
+		self.blasts = []
+		
+		self.timer = 0
+		blastNum = 20
+		for i in range(blastNum):
+			self.blasts.append([vectorCopy(self.pos), vectorFromAngle(i * 2 * pi / blastNum, 7 + uniform(-1,1))])
+
+		self.color = color
+		self.state = "blow"
+	def step(self):
+		if self.state == "blow":
+			for i in range(len(self.blasts)):
+				vel = self.blasts[i][1]
+				vel += Vector(0, 0.5 * Game._game.globalGravity)
+				vel *= 0.9
+				self.blasts[i][0] += vel
+				Blast(self.blasts[i][0] + vectorUnitRandom(), randint(3,6), 150, color=self.color)
+		
+		self.timer += 1
+		if self.timer > 0.9 * fps:
+			if self in Game._game.nonPhys:
+				Game._game.nonPhys.remove(self)		
 	def draw(self):
 		pass
 
@@ -6542,6 +6610,18 @@ def fire(weapon = None):
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 3)
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
 		w = Chum(weaponOrigin, weaponDir, energy)
+	elif weapon == "fireworks":
+		done = False
+		if FireWorkRockets._fw:
+			done = FireWorkRockets._fw.fire()
+			Game._game.nextState = FIRE_MULTIPLE
+		else:
+			FireWorkRockets()
+			decrease = False
+			Game._game.nextState = FIRE_MULTIPLE
+		if done:
+			decrease = True
+			Game._game.nextState = PLAYER_CONTROL_2
 
 	# artifacts
 	elif weapon == "mjolnir strike":
@@ -7890,7 +7970,7 @@ def loadGame():
 			pass
 
 def randomStartingWeapons(amount):
-	startingWeapons = ["holy grenade", "gemino mine", "bee hive", "electro boom", "pokeball", "green shell", "guided missile"]
+	startingWeapons = ["holy grenade", "gemino mine", "bee hive", "electro boom", "pokeball", "green shell", "guided missile", "fireworks"]
 	if Game._game.allowAirStrikes:
 		startingWeapons.append("mine strike")
 	if Game._game.unlimitedMode: return
@@ -7953,7 +8033,8 @@ def isOnMap(vec):
 	return not (vec[0] < 0 or vec[0] >= Game._game.mapWidth or vec[1] < 0 or vec[1] >= Game._game.mapHeight)
 
 def cheatActive(code):
-	code = code[:-1]
+	code = code[:-1].lower()
+
 	if code == "gibguns":
 		Game._game.unlimitedMode = True
 		for team in TeamManager._tm.teams:

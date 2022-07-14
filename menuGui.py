@@ -78,7 +78,6 @@ def handleEvents(event, handleMenuEvents):
 				if menu.event:
 					menu.processInternalEvents()
 					handleMenuEvents(menu.event)
-
 	if event.type == pygame.KEYDOWN:
 		for inp in MenuElementInput._reg:
 			if inp.mode == "editing":

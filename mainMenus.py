@@ -660,5 +660,6 @@ def pauseMenu(args, result=None):
 		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
 		pygame.display.update()
 		globals.fpsClock.tick(globals.fps)
+	pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 	clearMenu()
 	return

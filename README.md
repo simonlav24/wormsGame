@@ -108,6 +108,7 @@ game development practice in python for educational purposes and fun.
 - **POKEBALL** - catch worms. store them until the ball is damaged.
 - **GREEN SHELL** - actual Koopa Troopa shell.
 - **GUIDED MISSILE** - controllable missile. use RIGHT KEY and LEFT KEY to control.
+- **FIREWORKS** - tie 3 worms or any object to firework rocket and light the sky.
 
 # :hammer: Utilities:
 

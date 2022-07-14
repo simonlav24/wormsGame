@@ -51,6 +51,7 @@
         <weapon name="pokeball"         style="CHARGABLE"   amount="0"      category="LEGENDARY"    fused="True"  delay="1"/>
         <weapon name="green shell"      style="PUTABLE"     amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
         <weapon name="guided missile"   style="PUTABLE"     amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
+        <weapon name="fireworks"        style="PUTABLE"     amount="0"      category="LEGENDARY"    fused="False" delay="1"/>
         <!-- <weapon name="distorter"        style="CHARGABLE"   amount="0"      category="TOOLS"        fused="True" delay="0"/> -->
         <!-- <weapon name="fus ro duh"       style="PUTABLE"     amount="0"      category="TOOLS"        fused="False" delay="0"/> -->
     </weapons>
