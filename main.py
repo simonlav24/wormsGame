@@ -8236,7 +8236,6 @@ def drawDirInd(pos):
 def testerFunc():
 	mousePos = pygame.mouse.get_pos()
 	mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
-	Trampoline(mouse)
 
 class Anim:
 	_a = None
