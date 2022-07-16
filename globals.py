@@ -19,8 +19,8 @@ def globalsInit():
     pixelFont5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
     pixelFont10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
 
-    screenWidth = 1920
-    screenHeight = 1080
+    screenWidth = 1280
+    screenHeight = 720
     
     scalingFactor = 3
     scalingMax = 3

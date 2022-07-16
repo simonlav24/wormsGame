@@ -34,6 +34,7 @@
         <weapon name="sentry turret"    style="PUTABLE"     amount="0"      category="TOOLS"        fused="False" delay="0"/>
         <weapon name="portal gun"       style="GUN"         amount="0"      category="TOOLS"        fused="False" delay="0"/>
         <weapon name="ender pearl"      style="CHARGABLE"   amount="0"      category="TOOLS"        fused="False" delay="0"/>
+        <weapon name="trampoline"       style="PUTABLE"     amount="0"      category="TOOLS"        fused="False" delay="0"/>
         <weapon name="airstrike"        style="CLICKABLE"   amount="1"      category="AIRSTRIKE"    fused="False" delay="8"/>
         <weapon name="napalm strike"    style="CLICKABLE"   amount="1"      category="AIRSTRIKE"    fused="False" delay="8"/>
         <weapon name="mine strike"      style="CLICKABLE"   amount="0"      category="AIRSTRIKE"    fused="False" delay="1"/>

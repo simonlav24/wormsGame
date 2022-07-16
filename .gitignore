@@ -6,3 +6,10 @@
 /wormsRecord.xml
 /wormsMaps/moreMaps
 /anims
+/graphObject.py
+/levelEditor.py
+/recordParser.py
+/springsBranch.py
+/wormsLauncherOld.py
+/wormsWinCounter.py
+/assets/weaponsSets

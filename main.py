@@ -405,6 +405,22 @@ class Game:
 		pos = pygame.mouse.get_pos()
 		pos = Vector(pos[0]/scalingFactor , pos[1]/scalingFactor )
 		win.blit(surf, (int(pos[0] - surf.get_width()/2), int(pos[1] - surf.get_height()/2)))
+	def drawTrampolineHint(self):
+		surf = pygame.Surface((24, 7), pygame.SRCALPHA)
+		surf.blit(Game._game.sprites, (0,0), (100, 117, 24, 7))
+		position = self.objectUnderControl.pos + vectorFromAngle(self.objectUnderControl.shootAngle, 20)
+		anchored = False
+		for i in range(25):
+			cpos = position.y + i
+			if mapGetAt(Vector(position.x, cpos)) == GRD:
+				anchored = True
+				break
+		if anchored:
+			surf.set_alpha(200)
+		else:
+			surf.set_alpha(100)
+		
+		win.blit(surf, point2world(position - Vector(24,7) / 2))
 	def evaluateArgs(self, argumentsString=None):
 		args = parseArgs(argumentsString)
 		self.mapChoice = args.map_choice
@@ -1407,6 +1423,16 @@ class PhysObj:
 				
 		else:
 			self.pos = ppos
+
+		# trampoline
+		if self.vel.y > 0:
+			for trampoline in Trampoline._reg:
+				if trampoline.collide(self.pos):
+					trampoline.spring(self.vel.y)
+					if abs(self.vel.y) <= 10:
+						self.vel.y *= -1.2
+					else:
+						self.vel.y *= -1.0
 			
 		# flew out Game._game.gameMap but not worms !
 		if self.pos.y > Game._game.mapHeight - Water.level and not self in self._worms:
@@ -1604,7 +1630,7 @@ class PetrolBomb(PhysObj):#4
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (158,66,43)
-		self.bounceBeforeDeath = 1
+		self.bounceBeforeDeath = 1 
 		self.damp = 0.5
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blitWeaponSprite(self.surf, (0,0), "petrol bomb")
@@ -6191,6 +6217,52 @@ class FireWork:
 	def draw(self):
 		pass
 
+class Trampoline:
+	_reg = []
+	_sprite = None
+	def __init__(self, pos):
+		Game._game.nonPhys.append(self)
+		self.pos = vectorCopy(pos)
+		self.directionalVel = 0
+		self.offset = 0
+		self.stable = False
+		for i in range(25):
+			if mapGetAt(self.pos + Vector(0, i)) == GRD:
+				self.anchor = self.pos + Vector(0, i)
+				break
+		Trampoline._reg.append(self)
+		self.size = Vector(24, 8)
+		if Trampoline._sprite == None:
+			Trampoline._sprite = pygame.Surface((24, 7), pygame.SRCALPHA)
+			Trampoline._sprite.blit(Game._game.sprites, (0,0), (100, 117, 24, 7))
+	def collide(self, pos):
+		if pos.x > self.pos.x - self.size.x / 2 and pos.x < self.pos.x + self.size.x / 2 and pos.y > self.pos.y - self.size.y / 2 and pos.y < self.pos.y + self.size.y:
+			return True
+		return False
+	def step(self):
+		if not self.stable:
+			acc = - 1 * self.offset
+			self.directionalVel += acc
+			self.directionalVel *= 0.8
+			self.offset += self.directionalVel
+			if abs(self.directionalVel) < 0.2 and abs(self.offset) < 0.2:
+				self.directionalVel = 0
+				self.offset = 0
+				self.stable = True
+		if not mapGetAt(self.anchor) == GRD:
+			Game._game.nonPhys.remove(self)
+	def spring(self, amount):
+		self.offset = -amount
+		self.stable = False
+	def draw(self):
+		startPos = self.anchor.y
+		endPos = self.pos.y + self.offset - 4
+		i = startPos
+		while i > endPos:
+			win.blit(Game._game.sprites, point2world((self.pos.x - 5, i)), (107, 124, 10, 4))
+			i -= 4
+		win.blit(Trampoline._sprite, point2world(self.pos + Vector(0, self.offset) - self.size / 2))
+
 ################################################################################ Weapons setup
 
 class WeaponManager:
@@ -6347,6 +6419,8 @@ class WeaponManager:
 			drawTarget(HomingMissile.Target)
 		if WeaponManager._wm.currentWeapon == "girder" and Game._game.state == PLAYER_CONTROL_1:
 			Game._game.drawGirderHint()
+		if WeaponManager._wm.currentWeapon == "trampoline" and Game._game.state == PLAYER_CONTROL_1:
+			Game._game.drawTrampolineHint()
 		if WeaponManager._wm.getBackColor(WeaponManager._wm.currentWeapon) == AIRSTRIKE:
 			mousePos = pygame.mouse.get_pos()
 			mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
@@ -6622,6 +6696,18 @@ def fire(weapon = None):
 		if done:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
+	elif weapon == "trampoline":
+		position = Game._game.objectUnderControl.pos + vectorFromAngle(Game._game.objectUnderControl.shootAngle, 20)
+		anchored = False
+		for i in range(25):
+			if mapGetAt(position + Vector(0, i)) == GRD:
+				anchored = True
+				break
+		if anchored:
+			Trampoline(position)
+		else:
+			decrease = False
+		Game._game.nextState = PLAYER_CONTROL_1
 
 	# artifacts
 	elif weapon == "mjolnir strike":
@@ -7981,12 +8067,9 @@ def randomStartingWeapons(amount):
 			if randint(0,2) >= 1:
 				effect = choice(["moon gravity", "teleport", "jet pack", "aim aid", "switch worms"])
 				team.ammo(effect, 1)
-			if randint(0,7) == 1:
-				if randint(0,1) == 0:
-					team.ammo("portal gun", 1)
-				else:
-					team.ammo("ender pearl", 3)
-
+			if randint(0,6) == 1:
+				effect = choice([("portal gun", 1), ("trampoline", 3), ("ender pearl", 3)])
+				team.ammo(effect[0], effect[1])
 def randomWeaponsGive():
 	for team in TeamManager._tm.teams:
 		for i, teamCount in enumerate(team.weaponCounter):
@@ -8153,6 +8236,7 @@ def drawDirInd(pos):
 def testerFunc():
 	mousePos = pygame.mouse.get_pos()
 	mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
+	Trampoline(mouse)
 
 class Anim:
 	_a = None

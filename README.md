@@ -80,6 +80,7 @@ game development practice in python for educational purposes and fun.
 - **SENTRY GUN** - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
 - **PORTAL GUN** - the cake is a deception. obtainable by utility crate.
 - **ENDER PEARL** - throw and teleport to where it lands. obtainable by utility crate.
+- **TRAMPOLINE** - place a trampoline. any object will bounce off.
 
 ## :small_airplane: Aerial
 
