@@ -67,7 +67,7 @@ game development practice in python for educational purposes and fun.
 - **SHEEP** - baaaa.
 - **SNAIL** - quick and sticky snail.
 - **VENUS FLY TRAP** - throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
-- **COVID19** - very contagious. sick worms will cough and spread the virus. obtainable by weapon crate.
+- **COVID19** - very contagious. sick worms will cough and spread the virus.
 
 ## :wrench: Tools
 
@@ -77,9 +77,9 @@ game development practice in python for educational purposes and fun.
 - **GIRDER** - place a girder. press tab for rotation and scaling.
 - **ROPE** - swing your way to action.
 - **PARACHUTE** - glide down safely. wind sensitive.
-- **SENTRY GUN** - place a sentry gun. fires at nearby worms at the end of the turn. obtainable by weapon crate.
-- **PORTAL GUN** - the cake is a deception. obtainable by utility crate.
-- **ENDER PEARL** - throw and teleport to where it lands. obtainable by utility crate.
+- **SENTRY GUN** - place a sentry gun. fires at nearby worms at the end of the turn.
+- **PORTAL GUN** - the cake is a deception.
+- **ENDER PEARL** - throw and teleport to where it lands.
 - **TRAMPOLINE** - place a trampoline. any object will bounce off.
 
 ## :small_airplane: Aerial
@@ -96,7 +96,7 @@ game development practice in python for educational purposes and fun.
 
 ![](/assets/anims/electro.gif)
 
- Legendary weapons can be obtained by weapon crates marked with "W".
+ Legendary weapons can be obtained by weapon crates.
 - **HOLY GRENADE** - feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
 - **BANANA** - multiplying banana of mass destruction.
 - **EARTHQUAKE** - quakes the earth.
@@ -115,7 +115,7 @@ game development practice in python for educational purposes and fun.
 
 ![](/assets/anims/jetpack.gif)
 
- Utilities can be obtained by utility crates marked with "?".
+ Utilities can be obtained by utility crates.
 - **moon gravity** - big step for wormanity.
 - **double damage** - twice as fun.
 - **aim aid** - laser sight for guns.
@@ -123,7 +123,7 @@ game development practice in python for educational purposes and fun.
 - **switch worms** - activate and press tab to switch worms in team.
 - **time travel** - activate and continue with your turn. shoot a 'chargeable' weapon or 'place and run'. 
 - **jet pack** - thrust with arrow keys.
-- **portal gun** - to use in weapons.
+- **tool set** - receive some useful tools to use in weapons.
 - **traveling kit** - more ropes and parachutes.
 
 ## :moyai: Artifacts

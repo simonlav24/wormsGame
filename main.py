@@ -10,9 +10,10 @@ import xml.etree.ElementTree as ET
 import os
  
 def getGlobals():
-	global fpsClock, fps, pixelFont5, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
+	global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
 	fpsClock = globals.fpsClock
 	fps = globals.fps
+	pixelFont5halo = globals.pixelFont5halo
 	pixelFont5 = globals.pixelFont5
 	pixelFont10 = globals.pixelFont10
 	screenWidth = globals.screenWidth
@@ -126,11 +127,8 @@ class Game:
 		self.girderAngle = 0
 		self.girderSize = 50
 
-		if self.darkness:
-			self.HUDColor = WHITE
-
 		self.airStrikeDir = RIGHT
-		self.airStrikeSpr = pixelFont10.render(">>>", False, self.HUDColor)
+		self.airStrikeSpr = pixelFont10.render(">>>", False, BLACK)
 
 		self.killList = []
 		self.useList = []
@@ -163,7 +161,6 @@ class Game:
 		PhysObj._worms.clear()
 		PhysObj._mines.clear()
 		Debrie._debries.clear()
-		# Smoke._smoke.clear()
 		SentryGun._sentries.clear()
 		Portal._reg.clear()
 		Venus._reg.clear()
@@ -176,6 +173,9 @@ class Game:
 		Chum._chums.clear()
 		Water.layersA.clear()
 		Water.layersB.clear()
+
+		ArenaManager._arena = None
+		MissionManager._mm = None
 	def createMapSurfaces(self, dims):
 		"""
 		create all map related surfaces
@@ -340,7 +340,7 @@ class Game:
 		self.victim = None # worm targeted for termination
 		self.terminatorHit = False # whether terminator hit in current turn
 		self.cheatCode = "" # cheat code
-		self.HUDColor = BLACK # color of HUD
+		self.HUDColor = WHITE # color of HUD
 		self.holdArtifact = True # whether to hold artifact
 		self.worldArtifacts = [MJOLNIR, PLANT_MASTER, AVATAR, MINECRAFT] # world artifacts
 		self.trigerArtifact = False # whether to trigger artifact drop next turn
@@ -450,7 +450,7 @@ class Game:
 	def step(self):
 		pass
 	def addToUseList(self, string):
-		self.useList.append([pixelFont5.render(string, False, self.HUDColor), string])
+		self.useList.append([pixelFont5halo.render(string, False, self.HUDColor), string])
 		if len(self.useList) > 4:
 			self.useList.pop(0)
 	def addToKillList(self, amount=1):
@@ -459,15 +459,15 @@ class Game:
 			amount += self.killList[0][2]
 			self.killList.pop(0)
 		string = self.objectUnderControl.nameStr + ": " + str(amount)
-		self.killList.insert(0, (pixelFont5.render(string, False, self.HUDColor), self.objectUnderControl.nameStr, amount))
+		self.killList.insert(0, (pixelFont5halo.render(string, False, self.HUDColor), self.objectUnderControl.nameStr, amount))
 	def drawUseList(self):
 		space = 0
 		for i, usedWeapon in enumerate(self.useList):
 			if i == 0:
-				win.blit(usedWeapon[0], (30 + 80 * i,winHeight - 6))
+				win.blit(usedWeapon[0], (30 + 80 * i,winHeight - 5 - usedWeapon[0].get_height()))
 			else:
 				space += self.useList[i-1][0].get_width() + 10
-				win.blit(usedWeapon[0], (30 + space, winHeight - 6))
+				win.blit(usedWeapon[0], (30 + space, winHeight - 5 - usedWeapon[0].get_height()))
 	def inUsedList(self, string):
 		used = False
 		for i in self.useList:
@@ -1248,7 +1248,9 @@ class TimeManager:
 		TimeManager._tm = self
 		self.timeCounter = Game._game.turnTime
 		self.timeOverall = 0
-		self.timeSurf = (self.timeCounter, pixelFont5.render(str(self.timeCounter), False, Game._game.HUDColor))
+		self.generateTimeSurf()
+	def generateTimeSurf(self):
+		self.timeSurf = (self.timeCounter, pixelFont5halo.render(str(self.timeCounter), False, Game._game.HUDColor))
 	def step(self):
 		self.timeOverall += 1
 		if self.timeOverall % fps == 0 and Game._game.state != PLACING_WORMS:
@@ -1274,8 +1276,8 @@ class TimeManager:
 			Game._game.objectUnderControl.toggleParachute()
 	def draw(self):
 		if self.timeSurf[0] != self.timeCounter:
-			self.timeSurf = (self.timeCounter, pixelFont5.render(str(self.timeCounter), False, Game._game.HUDColor))
-		win.blit(self.timeSurf[1] , ((int(10), int(8))))
+			self.generateTimeSurf()
+		win.blit(self.timeSurf[1] , ((5, 5)))
 	def timeReset(self):
 		self.timeCounter = Game._game.turnTime
 	def timeRemaining(self, amount):
@@ -1873,7 +1875,7 @@ class Worm (PhysObj):
 			TeamManager._tm.currentTeam.killCount += 1
 			if Game._game.gameMode == POINTS:
 				string = self.nameStr + " by " + Game._game.objectUnderControl.nameStr
-				Game._game.killList.insert(0, (pixelFont5.render(string, False, Game._game.HUDColor), 0))
+				Game._game.killList.insert(0, (pixelFont5halo.render(string, False, Game._game.HUDColor), 0))
 		
 		self.health = 0
 		
@@ -2437,22 +2439,21 @@ class UtilityPack(HealthPack):# Utility Pack
 		self.health = 5
 		self.fallAffected = False
 		self.windAffected = 0
-		self.box = choice(["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel", "jet pack", "portal gun", "travel kit", "ender pearls"])
+		self.box = choice(["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel", "jet pack", "tool set", "travel kit"])
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		self.surf.blit(Game._game.sprites, (0,0), (96, 96, 16, 16))
 	def effect(self, worm):
 		if Game._game.unlimitedMode:
 			return
 		FloatingText(self.pos, self.box, (0,200,200))
-		if self.box == "portal gun":
-			worm.team.ammo(self.box, 1)
+		if self.box == "tool set":
+			worm.team.ammo("portal gun", 1)
+			worm.team.ammo("ender pearl", 5)
+			worm.team.ammo("trampoline", 3)
 			return
 		elif self.box == "travel kit":
 			worm.team.ammo("rope", 3)
 			worm.team.ammo("parachute", 3)
-			return
-		elif self.box == "ender pearls":
-			worm.team.ammo("ender pearl", 5)
 			return
 		
 		worm.team.ammo(self.box, 1)
@@ -6251,6 +6252,7 @@ class Trampoline:
 				self.stable = True
 		if not mapGetAt(self.anchor) == GRD:
 			Game._game.nonPhys.remove(self)
+			Trampoline._reg.remove(self)
 	def spring(self, amount):
 		self.offset = -amount
 		self.stable = False
@@ -6409,7 +6411,7 @@ class WeaponManager:
 		if self.getFused(self.currentWeapon):
 			weaponStr += "  delay: " + str(Game._game.fuseTime//fps)
 			
-		self.surf = pixelFont5.render(weaponStr, False, color)
+		self.surf = pixelFont5halo.render(weaponStr, False, color)
 	def updateDelay(self):
 		for w in self.weapons:
 			if not w[5] == 0:
@@ -7268,7 +7270,7 @@ def cycleWorms():
 		pickVictim()
 	
 	if Game._game.gameMode == ARENA:
-		Arena._arena.wormsCheck()
+		ArenaManager._arena.wormsCheck()
 	
 	Game._game.damageThisTurn = 0
 	if Game._game.nextState == PLAYER_CONTROL_1:
@@ -7627,13 +7629,13 @@ class Commentator:#(name, strings, color)
 			else:
 				self.mode = Commentator.RENDER
 		elif self.mode == Commentator.RENDER:
-			nameSurf = pixelFont5.render(self.que[0][0], False, self.que[0][2])
+			nameSurf = pixelFont5halo.render(self.que[0][0], False, self.que[0][2])
 				
 			string1 = self.que[0][1][0]
 			string2 = self.que[0][1][1]
 			
-			stringSurf1 = pixelFont5.render(string1, False, Game._game.HUDColor)
-			stringSurf2 = pixelFont5.render(string2, False, Game._game.HUDColor)
+			stringSurf1 = pixelFont5halo.render(string1, False, Game._game.HUDColor)
+			stringSurf2 = pixelFont5halo.render(string2, False, Game._game.HUDColor)
 			# combine strings
 			self.textSurf = pygame.Surface((nameSurf.get_width() + stringSurf1.get_width() + stringSurf2.get_width(), nameSurf.get_height())).convert_alpha()
 			self.textSurf.fill((0,0,0,0))
@@ -7644,7 +7646,7 @@ class Commentator:#(name, strings, color)
 			self.mode = Commentator.SHOW
 			self.timer = 2*fps + 1*fps/2
 		elif self.mode == Commentator.SHOW:
-			win.blit(self.textSurf, (int(winWidth/2 - self.textSurf.get_width()/2), 10))
+			win.blit(self.textSurf, (int(winWidth/2 - self.textSurf.get_width()/2), 5))
 			
 			self.timer -= 1
 			if self.timer == 0:
@@ -7672,7 +7674,6 @@ class Toast:
 		self.pos = Vector()
 		self.state = 0
 		Toast.toastCount += 1
-		
 	def step(self):
 		if self.mode == Toast.bottom:
 			if self.state == 0:
@@ -7693,8 +7694,7 @@ class Toast:
 			if self.time == fps * 3:
 				Toast._toasts.remove(self)
 				Toast.toastCount -= 1
-			self.pos = uniform(0,2) * vectorUnitRandom()
-				
+			self.pos = uniform(0,2) * vectorUnitRandom()	
 	def draw(self):
 		if self.mode == Toast.bottom:
 			pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
@@ -7725,17 +7725,18 @@ def toastInfo():
 		i += s[0].get_height() + 3
 	Toast(surf)
 
-class Arena:
+class ArenaManager:
 	_arena = None
 	def __init__(self):
-		Arena._arena = self
-		self.size = Vector(200, 15)
+		ArenaManager._arena = self
+		self.size = Vector(10 * 16, 10)
 		self.pos = Vector(Game._game.mapWidth, Game._game.mapHeight)//2 - self.size//2
 	def step(self):
 		pass
 	def draw(self):
 		pygame.draw.rect(Game._game.gameMap, GRD,(self.pos, self.size))
-		pygame.draw.rect(Game._game.ground, (102, 102, 153), (self.pos, self.size))
+		for i in range(10):
+			Game._game.ground.blit(Game._game.sprites, self.pos + Vector(i * 16, 0), (64,80,16,16))
 	def wormsCheck(self):
 		for worm in PhysObj._worms:
 			checkPos = worm.pos + Vector(0, worm.radius * 2)
@@ -7812,7 +7813,6 @@ class MissionManager:
 				self.worms[worm].remove(mission)
 				newMission = self.assignOneMission(worm)
 				self.worms[worm].append(newMission)
-		
 	def assignOneMission(self, worm, oldMission=None):
 		# choose 1 mission that the worm not have
 		availableMissions = list(self.availableMissions.keys())
@@ -7840,7 +7840,6 @@ class MissionManager:
 		if chosenMission == "reach marker":
 			self.createMarker()
 		return chosenMission
-	
 	def getAliveWormsFromOtherTeams(self):
 		notFromTeam = Game._game.objectUnderControl.team
 		worms = []
@@ -7851,7 +7850,6 @@ class MissionManager:
 				continue
 			worms.append(worm)
 		return worms
-
 	def createMarker(self):
 		place = giveGoodPlace(-1, True)
 		self.marker = place
@@ -7935,7 +7933,6 @@ class MissionManager:
 					self.missionCompleted(mission, target.nameStr)
 					if currentWorm in self.hitTargets.keys():
 						self.hitTargets.pop(currentWorm)
-
 	def missionCompleted(self, mission, args=None):
 		string = mission
 		if "_" in mission:
@@ -7950,7 +7947,6 @@ class MissionManager:
 			newMission = self.assignOneMission(Game._game.objectUnderControl, mission)
 			self.worms[Game._game.objectUnderControl].append(newMission)
 		self.updateDisplay()
-
 	def notifyKill(self, worm):
 		if worm == Game._game.objectUnderControl:
 			return
@@ -7992,8 +7988,7 @@ class MissionManager:
 		self.displayList = []
 		args = self.calculateArgs()
 		for mission in args["missions"]:
-			self.displayList.append(pixelFont5.render(mission, False, (0,0,0)))
-
+			self.displayList.append(pixelFont5halo.render(mission, False, Game._game.HUDColor))
 	def step(self):
 		if self.marker:
 			if distus(self.marker, Game._game.objectUnderControl.pos) < 20 * 20:
@@ -8003,7 +7998,7 @@ class MissionManager:
 		# draw missions gui in lower right of screen
 		yOffset = 0
 		for i, surf in enumerate(self.displayList):
-			win.blit(surf, (winWidth - surf.get_width() - 10, winHeight - surf.get_height() - 10 - yOffset))
+			win.blit(surf, (winWidth - surf.get_width() - 5, winHeight - surf.get_height() - 5 - yOffset))
 			yOffset += surf.get_height() + 5
 		
 		# draw distance indicator
@@ -8070,6 +8065,7 @@ def randomStartingWeapons(amount):
 			if randint(0,6) == 1:
 				effect = choice([("portal gun", 1), ("trampoline", 3), ("ender pearl", 3)])
 				team.ammo(effect[0], effect[1])
+
 def randomWeaponsGive():
 	for team in TeamManager._tm.teams:
 		for i, teamCount in enumerate(team.weaponCounter):
@@ -8369,7 +8365,7 @@ def stateMachine():
 			if Game._game.gameMode == CAPTURE_THE_FLAG:
 				placeFlag()
 			if Game._game.gameMode == ARENA:
-				Arena()
+				ArenaManager()
 			if Game._game.gameMode == MISSIONS:
 				MissionManager()
 				Game._game.turnTime = Game._game.turnTime + 10
@@ -8581,7 +8577,7 @@ def gameMain(gameParameters=None):
 	HealthBar()
 	SmokeParticles()
 	
-	damageText = (Game._game.damageThisTurn, pixelFont5.render(str(int(Game._game.damageThisTurn)), False, Game._game.HUDColor))
+	damageText = (Game._game.damageThisTurn, pixelFont5halo.render(str(int(Game._game.damageThisTurn)), False, Game._game.HUDColor))
 	Commentator()
 	TimeTravel()
 
@@ -8848,7 +8844,7 @@ def gameMain(gameParameters=None):
 		TimeManager._tm.step()
 		BackGround._bg.step()
 		
-		if Arena._arena: Arena._arena.step()
+		if ArenaManager._arena: ArenaManager._arena.step()
 		if MissionManager._mm: MissionManager._mm.step()
 		
 		# menu step
@@ -8866,7 +8862,7 @@ def gameMain(gameParameters=None):
 		BackGround._bg.drawSecondary()
 		for t in Toast._toasts: t.draw()
 		
-		if Arena._arena: Arena._arena.draw()
+		if ArenaManager._arena: ArenaManager._arena.draw()
 		# drawSmoke()
 		SmokeParticles._sp.draw()
 
@@ -8891,7 +8887,7 @@ def gameMain(gameParameters=None):
 		# HUD
 		drawWindIndicator()
 		TimeManager._tm.draw()
-		if WeaponManager._wm.surf: win.blit(WeaponManager._wm.surf, ((int(25), int(8))))
+		if WeaponManager._wm.surf: win.blit(WeaponManager._wm.surf, (25, 5))
 		Commentator._com.step()
 		# draw weapon indicators
 		WeaponManager._wm.drawWeaponIndicators()
@@ -8925,11 +8921,11 @@ def gameMain(gameParameters=None):
 			while len(Game._game.killList) > 8:
 				Game._game.killList.pop(-1)
 			for i, killed in enumerate(Game._game.killList):
-				win.blit(killed[0], (5, winHeight - 14 - i * 8))
+				win.blit(killed[0], (5, winHeight - 20 - i * (killed[0].get_height() + 1)))
 		
 		# debug:
-		if damageText[0] != Game._game.damageThisTurn: damageText = (Game._game.damageThisTurn, pixelFont5.render(str(int(Game._game.damageThisTurn)), False, Game._game.HUDColor))
-		win.blit(damageText[1], ((int(5), int(winHeight-6))))
+		if damageText[0] != Game._game.damageThisTurn: damageText = (Game._game.damageThisTurn, pixelFont5halo.render(str(int(Game._game.damageThisTurn)), False, Game._game.HUDColor))
+		win.blit(damageText[1], ((int(5), int(winHeight -5 -damageText[1].get_height()))))
 		
 		if Game._game.state == PLACING_WORMS: win.blit(pixelFont5.render(str(len(PhysObj._worms)), False, Game._game.HUDColor), ((int(20), int(winHeight-6))))
 		
