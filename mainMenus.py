@@ -183,7 +183,7 @@ class MainMenu:
 	def initializeWeaponMenu(self, zero=False):
 		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (globals.winHeight - 180)//2], size=[globals.winWidth - 80, 180], register=True)
 		
-		weapons = ET.parse('weapons.xml').getroot().getchildren()[0]
+		weapons = ET.parse('weapons.xml').getroot()[0]
 		weaponCount = len(weapons)
 		weaponSprites = pygame.image.load("./assets/sprites.png")
 		weaponIndex = 0
@@ -471,7 +471,7 @@ def grabMapsFrom(paths):
 
 def saveWeaponsXml(values, filename):
 	weaponsStrings = {}
-	weapons = ET.parse('weapons.xml').getroot().getchildren()[0]
+	weapons = ET.parse('weapons.xml').getroot()[0]
 	for w in weapons:
 		weaponsStrings[w.attrib["name"]] = w.attrib["amount"]
 

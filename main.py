@@ -469,6 +469,8 @@ class Game:
 				space += self.useList[i-1][0].get_width() + 10
 				win.blit(usedWeapon[0], (30 + space, winHeight - 5 - usedWeapon[0].get_height()))
 	def inUsedList(self, string):
+		if not self.useListMode:
+			return False
 		used = False
 		for i in self.useList:
 			if string == i[1]:
@@ -1302,6 +1304,7 @@ class FloatingText: #pos, text, color
 
 class PhysObj:
 	_reg = []
+	_toRemove = []
 	_worms = []
 	_mines = []
 	_fastest = 10
@@ -1472,7 +1475,7 @@ class PhysObj:
 	def secondaryStep(self):
 		pass
 	def removeFromGame(self):
-		PhysObj._reg.remove(self)
+		PhysObj._toRemove.append(self)
 	def damage(self, value, damageType=0):
 		pass
 	def collisionRespone(self, ppos):
@@ -1906,7 +1909,7 @@ class Worm (PhysObj):
 		if self in self.team.worms:
 			self.team.worms.remove(self)
 		if cause == Worm.causeFlew or cause == Worm.causeVenus:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 		
 		# if under control 
 		if Game._game.objectUnderControl == self:
@@ -2110,7 +2113,7 @@ class Fire(PhysObj):
 		if Game._game.darkness:
 			Game._game.lights.append((self.pos[0], self.pos[1], 20, (0,0,0,0)))
 		if self.life == 0:
-			self._reg.remove(self)
+			self.removeFromGame()
 			del self
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
@@ -2278,7 +2281,7 @@ class PetrolCan(PhysObj):
 			f.vel.x = (i - 20) * 0.1 * 1.5
 			f.vel.y = uniform(-2, -0.4)
 		if self in PhysObj._reg:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 		if self in PetrolCan._cans:
 			PetrolCan._cans.remove(self)
 	def secondaryStep(self):
@@ -2776,7 +2779,7 @@ class PlantBomb(PhysObj):
 
 		response = getNormal(ppos, self.vel, self.radius, False, True)
 		
-		PhysObj._reg.remove(self)
+		self.removeFromGame()
 		
 		if self.mode == PlantBomb.bomb:
 			for i in range(randint(4,5)):
@@ -2873,7 +2876,7 @@ class SentryGun(PhysObj):
 			self.vel.y = 0.1
 			
 		if self.health <= 0:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 			self._sentries.remove(self)
 			boom(self.pos, 20)
 			
@@ -4240,7 +4243,7 @@ class Ball(PhysObj):# EXPERIMENTAL
 		for i in self.collidingBalls:
 			pygame.draw.circle(win, self.color, point2world(i), int(0.5)+1)
 		self.collidingBalls = []
-		
+
 class PokeBall(PhysObj):
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -4320,7 +4323,7 @@ class PokeBall(PhysObj):
 			drawLightning(self, self.hold, (255, 255, 204))
 		if self.name:
 			win.blit(self.name , point2world(self.pos + Vector(-self.name.get_width()/2, -21)))
-	
+
 class GreenShell(PhysObj):
 	_shells = []
 	def __init__(self, pos):
@@ -4503,9 +4506,9 @@ class GuidedMissile(PhysObj):
 				for i in range(80):
 					s = Fire(self.pos, 5)
 					s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,4)
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 		if self.pos.y > Game._game.mapHeight:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 	def draw(self):
 		surf = pygame.transform.rotate(self.surf, -90 -degrees(self.vel.getAngle()))
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -4530,7 +4533,7 @@ class Flare(PhysObj):
 		if randint(0,10) == 1:
 			Blast(self.pos, randint(self.radius,7), 150)
 		if self.lightRadius < 0:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 			Flare._flares.remove(self)
 			del self
 			return
@@ -4570,7 +4573,7 @@ class EndPearl(PhysObj):
 				response += ppos - testPos
 			
 			r += pi /8
-		PhysObj._reg.remove(self)
+		self.removeFromGame()
 		
 		response.normalize()
 		pos = self.pos + response * (Game._game.objectUnderControl.radius + 2)
@@ -4595,7 +4598,7 @@ class Flag(PhysObj):
 				# worm has flag
 				Game._game.objectUnderControl.flagHolder = True
 				Game._game.objectUnderControl.team.flagHolder = True
-				PhysObj._reg.remove(self)
+				self.removeFromGame()
 				Flag.flags.remove(self)
 				del self
 				return
@@ -5249,7 +5252,7 @@ class MjolnirThrow(PhysObj):
 		else:
 			self.stableCount = 0
 		if self.stableCount > 20:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 			self.returnToWorm()
 		
 		# electrocute
@@ -5330,7 +5333,7 @@ class Mjolnir(PhysObj):
 		# pick up
 		if dist(Game._game.objectUnderControl.pos, self.pos) < self.radius + Game._game.objectUnderControl.radius + 5 and not Game._game.objectUnderControl.health <= 0\
 			and not len(Game._game.objectUnderControl.team.artifacts) > 0: 
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 			Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), TeamManager._tm.currentTeam.color))
 			TeamManager._tm.currentTeam.artifacts.append(MJOLNIR)
 			# add artifacts moves:
@@ -5341,7 +5344,7 @@ class Mjolnir(PhysObj):
 	def removeFromGame(self):
 		# print("mjolnir gone")
 		if self in PhysObj._reg:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
 		Game._game.worldArtifacts.append(MJOLNIR)
 	def collisionRespone(self, ppos):
 		vel = self.vel.getMag()
@@ -5410,7 +5413,7 @@ class MjolnirFly(PhysObj):
 		Game._game.objectUnderControl.pos = pos
 		
 	def removeFromGame(self):
-		PhysObj._reg.remove(self)
+		PhysObj._toRemove.append(self)
 		MjolnirFly.flying = False
 		Game._game.holdArtifact = True
 	def draw(self):
@@ -5486,7 +5489,8 @@ class MagicLeaf(PhysObj):
 		if distus(Game._game.objectUnderControl.pos, self.pos) < (self.radius + Game._game.objectUnderControl.radius + 5)**2 \
 			and not Game._game.objectUnderControl.health <= 0\
 			and not len(Game._game.objectUnderControl.team.artifacts) > 0:
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
+			Game._game.worldArtifacts.append(PLANT_MASTER)
 			Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " became master of plants"), TeamManager._tm.currentTeam.color))
 			TeamManager._tm.currentTeam.artifacts.append(PLANT_MASTER)
 			WeaponManager._wm.addArtifactMoves(PLANT_MASTER)
@@ -5501,11 +5505,7 @@ class MagicLeaf(PhysObj):
 		force += self.turbulance * 0.1
 		self.acc += force
 	def collisionRespone(self, ppos):
-		self.turbulance *= 0.9
-	def removeFromGame(self):
-		if self in PhysObj._reg:
-			PhysObj._reg.remove(self)
-		Game._game.worldArtifacts.append(PLANT_MASTER)
+		self.turbulance *= 0.9		
 	def draw(self):
 		surf = self.surf
 		surf = pygame.transform.rotate(surf, self.angle)
@@ -5932,17 +5932,14 @@ class Avatar(PhysObj):
 		# pick up
 		if dist(Game._game.objectUnderControl.pos, self.pos) < self.radius + Game._game.objectUnderControl.radius + 5 and not Game._game.objectUnderControl.health <= 0\
 			and not len(Game._game.objectUnderControl.team.artifacts) > 0: 
-			PhysObj._reg.remove(self)
+			self.RemoveFromGame()
+			Game._game.worldArtifacts.append(AVATAR)
 			Commentator._com.que.append((TeamManager._tm.currentTeam.name, ("everything changed when the ", " attacked"), TeamManager._tm.currentTeam.color))
 			TeamManager._tm.currentTeam.artifacts.append(AVATAR)
 			# add artifacts moves:
 			WeaponManager._wm.addArtifactMoves(AVATAR)
 			del self
 			return 
-	def removeFromGame(self):
-		if self in PhysObj._reg:
-			PhysObj._reg.remove(self)
-		Game._game.worldArtifacts.append(AVATAR)
 	def draw(self):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
@@ -6095,17 +6092,14 @@ class PickAxeArtifact(PhysObj):
 		# pick up
 		if dist(Game._game.objectUnderControl.pos, self.pos) < self.radius + Game._game.objectUnderControl.radius + 5 and not Game._game.objectUnderControl.health <= 0\
 			and not len(Game._game.objectUnderControl.team.artifacts) > 0: 
-			PhysObj._reg.remove(self)
+			self.removeFromGame()
+			Game._game.worldArtifacts.append(MINECRAFT)
 			Commentator._com.que.append(("mining", ("its ", " time!"), TeamManager._tm.currentTeam.color))
 			TeamManager._tm.currentTeam.artifacts.append(MINECRAFT)
 			# add artifacts moves:
 			WeaponManager._wm.addArtifactMoves(MINECRAFT)
 			del self
-			return 
-	def removeFromGame(self):
-		if self in PhysObj._reg:
-			PhysObj._reg.remove(self)
-		Game._game.worldArtifacts.append(MINECRAFT)
+			return 		
 	def draw(self):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
@@ -6161,11 +6155,16 @@ class FireWorkRockets:
 	def fire(self):
 		"""return true if fired"""
 		if self.state == "tag":
+			candidates = []
 			for obj in PhysObj._reg:
 				if obj == Game._game.objectUnderControl or obj in self.objects:
 					continue
 				if distus(obj.pos, Game._game.objectUnderControl.pos) < 15*15:
-					self.objects.append(obj)
+					candidates.append(obj)
+			# take the closest
+			if len(candidates) > 0:
+				candidates.sort(key = lambda x: distus(x.pos, Game._game.objectUnderControl.pos))
+				self.objects.append(candidates[0])
 			self.picked += 1
 			if self.picked == 3:
 				self.state = "ready"
@@ -6180,7 +6179,7 @@ class FireWorkRockets:
 	def draw(self):
 		if self.state in ["tag"]:
 			for obj in PhysObj._reg:
-				if obj == Game._game.objectUnderControl:
+				if obj == Game._game.objectUnderControl or obj in self.objects:
 					continue
 				if distus(obj.pos, Game._game.objectUnderControl.pos) < 15*15:
 					drawTarget(obj.pos)
@@ -6278,7 +6277,7 @@ class WeaponManager:
 						"AIRSTRIKE": AIRSTRIKE, "LEGENDARY": LEGENDARY}
 		artifDict = {"MJOLNIR": MJOLNIR, "PLANT_MASTER": PLANT_MASTER, "AVATAR": AVATAR, "MINECRAFT": MINECRAFT}
 
-		groups = ET.parse('weapons.xml').getroot().getchildren()
+		groups = ET.parse('weapons.xml').getroot()
 		for weapon in groups[0]:
 			name = weapon.attrib["name"]
 			style = styleDict[weapon.attrib["style"]]
@@ -6322,7 +6321,7 @@ class WeaponManager:
 			# zero out basicSet
 			self.basicSet = [0 for i in self.basicSet]
 
-			weaponSet = ET.parse('./assets/weaponsSets/' + Game._game.args.weapon_set + '.xml').getroot().getchildren()
+			weaponSet = ET.parse('./assets/weaponsSets/' + Game._game.args.weapon_set + '.xml').getroot()
 			for weapon in weaponSet:
 				name = weapon.attrib["name"]
 				amount = int(weapon.attrib["amount"])
@@ -6395,7 +6394,7 @@ class WeaponManager:
 		color = Game._game.HUDColor
 		# if no ammo in current team
 		ammo = TeamManager._tm.currentTeam.ammo(WeaponManager._wm.currentWeapon)
-		if ammo == 0 or self.currentActive() or Game._game.inUsedList(self.currentWeapon):
+		if ammo == 0 or self.currentActive() or (Game._game.useListMode and Game._game.inUsedList(self.currentWeapon)):
 			color = GREY
 		weaponStr = self.currentWeapon
 
@@ -6854,7 +6853,8 @@ def fireUtility(weapon = None):
 	elif weapon == "double damage":
 		Game._game.damageMult *= 2
 		Game._game.radiusMult *= 1.5
-		Commentator.que.append(("", ("this gonna hurt", ""), Game._game.HUDColor))
+		comments = ["that's gotta hurt", "that'll leave a mark"]
+		Commentator.que.append(("", (choice(comments), ""), Game._game.HUDColor))
 	elif weapon == "aim aid":
 		Game._game.aimAid = True
 		Commentator.que.append(("", ("snipe em'", ""), Game._game.HUDColor))
@@ -7529,7 +7529,7 @@ class RadialButton:
 					if TeamManager._tm.currentTeam.ammo(weapon[0]) == 0:
 						continue
 					active = True
-					if Game._game.inUsedList(weapon[0]) or weapon[5] != 0:
+					if Game._game.useListMode and Game._game.inUsedList(weapon[0]) or weapon[5] != 0:
 						active = False
 					if weapon[3] == self.category:
 						b = self.addSubButton(weapon[0])
@@ -7575,7 +7575,7 @@ def clickInRadialMenu():
 	weapon = RadialMenu.events[1]
 	if weapon == None:
 		return
-	if Game._game.inUsedList(weapon):
+	if Game._game.useListMode and Game._game.inUsedList(weapon):
 		return
 	if WeaponManager._wm.weapons[WeaponManager._wm.weaponDict[weapon]][5] != 0:
 		return
@@ -8121,6 +8121,7 @@ def cheatActive(code):
 				team.weaponCounter[i] = -1
 		for weapon in WeaponManager._wm.weapons:
 			weapon[5] = 0
+		Game._game.useListMode = False
 	if code == "suddendeath":
 		suddenDeath()
 	if code == "wind":
@@ -8141,7 +8142,7 @@ def cheatActive(code):
 		for i in range(amount):
 			mousePos = pygame.mouse.get_pos()
 			UtilityPack((mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
-	if code == "aspirin":
+	if code == "asirin":
 		mousePos = pygame.mouse.get_pos()
 		HealthPack((mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
 	if code == "globalshift":
@@ -8149,7 +8150,7 @@ def cheatActive(code):
 			# if worm in TeamManager._tm.currentTeam.worms:
 				# continue
 			worm.gravity = worm.gravity * -1
-	if code == "gibpetrolcan":
+	if code == "gibetrolcan":
 		mousePos = pygame.mouse.get_pos()
 		PetrolCan((mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
 	if code == "megaboom":
@@ -8167,7 +8168,7 @@ def cheatActive(code):
 	if code == "bulbasaur":
 		mousePos = pygame.mouse.get_pos()
 		m = MagicLeaf(Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
-	if code == "masterofpuppets":
+	if code == "masterofuets":
 		MasterOfPuppets()
 	if code == "artifact":
 		Game._game.trigerArtifact = True
@@ -8823,6 +8824,9 @@ def gameMain(gameParameters=None):
 			p.step()
 			if not p.stable:
 				gameDistable()
+		for p in PhysObj._toRemove:
+			PhysObj._reg.remove(p)
+		PhysObj._toRemove = []
 		for f in Game._game.nonPhys:
 			f.step()
 		for t in Toast._toasts:
