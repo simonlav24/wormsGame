@@ -476,6 +476,8 @@ def saveWeaponsXml(values, filename):
 		weaponsStrings[w.attrib["name"]] = w.attrib["amount"]
 
 	filename = filename.replace(" ", "_")
+	if not os.path.exists("./assets/weaponsSets"):
+		os.makedirs("./assets/weaponsSets")
 	file = open("./assets/weaponsSets/" + filename + ".xml", "w")
 	file.write("<weapons>\n")
 	for key in values:
