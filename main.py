@@ -5289,7 +5289,7 @@ class MjolnirReturn:
 		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
-class Mjolnir(PhysObj):
+class Artifact(PhysObj):
 	def __init__(self, pos):
 		self.initialize()
 		self.pos = pos
@@ -5298,31 +5298,53 @@ class Mjolnir(PhysObj):
 		self.damp = 0.2
 		self.angle = 0
 		Game._game.camTrack = self
+		self.artifact = self.getArtifact()
+		self.setSurf()
+	def getArtifact(self):
+		pass
+	def setSurf(self):
+		pass
+	def commentCreation(self):
+		pass
+	def commentPicked(self):
+		pass
 	def secondaryStep(self):
-		if self.vel.getMag() > 1:
-			self.rotating = True
-		else:
-			self.rotating = False
-		if self.rotating:
-			self.angle = -degrees(self.vel.getAngle()) - 90
 		# pick up
 		if dist(Game._game.objectUnderControl.pos, self.pos) < self.radius + Game._game.objectUnderControl.radius + 5 and not Game._game.objectUnderControl.health <= 0\
 			and not len(Game._game.objectUnderControl.team.artifacts) > 0: 
 			self.removeFromGame()
-			Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), TeamManager._tm.currentTeam.color))
-			TeamManager._tm.currentTeam.artifacts.append(MJOLNIR)
+			Game._game.worldArtifacts.remove(self.artifact)
+			self.commentPicked()
+			TeamManager._tm.currentTeam.artifacts.append(self.artifact)
 			# add artifacts moves:
-			
-			WeaponManager._wm.addArtifactMoves(MJOLNIR)
-			return 
+			WeaponManager._wm.addArtifactMoves(self.artifact)
+			return
+		self.trenaryStep()
 	def removeFromGame(self):
-		# print("mjolnir gone")
-		if self in PhysObj._reg:
-			self.removeFromGame()
-		Game._game.worldArtifacts.append(MJOLNIR)
+		super().removeFromGame()
+		Game._game.worldArtifacts.append(self.artifact)
+	def trenaryStep(self):
+		pass
+	def draw(self):
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+
+class Mjolnir(Artifact):
+	def getArtifact(self):
+		return MJOLNIR
+	def setSurf(self):
+		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+		self.surf.blit(Game._game.sprites, (0,0), (0,112,16,16))
+	def commentCreation(self):
+		Commentator._com.que.append(("", ("a gift from the gods", ""), Game._game.HUDColor))
+	def commentPicked(self):
+		Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), TeamManager._tm.currentTeam.color))
+	def trenaryStep(self):
+		if self.vel.getMag() > 1:
+			self.angle = -degrees(self.vel.getAngle()) - 90
 	def collisionRespone(self, ppos):
 		vel = self.vel.getMag()
-		# print(vel, vel * 4)
 		if vel > 4:
 			boom(self.pos, max(20, 2 * self.vel.getMag()))
 		elif vel < 1:
@@ -5330,8 +5352,6 @@ class Mjolnir(PhysObj):
 	def draw(self):
 		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-	def comment(self):
-		Commentator._com.que.append(("", ("a gift from the gods", ""), Game._game.HUDColor))
 	
 class MjolnirFly(PhysObj):
 	flying = False
@@ -5445,46 +5465,30 @@ class MjolnirStrike:
 		for worm in self.worms:
 			drawLightning(Camera(Vector(self.pos.x, randint(0, int(self.pos.y)))), worm)
 
-class MagicLeaf(PhysObj):
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = pos
-		self.color = (30, 170, 40)
-		self.windAffected = True
-		self.radius = 2
-		self.damp = 0.2
-		self.turbulance = vectorUnitRandom()
-		self.angle = 0
+class MagicLeaf(Artifact):
+	def getArtifact(self):
+		return PLANT_MASTER
+	def setSurf(self):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		self.surf.blit(Game._game.sprites, (0,0), (48, 64, 16,16))
-	def secondaryStep(self):
-		if self.vel.getMag() > 0.25:
-			self.angle += self.vel.x*4
-		if distus(Game._game.objectUnderControl.pos, self.pos) < (self.radius + Game._game.objectUnderControl.radius + 5)**2 \
-			and not Game._game.objectUnderControl.health <= 0\
-			and not len(Game._game.objectUnderControl.team.artifacts) > 0:
-			self.removeFromGame()
-			Game._game.worldArtifacts.append(PLANT_MASTER)
-			Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " became master of plants"), TeamManager._tm.currentTeam.color))
-			TeamManager._tm.currentTeam.artifacts.append(PLANT_MASTER)
-			WeaponManager._wm.addArtifactMoves(PLANT_MASTER)
-			return
-		
+
+		self.windAffected = True
+		self.turbulance = vectorUnitRandom()
+	def commentCreation(self):
+		Commentator._com.que.append(("", ("a leaf of heavens tree", ""), Game._game.HUDColor))
+	def commentPicked(self):
+		Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " became master of plants"), TeamManager._tm.currentTeam.color))
+	def trenaryStep(self):
+		self.angle += self.vel.x*4
+
 		# aerodynamic drag
 		self.turbulance.rotate(uniform(-1, 1))
 		velocity = self.vel.getMag()
-		# turbulance = vectorFromAngle(uniform(0, 2 * pi))
 		force =  - 0.15 * 0.5 * velocity * velocity * normalize(self.vel)
 		force += self.turbulance * 0.1
 		self.acc += force
 	def collisionRespone(self, ppos):
-		self.turbulance *= 0.9		
-	def draw(self):
-		surf = self.surf
-		surf = pygame.transform.rotate(surf, self.angle)
-		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())/2))
-	def comment(self):
-		Commentator._com.que.append(("", ("a leaf of heavens tree", ""), Game._game.HUDColor))
+		self.turbulance *= 0.9
 
 class MagicBeanGrow:
 	def __init__(self, pos, vel):
@@ -5888,35 +5892,18 @@ class Tornado:
 			five = [point2world(Vector(swirl[0] * cos(swirl[2] + t/5) + self.pos.x, 10 * i + swirl[1] * sin(swirl[2] + t/5))) for t in range(5)]
 			pygame.draw.lines(win, (255,255,255), False, five)
 
-class Avatar(PhysObj):
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = pos
-		self.vel = Vector(randint(-2,2), 0)
-		self.radius = 3
-		self.damp = 0.2
-		self.angle = 0
-		Game._game.camTrack = self
+class Avatar(Artifact):
+	def getArtifact(self):
+		return AVATAR
+	def setSurf(self):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		self.surf.blit(Game._game.sprites, (0,0), (0,112,16,16))
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
-		# pick up
-		if dist(Game._game.objectUnderControl.pos, self.pos) < self.radius + Game._game.objectUnderControl.radius + 5 and not Game._game.objectUnderControl.health <= 0\
-			and not len(Game._game.objectUnderControl.team.artifacts) > 0: 
-			self.removeFromGame()
-			Game._game.worldArtifacts.append(AVATAR)
-			Commentator._com.que.append((TeamManager._tm.currentTeam.name, ("everything changed when the ", " attacked"), TeamManager._tm.currentTeam.color))
-			TeamManager._tm.currentTeam.artifacts.append(AVATAR)
-			# add artifacts moves:
-			WeaponManager._wm.addArtifactMoves(AVATAR)
-			return 
-	def draw(self):
-		angle = 45 * round(self.angle / 45)
-		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-	def comment(self):
+	def commentCreation(self):
 		Commentator._com.que.append(("", ("who is the next avatar?", ""), Game._game.HUDColor))
+	def commentPicked(self):
+		Commentator._com.que.append((TeamManager._tm.currentTeam.name, ("everything changed when the ", " attacked"), TeamManager._tm.currentTeam.color))
+	def trenaryStep(self):
+		self.angle -= self.vel.x*4
 
 class GunShell(PhysObj):
 	def __init__(self, pos, vel=None, index=0):
@@ -6047,35 +6034,18 @@ class MineBuild:
 		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
 		pygame.draw.rect(win, (255,255,255), (point2world(position), Vector(16,16)), 1)
 
-class PickAxeArtifact(PhysObj):
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = pos
-		self.vel = Vector(randint(-2,2), 0)
-		self.radius = 3
-		self.damp = 0.2
-		self.angle = 0
-		Game._game.camTrack = self
+class PickAxeArtifact(Artifact):
+	def getArtifact(self):
+		return MINECRAFT
+	def setSurf(self):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		blitWeaponSprite(self.surf, (0,0), "pick axe")
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
-		# pick up
-		if dist(Game._game.objectUnderControl.pos, self.pos) < self.radius + Game._game.objectUnderControl.radius + 5 and not Game._game.objectUnderControl.health <= 0\
-			and not len(Game._game.objectUnderControl.team.artifacts) > 0: 
-			self.removeFromGame()
-			Game._game.worldArtifacts.append(MINECRAFT)
-			Commentator._com.que.append(("mining", ("its ", " time!"), TeamManager._tm.currentTeam.color))
-			TeamManager._tm.currentTeam.artifacts.append(MINECRAFT)
-			# add artifacts moves:
-			WeaponManager._wm.addArtifactMoves(MINECRAFT)
-			return 		
-	def draw(self):
-		angle = 45 * round(self.angle / 45)
-		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-	def comment(self):
+	def commentCreation(self):
 		Commentator._com.que.append(("", ("a game changer", ""), Game._game.HUDColor))
+	def commentPicked(self):
+		Commentator._com.que.append(("mining", ("its ", " time!"), TeamManager._tm.currentTeam.color))
+	def trenaryStep(self):
+		self.angle -= self.vel.x*4
 
 class TimeSlow:
 	def __init__(self):
@@ -7176,7 +7146,7 @@ def cycleWorms():
 				Game._game.deployingArtifact = True
 				artifact = choice(Game._game.worldArtifacts)
 				Game._game.worldArtifacts.remove(artifact)
-				dropArtifact(WeaponManager._wm.artifactDict[artifact], None, True)
+				dropArtifact(WeaponManager._wm.artifactDict[artifact], None, comment=True)
 				Game._game.nextState = WAIT_STABLE
 				Game._game.roundCounter -= 1
 				return
@@ -7337,7 +7307,7 @@ def dropArtifact(artifact, pos, comment=False):
 		m = deployPack(artifact)
 	
 	if comment:
-		m.comment()
+		m.commentCreation()
 	Game._game.camTrack = m
 
 ################################################################################ Gui
