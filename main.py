@@ -1426,16 +1426,6 @@ class PhysObj:
 				
 		else:
 			self.pos = ppos
-
-		# trampoline
-		if self.vel.y > 0:
-			for trampoline in Trampoline._reg:
-				if trampoline.collide(self.pos):
-					trampoline.spring(self.vel.y)
-					if abs(self.vel.y) <= 10:
-						self.vel.y *= -1.2
-					else:
-						self.vel.y *= -1.0
 			
 		# flew out Game._game.gameMap but not worms !
 		if self.pos.y > Game._game.mapHeight - Water.level and not self in self._worms:
@@ -4010,6 +4000,13 @@ class Venus:
 			if not Game._game.gameMap.get_at(self.pos.vec2tupint()) == GRD:
 				Game._game.nonPhysToRemove.append(self)
 				Venus._reg.remove(self)
+				
+				gs = GunShell(vectorCopy(self.pos))
+				gs.angle = self.angle - self.snap
+				gs.surf = self.surf
+				gs = GunShell(vectorCopy(self.pos))
+				gs.angle = self.angle + self.snap
+				gs.surf = self.surf
 		else:
 			Game._game.nonPhysToRemove.append(self)
 			Venus._reg.remove(self)
@@ -5105,7 +5102,8 @@ class Seagull(Seeker):
 		boom(self.pos, 30)
 		self.removeFromGame()
 	def removeFromGame(self):
-		Seagull._reg.remove(self)
+		if self in Seagull._reg:
+			Seagull._reg.remove(self)
 		Game._game.nonPhysToRemove.append(self)
 		self.chum.dead = True
 	def secondaryStep(self):
@@ -5954,7 +5952,7 @@ class GunShell(PhysObj):
 		if self.index == 0:
 			angle = 45 * round(self.angle / 45)
 			surf = pygame.transform.rotate(self.surf, angle)
-			win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+			win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())/2))
 		if self.index == 1:
 			pygame.draw.circle(win, (25,25,25), point2world(self.pos), 3, 1)
 
@@ -6218,6 +6216,19 @@ class Trampoline:
 		if not mapGetAt(self.anchor) == GRD:
 			Game._game.nonPhysToRemove.append(self)
 			Trampoline._reg.remove(self)
+			gs = GunShell(vectorCopy(self.pos))
+			gs.surf = Trampoline._sprite
+		for obj in PhysObj._reg:
+			# trampoline
+			if obj.vel.y > 0:
+				if self.collide(obj.pos):
+					self.spring(obj.vel.y)
+					if abs(obj.vel.y) <= 10:
+						obj.vel.y *= -1.2
+					else:
+						obj.vel.y *= -1.0
+					if Game._game.state == WAIT_STABLE:
+						obj.vel.x += uniform(-0.5,0.5)
 	def spring(self, amount):
 		self.offset = -amount
 		self.stable = False
