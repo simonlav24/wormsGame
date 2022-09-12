@@ -3765,7 +3765,8 @@ def firePortal(start, direction):
 		if t == steps - 1:
 			if len(Portal._reg) % 2 == 1:
 				p = Portal._reg.pop(-1)
-				PhysObj._reg.remove(p)
+				if p in PhysObj._reg:
+					PhysObj._reg.remove(p)
 
 		if testPos.x >= Game._game.mapWidth or testPos.y >= Game._game.mapHeight or testPos.x < 0 or testPos.y < 0:
 			continue
@@ -3836,7 +3837,8 @@ class Portal:
 			
 		if Game._game.state == PLAYER_CONTROL_1 and not self.brother:
 			Game._game.nonPhysToRemove.append(self)
-			Portal._reg.remove(self)
+			if self in Portal._reg:
+				Portal._reg.remove(self)
 			return
 		
 		if self.brother:

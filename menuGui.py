@@ -286,8 +286,6 @@ class MenuElement:
 		dic[self.key] = self.value
 	def drawRect(self):
 		buttonPos = self.getSuperPos() + self.pos
-		# color = Menu._selectedColor if self.selected else self.color
-		print(self.animation_offset)
 		color = [self.color[i] * (1 - self.animation_offset) + Menu._selectedColor[i] * self.animation_offset for i in range(3)]
 		pygame.draw.rect(Gui._instance.win, color, (buttonPos, self.size))
 	def drawText(self):
