@@ -325,6 +325,8 @@ class Game:
 		self.dampMult = 1.5 # dampening multiplier
 		self.initialWaterLevel = 50 # initial water level height
 		self.weaponSet = "default"
+		self.fallVelocityHurt = 5
+		self.jumpVelocity = 3
 	def initiateGameVariables(self):
 		self.deployPacks = True # whether to deploy packs 
 		self.drawHealthBar = True # whether to draw health bar
@@ -1397,7 +1399,7 @@ class PhysObj:
 		if collision:
 			
 			self.collisionRespone(ppos)
-			if magVel > 5 and self.fallAffected:
+			if magVel > Game._game.fallVelocityHurt and self.fallAffected:
 				self.damage(magVel * 1.5 * Game._game.fallDamageMult, 1)
 				# blood
 				if self in PhysObj._worms:
@@ -1843,8 +1845,6 @@ class Worm (PhysObj):
 			weaponSurf = pygame.transform.rotate(pygame.transform.flip(Game._game.weaponHold, False, self.facing == LEFT), -degrees(self.shootAngle))
 			win.blit(weaponSurf, point2world(self.pos - tup2vec(weaponSurf.get_size())/2 + Vector(0, 5)))
 
-		# if self.stable:
-		# 	pygame.draw.circle(win, (0,0,0), point2world(self.pos- Vector(0, self.radius + 2)) , 2)
 	def __str__(self):
 		return self.nameStr
 	def __repr__(self):
@@ -2070,6 +2070,16 @@ class Worm (PhysObj):
 		if Game._game.actionMove:
 			if Game._game.objectUnderControl == self and self.health > 0 and not self.jetpacking and not self.rope:
 				move(self)
+
+		if not self.stable:
+			velocity = self.vel.getMag()
+			if velocity > 5:
+				for worm in PhysObj._worms:
+					if worm == self or not worm.stable:
+						continue
+					if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
+						worm.vel = vectorCopy(self.vel)
+						# print(self.nameStr, "collided with", worm.nameStr)
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
@@ -3335,9 +3345,7 @@ class VortexGrenade(Grenade):
 
 class TimeAgent:
 	def __init__(self):
-		PhysObj._reg.append(self)
-		self.stable = False
-		self.boomAffected = False
+		Game._game.nonPhys.append(self)
 		self.positions = TimeTravel._tt.timeTravelPositions
 		self.facings = TimeTravel._tt.timeTravelFacings
 		self.timeCounter = 0
@@ -3353,7 +3361,7 @@ class TimeAgent:
 		if len(self.positions) == 0:
 			TimeTravel._tt.timeTravelFire = True
 			fire(TimeTravel._tt.timeTravelList["weapon"])
-			PhysObj._reg.remove(self)
+			Game._game.nonPhys.remove(self)
 			TimeTravel._tt.timeTravelPositions = []
 			TimeTravel._tt.timeTravelList = {}
 			return
@@ -7710,7 +7718,7 @@ def toastInfo():
 	surfs = []
 	for team in TeamManager._tm.teams:
 		name = pixelFont5.render(team.name, False, team.color)
-		points = pixelFont5.render(str(team.points), False, Game._game.HUDColor)
+		points = pixelFont5.render(str(team.points), False, (0,0,0))
 		surfs.append((name, points))
 	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * TeamManager._tm.totalTeams), pygame.SRCALPHA)
 	i = 0
@@ -8257,6 +8265,9 @@ def drawDirInd(pos):
 def testerFunc():
 	mousePos = pygame.mouse.get_pos()
 	mouse = Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y)
+	if Game._game.objectUnderControl.stable and Game._game.objectUnderControl.health > 0:
+		Game._game.objectUnderControl.vel += Vector(cos(Game._game.objectUnderControl.shootAngle), sin(Game._game.objectUnderControl.shootAngle)) * 7
+		Game._game.objectUnderControl.stable = False
 
 class Anim:
 	_a = None
@@ -8586,7 +8597,7 @@ def onKeyPressTab():
 def onKeyPressEnter():
 	# jump
 	if Game._game.objectUnderControl.stable and Game._game.objectUnderControl.health > 0:
-		Game._game.objectUnderControl.vel += Vector(cos(Game._game.objectUnderControl.shootAngle), sin(Game._game.objectUnderControl.shootAngle)) * 3
+		Game._game.objectUnderControl.vel += Vector(cos(Game._game.objectUnderControl.shootAngle), sin(Game._game.objectUnderControl.shootAngle)) * Game._game.jumpVelocity
 		Game._game.objectUnderControl.stable = False
 
 ################################################################################ Main
