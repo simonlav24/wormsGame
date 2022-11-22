@@ -6233,15 +6233,16 @@ class Trampoline:
 			gs.surf = Trampoline._sprite
 		for obj in PhysObj._reg:
 			# trampoline
-			if obj.vel.y > 0:
-				if self.collide(obj.pos):
-					self.spring(obj.vel.y)
-					if abs(obj.vel.y) <= 10:
-						obj.vel.y *= -1.2
-					else:
-						obj.vel.y *= -1.0
-					if Game._game.state == WAIT_STABLE:
-						obj.vel.x += uniform(-0.5,0.5)
+			if obj.vel.y > 0 and self.collide(obj.pos):
+				self.spring(obj.vel.y)
+				if abs(obj.vel.y) <= 10:
+					obj.vel.y *= -1.2
+				else:
+					obj.vel.y *= -1.0
+				if abs(obj.vel.y) < Game._game.jumpVelocity:
+					obj.vel.y = -Game._game.jumpVelocity
+				if Game._game.state == WAIT_STABLE:
+					obj.vel.x += uniform(-0.5,0.5)
 	def spring(self, amount):
 		self.offset = -amount
 		self.stable = False
