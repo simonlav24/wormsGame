@@ -14,7 +14,6 @@ game development practice in python for educational purposes and fun.
 - F2 - toggle health visualization mode.
 - mouse left click - press for clickable weapons. (airstrikes, teleport etc).
 - mouse right click - open weapons menu.
-- mouse scroll - scroll weapons menu.
 
 # :crossed_swords: Weapons
 ## :rocket: Missiles

@@ -7836,8 +7836,8 @@ class MissionManager:
 
 		# check if any of the missions are completed and remove them
 		for mission in self.wormMissionDict[worm]:
-			if mission.completed:
-				replaceMissions.append(mission)
+			if mission.completed and mission.readyToChange:
+				replaceMissions.append((mission, self.wormMissionDict[worm].index(mission)))
 
 		currentWormMissionsTypes = [i.missionType for i in self.wormMissionDict[worm]]
 
@@ -7846,12 +7846,12 @@ class MissionManager:
 			for mission in self.wormMissionDict[worm]:
 				if mission.missionType == "hit _" or mission.missionType == "kill _":
 					if mission.target not in PhysObj._worms or not mission.target.alive:
-						replaceMissions.append(mission)
+						replaceMissions.append((mission, self.wormMissionDict[worm].index(mission)))
 		if "hit a worm from _" in currentWormMissionsTypes:
 			for mission in self.wormMissionDict[worm]:
 				if mission.missionType == "hit a worm from _":
 					if len(mission.teamTarget) == 0:
-						replaceMissions.append(mission)
+						replaceMissions.append((mission, self.wormMissionDict[worm].index(mission)))
 
 		# count alive worms from other teams
 		aliveWorms = 0
@@ -7862,27 +7862,29 @@ class MissionManager:
 		if aliveWorms < 5:
 			for mission in self.wormMissionDict[worm]:
 				if mission.missionType == "hit 3 worms":
-					replaceMissions.append(mission)
+					replaceMissions.append((mission, self.wormMissionDict[worm].index(mission)))
 		if aliveWorms < 3:
 			for mission in self.wormMissionDict[worm]:
 				if mission.missionType == "triple kill":
-					replaceMissions.append(mission)
+					replaceMissions.append((mission, self.wormMissionDict[worm].index(mission)))
 		if aliveWorms < 2:
 			for mission in self.wormMissionDict[worm]:
 				if mission.missionType == "double kill":
-					replaceMissions.append(mission)
+					replaceMissions.append((mission, self.wormMissionDict[worm].index(mission)))
 
 		for mission in replaceMissions:
-			if mission in self.wormMissionDict[worm]:
-				self.wormMissionDict[worm].remove(mission)
+			if mission[0] in self.wormMissionDict[worm]:
+				self.wormMissionDict[worm].remove(mission[0])
 				newMission = self.assignOneMission(worm, oldMission)
-				self.wormMissionDict[worm].append(newMission)
+				self.wormMissionDict[worm].insert(mission[1], newMission)
+				# self.wormMissionDict[worm].append(newMission)
 				MissionManager._log += f"{worm.nameStr} received mission {newMission.missionType}\n"
 
 		if len(self.wormMissionDict[worm]) < 3:
 			for i in range(3 - len(self.wormMissionDict[worm])):
 				newMission = self.assignOneMission(worm, oldMission)
 				self.wormMissionDict[worm].append(newMission)
+				# self.wormMissionDict[worm].append(newMission)
 				MissionManager._log += f"{worm.nameStr} received mission {newMission.missionType}\n"
 
 		self.updateDisplay()
@@ -8039,6 +8041,7 @@ class Mission:
 		self.teamTarget = None
 		self.marker = None
 		self.completed = False
+		self.readyToChange = False
 		self.timer = 3 * fps
 		self.textSurf = None
 		self.surf = None
@@ -8118,6 +8121,7 @@ class Mission:
 			self.timer = max(0, self.timer - 1)
 			self.updateDisplay()
 			if self.timer == 0 and Game._game.isPlayingState():
+				self.readyToChange = True
 				MissionManager._mm.removeMission(self)
 
 	def draw(self):
@@ -8494,6 +8498,7 @@ def stateMachine():
 			if Game._game.args.flying:
 				for team in TeamManager._tm.teams:
 					team.ammo("jet pack", 20)
+					team.ammo("switch worms", 20)
 
 			if Game._game.gameMode == DAVID_AND_GOLIATH:
 				for team in TeamManager._tm.teams:
