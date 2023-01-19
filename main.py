@@ -648,6 +648,7 @@ def splash(pos, vel):
 		d.vel.y = uniform(-1,0) * vel.getMag()
 		d.vel.x *= vel.getMag() * 0.17
 		d.radius = choice([2,1])
+	displaceWater(pos.x, vel.getMag())
 
 class Blast:
 	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
@@ -729,6 +730,15 @@ class Explossion:
 	def draw(self):
 		pass
 
+def displaceWater(x, magnitude):
+	# find the closest vertex to x
+	
+	indexOfClosest = int(x / 10)
+	Water.layersA[0].speeds[indexOfClosest] += magnitude * 5
+	# for w in Water.layersB:
+	# 	indexOfClosest = int(x / 10)
+	# 	w.speeds[indexOfClosest] += magnitude * 2
+
 class Water:
 	level = 50
 	quiet = 0
@@ -741,10 +751,16 @@ class Water:
 		self.points = [Vector(i * 20, 3 + Water.waterAmp + Water.waterAmp * (-1)**i) for i in range(-1,12)]
 		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
 		self.phase = [sin(TimeManager._tm.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-		
+
 		self.surf = pygame.Surface((200, Water.waterAmp * 2 + 6), pygame.SRCALPHA)
 		self.state = Water.quiet
 		self.amount = 0
+
+		self.amountOfVertices = 100
+		self.vertices = [Vector(i * 10, 0) for i in range(self.amountOfVertices)]
+		self.accels = [0 for i in range(self.amountOfVertices)]
+		self.speeds = [uniform(-0.0,0.0) for i in range(self.amountOfVertices)]
+
 	def getSplinePoint(self, t):
 		p1 = int(t) + 1
 		p2 = p1 + 1
@@ -768,34 +784,84 @@ class Water:
 	def riseAll(self, amount):
 		self.rise(amount)
 	def step(self):
-		self.surf.fill((0,0,0,0))
-		self.points = [Vector(i * 20, 3 + Water.waterAmp + self.phase[i % 10] * Water.waterAmp * (-1)**i) for i in range(-1,12)]
-		pygame.draw.polygon(self.surf, Water.waterColor[0], self.points + [(200, Water.waterAmp * 2 + 6), (0, Water.waterAmp * 2 + 6)])
-		for t in range(0,(len(self.points) - 3) * 20):
-			point = self.getSplinePoint(t / 20)
-			pygame.draw.circle(self.surf,  Water.waterColor[1], (int(point[0]), int(point[1])), 1)
+
+		# wave function 
+		for i, v in enumerate(self.vertices):
+			
+			self.accels[i] = - 0.1 * self.vertices[i][1]
+
+			rightDelta = self.vertices[(i+1)%self.amountOfVertices][1] - self.vertices[i][1]
+			leftDelta = self.vertices[i][1] - self.vertices[(i-1)%self.amountOfVertices][1]
+
+			self.accels[i] += 0.1 * (rightDelta - leftDelta)
+
+
+			# dx = 20
+			# dx = 10
+			# uyy = 10 * (self.vertices[(i+1)%self.amountOfVertices][1] - 2 * self.vertices[i][1] + self.vertices[(i-1)%self.amountOfVertices][1]) / dx**2
+			# self.accels[i] = uyy
+			
+		# if TimeManager._tm.timeOverall == 100:
+		# 	self.speeds[20] = 50
+
+		for i, v in enumerate(self.vertices):
+			self.accels[i] += uniform(-0.3, 0.3)
+			self.speeds[i] += self.accels[i]
+			self.speeds[i] *= 0.95
+			self.vertices[i][1] += self.speeds[i]
+
 		
-		self.phase = [sin(TimeManager._tm.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-	
-		if self.state == Water.rising:
-			gameDistable()
-			Water.level += 1
-			self.amount -= 1
-			if self.amount <= 0:
-				self.amount = 0
-				self.state = Water.quiet
+
+		self.vertices[0][1] = 0
+		self.vertices[-1][1] = 0
+		self.speeds[0] = 0
+		self.speeds[-1] = 0
+		self.accels[0] = 0
+		self.accels[-1] = 0
+
+		
+		
+
+		old = False
+		if old:
+			self.surf.fill((0,0,0,0))
+			self.points = [Vector(i * 20, 3 + Water.waterAmp + self.phase[i % 10] * Water.waterAmp * (-1)**i) for i in range(-1,12)]
+			pygame.draw.polygon(self.surf, Water.waterColor[0], self.points + [(200, Water.waterAmp * 2 + 6), (0, Water.waterAmp * 2 + 6)])
+			for t in range(0,(len(self.points) - 3) * 20):
+				point = self.getSplinePoint(t / 20)
+				pygame.draw.circle(self.surf,  Water.waterColor[1], (int(point[0]), int(point[1])), 1)
+			# pygame.draw.lines(self.surf, Water.waterColor[1], False, self.points, 2)
+
+			self.phase = [sin(TimeManager._tm.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
+
+			if self.state == Water.rising:
+				gameDistable()
+				Water.level += 1
+				self.amount -= 1
+				if self.amount <= 0:
+					self.amount = 0
+					self.state = Water.quiet
 	def draw(self, offsetY=0):
 
-		width = 200
-		height = 10
-		offset = (Game._game.camPos.x)//width
-		times = winWidth//width + 2
-		for i in range(times):
-			x = int(-Game._game.camPos.x) + int(int(offset) * width + i * width)
-			y =  int(Game._game.mapHeight - Water.level - 3 - Water.waterAmp - offsetY) - int(Game._game.camPos.y)
-			win.blit(self.surf, (x, y))
+		# for v in self.vertices:
+		# 	pygame.draw.circle(win, (0,0,255), point2world(v), 1)
+		additionalPoints = [self.vertices[-1] + Vector(0,512 + Water.level), self.vertices[0] + Vector(0,512 + Water.level)]
+
+		pygame.draw.polygon(win, Water.waterColor[0], [point2world(v + Vector(0,512 - offsetY)) for v in self.vertices] + additionalPoints)
 		
-		pygame.draw.rect(win, Water.waterColor[0], ((0,y + height), (winWidth, Water.level)))
+		pygame.draw.lines(win, Water.waterColor[1], False, [point2world(v + Vector(0,512 - offsetY)) for v in self.vertices], width=2)
+		old = False
+		if old:
+			width = 200
+			height = 10
+			offset = (Game._game.camPos.x)//width
+			times = winWidth//width + 2
+			for i in range(times):
+				x = int(-Game._game.camPos.x) + int(int(offset) * width + i * width)
+				y =  int(Game._game.mapHeight - Water.level - 3 - Water.waterAmp - offsetY) - int(Game._game.camPos.y)
+				win.blit(self.surf, (x, y))
+
+			pygame.draw.rect(win, Water.waterColor[0], ((0,y + height), (winWidth, Water.level)))
 	def createLayers(self):
 		Water.layersA.append(Water())
 		Water.layersB.append(Water())
@@ -4627,7 +4693,9 @@ class ShootingTarget:
 	def explode(self):
 		boom(self.pos, 15)
 		Game._game.nonPhysToRemove.append(self)
-		ShootingTarget._reg.remove(self)
+		
+		if self in ShootingTarget._reg:
+			ShootingTarget._reg.remove(self)
 		TeamManager._tm.currentTeam.points += 1
 		if len(ShootingTarget._reg) < ShootingTarget.numTargets:
 			ShootingTarget()
@@ -8154,8 +8222,8 @@ class Mission:
 			self.surf = pygame.Surface((self.textSurf.get_width() + 2, self.textSurf.get_height() + 2))
 
 		# interpolate from Black to Green base on timer [0, 3 * fps]
-		amount = 1 - self.timer / (3 * fps)
-		bColor = (0, 255 * amount, 0)
+		amount = (1 - self.timer / (3 * fps)) * 4
+		bColor = (0, min(255 * amount, 255), 0)
 
 		self.surf.fill(bColor)
 		self.surf.blit(self.textSurf, (1,1))
@@ -8989,7 +9057,7 @@ def gameMain(gameParameters=None):
 			try:
 				Game._game.nonPhys.remove(f)
 			except ValueError:
-				print("remove from phys list error")
+				print("remove from nonphys list error")
 		Game._game.nonPhysToRemove = []
 		for t in Toast._toasts:
 			t.step()
