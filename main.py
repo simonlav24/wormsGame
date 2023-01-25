@@ -1600,6 +1600,7 @@ class Mortar (Grenade):#3
 					k.vel.y += self.vel.y * 0.5
 					k.windAffected = 0
 					k.boomAffected = False
+					k.boomRadius = 20
 					k.color = (0,50,0)
 					k.radius = 1.5
 					k.surf.fill((0,0,0,0))
@@ -4627,7 +4628,8 @@ class ShootingTarget:
 	def explode(self):
 		boom(self.pos, 15)
 		Game._game.nonPhysToRemove.append(self)
-		ShootingTarget._reg.remove(self)
+		if self in ShootingTarget._reg:
+			ShootingTarget._reg.remove(self)
 		TeamManager._tm.currentTeam.points += 1
 		if len(ShootingTarget._reg) < ShootingTarget.numTargets:
 			ShootingTarget()
@@ -8154,8 +8156,8 @@ class Mission:
 			self.surf = pygame.Surface((self.textSurf.get_width() + 2, self.textSurf.get_height() + 2))
 
 		# interpolate from Black to Green base on timer [0, 3 * fps]
-		amount = 1 - self.timer / (3 * fps)
-		bColor = (0, 255 * amount, 0)
+		amount = (1 - self.timer / (3 * fps)) * 4
+		bColor = (0, min(255 * amount, 255), 0)
 
 		self.surf.fill(bColor)
 		self.surf.blit(self.textSurf, (1,1))
@@ -8989,7 +8991,7 @@ def gameMain(gameParameters=None):
 			try:
 				Game._game.nonPhys.remove(f)
 			except ValueError:
-				print("remove from phys list error")
+				print("remove from nonphys list error")
 		Game._game.nonPhysToRemove = []
 		for t in Toast._toasts:
 			t.step()
