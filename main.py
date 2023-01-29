@@ -785,9 +785,19 @@ class Water:
 		self.rise(amount)
 	def step(self):
 
-		# wave function 
+		# calculate vertices in screen space
+		posInScreen = (10,50)
+		leftMost = Vector(posInScreen[0]/scalingFactor + Game._game.camPos.x, posInScreen[1]/scalingFactor + Game._game.camPos.y)
+		# print(winWidth)
+		posInScreen = (globals.screenWidth - 10,50)
+		rightMost = Vector(posInScreen[0]/scalingFactor + Game._game.camPos.x, posInScreen[1]/scalingFactor + Game._game.camPos.y)
+
+		Game._game.addExtra(leftMost, delay=1)
+		Game._game.addExtra(rightMost, delay=1)
+
+		# springs function 
 		for i, v in enumerate(self.vertices):
-			
+			# spring formula
 			self.accels[i] = - 0.1 * self.vertices[i][1]
 
 			rightDelta = self.vertices[(i+1)%self.amountOfVertices][1] - self.vertices[i][1]
@@ -795,22 +805,11 @@ class Water:
 
 			self.accels[i] += 0.1 * (rightDelta - leftDelta)
 
-
-			# dx = 20
-			# dx = 10
-			# uyy = 10 * (self.vertices[(i+1)%self.amountOfVertices][1] - 2 * self.vertices[i][1] + self.vertices[(i-1)%self.amountOfVertices][1]) / dx**2
-			# self.accels[i] = uyy
-			
-		# if TimeManager._tm.timeOverall == 100:
-		# 	self.speeds[20] = 50
-
 		for i, v in enumerate(self.vertices):
 			self.accels[i] += uniform(-0.3, 0.3)
 			self.speeds[i] += self.accels[i]
 			self.speeds[i] *= 0.95
 			self.vertices[i][1] += self.speeds[i]
-
-		
 
 		self.vertices[0][1] = 0
 		self.vertices[-1][1] = 0
@@ -818,9 +817,6 @@ class Water:
 		self.speeds[-1] = 0
 		self.accels[0] = 0
 		self.accels[-1] = 0
-
-		
-		
 
 		old = False
 		if old:
