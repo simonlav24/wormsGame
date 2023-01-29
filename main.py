@@ -643,7 +643,8 @@ def stain(pos, surf, size, alphaMore):
 	Game._game.ground.blit(grounder, pos - tup2vec(size)/2)
 
 def splash(pos, vel):
-	for i in range(10 + int(vel.getMag())):
+	amount = 10 + int(vel.getMag())
+	for i in range(amount):
 		d = Debrie(Vector(pos.x, Game._game.mapHeight - Water.level - 3), 10, [Water.waterColor[1]], 1, False, True)
 		d.vel = vectorUnitRandom()
 		d.vel.y = uniform(-1,0) * vel.getMag()
@@ -877,6 +878,58 @@ class BackGround:
 				y = int(-Game._game.camPos.y/parallax) + int(int(offsety) * height + j * height)
 				win.blit(surf, (x, y))
 
+class WindFlag:
+	_instance = None
+	def __init__(self):
+		WindFlag._instance = self
+		self.vertices = [Vector(i * 10, 0) for i in range(5)]
+		self.acc = [Vector() for i in range(len(self.vertices))]
+		self.vel = [Vector() for i in range(len(self.vertices))]
+	def step(self):
+		for step in range(3):
+			# calculate acc
+			for i in range(len(self.vertices)):
+				if i == 0:
+					continue
+
+				displacement1 = dist(self.vertices[i], self.vertices[i-1]) - 10
+				displacement2 = 0
+				if i != len(self.vertices) - 1:
+					displacement2 = dist(self.vertices[i], self.vertices[i+1]) - 10
+
+				acc1 = 0.05 * displacement1 * (self.vertices[i-1] - self.vertices[i]).normalize()
+				acc2 = Vector()
+				if i != len(self.vertices) - 1:
+					acc2 = 0.05 * displacement2 * (self.vertices[i+1] - self.vertices[i]).normalize()
+
+				self.acc[i] += acc1 + acc2
+				# gravity
+				self.acc[i] += Vector(0, 0.01)
+				# wind
+				self.acc[i] += Vector(Game._game.wind * 0.05, 0)
+				# turbulence
+				self.acc[i] += vectorUnitRandom() * 0.01
+
+			for i in range(len(self.vertices)):
+				# calculate vel
+				self.vel[i] += self.acc[i]
+				self.vel[i] *= 0.99
+				self.acc[i] = Vector()
+			
+				# calculate pos
+				self.vertices[i] += self.vel[i]
+	def draw(self):
+		it = 0
+		rad = 6
+		pos = Vector(25, 18)
+		scale = 0.5
+		pygame.draw.line(win, (204, 102, 0), pos, pos + Vector(0, 40) * scale, 1)
+		for i in range(len(self.vertices) - 1):
+			# draw alternating lines red and white
+			pygame.draw.line(win, (255, 255*it, 255*it), self.vertices[i] * scale + pos, self.vertices[i + 1] * scale + pos, rad)
+			it = (it + 1) % 2
+			rad -= 1
+			
 def mapGetAt(pos, mat=None):
 	if not mat:
 		mat = Game._game.gameMap
@@ -8713,6 +8766,8 @@ def gameMain(gameParameters=None):
 	Commentator()
 	TimeTravel()
 
+	WindFlag()
+
 	run = True
 	pause = False
 	while run:
@@ -8993,6 +9048,8 @@ def gameMain(gameParameters=None):
 		# reset actions
 		Game._game.actionMove = False
 
+		WindFlag._instance.step()
+
 		# draw:
 		BackGround._bg.draw()
 		drawLand()
@@ -9026,7 +9083,8 @@ def gameMain(gameParameters=None):
 		Game._game.drawLayers()
 		
 		# HUD
-		drawWindIndicator()
+		# drawWindIndicator()
+		WindFlag._instance.draw()
 		TimeManager._tm.draw()
 		if WeaponManager._wm.surf: win.blit(WeaponManager._wm.surf, (25, 5))
 		Commentator._com.step()
