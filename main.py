@@ -8,7 +8,7 @@ import pygame
 import argparse
 import xml.etree.ElementTree as ET
 import os
- 
+
 def getGlobals():
 	global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
 	fpsClock = globals.fpsClock
@@ -172,8 +172,9 @@ class Game:
 		Raon._raons.clear()
 		Seagull._reg.clear()
 		Chum._chums.clear()
-		Water.layersA.clear()
-		Water.layersB.clear()
+		Water.layerTop = None
+		Water.layerMiddle = None
+		Water.layerBottom = None
 
 		ArenaManager._arena = None
 		MissionManager._mm = None
@@ -734,8 +735,9 @@ class Water:
 	quiet = 0
 	waterAmp = 2
 	rising = 1
-	layersA = []
-	layersB = []
+	layerTop = None
+	layerMiddle = None
+	layerBottom = None
 	waterColor = []
 	def __init__(self):
 		self.points = [Vector(i * 20, 3 + Water.waterAmp + Water.waterAmp * (-1)**i) for i in range(-1,12)]
@@ -745,35 +747,18 @@ class Water:
 		self.surf = pygame.Surface((200, Water.waterAmp * 2 + 6), pygame.SRCALPHA)
 		self.state = Water.quiet
 		self.amount = 0
-	def getSplinePoint(self, t):
-		p1 = int(t) + 1
-		p2 = p1 + 1
-		p3 = p2 + 1
-		p0 = p1 - 1
-			
-		t = t - int(t)
-		tt = t * t
-		ttt = t * tt
-		q1 = -ttt + 2 * tt - t
-		q2 = 3 * ttt - 5 * tt + 2
-		q3 = -3 * ttt + 4 * tt + t
-		q4 = ttt - tt
-		tx = (self.points[p0][0] * q1 + self.points[p1][0] * q2 + self.points[p2][0] * q3 + self.points[p3][0] * q4) /2
-		ty = (self.points[p0][1] * q1 + self.points[p1][1] * q2 + self.points[p2][1] * q3 + self.points[p3][1] * q4) /2
-	
-		return (tx, ty)
-	def rise(self, amount):
-		self.amount = amount
-		self.state = Water.rising
-	def riseAll(self, amount):
-		self.rise(amount)
+	def rise(amount):
+		Water.layerTop.amount = amount
+		Water.layerMiddle.amount = amount
+		Water.layerBottom.amount = amount
+		Water.layerTop.state = Water.rising
+		Water.layerMiddle.state = Water.rising
+		Water.layerBottom.state = Water.rising
 	def step(self):
 		self.surf.fill((0,0,0,0))
 		self.points = [Vector(i * 20, 3 + Water.waterAmp + self.phase[i % 10] * Water.waterAmp * (-1)**i) for i in range(-1,12)]
 		pygame.draw.polygon(self.surf, Water.waterColor[0], self.points + [(200, Water.waterAmp * 2 + 6), (0, Water.waterAmp * 2 + 6)])
-		for t in range(0,(len(self.points) - 3) * 20):
-			point = self.getSplinePoint(t / 20)
-			pygame.draw.circle(self.surf,  Water.waterColor[1], (int(point[0]), int(point[1])), 1)
+		pygame.draw.lines(self.surf, Water.waterColor[1], False, self.points, 2)
 		
 		self.phase = [sin(TimeManager._tm.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
 	
@@ -785,7 +770,6 @@ class Water:
 				self.amount = 0
 				self.state = Water.quiet
 	def draw(self, offsetY=0):
-
 		width = 200
 		height = 10
 		offset = (Game._game.camPos.x)//width
@@ -796,25 +780,14 @@ class Water:
 			win.blit(self.surf, (x, y))
 		
 		pygame.draw.rect(win, Water.waterColor[0], ((0,y + height), (winWidth, Water.level)))
-	def createLayers(self):
-		Water.layersA.append(Water())
-		Water.layersB.append(Water())
-	def stepAll(self):
-		for w in Water.layersA:
-			w.step()
-		for w in Water.layersB:
-			w.step()
-	def drawLayers(self, layer):
-		if layer == DOWN:
-			offset = 2
-			for w in Water.layersA:
-				w.draw(offset)
-				offset -= 10
-		else:
-			offset = 12
-			for w in Water.layersB:
-				w.draw(offset)
-				offset -= 10
+	def createLayers():
+		Water.layerTop = Water()
+		Water.layerMiddle = Water()
+		Water.layerBottom = Water()
+	def stepAll():
+		Water.layerTop.step()
+		Water.layerMiddle.step()
+		Water.layerBottom.step()
 
 class Cloud:
 	_reg = []
@@ -856,12 +829,10 @@ class BackGround:
 		Water.waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
 		Water.waterColor.append(tuple(min(int(Water.waterColor[0][i] * 1.5), 255) for i in range(3)))
 
-		self.water = Water()
-		Water.layersA.append(self.water)
-		self.water.createLayers()
+		Water.createLayers()
 	def step(self):
 		self.manageClouds()
-		self.water.stepAll()
+		Water.stepAll()
 	def manageClouds(self):
 		if Game._game.mapHeight == 0:
 			return
@@ -879,11 +850,11 @@ class BackGround:
 			cloud.draw()
 		self.drawBackGround(self.mountains[1],4)
 		self.drawBackGround(self.mountains[0],2)
-
-		self.water.drawLayers(UP)
+		Water.layerTop.draw(22)
 	def drawSecondary(self):
 		# draw top layer of water
-		self.water.drawLayers(DOWN)
+		Water.layerMiddle.draw(12)
+		Water.layerBottom.draw(2)
 	def drawBackGround(self, surf, parallax):
 		width = surf.get_width()
 		height = surf.get_height()
@@ -7232,7 +7203,7 @@ def cycleWorms():
 	
 	# rise water:
 	if Game._game.waterRise and not Game._game.waterRising:
-		BackGround._bg.water.riseAll(20)
+		Water.rise(20)
 		Game._game.nextState = WAIT_STABLE
 		Game._game.roundCounter -= 1
 		Game._game.waterRising = True
