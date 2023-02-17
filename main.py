@@ -3523,6 +3523,8 @@ class Artillery(PhysObj):
 				m.windAffected = 0
 				m.boomAffected = False
 				m.megaBoom = False
+				m.surf.fill((0,0,0,0))
+				m.surf.blit(Game._game.sprites, (0,0), (0,96,16,16))
 				if self.boomCount == self.booms:
 					Game._game.camTrack = m
 				self.boomCount -= 1
@@ -9009,7 +9011,10 @@ def gameMain(gameParameters=None):
 			if not p.stable:
 				gameDistable()
 		for p in PhysObj._toRemove:
-			PhysObj._reg.remove(p)
+			try:
+				PhysObj._reg.remove(p)
+			except ValueError:
+				print("remove from phys list error")
 		PhysObj._toRemove = []
 		for f in Game._game.nonPhys:
 			f.step()
