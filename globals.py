@@ -34,8 +34,8 @@ def globalsInit():
     pixelFont5halo = HaloFont(pixelFont5)
     pixelFont10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
 
-    screenWidth = 1280
-    screenHeight = 720
+    screenWidth = 1920
+    screenHeight = 1080
     
     scalingFactor = 3
     scalingMax = 3

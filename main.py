@@ -7169,7 +7169,10 @@ def checkWinners():
 
 		Game._game.endGameDict = dic
 		Game._game.nextState = WIN
-		pygame.image.save(Game._game.ground, "lastWormsGround.png")
+		
+		GroundScreenShoot = pygame.Surface((Game._game.ground.get_width(), Game._game.ground.get_height() - Water.level), pygame.SRCALPHA)
+		GroundScreenShoot.blit(Game._game.ground, (0,0))
+		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
 	return end
 
 def cycleWorms():
