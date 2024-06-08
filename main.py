@@ -8306,7 +8306,7 @@ def cheatActive(code):
 		for i in range(amount):
 			mousePos = pygame.mouse.get_pos()
 			UtilityPack((mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
-	elif code == "asirin":
+	elif code == "aspirin":
 		mousePos = pygame.mouse.get_pos()
 		HealthPack((mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
 	elif code == "globalshift":
@@ -8314,7 +8314,7 @@ def cheatActive(code):
 			# if worm in TeamManager._tm.currentTeam.worms:
 				# continue
 			worm.gravity = worm.gravity * -1
-	elif code == "gibetrolcan":
+	elif code == "gibpetrolcan":
 		mousePos = pygame.mouse.get_pos()
 		PetrolCan((mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
 	elif code == "megaboom":
@@ -8336,7 +8336,7 @@ def cheatActive(code):
 	elif code == "avatar":
 		mousePos = pygame.mouse.get_pos()
 		m = Avatar(Vector(mousePos[0]/scalingFactor + Game._game.camPos.x, mousePos[1]/scalingFactor + Game._game.camPos.y))
-	elif code == "masterofuets":
+	elif code == "masterofpuppets":
 		MasterOfPuppets()
 	elif code == "artifact":
 		Game._game.trigerArtifact = True
@@ -8893,7 +8893,7 @@ def gameMain(gameParameters=None):
 							WeaponManager._wm.switchWeapon(weaponSwitch)
 							WeaponManager._wm.renderWeaponCount()
 					# misc
-					if event.key == pygame.K_p:
+					if event.key == pygame.K_ESCAPE:
 						pause = not pause
 					if event.key == pygame.K_TAB:
 						onKeyPressTab()
@@ -8926,8 +8926,6 @@ def gameMain(gameParameters=None):
 				if event.key == pygame.K_SPACE:
 					onKeyReleaseSpace()
 		keys = pygame.key.get_pressed()
-		if keys[pygame.K_ESCAPE]:
-			globals.exitGame()
 		#key hold:
 		if Game._game.objectUnderControl and Game._game.playerControl and Game._game.playerMoveable:
 			if keys[pygame.K_RIGHT]:
@@ -9162,9 +9160,6 @@ def splashScreen():
 				run = False
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 				run = False
-		keys = pygame.key.get_pressed()
-		if keys[pygame.K_ESCAPE]:
-			run = False
 		
 		timer -= 1
 		if timer <= 0:

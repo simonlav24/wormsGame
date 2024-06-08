@@ -311,6 +311,10 @@ class MainMenu:
 		subMore = Menu(orientation=HORIZONTAL, customSize=14)
 		subMore.insert(MENU_BUTTON, key="scoreboard", text="score board")
 		mainMenu.addElement(subMore)
+		
+		subMore = Menu(orientation=HORIZONTAL, customSize=14)
+		subMore.insert(MENU_BUTTON, key="exit", text="exit")
+		mainMenu.addElement(subMore)
 
 		# background feel menu
 		bgMenu = Menu(pos=[globals.winWidth - 20, globals.winHeight - 20], size=[20, 20], register=True)
@@ -420,6 +424,8 @@ class MainMenu:
 			wepmenu.evaluate(values)
 			saveWeaponsXml(values, values["filename"])
 			Gui._instance.toaster.toast("weapons set " + values["filename"] + " saved")
+		if key == "exit":
+			exit(0)
 
 class PauseMenu:
 	_pm = None
@@ -447,6 +453,7 @@ class PauseMenu:
 
 		pauseMenu.insert(MENU_BUTTON, key="resume", text="resume")
 		pauseMenu.insert(MENU_BUTTON, key="toMainMenu", text="back to main menu")
+		pauseMenu.pos = Vector(globals.winWidth//2 - pauseMenu.size[0]//2, globals.winHeight//2 - pauseMenu.size[1]//2)
 
 	def handlePauseMenu(self, event):
 		key = event.key
@@ -608,9 +615,6 @@ def mainMenu(args, fromGameParameters=None, toGameParameters=None):
 			handleEvents(event, MainMenu._mm.handleMainMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
-		keys = pygame.key.get_pressed()
-		if keys[pygame.K_ESCAPE]:
-			globals.exitGame()
 
 		# step
 		BackGround._bg.step()
@@ -647,11 +651,8 @@ def pauseMenu(args, result=None):
 			handleEvents(event, PauseMenu._pm.handlePauseMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
-			if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+			if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
 				PauseMenu._pm.run = False
-		keys = pygame.key.get_pressed()
-		if keys[pygame.K_ESCAPE]:
-			globals.exitGame()
 
 		for menu in Menu._reg:
 			menu.step()
