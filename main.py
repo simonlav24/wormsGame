@@ -1912,14 +1912,14 @@ class Worm (PhysObj):
 		
 		# commentator:
 		if cause == -1:
-			Commentator.que.append((self.nameStr, choice(Commentator.stringsDmg), self.team.color))
+			Commentator.commentDeath(self, Commentator.CAUSE_DAMAGE)
 		elif cause == Worm.causeFlew:
 			comment = True
 			if not self in TeamManager._tm.currentTeam.worms and WeaponManager._wm.currentWeapon == "baseball" and Game._game.state in [PLAYER_CONTROL_2, WAIT_STABLE]:
-				Commentator.que.append((self.nameStr, Commentator.stringBaseBall, self.team.color))
+				Commentator.comment([{'text': self.nameStr, 'color': self.team.color}, {'text': 'home run'}])
 				comment = False
 			if comment:
-				Commentator.que.append((self.nameStr, choice(Commentator.stringsFlw), self.team.color))
+				Commentator.commentDeath(self, Commentator.CAUSE_FLEW)
 		
 		# remove from regs:
 		if self in PhysObj._worms:
@@ -2666,7 +2666,14 @@ class HolyGrenade(Grenade):
 		if self.timer == Game._game.fuseTime + 2*fps:
 			self.dead = True
 		if self.timer == Game._game.fuseTime + fps:
-			Commentator.que.append(choice([("hand grenade",("o lord bless this thy ",""),(210,210,0)), ("",("blow thine enemy to tiny bits ",""),(210,210,0)), ("",("feast upon the lambs and sloths and carp",""),(210,210,0)), ("",("three shall be the number thous shalt count",""),(210,210,0)), ("",("thou shall snuff that",""),(210,210,0))]))
+			comments = [
+				[{'text': "o lord bless this thy "}, {'text': 'hand grenade', 'color': (210,210,0)}],
+				[{'text': "blow thine enemy to tiny bits"}],
+				[{'text': "feast upon the lambs and sloths and carp"}],
+				[{'text': "three shall be the number thou shalt count"}],
+				[{'text': "thou shall snuff that"}],
+			]
+			Commentator.comment(choice(comments))
 
 class Banana(Grenade):
 	def __init__(self, pos, direction, energy, used = False):
@@ -4012,7 +4019,15 @@ class Venus:
 					self.mode = Venus.catch
 					if worm in PhysObj._worms:
 						worm.dieded(Worm.causeVenus)
-						Commentator.que.append(choice([("", ("yummy",""), worm.team.color), (worm.nameStr, ("", " was delicious"), worm.team.color), (worm.nameStr, ("", " is good protein"), worm.team.color), (worm.nameStr, ("", " is some serious gourmet s**t"), worm.team.color)]))
+						name = worm.nameStr
+						color = worm.team.color
+						comments = [
+							[{'text': 'yummy'}],
+							[{'text': name, 'color': color}, {'text': ' was delicious'}],
+							[{'text': name, 'color': color}, {'text': ' is good protein'}],
+							[{'text': name, 'color': color}, {'text': ' is some serious gourmet s**t'}],
+						]
+						Commentator.comment(choice(comments))
 					else:
 						self.explossive = True
 						worm.removeFromGame()
@@ -4333,7 +4348,14 @@ class PokeBall(PhysObj):
 					self.hold.team.flagHolder = False
 					Flag(self.hold.pos)
 				self.name = pixelFont5.render(self.hold.nameStr, False, self.hold.team.color)
-				Commentator.que.append(choice([(self.hold.nameStr, ("",", i choose you"), self.hold.team.color), ("", ("", "gotta catch 'em al"), self.hold.team.color), (self.hold.nameStr, ("", " will help beat the next gym leader"), self.hold.team.color)]))
+				name = self.hold.nameStr
+				color = self.hold.team.color
+				comments = [
+					[{'text': name, 'color': color}, {'text': ', i choose you'}],
+					[{'text': "gotta catch 'em al"}],
+					[{'text': name, 'color': color}, {'text': ' will help beat the next gym leader'}],
+				]
+				Commentator.comment(choice(comments))
 			else:
 				self.dead = True
 		
@@ -4849,7 +4871,9 @@ class Spear(PhysObj):
 		if len(self.worms) > 0:
 			stain(self.pos, Game._game.imageBlood, Game._game.imageBlood.get_size(), False)
 		if len(self.worms) > 1:
-			Commentator.que.append((Game._game.objectUnderControl.nameStr, ("", " the impaler!"), Game._game.objectUnderControl.team.color))
+			name = Game._game.objectUnderControl.nameStr
+			color = Game._game.objectUnderControl.team.color
+			Commentator.comment([{'text': name, 'color': color}, {'text': ' the impaler!'}])
 	def draw(self):
 		point = self.pos - normalize(self.vel) * 30
 		pygame.draw.line(win, self.color, point2world(self.pos), point2world(point), self.radius)
@@ -5396,9 +5420,9 @@ class Mjolnir(Artifact):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		self.surf.blit(Game._game.sprites, (0,0), (0,112,16,16))
 	def commentCreation(self):
-		Commentator._com.que.append(("", ("a gift from the gods", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "a gift from the gods"}])
 	def commentPicked(self):
-		Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " is worthy to wield mjolnir!"), TeamManager._tm.currentTeam.color))
+		Commentator.comment([{'text': Game._game.objectUnderControl.nameStr, 'color': TeamManager._tm.currentTeam.color}, {'text': " is worthy to wield mjolnir!"}])
 	def trenaryStep(self):
 		if self.vel.getMag() > 1:
 			self.angle = -degrees(self.vel.getAngle()) - 90
@@ -5534,9 +5558,9 @@ class MagicLeaf(Artifact):
 		self.windAffected = True
 		self.turbulance = vectorUnitRandom()
 	def commentCreation(self):
-		Commentator._com.que.append(("", ("a leaf of heavens tree", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "a leaf of heavens tree"}])
 	def commentPicked(self):
-		Commentator._com.que.append((Game._game.objectUnderControl.nameStr, ("", " became master of plants"), TeamManager._tm.currentTeam.color))
+		Commentator.comment([{'text': Game._game.objectUnderControl.nameStr, 'color': TeamManager._tm.currentTeam.color}, {'text': "  became master of plants"}])
 	def trenaryStep(self):
 		self.angle += self.vel.x*4
 
@@ -5975,9 +5999,9 @@ class Avatar(Artifact):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		self.surf.blit(Game._game.sprites, (0,0), (0,112,16,16))
 	def commentCreation(self):
-		Commentator._com.que.append(("", ("who is the next avatar?", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "who is the next avatar?"}])
 	def commentPicked(self):
-		Commentator._com.que.append((TeamManager._tm.currentTeam.name, ("everything changed when the ", " attacked"), TeamManager._tm.currentTeam.color))
+		Commentator.comment([{'text': 'everything changed when the '}, {'text': TeamManager._tm.currentTeam.name, 'color': TeamManager._tm.currentTeam.color}, {'text': ' attacked'}])
 	def trenaryStep(self):
 		self.angle -= self.vel.x*4
 
@@ -6117,9 +6141,9 @@ class PickAxeArtifact(Artifact):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		blitWeaponSprite(self.surf, (0,0), "pick axe")
 	def commentCreation(self):
-		Commentator._com.que.append(("", ("a game changer", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "a game changer"}])
 	def commentPicked(self):
-		Commentator._com.que.append(("mining", ("its ", " time!"), TeamManager._tm.currentTeam.color))
+		Commentator.comment([{'text': 'its mining time'}])
 	def trenaryStep(self):
 		self.angle -= self.vel.x*4
 
@@ -6925,15 +6949,15 @@ def fireUtility(weapon = None):
 	decrease = True
 	if weapon == "moon gravity":
 		Game._game.globalGravity = 0.1
-		Commentator.que.append(("", ("small step for wormanity", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "small step for wormanity"}])
 	elif weapon == "double damage":
 		Game._game.damageMult *= 2
 		Game._game.radiusMult *= 1.5
-		comments = ["that's gotta hurt", "that'll leave a mark"]
-		Commentator.que.append(("", (choice(comments), ""), Game._game.HUDColor))
+		comments = ["that's will hurt", "that'll leave a mark"]
+		Commentator.comment([{'text': choice(comments)}])
 	elif weapon == "aim aid":
 		Game._game.aimAid = True
-		Commentator.que.append(("", ("snipe em'", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "snipe em'"}])
 	elif weapon == "teleport":
 		WeaponManager._wm.switchWeapon(weapon)
 		decrease = False
@@ -6941,11 +6965,11 @@ def fireUtility(weapon = None):
 		if Game._game.switchingWorms:
 			decrease = False
 		Game._game.switchingWorms = True
-		Commentator.que.append(("", ("the ol' switcheroo", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "the ol' switcheroo"}])
 	elif weapon == "time travel":
 		if not Game._game.timeTravel:
 			TimeTravel._tt.timeTravelInitiate()
-		Commentator.que.append(("", ("great scott", ""), Game._game.HUDColor))
+		Commentator.comment([{'text': "great scott"}])
 	elif weapon == "jet pack":
 		Game._game.objectUnderControl.toggleJetpack()
 	elif weapon == "flare":
@@ -7157,9 +7181,13 @@ def checkWinners():
 			addToRecord(dic)
 			if len(winningTeam.worms) > 0:
 				Game._game.camTrack = winningTeam.worms[0]
-			Commentator._com.que.append((winningTeam.name, ("Team "," Won!"), Game._game.HUDColor))
+			Commentator.comment([
+				{'text': 'team '},
+				{'text': winningTeam.name, 'color': winningTeam.color},
+				{'text': ' Won!'}
+			])
 		else:
-			Commentator._com.que.append(("", ("Its a"," Tie!"), Game._game.HUDColor))
+			Commentator.comment([{'text': 'its a tie!'}])
 			print("Tie!")
 		
 		# add teams to dic
@@ -7190,15 +7218,26 @@ def cycleWorms():
 		Worm.roped = False
 	
 	# update damage:
+	wormName = Game._game.objectUnderControl.nameStr
+	wormColor = Game._game.objectUnderControl.team.color
 	if Game._game.damageThisTurn > Game._game.mostDamage[0]:
 		Game._game.mostDamage = (Game._game.damageThisTurn, Game._game.objectUnderControl.nameStr)	
 	if Game._game.damageThisTurn > int(Game._game.initialHealth * 2.5):
 		if Game._game.damageThisTurn == 300:
-			Commentator.que.append((Game._game.objectUnderControl.nameStr, ("THIS IS ", "!"), Game._game.objectUnderControl.team.color))
+			Commentator.comment([{'text': "THIS IS "}, {'text': wormName, 'color': wormColor}])
 		else:
-			Commentator.que.append((Game._game.objectUnderControl.nameStr, choice([("awesome shot ", "!"), ("", " is on fire!"), ("", " shows no mercy")]), Game._game.objectUnderControl.team.color))
+			comment = choice([
+					[{'text': 'awesome shot '}, {'text': wormName, 'color': wormColor}, {'text': '!'}],
+					[{'text': wormName, 'color': wormColor}, {'text': ' is on fire!'}],
+					[{'text': wormName, 'color': wormColor}, {'text': ' shows no mercy'}],
+				])
+			Commentator.comment(comment)
 	elif Game._game.damageThisTurn > int(Game._game.initialHealth * 1.5):
-		Commentator.que.append((Game._game.objectUnderControl.nameStr, choice([("good shot ", "!"), ("nicely done ","")]), Game._game.objectUnderControl.team.color))
+		comment = choice([
+					[{'text': 'good shot '}, {'text': wormName, 'color': wormColor}, {'text': '!'}],
+					[{'text': 'nicely done '}, {'text': wormName, 'color': wormColor}],
+				])
+		Commentator.comment(comment)
 	
 	TeamManager._tm.currentTeam.damage += Game._game.damageThisTurn
 	if Game._game.gameMode in [POINTS, BATTLE]:
@@ -7248,7 +7287,12 @@ def cycleWorms():
 		Game._game.deploying = True
 		Game._game.roundCounter -= 1
 		Game._game.nextState = WAIT_STABLE
-		Commentator.que.append(("", choice(Commentator.stringsCrt), (0,0,0)))
+		comments = [
+			[{'text': 'a jewel from the heavens!'}],
+			[{'text': 'its raining crates, halelujah!'}],
+			[{'text': ' '}],
+		]
+		Commentator.comment(choice(comments))
 		for i in range(Game._game.packMult):
 			w = deployPack(choice([HealthPack,UtilityPack, WeaponPack]))
 			Game._game.camTrack = w
@@ -7314,7 +7358,7 @@ def cycleWorms():
 		if Game._game.gameMode == TARGETS:
 			ShootingTarget.numTargets -= 1
 			if ShootingTarget.numTargets == 0:
-				Commentator._com.que.append(("", ("final targets round",""), (0,0,0)))
+				Commentator.comment([{'text': 'final targets round'}])
 	
 	# update stuff
 	Debrie._debries = []
@@ -7688,43 +7732,32 @@ def weaponMenuRadialInit():
 			b.category = weapon[3]
 			blitWeaponSprite(b.surf, (0,0), weapon[0])
 
-class Commentator:#(name, strings, color)
+class Commentator:
 	_com = None
-	que = []
+	surf_que = []
 	timer = 0 #0-wait, 1-render, 2-show
 	WAIT = 0
-	RENDER = 1
+	PREPARE = 1
 	SHOW = 2
 	mode = 0
 	textSurf = None
 	name = None
-	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed")]
+	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed"), ("", " smells the flower from bellow")]
 	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " has divided by zero")]
-	stringsCrt = [("a jewel from the heavens!", ""), ("its raining crates, halelujah!", ""), (" ","")]
-	stringBaseBall = ("", " home run!")
+	CAUSE_DAMAGE = 0
+	CAUSE_FLEW = 1
 	def __init__(self):
 		Commentator._com = self
+    
 	def step(self):
 		if self.mode == Commentator.WAIT:
-			if len(self.que) == 0:
+			if len(self.surf_que) == 0:
 				return
 			else:
-				self.mode = Commentator.RENDER
-		elif self.mode == Commentator.RENDER:
-			nameSurf = pixelFont5halo.render(self.que[0][0], False, self.que[0][2])
-				
-			string1 = self.que[0][1][0]
-			string2 = self.que[0][1][1]
-			
-			stringSurf1 = pixelFont5halo.render(string1, False, Game._game.HUDColor)
-			stringSurf2 = pixelFont5halo.render(string2, False, Game._game.HUDColor)
-			# combine strings
-			self.textSurf = pygame.Surface((nameSurf.get_width() + stringSurf1.get_width() + stringSurf2.get_width(), nameSurf.get_height())).convert_alpha()
-			self.textSurf.fill((0,0,0,0))
-			self.textSurf.blit(stringSurf1, (0,0))
-			self.textSurf.blit(nameSurf, (stringSurf1.get_width(),0))
-			self.textSurf.blit(stringSurf2, (stringSurf1.get_width() + nameSurf.get_width() ,0))
-			self.que.pop(0)
+				self.mode = Commentator.PREPARE
+		elif self.mode == Commentator.PREPARE:
+			self.textSurf = self.surf_que.pop(0)
+
 			self.mode = Commentator.SHOW
 			self.timer = 2*fps + 1*fps/2
 		elif self.mode == Commentator.SHOW:
@@ -7733,6 +7766,35 @@ class Commentator:#(name, strings, color)
 			self.timer -= 1
 			if self.timer == 0:
 				self.mode = Commentator.WAIT
+	
+	@staticmethod
+	def commentDeath(worm, cause):
+		if cause == Commentator.CAUSE_DAMAGE:
+			strings = choice(Commentator.stringsDmg)
+		elif cause == Commentator.CAUSE_FLEW:
+			strings = choice(Commentator.stringsFlw)
+		output = [
+			{'text': strings[0]},
+			{'text': worm.nameStr, 'color': worm.team.color},
+			{'text': strings[1]},
+		]
+		Commentator.comment(output)
+
+	@staticmethod
+	def comment(strings):
+		surfs = []
+		for string in strings:
+			text = string.get('text')
+			color = string.get('color', Game._game.HUDColor)
+			surfs.append(pixelFont5halo.render(text, False, color))
+		width = sum([i.get_width() for i in surfs])
+		surf = pygame.Surface((width, surfs[0].get_height()), pygame.SRCALPHA)
+		x = 0
+		for s in surfs:
+			surf.blit(s, (x, 0))
+			x += s.get_width()
+		Commentator.surf_que.append(surf)
+
 
 class Camera:
 	def __init__(self, pos):
@@ -8098,7 +8160,10 @@ class Mission:
 		string = self.missionType
 		if "_" in string:
 			string = string.replace("_", stringReplacement)
-		Commentator._com.que.append((string, ("mission "," passed"), Game._game.objectUnderControl.team.color))
+		comment = [
+			{'text': 'mission '}, {'text': string, 'color': Game._game.objectUnderControl.team.color}, {'text': ' passed'}
+		]
+		Commentator.comment(comment)
 		Game._game.objectUnderControl.team.points += self.reward
 		Game._game.addToScoreList(self.reward)
 
@@ -8321,7 +8386,7 @@ def cheatActive(code):
 		Game._game.megaTrigger = True
 	elif code == "tsunami":
 		Game._game.waterRise = True
-		Commentator.que.append(("", ("", "water rising!"), Game._game.HUDColor))
+		Commentator.comment([{'text': "water rising!"}])
 	elif code == "comeflywithme":
 		TeamManager._tm.currentTeam.ammo("jet pack", 6)
 		TeamManager._tm.currentTeam.ammo("rope", 6)
@@ -8391,7 +8456,14 @@ def pickVictim():
 		Game._game.victim = None
 		return
 	Game._game.victim = choice(worms)
-	Commentator.que.append((Game._game.victim.nameStr, choice([("", " is marked for death"), ("kill ", "!"), ("", " is the weakest link"), ("your target: ", "")]), Game._game.victim.team.color))
+	wormComment = {'text': Game._game.victim.nameStr, 'color': Game._game.victim.team.color}
+	comments = [
+		[wormComment, {'text': ' is marked for death'}],
+		[{'text': 'kill '}, wormComment],
+		[wormComment, {'text': ' is the weakest link'}],
+		[{'text': 'your target: '}, wormComment],
+	]
+	Commentator.comment(choice(comments))
 
 def drawDirInd(pos):
 	border = 20
