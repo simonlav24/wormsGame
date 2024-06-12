@@ -7993,9 +7993,9 @@ class MissionManager:
 
 		# check if worms or teams exist
 		if len(self.getAliveWormsFromOtherTeams()) == 0:
-			availableMissions.remove("hit a worm from _")
-			availableMissions.remove("kill _")
-			availableMissions.remove("hit _")
+			for i in ["hit a worm from _", "kill _", "hit _"]:
+				if i in availableMissions:
+					availableMissions.remove(i)
 		
 		# choose a missionType and create it
 		chosenMission = choice(availableMissions)
