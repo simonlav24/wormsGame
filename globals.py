@@ -9,6 +9,7 @@ scalingFactor = 0
 game_manager = None
 time_manager = None
 team_manager = None
+weapon_manager = None
 
 class HaloFont:
     def __init__(self, font):

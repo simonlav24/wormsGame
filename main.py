@@ -13,6 +13,8 @@ import os
 from Constants import *
 from Effects import *
 from Hud import *
+from Gui import *
+from tempFuncs import *
 
 def getGlobals():
 	global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
@@ -746,59 +748,6 @@ class BackGround:
 				x = int(-Game._game.camPos.x/parallax) + int(int(offsetx) * width + i * width)
 				y = int(-Game._game.camPos.y/parallax) + int(int(offsety) * height + j * height)
 				win.blit(surf, (x, y))
-
-class WindFlag:
-	''' hud widget, represents wind speed and direction '''
-	_instance = None
-	def __init__(self):
-		WindFlag._instance = self
-		self.vertices = [Vector(i * 10, 0) for i in range(5)]
-		self.acc = [Vector() for i in range(len(self.vertices))]
-		self.vel = [Vector() for i in range(len(self.vertices))]
-	def step(self):
-		for step in range(3):
-			# calculate acc
-			for i in range(len(self.vertices)):
-				if i == 0:
-					continue
-
-				displacement1 = dist(self.vertices[i], self.vertices[i-1]) - 10
-				displacement2 = 0
-				if i != len(self.vertices) - 1:
-					displacement2 = dist(self.vertices[i], self.vertices[i+1]) - 10
-
-				acc1 = 0.05 * displacement1 * (self.vertices[i-1] - self.vertices[i]).normalize()
-				acc2 = Vector()
-				if i != len(self.vertices) - 1:
-					acc2 = 0.05 * displacement2 * (self.vertices[i+1] - self.vertices[i]).normalize()
-
-				self.acc[i] += acc1 + acc2
-				# gravity
-				self.acc[i] += Vector(0, 0.01)
-				# wind
-				self.acc[i] += Vector(Game._game.wind * 0.05, 0)
-				# turbulence
-				self.acc[i] += vectorUnitRandom() * 0.01
-
-			for i in range(len(self.vertices)):
-				# calculate vel
-				self.vel[i] += self.acc[i]
-				self.vel[i] *= 0.99
-				self.acc[i] = Vector()
-			
-				# calculate pos
-				self.vertices[i] += self.vel[i]
-	def draw(self):
-		it = 0
-		rad = 6
-		pos = Vector(25, 18)
-		scale = 0.5
-		pygame.draw.line(win, (204, 102, 0), pos, pos + Vector(0, 40) * scale, 1)
-		for i in range(len(self.vertices) - 1):
-			# draw alternating lines red and white
-			pygame.draw.line(win, (255, 255*it, 255*it), self.vertices[i] * scale + pos, self.vertices[i + 1] * scale + pos, rad)
-			it = (it + 1) % 2
-			rad -= 1
 			
 def mapGetAt(pos, mat=None):
 	if not mat:
@@ -934,13 +883,6 @@ def clamp(value, upper, lower):
 	if value < lower:
 		value = lower
 	return value
-
-def blitWeaponSprite(dest, pos, weapon):
-	index = WeaponManager._wm.weaponDict[weapon]
-	x = index % 8
-	y = 9 + index // 8
-	rect = (x * 16, y * 16, 16, 16)
-	dest.blit(Game._game.sprites, pos, rect)
 
 def point2world(point):
 	return (int(point[0]) - int(Game._game.camPos[0]), int(point[1]) - int(Game._game.camPos[1]))
@@ -1415,7 +1357,7 @@ class Missile (PhysObj):#1
 		if randint(0,50) == 1:
 			self.megaBoom = True
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "missile")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "missile")
 	def deathResponse(self):
 		if self.megaBoom:
 			self.boomRadius *= 2
@@ -1438,7 +1380,7 @@ class Grenade (PhysObj):#2
 		self.damp = 0.4
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "grenade")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "grenade")
 		self.angle = 0
 	def deathResponse(self):
 		rad = 30
@@ -1468,7 +1410,7 @@ class Mortar (Grenade):#3
 		self.damp = 0.4
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "mortar")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "mortar")
 		self.angle = 0
 	def deathResponse(self):
 		megaBoom = False
@@ -1514,7 +1456,7 @@ class PetrolBomb(PhysObj):#4
 		self.bounceBeforeDeath = 1 
 		self.damp = 0.5
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "petrol bomb")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "petrol bomb")
 		self.angle = 0
 	def secondaryStep(self):
 		self.angle -= self.vel.x * 4
@@ -1699,7 +1641,7 @@ class Worm (PhysObj):
 		if self.gravity == UP:
 			rotated = pygame.transform.flip(rotated, False, True)
 		if self.jetpacking:
-			blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "jet pack")
+			WeaponManager._wm.blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "jet pack")
 		pygame.draw.circle(win, self.color, point2world(self.pos), self.radius + 1)
 		win.blit(rotated, point2world(self.pos - tup2vec(rotated.get_size())//2))
 		
@@ -2074,7 +2016,7 @@ class StickyBomb (Grenade):#9
 		self.sticked = False
 		self.stick = None
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "sticky bomb")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "sticky bomb")
 		self.angle = 0
 	def collisionRespone(self, ppos):
 		if not self.sticked:
@@ -2223,7 +2165,7 @@ class GasGrenade(Grenade):
 		self.damp = 0.5
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "gas grenade")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "gas grenade")
 		self.angle = 0
 		self.state = "throw"
 	def deathResponse(self):
@@ -2411,7 +2353,7 @@ class GravityMissile(Missile):
 		if randint(0,50) == 1:
 			self.megaBoom = True
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "gravity missile")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "gravity missile")
 	def deathResponse(self):
 		boom(self.pos, self.boomRadius, True, True)
 	def applyForce(self):
@@ -2460,7 +2402,7 @@ class HolyGrenade(Grenade):
 		self.damp = 0.5
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "holy grenade")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "holy grenade")
 		self.angle = 0
 	def deathResponse(self):
 		boom(self.pos, 45)
@@ -2493,7 +2435,7 @@ class Banana(Grenade):
 		self.angle = 0
 		self.used = used
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "banana")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "banana")
 		self.angle = 0
 	def collisionRespone(self, ppos):
 		if self.used:
@@ -2614,7 +2556,7 @@ class PlantBomb(PhysObj):
 		self.mode = mode
 		self.wormCollider = True
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "venus fly trap")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "venus fly trap")
 		self.angle = 0
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
@@ -2823,7 +2765,7 @@ class BeeHive(PhysObj):
 		self.beeSurf.fill((143,234,217,100), ((1,0), (2,2)))
 		
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "bee hive")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "bee hive")
 		self.angle = 0
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
@@ -2859,7 +2801,7 @@ class BunkerBuster(PhysObj):
 		self.inGround = False
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "bunker buster")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "bunker buster")
 	def step(self):
 		self.applyForce()
 		
@@ -2985,7 +2927,7 @@ class ElectricGrenade(PhysObj):
 		self.emptyCounter = 0
 		self.lifespan = 300
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "electric grenade")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "electric grenade")
 		self.angle = 0
 	def deathResponse(self):
 		rad = 20
@@ -3073,7 +3015,7 @@ class HomingMissile(PhysObj):
 		self.activated = False
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "homing missile")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "homing missile")
 	def applyForce(self):
 		# gravity:
 		if self.activated:
@@ -3179,7 +3121,7 @@ class VortexGrenade(Grenade):
 		self.damp = 0.5
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "vortex grenade")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "vortex grenade")
 		self.angle = 0
 	def deathResponse(self):
 		Vortex(self.pos)
@@ -3277,7 +3219,7 @@ class ChilliPepper(PhysObj):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "chilli pepper")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "chilli pepper")
 		self.damp = 0.5
 		self.angle = 0
 		self.boomAffected = False
@@ -3309,7 +3251,7 @@ class Artillery(PhysObj):
 		self.booms = randint(3,5)
 		self.boomCount = 20 if randint(0,50) == 0 or Game._game.megaTrigger else self.booms
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "flare")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "flare")
 		self.angle = 0
 	def draw(self):
 		angle = 45 * round(self.angle / 45)
@@ -3567,7 +3509,7 @@ class ElectroBoom(PhysObj):
 		self.used = []
 		self.electrifying = False
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "electro boom")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "electro boom")
 		self.angle = 0
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
@@ -4105,7 +4047,7 @@ class PokeBall(PhysObj):
 		self.health = 10
 		self.name = None
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "pokeball")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "pokeball")
 		self.angle = 0
 	def damage(self, value, damageType=0):
 		if damageType == 1:
@@ -4317,7 +4259,7 @@ class GuidedMissile(PhysObj):
 		self.vel = Vector(0, -self.speed)
 		self.stable = False
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "guided missile")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "guided missile")
 		self.radius = 3
 	def applyForce(self):
 		pass
@@ -4379,7 +4321,7 @@ class Flare(PhysObj):
 		self.damp = 0.4
 		self.lightRadius = 50
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "flare")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "flare")
 		self.angle = 0
 	def secondaryStep(self):
 		if self.vel.getMag() > 0.25:
@@ -4432,7 +4374,7 @@ class EndPearl(PhysObj):
 		pos = self.pos + response * (Game._game.objectUnderControl.radius + 2)
 		Game._game.objectUnderControl.pos = pos
 	def draw(self):
-		blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "ender pearl")
+		WeaponManager._wm.blitWeaponSprite(win, point2world(self.pos - Vector(8,8)), "ender pearl")
 
 class Flag(PhysObj):
 	flags = []
@@ -4881,7 +4823,7 @@ class AcidBottle(PetrolBomb):
 		self.damp = 0.5
 		self.angle = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "acid bottle")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "acid bottle")
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
 	def deathResponse(self):
@@ -4899,7 +4841,7 @@ class Seeker:
 		self.timer = 15 * fps
 		self.target = HomingMissile.Target
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "seeker")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "seeker")
 	def initialize(self, pos, direction, energy):
 		Game._game.nonPhys.append(self)
 		self.pos = vectorCopy(pos)
@@ -5616,7 +5558,7 @@ class Icicle(LongBow):
 		self.color = (112, 74, 255)
 		self.ignore = None
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "icicle")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "icicle")
 		self.timer = 0
 	def secondaryStep(self):
 		if randint(0,5) == 0:
@@ -5728,7 +5670,7 @@ class FireBall(LongBow):
 		self.color = (112, 74, 255)
 		self.ignore = None
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "fire ball")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "fire ball")
 		self.timer = 0
 	def secondaryStep(self):
 		if randint(0,2) == 0:
@@ -5843,7 +5785,7 @@ class PickAxe:
 		Game._game.nonPhys.append(self)
 		self.count = 6
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "pick axe")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "pick axe")
 		self.animating = 0
 	def mine(self):
 		worm = Game._game.objectUnderControl
@@ -5910,12 +5852,12 @@ class MineBuild:
 
 		pygame.draw.rect(Game._game.gameMap, GRD, (position, Vector(16,16)))
 		if position + Vector(0,16) in self.locations:
-			blitWeaponSprite(Game._game.ground, position, "build")
+			WeaponManager._wm.blitWeaponSprite(Game._game.ground, position, "build")
 			Game._game.ground.blit(Game._game.sprites, position + Vector(0,16), (80,112,16,16))
 		elif position + Vector(0,-16) in self.locations:
 			Game._game.ground.blit(Game._game.sprites, position, (80,112,16,16))
 		else:
-			blitWeaponSprite(Game._game.ground, position, "build")
+			WeaponManager._wm.blitWeaponSprite(Game._game.ground, position, "build")
 
 		self.locations.append(position)
 		
@@ -5943,7 +5885,7 @@ class PickAxeArtifact(Artifact):
 		return MINECRAFT
 	def setSurf(self):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		blitWeaponSprite(self.surf, (0,0), "pick axe")
+		WeaponManager._wm.blitWeaponSprite(self.surf, (0,0), "pick axe")
 	def commentCreation(self):
 		Commentator.comment([{'text': "a game changer"}])
 	def commentPicked(self):
@@ -6029,7 +5971,7 @@ class FireWorkRockets:
 					drawTarget(obj.pos)
 		
 		for obj in self.objects:
-			blitWeaponSprite(win, point2world(obj.pos - Vector(8,8)), "fireworks")
+			WeaponManager._wm.blitWeaponSprite(win, point2world(obj.pos - Vector(8,8)), "fireworks")
 
 class FireWork:
 	_reg = []
@@ -6164,6 +6106,7 @@ class WeaponManager:
 	_wm = None
 	def __init__(self):
 		WeaponManager._wm = self
+		globals.weapon_manager = self
 		self.weapons = [] #	  name					style	amount	category	fused	delay
 
 		styleDict = {"CHARGABLE": CHARGABLE, "GUN": GUN, "PUTABLE": PUTABLE, "CLICKABLE": CLICKABLE, "UTILITY": UTILITY}
@@ -6252,12 +6195,12 @@ class WeaponManager:
 				if string in ["covid 19", "parachute", "earthquake"]:
 					return
 				if string == "gemino mine":
-					blitWeaponSprite(Game._game.weaponHold, (0,0), "mine")
+					WeaponManager._wm.blitWeaponSprite(Game._game.weaponHold, (0,0), "mine")
 					return
-				blitWeaponSprite(Game._game.weaponHold, (0,0), string)
+				WeaponManager._wm.blitWeaponSprite(Game._game.weaponHold, (0,0), string)
 				return
 			if string in ["flare", "artillery assist"]:
-				blitWeaponSprite(Game._game.weaponHold, (0,0), "flare")
+				WeaponManager._wm.blitWeaponSprite(Game._game.weaponHold, (0,0), "flare")
 				return
 			if self.getBackColor(string) in [MISSILES]:
 				Game._game.weaponHold.blit(Game._game.sprites, (0,0), (64,112,16,16))
@@ -6324,6 +6267,13 @@ class WeaponManager:
 			spikeTarget = calcEarthSpikePos()
 			if spikeTarget:
 				drawTarget(spikeTarget)
+
+	def blitWeaponSprite(self, dest, pos, weapon):
+		index = self.weaponDict[weapon]
+		x = index % 8
+		y = 9 + index // 8
+		rect = (x * 16, y * 16, 16, 16)
+		dest.blit(Game._game.sprites, pos, rect)
 
 def fire(weapon = None):
 	global decrease
@@ -7304,149 +7254,6 @@ def dropArtifact(artifact, pos, comment=False):
 
 ################################################################################ Gui
 
-
-
-def drawArc(center, outr, inr, start, end, color):
-	points1 = []
-	res = int(100 * ((end - start) / (2 * pi)))
-	
-	for i in range(res):
-		t = start + (i / (res - 1)) * (end - start)
-		point1 = Vector(outr * cos(t),outr * sin(t))
-		points1.append(point1)
-	
-	for i in range(res):
-		t = end + (i / (res - 1)) * (start - end)
-		point1 = Vector(inr * cos(t),inr * sin(t))
-		points1.append(point1)
-	
-	points1 = [i + center for i in points1]
-	pygame.draw.polygon(win, color, points1)
-
-class RadialMenu:
-	events = [None, None]
-	menu = None
-	toster = [None, None]
-	focus = False
-	def __init__(self):
-		self.elements = []
-		self.outr = 60
-		self.inr = 30
-	def step(self):
-		RadialMenu.focus = False
-		for e in self.elements:
-			e.step()
-	def recalculate(self):
-		NumButtons = len(self.elements)
-		buttonArcAngle = 2 * pi / NumButtons
-		# update buttons rects
-		for i, button in enumerate(self.elements):
-			buttonRect = ((self.inr, i * buttonArcAngle), (self.outr, i * buttonArcAngle + buttonArcAngle))
-			button.rect = buttonRect
-	def addButton(self, key, bgColor):
-		b = RadialButton(key, bgColor)
-		self.elements.insert(0, b)
-		self.recalculate()
-		return b
-		
-	def draw(self):
-		for e in self.elements:
-			e.draw()
-		if self.focus:
-			mouse = Vector(pygame.mouse.get_pos()[0]/scalingFactor, pygame.mouse.get_pos()[1]/scalingFactor)
-			win.blit(RadialMenu.toster[0], mouse + Vector(5,5))
-
-class RadialButton:
-	def __init__(self, key, bgColor):
-		self.rect = None
-		self.key = key
-		self.bgColor = bgColor
-		self.selected = False
-		self.color = bgColor
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		self.ammo = TeamManager._tm.currentTeam.ammo(self.key)
-		self.amount = None
-		if self.ammo > 0:
-			self.amount = pixelFont5.render(str(self.ammo), False, BLACK)
-		self.subButtons = []
-		self.level = 0
-		self.category = None
-	def step(self):
-		mouse = Vector(pygame.mouse.get_pos()[0]/scalingFactor, pygame.mouse.get_pos()[1]/scalingFactor)
-		mouseInMenu = mouse - Vector(winWidth//2, winHeight//2)
-		mouseInRadial = Vector(sqrt(mouseInMenu[0]**2 + mouseInMenu[1]**2), atan2(mouseInMenu[1], mouseInMenu[0]))
-		if mouseInRadial[1] < 0:
-			mouseInRadial[1] += 2 * pi
-		if mouseInRadial[0] > self.rect[0][0] and mouseInRadial[0] < self.rect[1][0]\
-			and ((mouseInRadial[1] > self.rect[0][1] and mouseInRadial[1] < self.rect[1][1]) or\
-			(mouseInRadial[1] + 2*pi > self.rect[0][1] and mouseInRadial[1] + 2*pi < self.rect[1][1]) or\
-			(mouseInRadial[1] - 2*pi > self.rect[0][1] and mouseInRadial[1] - 2*pi < self.rect[1][1])):
-			self.selected = True
-			if self.level == 1:
-				RadialMenu.focus = True
-			self.color = RED
-			RadialMenu.events[self.level] = self.key
-			if self.level == 0:
-				RadialMenu.events[self.level + 1] = self.key
-			if self.level == 1 and RadialMenu.toster[1] != self.key:
-				textSurf = pixelFont5.render(self.key, False, WHITE)
-				RadialMenu.toster[0] = pygame.Surface(tup2vec(textSurf.get_size()) + Vector(2,2))
-				RadialMenu.toster[0].blit(textSurf, (1,1))
-				RadialMenu.toster[1] = self.key
-		else:
-			self.selected = False
-			self.color =  [self.color[i] + (self.bgColor[i] - self.color[i]) * 0.2 for i in range(3)]
-
-		# add sub buttons
-		if self.level == 0:
-			if RadialMenu.events[self.level] == self.key and len(self.subButtons) == 0:
-				# self key is category, add all weapons in that category
-				for weapon in WeaponManager._wm.weapons:
-					if TeamManager._tm.currentTeam.ammo(weapon[0]) == 0:
-						continue
-					active = True
-					if Game._game.useListMode and Game._game.inUsedList(weapon[0]) or weapon[5] != 0:
-						active = False
-					if weapon[3] == self.category:
-						b = self.addSubButton(weapon[0])
-						b.level = self.level + 1
-						blitWeaponSprite(b.surf, (0,0), weapon[0])
-						if not active:
-							b.surf.fill((200, 200, 200), special_flags= pygame.BLEND_SUB)
-							b.surf.fill((200, 200, 200), special_flags= pygame.BLEND_ADD)
-			if RadialMenu.events[self.level] != self.key:
-				self.subButtons.clear()
-			
-		for e in self.subButtons:
-			e.step()
-	def recalculate(self):
-		offset = (self.rect[1][1] + self.rect[0][1])/2 - ((pi / 10) * len(self.subButtons)) /2
-		outr = 90
-		inr = 65
-		NumButtons = len(self.subButtons)
-		buttonArcAngle = pi / 10
-		# update buttons rects
-		for i, button in enumerate(self.subButtons):
-			buttonRect = ((inr, i * buttonArcAngle + offset), (outr, i * buttonArcAngle + buttonArcAngle + offset))
-			button.rect = buttonRect
-			
-	def addSubButton(self, key):
-		b = RadialButton(key, self.bgColor)
-		self.subButtons.insert(0, b)
-		self.recalculate()
-		return b
-		
-	def draw(self):
-		drawArc(Vector(winWidth//2, winHeight//2), self.rect[1][0], self.rect[0][0], self.rect[0][1], self.rect[1][1], self.color)
-		if self.surf:
-			posRadial = (tup2vec(self.rect[0]) + tup2vec(self.rect[1])) / 2
-			pos = vectorFromAngle(posRadial[1], posRadial[0]) + Vector(winWidth//2, winHeight//2)
-			win.blit(self.surf, pos - Vector(8,8))
-			if self.amount:
-				win.blit(self.amount, pos + Vector(4,4))
-		for e in self.subButtons:
-			e.draw()
-
 def clickInRadialMenu():
 	weapon = RadialMenu.events[1]
 	if weapon == None:
@@ -7480,122 +7287,12 @@ def weaponMenuRadialInit():
 			categories.append(weapon[3])
 			b = RadialMenu.menu.addButton(weapon[0], weapon[3])
 			b.category = weapon[3]
-			blitWeaponSprite(b.surf, (0,0), weapon[0])
-
-class Commentator:
-	_com = None
-	surf_que = []
-	timer = 0 #0-wait, 1-render, 2-show
-	WAIT = 0
-	PREPARE = 1
-	SHOW = 2
-	mode = 0
-	textSurf = None
-	name = None
-	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed"), ("", " smells the flower from bellow")]
-	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " has divided by zero")]
-	CAUSE_DAMAGE = 0
-	CAUSE_FLEW = 1
-	def __init__(self):
-		Commentator._com = self
-    
-	def step(self):
-		if self.mode == Commentator.WAIT:
-			if len(self.surf_que) == 0:
-				return
-			else:
-				self.mode = Commentator.PREPARE
-		elif self.mode == Commentator.PREPARE:
-			self.textSurf = self.surf_que.pop(0)
-
-			self.mode = Commentator.SHOW
-			self.timer = 2*fps + 1*fps/2
-		elif self.mode == Commentator.SHOW:
-			win.blit(self.textSurf, (int(winWidth/2 - self.textSurf.get_width()/2), 5))
-			
-			self.timer -= 1
-			if self.timer == 0:
-				self.mode = Commentator.WAIT
-	
-	@staticmethod
-	def commentDeath(worm, cause):
-		if cause == Commentator.CAUSE_DAMAGE:
-			strings = choice(Commentator.stringsDmg)
-		elif cause == Commentator.CAUSE_FLEW:
-			strings = choice(Commentator.stringsFlw)
-		output = [
-			{'text': strings[0]},
-			{'text': worm.nameStr, 'color': worm.team.color},
-			{'text': strings[1]},
-		]
-		Commentator.comment(output)
-
-	@staticmethod
-	def comment(strings):
-		surfs = []
-		for string in strings:
-			text = string.get('text')
-			color = string.get('color', Game._game.HUDColor)
-			surfs.append(pixelFont5halo.render(text, False, color))
-		width = sum([i.get_width() for i in surfs])
-		surf = pygame.Surface((width, surfs[0].get_height()), pygame.SRCALPHA)
-		x = 0
-		for s in surfs:
-			surf.blit(s, (x, 0))
-			x += s.get_width()
-		Commentator.surf_que.append(surf)
-
+			WeaponManager._wm.blitWeaponSprite(b.surf, (0,0), weapon[0])
 
 class Camera:
 	def __init__(self, pos):
 		self.pos = pos
 		self.radius = 1
-
-class Toast:
-	_toasts = []
-	toastCount = 0
-	bottom = 0
-	middle = 1
-	def __init__(self, surf, mode=0):
-		Toast._toasts.append(self)
-		self.surf = surf
-		self.time = 0
-		self.mode = mode
-		if self.mode == Toast.bottom:
-			self.anchor = Vector(winWidth/2, winHeight)
-		else:
-			self.anchor = Vector(winWidth//2, winHeight//2) - tup2vec(self.surf.get_size())/2
-		self.pos = Vector()
-		self.state = 0
-		Toast.toastCount += 1
-	def step(self):
-		if self.mode == Toast.bottom:
-			if self.state == 0:
-				self.pos.y -= 3
-				if self.pos.y < -self.surf.get_height():
-					self.state = 1
-			if self.state == 1:
-				self.time += 1
-				if self.time == fps * 3:
-					self.state = 2
-			if self.state == 2:
-				self.pos.y += 3
-				if self.pos.y > 0:
-					Toast._toasts.remove(self)
-					Toast.toastCount -= 1
-		elif self.mode == Toast.middle:
-			self.time += 1
-			if self.time == fps * 3:
-				Toast._toasts.remove(self)
-				Toast.toastCount -= 1
-			self.pos = uniform(0,2) * vectorUnitRandom()	
-	def draw(self):
-		if self.mode == Toast.bottom:
-			pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
-		win.blit(self.surf, self.anchor + self.pos)
-	def updateWinPos(self, pos):
-		self.anchor[0] = pos[0]
-		self.anchor[1] = pos[1]
 
 def toastInfo():
 	if Game._game.gameMode < POINTS:
