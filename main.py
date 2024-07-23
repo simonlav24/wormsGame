@@ -9,6 +9,10 @@ import argparse
 import xml.etree.ElementTree as ET
 import os
 
+
+from Effects import *
+
+
 def getGlobals():
 	global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
 	fpsClock = globals.fpsClock
@@ -102,6 +106,7 @@ class Game:
 	_game = None
 	def __init__(self, argumentsString=None):
 		Game._game = self
+		globals.game_manager = self
 
 		self.clearLists()
 
@@ -156,6 +161,17 @@ class Game:
 		self.weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
 
 		self.dt = 1
+
+	@property
+	def win(self) -> pygame.Surface:
+		return globals.win
+
+	def point_to_world(self, point):
+		return (int(point[0]) - int(self.camPos[0]), int(point[1]) - int(self.camPos[1]))
+
+	def get_worms(self):
+		return PhysObj._worms
+
 	def clearLists(self):
 		# clear lists
 		PhysObj._reg.clear()
@@ -651,87 +667,16 @@ def splash(pos, vel):
 		d.vel.x *= vel.getMag() * 0.17
 		d.radius = choice([2,1])
 
-class Blast:
-	_color = [(255,255,255), (255, 222, 3), (255, 109, 10), (254, 153, 35), (242, 74, 1), (93, 91, 86)]
-	def __init__(self, pos, radius, smoke = 30, moving=0, star=False, color=None):
-		Game._game.nonPhys.append(self)
-		self.timeCounter = 0
-		self.pos = pos + vectorUnitRandom() * moving
-		self.radius = radius
-		self.rad = 0
-		self.timeCounter = 0
-		self.smoke = smoke
-		self.rand = vectorUnitRandom() * randint(1, int(self.radius / 2))
-		self.star = star
-		if color:
-			self.color = [(255,255,255), color]
-			for i in range(4):
-				color = darken(color)
-				self.color.append(color)
-		else:
-			self.color = Blast._color
-	def step(self):
-		if randint(0,self.smoke) == 0 and self.rad > 1:
-			SmokeParticles._sp.addSmoke(self.pos, Vector())
-		self.timeCounter += 0.5 * Game._game.dt
-		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
-		self.pos.x += (4.0 * Game._game.wind / self.rad) * Game._game.dt
-		self.pos.y -= (2.0 / self.rad) * Game._game.dt
-		if Game._game.darkness:
-			color = self.color[int(max(min(self.timeCounter, 5), 0))]
-			Game._game.lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
-		if self.timeCounter >= 10:
-			Game._game.nonPhysToRemove.append(self)
-	def draw(self):
-		if self.star and self.timeCounter < 1.0:
-			points = []
-			num = randint(10, 25) // 2
-			for i in range(num):
-				radius = self.rad * 0.1 if i % 2 == 0 else self.rad * 4
-				rand = Vector() if i % 2 == 0 else 5 * vectorUnitRandom()
-				radrand = 1.0 if i % 2 == 0 else uniform(0.8,3)
-				point = point2world(self.pos + vectorFromAngle((i/num) * 2 * pi, radius + radrand) + rand)
-				points.append(point)
-			pygame.draw.polygon(win, choice(self.color[0:2]), points)
-		Game._game.layersCircles[0].append((self.color[int(max(min(self.timeCounter, 5), 0))], self.pos, self.rad))
-		Game._game.layersCircles[1].append((self.color[int(max(min(self.timeCounter-1, 5), 0))], self.pos + self.rand, self.rad*0.6))
-		Game._game.layersCircles[2].append((self.color[int(max(min(self.timeCounter-2, 5), 0))], self.pos + self.rand, self.rad*0.3))
 
-class FireBlast():
-	_color = [(255, 222, 3), (242, 74, 1), (255, 109, 10), (254, 153, 35)]
-	def __init__(self, pos, radius):
-		self.pos = vectorCopy(pos) + vectorUnitRandom() * randint(1, 5)
-		self.radius = radius
-		Game._game.nonPhys.append(self)
-		self.color = choice(self._color)
-	def step(self):
-		self.pos.y -= (2 - 0.4 * self.radius) * Game._game.dt
-		self.pos.x += Game._game.wind * Game._game.dt
-		if randint(0, 10) < 3:
-			self.radius -= 1 * Game._game.dt
-		if self.radius < 0:
-			Game._game.nonPhysToRemove.append(self)
-	def draw(self):
-		if self.radius == 0:
-			win.set_at(point2world(self.pos), self.color)
-		Game._game.layersCircles[2].append((self.color, self.pos, self.radius))
 
-class Explossion:
-	def __init__(self, pos, radius):	
-		Game._game.nonPhys.append(self)
-		self.pos = pos
-		self.radius = radius
-		self.times = int(radius * 0.35)
-		self.timeCounter = 0
-	def step(self):
-		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7))
-		self.timeCounter += 1
-		if self.timeCounter == self.times:
-			Game._game.nonPhysToRemove.append(self)
-	def draw(self):
-		pass
+
+
+
+
+
 
 class Water:
+	''' water manager '''
 	level = 50
 	quiet = 0
 	waterAmp = 2
@@ -791,6 +736,7 @@ class Water:
 		Water.layerBottom.step()
 
 class Cloud:
+	''' single cloud, procedurally rendered, affected by wind '''
 	_reg = []
 	_toRemove = []
 	cWidth = 170
@@ -813,6 +759,7 @@ class Cloud:
 		win.blit(self.surf, point2world(self.pos))
 
 class BackGround:
+	''' manages background entitiey: clouds, water '''
 	_bg = None
 	def __init__(self, feelColor, isDark=False):
 		BackGround._bg = self
@@ -879,6 +826,7 @@ class BackGround:
 				win.blit(surf, (x, y))
 
 class WindFlag:
+	''' hud widget, represents wind speed and direction '''
 	_instance = None
 	def __init__(self):
 		WindFlag._instance = self
@@ -1274,9 +1222,11 @@ def getNormal(pos, vel, radius, wormCollision, extraCollision):
 ################################################################################ Objects
 
 class TimeManager:
+	''' manages time overall measuring, turn time counting '''
 	_tm = None
 	def __init__(self):
 		TimeManager._tm = self
+		globals.time_manager = self
 		self.timeCounter = Game._game.turnTime
 		self.timeOverall = 0
 		self.generateTimeSurf()
@@ -1314,23 +1264,10 @@ class TimeManager:
 	def timeRemaining(self, amount):
 		self.timeCounter = amount
 
-class FloatingText: #pos, text, color
-	def __init__(self, pos, text, color = (255,0,0)):
-		Game._game.nonPhys.append(self)
-		self.pos = Vector(pos[0], pos[1])
-		self.surf = pixelFont5.render(str(text), False, color)
-		self.timeCounter = 0
-		self.phase = uniform(0,2*pi)
-	def step(self):
-		self.timeCounter += 1
-		self.pos.y -= 0.5
-		self.pos.x += 0.25 * sin(0.1 * TimeManager._tm.timeOverall + self.phase)
-		if self.timeCounter == 50:
-			Game._game.nonPhysToRemove.append(self)
-	def draw(self):
-		win.blit(self.surf , (int(self.pos.x - Game._game.camPos.x - self.surf.get_size()[0]/2), int(self.pos.y - Game._game.camPos.y)))
+
 
 class PhysObj:
+	''' a physical object '''
 	_reg = []
 	_toRemove = []
 	_worms = []
@@ -1505,6 +1442,7 @@ class PhysObj:
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 
 class Debrie (PhysObj):
+	''' debrie resulting from explossions '''
 	_debries = []
 	def __init__(self, pos, blast, colors, bounces=2, firey=True, water=False):
 		Debrie._debries.append(self)
@@ -2154,58 +2092,7 @@ class Fire(PhysObj):
 		self.yellow = int(sin(0.3*TimeManager._tm.timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
 		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y)), radius)
 
-class SmokeParticles:
-	_sp = None
-	_particles = []
-	_particlesRemove = []
-	_sickParticles = []
-	def __init__(self):
-		SmokeParticles._sp = self
-	def addSmoke(self, pos, vel=None, color=None, sick=0):
-		if not color:
-			color = (20, 20, 20)
-		radius = randint(8,10)
-		pos = tup2vec(pos)
-		timeCounter = 0
-		if not vel:
-			vel = Vector()
-		particle = [pos, vel, color, radius, timeCounter]
-		if sick == 0:
-			SmokeParticles._particles.append(particle)
-		else:
-			particle[3] = randint(8,18)
-			particle.append(sick)
-			SmokeParticles._sickParticles.append(particle)
-	def step(self):
-		for particle in SmokeParticles._particles:
-			particle[4] += 1
-			if particle[4] % 5 == 0:
-				particle[3] -= 1 * Game._game.dt
-				if particle[3] <= 0:
-					SmokeParticles._particlesRemove.append(particle)
-			particle[1] += Vector(Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1) * Game._game.dt, -0.1)
-			particle[0] += particle[1] * Game._game.dt
-		for p in SmokeParticles._particlesRemove:
-			SmokeParticles._particles.remove(p)
-		SmokeParticles._particlesRemove = []
 
-		for particle in SmokeParticles._sickParticles:
-			particle[4] += 1
-			if particle[4] % 8 == 0:
-				particle[3] -= 1
-				if particle[3] <= 0:
-					SmokeParticles._sickParticles.remove(particle)
-			particle[1] += Vector(Game._game.wind * 0.1 * Game._game.windMult * uniform(0.2,1), -0.1)
-			particle[0] += particle[1]
-			for worm in PhysObj._worms:
-				if distus(particle[0], worm.pos) < (particle[3] + worm.radius) * (particle[3] + worm.radius):
-					worm.sicken(particle[5])
-	def draw(self):
-		smokeSurf = pygame.Surface(win.get_size(), pygame.SRCALPHA)
-		for particle in SmokeParticles._particles + SmokeParticles._sickParticles:
-			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
-		smokeSurf.set_alpha(100)
-		win.blit(smokeSurf, (0,0))
 
 class TNT(PhysObj):#5
 	def __init__(self, pos):
@@ -7005,7 +6892,7 @@ class Team:
 		pixels = pygame.PixelArray(self.hatSurf)
 		color = desaturate(self.color)
 		pixels.replace((101, 101, 101), color)
-		pixels.replace((81, 81, 81), darken(color))
+		pixels.replace((81, 81, 81), tuple(max(i - 30,0) for i in color))
 		del pixels
 	def __len__(self):
 		return len(self.worms)
