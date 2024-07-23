@@ -5,6 +5,7 @@ from random import randint, choice, uniform
 from perlinNoise import generateNoise
 from vector import *
 from menuGui import *
+from Constants import *
 if not os.path.exists("graphObject.py"):
 	print("fetching graphObject")
 	import urllib.request
@@ -17,30 +18,7 @@ import tkinter
 from tkinter.filedialog import askopenfile
 import xml.etree.ElementTree as ET
 
-MISSILES = (255, 255, 255)
-GRENADES = (204, 255, 204)
-GUNS = (255, 204, 153)
-FIREY = (255, 204, 204)
-TOOLS = (224, 224, 235)
-BOMBS = (200, 255, 200)
-AIRSTRIKE = (204, 255, 255)
-LEGENDARY = (255, 255, 102)
-UTILITIES = (254, 254, 254)
-ARTIFACTS = (255, 255, 101)
 
-# color feel 0:up 1:down 2:mountfar 3:mountclose
-feels = [[(238, 217, 97), (251, 236, 187), (222, 171, 51), (253, 215, 109)],
-		 [(122, 196, 233), (199, 233, 251), (116, 208, 186), (100, 173, 133)],
-		 [(110, 109, 166), (174, 95, 124), (68, 55, 101), (121, 93, 142)],
-		 [(35, 150, 197), (248, 182, 130), (165, 97, 62), (227, 150, 104)],
-		 [(121, 135, 174), (195, 190, 186), (101, 136, 174), (72, 113, 133)],
-		 [(68, 19, 136), (160, 100, 170), (63, 49, 124), (45, 29, 78)],
-		 [(40,40,30), (62, 19, 8), (20,20,26), (56, 41, 28)],
-		 [(0,38,95), (23, 199, 248), (2,113,194), (0, 66, 153)],
-		 [(252,255,186), (248, 243, 237), (165,176,194), (64, 97, 138)],
-		 [(37,145,184), (232, 213, 155), (85,179,191), (16, 160, 187)],
-		 [(246,153,121), (255, 205, 187), (252,117,92), (196, 78, 63)]
-		 ]
 
 trueFalse = ["-f", "-dig", "-dark", "-used", "-closed", "-warped", "-rg", "-place", "-art"]
 feelIndex = randint(0, len(feels) - 1)
