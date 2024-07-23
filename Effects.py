@@ -1,7 +1,9 @@
 
 import pygame
-import globals
 from vector import *
+
+
+import globals
 from random import randint, uniform, choice
 from math import exp, pi, sin, cos
 

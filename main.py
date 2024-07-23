@@ -10,8 +10,9 @@ import xml.etree.ElementTree as ET
 import os
 
 
+from Constants import *
 from Effects import *
-
+from Hud import *
 
 def getGlobals():
 	global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
@@ -30,77 +31,6 @@ def getGlobals():
 globals.globalsInit()
 initGui()
 getGlobals()
-
-# constants
-if True:
-	SKY = (0,0,0,0)
-	GRD = (255,255,255,255)
-	
-	CHARGABLE = 0
-	PUTABLE = 1
-	CLICKABLE = 2
-	GUN = 3
-	UTILITY = 4
-	
-	RESET = 0
-	GENERATE_MAP = 1
-	PLACING_WORMS = 2
-	CHOOSE_STARTER = 3
-	PLAYER_CONTROL_1 = 4
-	PLAYER_CONTROL_2 = 5
-	WAIT_STABLE = 6
-	FIRE_MULTIPLE = 7
-	WIN = 8
-
-	CATEGORY_WEAPONS = 0
-	CATEGORY_UTILITIES = 1
-	CATEGORY_ARTIFACTS = 2
-	
-	RIGHT = 1
-	LEFT = -1
-	RED = (255,0,0)
-	YELLOW = (255,255,0)
-	BLUE = (0,0,255)
-	GREEN = (0,255,0)
-	BLACK = (0,0,0)
-	WHITE = (255,255,255)
-	GREY = (100,100,100)
-	DARK_COLOR = (30,30,30)
-	DOWN = 1
-	UP = -1
-	
-	HEALTH_PACK = 0
-	UTILITY_PACK = 1
-	WEAPON_PACK = 2
-	FLAG_DEPLOY = 3
-	
-	MISSILES = (255, 255, 255)
-	GRENADES = (204, 255, 204)
-	GUNS = (255, 204, 153)
-	FIREY = (255, 204, 204)
-	TOOLS = (224, 224, 235)
-	BOMBS = (200, 255, 200)
-	AIRSTRIKE = (204, 255, 255)
-	LEGENDARY = (255, 255, 102)
-	UTILITIES = (254, 254, 254)
-	ARTIFACTS = (255, 255, 101)
-	
-	PLAGUE = 0
-	TSUNAMI = 1
-	
-	BATTLE = 0
-	POINTS = 1
-	TERMINATOR = 2
-	TARGETS = 3
-	DAVID_AND_GOLIATH = 4
-	CAPTURE_THE_FLAG = 5
-	ARENA = 6
-	MISSIONS = 7
-	
-	MJOLNIR = 0
-	PLANT_MASTER = 1
-	AVATAR = 2
-	MINECRAFT = 3
 
 class Game:
 	_game = None
@@ -588,7 +518,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 	# sample Game._game.ground colors:
 	if debries:
 		colors = []
-		for i in range(10):
+		for _ in range(10):
 			sample = (pos + vectorUnitRandom() * uniform(0,radius)).vec2tupint()
 			if isOnMap(sample):
 				color = Game._game.ground.get_at(sample)
@@ -666,14 +596,6 @@ def splash(pos, vel):
 		d.vel.y = uniform(-1,0) * vel.getMag()
 		d.vel.x *= vel.getMag() * 0.17
 		d.radius = choice([2,1])
-
-
-
-
-
-
-
-
 
 class Water:
 	''' water manager '''
@@ -1263,8 +1185,6 @@ class TimeManager:
 		self.timeCounter = Game._game.turnTime
 	def timeRemaining(self, amount):
 		self.timeCounter = amount
-
-
 
 class PhysObj:
 	''' a physical object '''
@@ -2091,8 +2011,6 @@ class Fire(PhysObj):
 			radius += 1
 		self.yellow = int(sin(0.3*TimeManager._tm.timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
 		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y)), radius)
-
-
 
 class TNT(PhysObj):#5
 	def __init__(self, pos):
@@ -4198,7 +4116,6 @@ class PokeBall(PhysObj):
 		if dmg > self.health:
 			dmg = self.health
 		
-		# FloatingText(self.pos.vec2tup(), str(dmg))
 		self.health -= dmg
 		if self.health <= 0:
 			self.health = 0
@@ -6912,6 +6829,8 @@ class TeamManager:
 	_tm = None
 	def __init__(self):
 		TeamManager._tm = self
+		globals.team_manager = self
+
 		self.teams = []
 		for teamsData in ET.parse('wormsTeams.xml').getroot():
 			newTeam = Team()
@@ -7385,63 +7304,7 @@ def dropArtifact(artifact, pos, comment=False):
 
 ################################################################################ Gui
 
-class HealthBar:
-	_healthBar = None
-	drawBar = True
-	drawPoints = True
-	width = 40
-	def __init__(self):
-		HealthBar._healthBar = self
-		self.mode = 0
-		self.teamHealthMod = [0] * TeamManager._tm.totalTeams
-		self.teamHealthAct = [0] * TeamManager._tm.totalTeams
-		self.maxHealth = 0
-		HealthBar.drawBar = True
-		HealthBar.drawPoints = True
-		if Game._game.diggingMatch:
-			HealthBar.drawBar = False
-	def calculateInit(self):
-		self.maxHealth = TeamManager._tm.nWormsPerTeam * Game._game.initialHealth
-		if Game._game.gameMode == DAVID_AND_GOLIATH:
-			self.maxHealth = int(Game._game.initialHealth/(1+0.5*(TeamManager._tm.nWormsPerTeam - 1))) * TeamManager._tm.nWormsPerTeam
-		for i, team in enumerate(TeamManager._tm.teams):
-			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
-	def step(self):
-		for i, team in enumerate(TeamManager._tm.teams):
-			# calculate teamhealth
-			self.teamHealthAct[i] = sum(worm.health for worm in team.worms)
-			
-			# animate health bar
-			self.teamHealthMod[i] += (self.teamHealthAct[i] - self.teamHealthMod[i]) * 0.1
-			if int(self.teamHealthMod[i]) == self.teamHealthAct[i]:
-				self.teamHealthMod[i] = self.teamHealthAct[i]
-	def draw(self):
-		if not HealthBar.drawBar: return
-		maxPoints = sum(i.points for i in TeamManager._tm.teams)
-		
-		for i, team in enumerate(TeamManager._tm.teams):
-			pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, HealthBar.width, 2))
-			
-			# health:
-			value = min(self.teamHealthMod[i] / self.maxHealth, 1) * HealthBar.width
-			if value < 1 and value > 0:
-				value = 1
-			if not value <= 0:
-				pygame.draw.rect(win, TeamManager._tm.teams[i].color, (int(winWidth - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
-			
-			# points:
-			if not HealthBar.drawPoints:
-				continue
-			if maxPoints == 0:
-				continue
-			value = (TeamManager._tm.teams[i].points / maxPoints) * HealthBar.width
-			if value < 1 and value > 0:
-				value = 1
-			if not value == 0:
-				pygame.draw.rect(win, (220,220,220), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
-			if Game._game.gameMode == CAPTURE_THE_FLAG:
-				if TeamManager._tm.teams[i].flagHolder:
-					pygame.draw.circle(win, (220,0,0), (int(winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
+
 
 def drawArc(center, outr, inr, start, end, color):
 	points1 = []
