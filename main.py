@@ -8,9 +8,10 @@ import pygame
 import argparse
 import xml.etree.ElementTree as ET
 import os
-
+from typing import Type, Any
 
 from Constants import *
+from Common import *
 from Effects import *
 from Hud import *
 from Gui import *
@@ -146,126 +147,20 @@ class Game:
 		self.groundSec = pygame.Surface((self.mapWidth, self.mapHeight)).convert_alpha()
 		if self.darkness:
 			self.darkMask = pygame.Surface((self.mapWidth, self.mapHeight)).convert_alpha()
-	def hardRatioValue0(self, path):
-		first = path.find("big")
-		if first != -1:
-			second = path.find(".", first)
-			if second != -1:
-				return int(path[first+3:second])
-		return 512
-	def createWorld(self):
+
+	def create_world(self) -> None:
+		''' create world map '''
 		custom_height = 512
 		if self.args.map_ratio != -1:
 			custom_height = self.args.map_ratio
 
-		self.map_manager.create_map_image(self.args.map_choice, custom_height)
-	def createWorld0(self):
-		# choose map
-		maps = grabMapsFrom(["wormsMaps", "wormsMaps/moreMaps"])
-
-		imageChoice = [None, None] # path, ratio
-		if self.args.map_choice == "":
-			# no map chosen in arguments. pick one at random
-			imageChoice[0] = choice(maps)
-		else:
-			# if perlin map, recolor ground
-			if "PerlinMaps" in self.args.map_choice:
-				self.args.recolor_ground = True
-			# search for chosen map
-			for m in maps:
-				if self.args.map_choice in m:
-					imageChoice[0] = m
-					break
-			# if not found, then custom map
-			if imageChoice[0] == None:
-				imageChoice[0] = self.args.map_choice
-
-		imageChoice[1] = self.hardRatioValue(imageChoice[0])
-		if self.args.map_ratio != -1:
-			imageChoice[1] = self.args.map_ratio
-
-		self.mapChoice = imageChoice
-		self.makeGameMap(imageChoice)
-		self.makeGroundMap()
-	def makeGameMap0(self, imageChoice):
-		"""
-		create and initialize all map related surfaces
-		"""	
-		self.lstepmax = self.wormsPerTeam * len(TeamManager._tm.teams) + 1
 		if self.diggingMatch:
-			self.createMapSurfaces((int(1024 * 1.5), 512))
-			self.gameMap.fill(GRD)
-			return
-
-		# load map
-		self.mapImage = pygame.image.load(imageChoice[0])
-
-		# flip for fun
-		if randint(0,1) == 0:
-			self.mapImage = pygame.transform.flip(self.mapImage, True, False)
-
-		# rescale based on ratio
-		ratio = self.mapImage.get_width() / self.mapImage.get_height()
-		self.mapImage = pygame.transform.scale(self.mapImage, (int(imageChoice[1] * ratio), imageChoice[1]))
-
-		self.createMapSurfaces((self.mapImage.get_width(), self.mapImage.get_height() + self.initialWaterLevel))
-
-		# fill gameMap
-		image = self.mapImage.copy()
-		imagepixels = pygame.PixelArray(image)
-		extracted = imagepixels.extract(SKY)
-		imagepixels.close()
-		extracted.replace((0,0,0), (255,0,0))
-		extracted.replace((255,255,255), SKY)
-		extracted.replace((255,0,0), GRD)	
-		self.gameMap.blit(extracted.make_surface(), (0,0))
-		extracted.close()
-
-		self.mapImage.set_colorkey((0,0,0))
-	def makeGroundMap0(self):
-		self.ground.fill(SKY)
-		if self.diggingMatch or self.args.recolor_ground:
-			assets = os.listdir("./assets/")
-			patterns = []
-			for asset in assets:
-				if "pattern" in asset:
-					patterns.append(asset)
-			patternImage = pygame.image.load("./assets/" + choice(patterns))
-			grassColor = choice([(10, 225, 10), (10,100,10)] + [i[3] for i in feels])
-
-			for x in range(0, self.mapWidth):
-				for y in range(0, self.mapHeight):
-					if self.gameMap.get_at((x,y)) == GRD:
-						self.ground.set_at((x,y), patternImage.get_at((x % patternImage.get_width(), y % patternImage.get_height())))
-
-			colorfulness = pygame.Surface((8,5), pygame.SRCALPHA)
-			for x in range(8):
-				for y in range(5):
-					randColor = (randint(0,50), randint(0,50), randint(0,50))
-					colorfulness.set_at((x, y), choice([randColor, (0,0,0)]))
-			self.ground.blit(pygame.transform.smoothscale(colorfulness, (self.mapWidth, self.mapHeight)), (0,0), special_flags=pygame.BLEND_SUB)
-
-			for x in range(0, self.mapWidth):
-				for y in range(0, self.mapHeight):
-					if self.gameMap.get_at((x,y)) == GRD:
-						if y > 0 and self.gameMap.get_at((x,y - 1)) != GRD:
-							for i in range(randint(3,5)):
-								if y + i < self.mapHeight:
-									if self.gameMap.get_at((x, y + i)) == GRD:
-										self.ground.set_at((x,y + i), [min(abs(i + randint(-30,30)), 255) for i in grassColor])
-
-			self.groundSec.fill(self.feelColor[0])
-			groundCopy = self.ground.copy()
-			groundCopy.set_alpha(64)
-			self.groundSec.blit(groundCopy, (0,0))
-			self.groundSec.set_colorkey(self.feelColor[0])
-			return
-
-		self.ground.blit(self.mapImage, (0,0))
-		self.groundSec.fill(self.feelColor[0])
-		self.mapImage.set_alpha(64)
-		self.groundSec.blit(self.mapImage, (0,0))
-		self.groundSec.set_colorkey(self.feelColor[0])
+			self.map_manager.create_map_digging(custom_height)
+		elif 'PerlinMaps' in self.args.map_choice:
+			self.map_manager.create_map_image(self.args.map_choice, custom_height, True)
+		else:
+			self.map_manager.create_map_image(self.args.map_choice, custom_height, self.args.recolor_ground)
+	
 	def initiateGameSettings(self):
 		self.turnTime = 45 # amount of time for each turn
 		self.retreatTime = 5 # amount of time for retreat
@@ -353,10 +248,10 @@ class Game:
 		for i in range(self.girderSize // 16 + 1):
 			surf.blit(Game._game.sprites, (i * 16, 0), (64,80,16,16))
 		surfGround = pygame.transform.rotate(surf, self.girderAngle)
-		self.ground.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
+		self.map_manager.ground_map.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
 		surf.fill(GRD)
 		surfMap = pygame.transform.rotate(surf, self.girderAngle)
-		self.gameMap.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
+		self.map_manager.game_map.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
 	def drawGirderHint(self):
 		surf = pygame.Surface((self.girderSize, 10)).convert_alpha()
 		for i in range(self.girderSize // 16 + 1):
@@ -373,7 +268,7 @@ class Game:
 		anchored = False
 		for i in range(25):
 			cpos = position.y + i
-			if mapGetAt(Vector(position.x, cpos)) == GRD:
+			if Game._game.map_manager.is_ground_at(Vector(position.x, cpos)):
 				anchored = True
 				break
 		if anchored:
@@ -490,34 +385,14 @@ def drawLand():
 		return
 	if Game._game.drawGroundSec: win.blit(Game._game.map_manager.ground_secondary, point2world((0,0)))
 	win.blit(Game._game.map_manager.ground_map, point2world((0,0)))
-	if Game._game.warpedMode:
-		if Game._game.drawGroundSec: win.blit(Game._game.map_manager.ground_secondary, point2world((Game._game.map_manager.game_map.get_width(),0)))
-		win.blit(Game._game.map_manager.ground_map, point2world((Game._game.map_manager.game_map.get_width(),0)))
-		if Game._game.drawGroundSec: win.blit(Game._game.map_manager.ground_secondary, point2world((-Game._game.map_manager.game_map.get_width(),0)))
-		win.blit(Game._game.map_manager.ground_map, point2world((-Game._game.map_manager.game_map.get_width(),0)))
+	
 	if Game._game.darkness and not Game._game.state == PLACING_WORMS:
-		Game._game.darkMask.fill(DARK_COLOR)
+		Game._game.map_manager.dark_mask.fill(DARK_COLOR)
 		if Game._game.objectUnderControl:
-			# advanced darkness experimental:
-			if False:
-				center = Game._game.objectUnderControl.pos
-				points = []
-				for i in range(100):
-					direction = vectorFromAngle((pi * i)/(100/2))
-					for t in range(100):
-						testPos = center + direction * (t*5)
-						if mapGetAt(testPos) == GRD:
-							points.append(testPos)
-							break
-						if t == 100 - 1:
-							points.append(testPos)
-							break
-				pygame.draw.polygon(Game._game.darkMask, (0,0,0,0), points)
-			else:
-				pygame.draw.circle(Game._game.darkMask, (0,0,0,0), Game._game.objectUnderControl.pos.vec2tupint(), Game._game.lightRadius)
+			pygame.draw.circle(Game._game.map_manager.dark_mask, (0,0,0,0), Game._game.objectUnderControl.pos.vec2tupint(), Game._game.lightRadius)
 	
 		for light in Game._game.lights:
-			pygame.draw.circle(Game._game.darkMask, light[3], (int(light[0]), int(light[1])), int(light[2]))
+			pygame.draw.circle(Game._game.map_manager.dark_mask, light[3], (int(light[0]), int(light[1])), int(light[2]))
 		Game._game.lights = []
 	
 	Game._game.map_manager.worm_col_map.fill(SKY)
@@ -757,18 +632,8 @@ class BackGround:
 				x = int(-Game._game.camPos.x/parallax) + int(int(offsetx) * width + i * width)
 				y = int(-Game._game.camPos.y/parallax) + int(int(offsety) * height + j * height)
 				win.blit(surf, (x, y))
-			
-def mapGetAt(pos, mat=None):
-	if not mat:
-		mat = Game._game.map_manager.game_map
-	if pos[0] >= Game._game.map_manager.game_map.get_width() or pos[0] < 0 or pos[1] >= Game._game.map_manager.game_map.get_height() or pos[1] < 0:
-		return SKY
-	return mat.get_at((int(pos[0]), int(pos[1])))
 
-def drawWindIndicator():
-	pygame.draw.line(win, (100,100,255), (20, 15), (int(20 + Game._game.wind * 20),15))
-	pygame.draw.line(win, (0,0,255), (20, 10), (20,20))
-
+# todo: determine where this belongs
 def giveGoodPlace(div = 0, girderPlace = True):
 	goodPlace = False
 	counter = 0
@@ -864,35 +729,19 @@ def giveGoodPlace(div = 0, girderPlace = True):
 			pygame.draw.circle(Game._game.map_manager.ground_map, SKY, place.vec2tup(), 5)
 	return place
 
-def placePetrolCan(quantity = 1):
-	for times in range(quantity):
-		place = giveGoodPlace(-1, False)
-		if place:
-			pt = PetrolCan((place.x, place.y - 2))
-
-def placeMines(quantity = 1):
-	for times in range(quantity):
-		place = giveGoodPlace(-1)
-		m = Mine((place.x, place.y - 2))
-		m.damp = 0.1
-
-def placePlants(quantity = 1):
-	for times in range(quantity):
-		place = giveGoodPlace(-1, False)
-		if place:
-			PlantBomb((place.x, place.y - 2), (0,0), 0, PlantBomb.venus)
-
-def placeFlag():
-	place = giveGoodPlace(-1)
-	Flag(place)
+def place_object(cls: Any, args, girder_place: bool=False) -> Any:
+	''' create an instance of cls, return the last created'''
+	place = giveGoodPlace(-1, girder_place)
+	if place:
+		if args is None:
+			instance = cls()
+		else:
+			instance = cls(*args)
+		instance.pos = Vector(place.x, place.y - 2)
+	else:
+		return None
+	return instance
 	
-def clamp(value, upper, lower):
-	if value > upper:
-		value = upper
-	if value < lower:
-		value = lower
-	return value
-
 def point2world(point):
 	return (int(point[0]) - int(Game._game.camPos[0]), int(point[1]) - int(Game._game.camPos[1]))
 
@@ -984,55 +833,6 @@ def checkFreePosFallProof(obj, pos):
 			break
 	return groundUnder
 
-def checkPotential(obj, count):
-	pot = []
-	
-	for i in range(1, count):
-		pos = obj.pos + Vector(i * obj.facing, 0)
-		if not isOnMap(pos):
-			break
-		pot.append(pos)
-	
-	for i in pot:
-		if Game._game.map_manager.game_map.get_at(i.vec2tupint()) == (0,0,0):
-			while Game._game.map_manager.game_map.get_at(i.vec2tupint()) == (0,0,0):
-				if isOnMap((i[0], i[1] + 1)):
-					i.y += 1
-				else:
-					break
-		else:
-			while Game._game.map_manager.game_map.get_at(i.vec2tupint()) == GRD:
-				if isOnMap((i[0], i[1] - 1)):
-					i.y -= 1
-				else:
-					break
-	
-	if len(pot) == 0:
-		return pot
-		
-	cut = None
-	for i in range(1, len(pot)):
-		prev = pot[i-1]
-		curr = pot[i]
-		# check for fall safety:
-		distance = prev.y - curr.y
-		if distance < 0:
-			#going down
-			if abs(distance) > 70:
-				cut = i
-				break
-		if distance > 0:
-			#going up
-			if abs(distance) > 5:
-				cut = i
-				break
-			
-	pot = pot[0:i]
-	
-	# for i in pot:
-		# addExtra(i)
-	return pot
-
 def getClosestPosAvail(obj):
 	r = 0
 	found = None
@@ -1053,18 +853,8 @@ def getClosestPosAvail(obj):
 				return None
 	return checkPos
 
-def grayen(color):
-	return tuple(i//5 + 167 for i in color)
-
-def desaturate(color, value=0.5):
-	grey = color[0] * 0.299 + color[1] * 0.587 + color[2] * 0.144
-	return tuple(grey * value + i * (1 - value) for i in color)
-
-def darken(color):
-	return tuple(max(i - 30,0) for i in color)
-
-def getNormal(pos, vel, radius, wormCollision, extraCollision):
-	# colission with world:
+def getNormal(pos, vel, radius, wormCollision: bool, extraCollision: bool) -> Vector:
+	''' returns collision with world response '''
 	response = Vector(0,0)
 	angle = atan2(vel.y, vel.x)
 	r = angle - pi
@@ -1183,14 +973,6 @@ class PhysObj:
 		response = Vector(0,0)
 		collision = False
 		
-		if Game._game.warpedMode and Game._game.camTrack == self:
-			if ppos.x > Game._game.map_manager.game_map.get_width():
-				ppos.x = 0
-				Game._game.camPos.x -= Game._game.map_manager.game_map.get_width()
-			if ppos.x < 0:
-				ppos.x = Game._game.map_manager.game_map.get_width()
-				Game._game.camPos.x += Game._game.map_manager.game_map.get_width()
-		
 		# colission with world:
 		r = angle - pi
 		while r < angle + pi:
@@ -1205,7 +987,7 @@ class PhysObj:
 					r += pi /8
 					continue
 			if testPos.y < 0:
-				if Game._game.map_manager.game_map.get_at((int(testPos.x), 0)) == GRD:#Game._game.mapClosed and 
+				if Game._game.map_manager.is_ground_at((int(testPos.x), 0)):#Game._game.mapClosed and 
 					response += ppos - testPos
 					collision = True
 					r += pi /8
@@ -2082,7 +1864,7 @@ class PetrolCan(PhysObj):
 		pygame.draw.rect(Game._game.map_manager.objects_col_map, GRD, (int(self.pos.x -6),int(self.pos.y -8), 12,16))
 
 class Mine(PhysObj):
-	def __init__(self, pos, delay=0):
+	def __init__(self, pos=(0,0), delay=0):
 		self.initialize()
 		self._mines.append(self)
 		self.pos = tup2vec(pos)
@@ -3342,7 +3124,7 @@ class LongBow:
 						return
 				# check Game._game.map_manager.game_map collision
 				if isOnMap(testPos.vec2tupint()):
-					if mapGetAt(testPos.vec2tupint()) == GRD:
+					if Game._game.map_manager.is_ground_at(testPos.vec2tupint()):
 						self.stuck = vectorCopy(testPos)
 				if self.pos.y < 0:
 					self.destroy()
@@ -3976,7 +3758,7 @@ class Ball(PhysObj):# EXPERIMENTAL
 		for y in range(start.y, end.y):
 			for x in range(start.x, end.x):
 				pos = Vector(x, y)
-				if mapGetAt(pos) == GRD:
+				if Game._game.map_manager.is_ground_at(pos):
 					self.fakeballs.append(pos)
 		
 		shuffle(self.fakeballs)
@@ -4659,7 +4441,7 @@ class Snail:
 			revolvment = self.pos - self.anchor
 			index = Snail.around.index(revolvment)
 			candidate = self.anchor + Snail.around[(index + self.clockwise * -1) % 8]
-			if mapGetAt(candidate) == GRD:
+			if Game._game.map_manager.is_ground_at(candidate):
 				self.anchor = candidate
 			else:
 				self.pos = candidate
@@ -4702,7 +4484,7 @@ class SnailShell(PhysObj):
 		for t in range(50):
 			testPos = self.pos + normalize(self.vel) * t
 			testPos.integer()
-			if mapGetAt(testPos) == GRD:
+			if Game._game.map_manager.is_ground_at(testPos):
 				finalAnchor = testPos
 				break
 			else:
@@ -4755,14 +4537,14 @@ class Bubble:
 			self.catch.vel *= 0
 		if Game._game.mapClosed and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= Game._game.map_manager.game_map.get_width() - Water.level):
 			self.burst()
-		if self.pos.y < 0 and (mapGetAt((self.pos.x + self.radius, 0)) == GRD or mapGetAt((self.pos.x - self.radius, 0)) == GRD):
+		if self.pos.y < 0 and (Game._game.map_manager.is_ground_at((self.pos.x + self.radius, 0)) or Game._game.map_manager.is_ground_at((self.pos.x - self.radius, 0))):
 			self.burst()
 		if self.pos.y < -50:
 			self.burst()
-		if self.pos.y - self.radius <= 0 and mapGetAt((self.pos.x, 0)) == GRD:
+		if self.pos.y - self.radius <= 0 and Game._game.map_manager.is_ground_at((self.pos.x, 0)):
 			self.burst()
 		if randint(0, 300) == 1:
-			if mapGetAt(self.pos) != GRD:
+			if not Game._game.map_manager.is_ground_at(self.pos):
 				self.burst()
 	def burst(self):
 		if self.catch:
@@ -4876,10 +4658,10 @@ class Seeker:
 				direction = vectorFromAngle((i / 20) * 2 * pi)
 				for j in range(visibility):
 					testPos = self.pos + direction * j
-					if mapGetAt(testPos) == GRD:
+					if Game._game.map_manager.is_ground_at(testPos):
 						self.avoid.append(testPos)
 		else:
-			if mapGetAt(self.pos) == GRD:
+			if Game._game.map_manager.is_ground_at(self.pos):
 				self.hitResponse()
 				return
 			
@@ -4898,7 +4680,7 @@ class Seeker:
 		self.vel.limit(self.maxSpeed)
 		
 		ppos = self.pos + self.vel
-		while mapGetAt(ppos) == GRD:
+		while Game._game.map_manager.is_ground_at(ppos):
 			self.vel *= -1
 			self.vel.rotate(uniform(-0.5,0.5))
 			ppos = self.pos + self.vel
@@ -5032,7 +4814,7 @@ class Chum(Grenade):
 			self.timer += 1
 		if self.stick:
 			self.pos = self.stick
-			if mapGetAt(self.stick) != GRD:
+			if not Game._game.map_manager.is_ground_at(self.stick):
 				self.sticked = False
 				self.stick = None
 	def draw(self):
@@ -5480,7 +5262,7 @@ class MasterOfPuppets:
 			# point = Vector(worm.pos.x, 0)
 			for t in range(200):
 				posToCheck = worm.pos - Vector(0, t * 5)
-				if mapGetAt(posToCheck) == GRD:
+				if Game._game.map_manager.is_ground_at(posToCheck):
 					break
 				if posToCheck.y < 0:
 					break
@@ -5526,7 +5308,7 @@ class Frost:
 		self.visited = []
 		self.next = []
 		self.timer = fps * randint(2, 6)
-		if not mapGetAt(self.pos) == GRD:
+		if not Game._game.map_manager.is_ground_at(self.pos):
 			return
 		Game._game.nonPhys.append(self)
 	def step(self):
@@ -5543,7 +5325,7 @@ class Frost:
 		while len(directions) > 0:
 			direction = directions.pop(0)
 			checkPos = self.pos + direction
-			if mapGetAt(checkPos) == GRD and not checkPos in self.visited:
+			if Game._game.map_manager.is_ground_at(checkPos) and not checkPos in self.visited:
 				self.next.append(checkPos)
 		if len(self.next) == 0:
 			Game._game.nonPhysToRemove.append(self)
@@ -5607,15 +5389,15 @@ class Icicle(LongBow):
 def calcEarthSpikePos():
 	amount = (pi/2 - Game._game.objectUnderControl.shootAngle) * Game._game.objectUnderControl.facing / pi
 	xFromWorm = Game._game.objectUnderControl.pos.x + Game._game.objectUnderControl.facing * amount * 70
-	if mapGetAt(Vector(xFromWorm, Game._game.objectUnderControl.pos.y)) == GRD:
+	if Game._game.map_manager.is_ground_at(Vector(xFromWorm, Game._game.objectUnderControl.pos.y)):
 		y = Game._game.objectUnderControl.pos.y
-		while mapGetAt(Vector(xFromWorm, y)) == GRD:
+		while Game._game.map_manager.is_ground_at(Vector(xFromWorm, y)):
 			y -= 2
 			if y < 0:
 				return None
 	else:
 		y = Game._game.objectUnderControl.pos.y
-		while mapGetAt(Vector(xFromWorm, y)) != GRD:
+		while not Game._game.map_manager.is_ground_at(Vector(xFromWorm, y)):
 			y += 2
 			if y > Game._game.map_manager.game_map.get_height():
 				return None
@@ -6022,7 +5804,7 @@ class Trampoline:
 		self.offset = 0
 		self.stable = False
 		for i in range(25):
-			if mapGetAt(self.pos + Vector(0, i)) == GRD:
+			if Game._game.map_manager.is_ground_at(self.pos + Vector(0, i)):
 				self.anchor = self.pos + Vector(0, i)
 				break
 		Trampoline._reg.append(self)
@@ -6044,7 +5826,7 @@ class Trampoline:
 				self.directionalVel = 0
 				self.offset = 0
 				self.stable = True
-		if not mapGetAt(self.anchor) == GRD:
+		if not Game._game.map_manager.is_ground_at(self.anchor):
 			Game._game.nonPhysToRemove.append(self)
 			Trampoline._reg.remove(self)
 			gs = GunShell(vectorCopy(self.pos))
@@ -6072,42 +5854,6 @@ class Trampoline:
 			win.blit(Game._game.sprites, point2world((self.pos.x - 5, i)), (107, 124, 10, 4))
 			i -= 4
 		win.blit(Trampoline._sprite, point2world(self.pos + Vector(0, self.offset) - self.size / 2))
-
-class HornedBeatle(Snail):
-	def secondaryInit(self):
-		self.timer = 10 * fps
-	def climb(self):
-		steps = 0
-		while True:
-			steps += 1
-			if steps > 20:
-				break
-			revolvment = self.pos - self.anchor
-			index = Snail.around.index(revolvment)
-			around = Snail.around[(index + self.clockwise * -1) % 8]
-			candidate = self.anchor + around
-			# if around == Vector(1,0) and self.clockwise == 1:
-			# 	print('down')
-			# if around == Vector(-1,0) and self.clockwise == -1:
-			# 	print('down2')
-			if mapGetAt(candidate) == GRD:
-				self.anchor = candidate
-			else:
-				self.pos = candidate
-				break
-	def step(self):
-
-		gameDistable()
-		self.timer -= 1
-		if self.timer <= 0:
-			boom(self.pos, 25)
-			Game._game.nonPhysToRemove.append(self)
-		self.climb()
-		radius = 6
-		for obj in PhysObj._reg:
-			if obj != self and distus(self.pos, obj.pos) < radius * radius:
-				obj.vel += Vector(uniform(-0.5,0.5), -uniform(2.5,5))
-		
 
 ################################################################################ Weapons setup
 
@@ -6554,7 +6300,7 @@ def fire(weapon = None):
 		position = Game._game.objectUnderControl.pos + vectorFromAngle(Game._game.objectUnderControl.shootAngle, 20)
 		anchored = False
 		for i in range(25):
-			if mapGetAt(position + Vector(0, i)) == GRD:
+			if Game._game.map_manager.is_ground_at(position + Vector(0, i)):
 				anchored = True
 				break
 		if anchored:
@@ -7244,7 +6990,7 @@ def dropArtifact(artifact, pos, comment=False):
 		deploy = False
 		while not goodPlace:
 			pos = Vector(randint(20, Game._game.map_manager.game_map.get_width() - 20), -50)
-			if not mapGetAt((pos.x, 0)) == GRD:
+			if not Game._game.map_manager.is_ground_at((pos.x, 0)):
 				goodPlace = True
 			count += 1
 			if count > 2000:
@@ -7992,23 +7738,30 @@ def stateMachine():
 		Game._game.playerControl = False
 		Game._game.playerControlPlacing = False
 		
-		Game._game.createWorld()
+		Game._game.create_world()
 		TeamManager._tm.currentTeam = TeamManager._tm.teams[0]
 		TeamManager._tm.teamChoser = TeamManager._tm.teams.index(TeamManager._tm.currentTeam)
 		# place stuff:
 		if not Game._game.diggingMatch:
-			placeMines(randint(2,4))
+			amount = randint(2,4)
+			for _ in range(amount):
+				mine = place_object(Mine, None, True)
+				mine.damp = 0.1
+
 		if Game._game.manualPlace:
-			placePetrolCan(randint(2,4))
+			amount = randint(2,4)
+			for _ in range(amount):
+				place_object(PetrolCan, None, False)
 			# place plants:
 			if not Game._game.diggingMatch:
-				placePlants(randint(0,2))
-				pass
+				amount = randint(0, 2)
+				for _ in range(amount):
+					place_object(PlantBomb, ((0,0), (0,0), 0, PlantBomb.venus), False)
 		
 		# check for sky opening for airstrikes
 		closedSkyCounter = 0
 		for i in range(100):
-			if mapGetAt((randint(0, Game._game.map_manager.game_map.get_width()-1), randint(0, 10))) == GRD:
+			if Game._game.map_manager.is_ground_at((randint(0, Game._game.map_manager.game_map.get_width()-1), randint(0, 10))):
 				closedSkyCounter += 1
 		if closedSkyCounter > 50:
 			Game._game.allowAirStrikes = False
@@ -8032,11 +7785,14 @@ def stateMachine():
 				weapon[5] = 0
 		if Game._game.nextState == CHOOSE_STARTER:
 			if not Game._game.manualPlace:
-				placePetrolCan(randint(2,4))
+				amount = randint(2,4)
+				for _ in range(amount):
+					place_object(PetrolCan, None, False)
 				# place plants:
 				if not Game._game.diggingMatch:
-					placePlants(randint(0,2))
-					pass
+					amount = randint(0, 2)
+					for _ in range(amount):
+						place_object(PlantBomb, ((0,0), (0,0), 0, PlantBomb.venus), False)
 			
 			# targets:
 			if Game._game.gameMode == TARGETS:
@@ -8044,7 +7800,9 @@ def stateMachine():
 					ShootingTarget()
 			
 			if Game._game.diggingMatch:
-				placeMines(80)
+				for _ in range(80):
+					mine = place_object(Mine, None)
+					mine.damp = 0.1
 				# more digging
 				for team in TeamManager._tm.teams:
 					team.ammo("minigun", 5)
@@ -8081,7 +7839,7 @@ def stateMachine():
 			if Game._game.randomWeapons:
 				randomWeaponsGive()
 			if Game._game.gameMode == CAPTURE_THE_FLAG:
-				placeFlag()
+				place_object(Flag, None)
 			if Game._game.gameMode == ARENA:
 				ArenaManager()
 			if Game._game.gameMode == MISSIONS:
@@ -8598,7 +8356,7 @@ def gameMain(gameParameters=None):
 		if ArenaManager._arena: ArenaManager._arena.draw()
 		SmokeParticles._sp.draw()
 
-		if Game._game.darkness and Game._game.darkMask: win.blit(Game._game.darkMask, (-int(Game._game.camPos.x), -int(Game._game.camPos.y)))
+		if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(Game._game.camPos.x), -int(Game._game.camPos.y)))
 		# draw shooting indicator
 		if Game._game.objectUnderControl and Game._game.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and Game._game.objectUnderControl.health > 0:
 			Game._game.objectUnderControl.drawCursor()
@@ -8617,7 +8375,6 @@ def gameMain(gameParameters=None):
 		Game._game.drawLayers()
 		
 		# HUD
-		# drawWindIndicator()
 		WindFlag._instance.draw()
 		TimeManager._tm.draw()
 		if WeaponManager._wm.surf: win.blit(WeaponManager._wm.surf, (25, 5))
