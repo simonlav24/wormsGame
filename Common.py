@@ -1,6 +1,11 @@
 
 from abc import ABC, abstractmethod
 from typing import Tuple
+import pygame
+from math import sin, pi
+from vector import *
+
+import globals
 
 # paths
 PATH_ASSETS = r'./assets'
@@ -41,3 +46,17 @@ def desaturate(color: ColorType, value: float=0.5) -> ColorType:
 def darken(color: ColorType) -> ColorType:
 	''' darkens color '''
 	return tuple(max(i - 30,0) for i in color)
+
+# drawing utilities
+
+def point2world(point):
+	''' point in vector space to point in world map space '''
+	return (int(point[0]) - int(globals.game_manager.camPos[0]), int(point[1]) - int(globals.game_manager.camPos[1]))
+
+def drawTarget(pos):
+	offset = sin(globals.time_manager.timeOverall / 5) * 4 + 3
+	triangle = [Vector(5 + offset,0), Vector(10 + offset,-2), Vector(10 + offset,2)]
+	for i in range(4):
+		angle = i * pi / 2
+		triangle = [triangle[0].rotate(angle), triangle[1].rotate(angle), triangle[2].rotate(angle)]
+		pygame.draw.polygon(globals.game_manager.win, (255,0,0), [point2world(pos + j) for j in triangle])

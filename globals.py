@@ -1,15 +1,19 @@
 
 import pygame
+from pygame import Vector2
 
-win = None
-winWidth = 0
-winHeight = 0
-scalingFactor = 0
+class Transformations:
+    def __init__(self):
+        self.scaling_factor = 3
+        self.scaling_max = 3
+        self.scaling_min = 1
+        self.cam: Vector2 = Vector2(0,0)
+    
+    def point_to_world(self, pos: Vector2) -> Vector2:
+        return Vector2((pos[0] - self.cam[0]), int(pos[1]) - int(self.cam[1]))
 
-game_manager = None
-time_manager = None
-team_manager = None
-weapon_manager = None
+    def world_to_point(self, pos: Vector2) -> Vector2:
+        ...
 
 class HaloFont:
     def __init__(self, font):
@@ -53,6 +57,16 @@ def globalsInit():
     pygame.display.set_caption("Simon's Worms")
     # screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF | pygame.NOFRAME)
     screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
+
+win = None
+winWidth = 0
+winHeight = 0
+scalingFactor = 0
+
+game_manager = None
+time_manager = None
+team_manager = None
+weapon_manager = None
 
 def exitGame():
     pygame.quit()
