@@ -320,11 +320,9 @@ class Game:
 		is_handled |= globals.weapon_manager.handle_event(event)
 		
 		return is_handled
-				
 
 	def step(self):
 		pass
-	
 	
 	def addToScoreList(self, amount=1):
 		"""add to score list if points, list entry: (surf, name, score)"""
@@ -5865,19 +5863,19 @@ def fire(weapon = None):
 	
 	avail = True
 	w = None
-	if weapon == "missile":
+	if weapon.name == "missile":
 		w = Missile(weaponOrigin, weaponDir, energy)
-	elif weapon == "grenade":
+	elif weapon.name == "grenade":
 		w = Grenade(weaponOrigin, weaponDir, energy)
-	elif weapon == "mortar":
+	elif weapon.name == "mortar":
 		w = Mortar(weaponOrigin, weaponDir, energy)
-	elif weapon == "petrol bomb":
+	elif weapon.name == "petrol bomb":
 		w = PetrolBomb(weaponOrigin, weaponDir, energy)
-	elif weapon == "TNT":
+	elif weapon.name == "TNT":
 		w = TNT(weaponOrigin)
 		w.vel.x = Game._game.objectUnderControl.facing * 0.5
 		w.vel.y = -0.8
-	elif weapon == "shotgun":
+	elif weapon.name == "shotgun":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 3 # three shots
@@ -5888,7 +5886,7 @@ def fire(weapon = None):
 		if Game._game.shotCount == 0:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon == "flame thrower":
+	elif weapon.name == "flame thrower":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 70
@@ -5899,9 +5897,9 @@ def fire(weapon = None):
 		else:
 			Game._game.nextState = PLAYER_CONTROL_2
 			decrease = True
-	elif weapon == "sticky bomb":
+	elif weapon.name == "sticky bomb":
 		w = StickyBomb(weaponOrigin, weaponDir, energy)
-	elif weapon == "minigun":
+	elif weapon.name == "minigun":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 20
@@ -5915,16 +5913,16 @@ def fire(weapon = None):
 		else:
 			Game._game.nextState = PLAYER_CONTROL_2
 			decrease = True
-	elif weapon == "mine":
+	elif weapon.name == "mine":
 		w = Mine(weaponOrigin, fps * 2.5)
 		w.vel.x = Game._game.objectUnderControl.facing * 0.5
-	elif weapon == "baseball":
+	elif weapon.name == "baseball":
 		Baseball()
-	elif weapon == "gas grenade":
+	elif weapon.name == "gas grenade":
 		w = GasGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon == "gravity missile":
+	elif weapon.name == "gravity missile":
 		w = GravityMissile(weaponOrigin, weaponDir, energy)
-	elif weapon == "gamma gun":
+	elif weapon.name == "gamma gun":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 2 # two shots
@@ -5935,39 +5933,39 @@ def fire(weapon = None):
 		if Game._game.shotCount == 0:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon == "holy grenade":
+	elif weapon.name == "holy grenade":
 		w = HolyGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon == "banana":
+	elif weapon.name == "banana":
 		w = Banana(weaponOrigin, weaponDir, energy)
-	elif weapon == "earthquake":
+	elif weapon.name == "earthquake":
 		Earthquake()
-	elif weapon == "gemino mine":
+	elif weapon.name == "gemino mine":
 		w = Gemino(weaponOrigin, weaponDir, energy)
-	elif weapon == "venus fly trap":
+	elif weapon.name == "venus fly trap":
 		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mode)
-	elif weapon == "sentry turret":
+	elif weapon.name == "sentry turret":
 		w = SentryGun(weaponOrigin, TeamManager._tm.currentTeam.color)
 		w.pos.y -= Game._game.objectUnderControl.radius + w.radius
-	elif weapon == "bee hive":
+	elif weapon.name == "bee hive":
 		w = BeeHive(weaponOrigin, weaponDir, energy)
-	elif weapon == "bunker buster":
+	elif weapon.name == "bunker buster":
 		w = BunkerBuster(weaponOrigin, weaponDir, energy)
 		avail = False
-	elif weapon == "electric grenade":
+	elif weapon.name == "electric grenade":
 		w = ElectricGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon == "homing missile":
+	elif weapon.name == "homing missile":
 		w = HomingMissile(weaponOrigin, weaponDir, energy)
-	elif weapon == "vortex grenade":
+	elif weapon.name == "vortex grenade":
 		w = VortexGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon == "chilli pepper":
+	elif weapon.name == "chilli pepper":
 		w = ChilliPepper(weaponOrigin, weaponDir, energy)
-	elif weapon == "covid 19":
+	elif weapon.name == "covid 19":
 		w = Covid19(weaponOrigin)
 		for worm in Game._game.objectUnderControl.team.worms:
 			w.bitten.append(worm)
-	elif weapon == "artillery assist":
+	elif weapon.name == "artillery assist":
 		w = Artillery(weaponOrigin, weaponDir, energy)
-	elif weapon == "long bow":
+	elif weapon.name == "long bow":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 3 # three shots
@@ -5980,10 +5978,10 @@ def fire(weapon = None):
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
 		avail = False
-	elif weapon == "sheep":
+	elif weapon.name == "sheep":
 		w = Sheep(weaponOrigin + Vector(0,-5))
 		w.facing = Game._game.objectUnderControl.facing
-	elif weapon == "rope":
+	elif weapon.name == "rope":
 		angle = weaponDir.getAngle()
 		if angle > 0:
 			decrease = False
@@ -5991,13 +5989,13 @@ def fire(weapon = None):
 			decrease = False
 			shootRope(weaponOrigin, weaponDir)
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "raging bull":
+	elif weapon.name == "raging bull":
 		w = Bull(weaponOrigin + Vector(0,-5))
 		w.facing = Game._game.objectUnderControl.facing
 		w.ignore.append(Game._game.objectUnderControl)
-	elif weapon == "electro boom":
+	elif weapon.name == "electro boom":
 		w = ElectroBoom(weaponOrigin, weaponDir, energy)
-	elif weapon == "portal gun":
+	elif weapon.name == "portal gun":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 2
@@ -6008,7 +6006,7 @@ def fire(weapon = None):
 		if Game._game.shotCount == 0:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "parachute":
+	elif weapon.name == "parachute":
 		if Game._game.objectUnderControl.parachuting:
 			Game._game.objectUnderControl.toggleParachute()
 			decrease = False
@@ -6018,13 +6016,13 @@ def fire(weapon = None):
 			else:
 				decrease = False
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "pokeball":
+	elif weapon.name == "pokeball":
 		w = PokeBall(weaponOrigin, weaponDir, energy)
-	elif weapon == "green shell":
+	elif weapon.name == "green shell":
 		w = GreenShell(weaponOrigin + Vector(0,-5))
 		w.facing = Game._game.objectUnderControl.facing
 		w.ignore.append(Game._game.objectUnderControl)
-	elif weapon == "laser gun":
+	elif weapon.name == "laser gun":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 70
@@ -6035,24 +6033,24 @@ def fire(weapon = None):
 		else:
 			Game._game.nextState = PLAYER_CONTROL_2
 			decrease = True
-	elif weapon == "guided missile":
+	elif weapon.name == "guided missile":
 		w = GuidedMissile(weaponOrigin + Vector(0,-5))
 		Game._game.nextState = WAIT_STABLE
-	elif weapon == "flare":
+	elif weapon.name == "flare":
 		w = Flare(weaponOrigin, weaponDir, energy)
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "ender pearl":
+	elif weapon.name == "ender pearl":
 		w = EndPearl(weaponOrigin, weaponDir, energy)
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "raon launcher":
+	elif weapon.name == "raon launcher":
 		w = Raon(weaponOrigin, weaponDir, energy * 0.95)
 		w = Raon(weaponOrigin, weaponDir, energy * 1.05)
 		if randint(0, 10) == 0 or Game._game.megaTrigger:
 			w = Raon(weaponOrigin, weaponDir, energy * 1.08)
 			w = Raon(weaponOrigin, weaponDir, energy * 0.92)
-	elif weapon == "snail":
+	elif weapon.name == "snail":
 		w = SnailShell(weaponOrigin, weaponDir, energy)
-	elif weapon == "fus ro duh":
+	elif weapon.name == "fus ro duh":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 3 # three shots
@@ -6063,7 +6061,7 @@ def fire(weapon = None):
 		if Game._game.shotCount == 0:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon == "spear":
+	elif weapon.name == "spear":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 2
@@ -6076,9 +6074,9 @@ def fire(weapon = None):
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
 		avail = False
-	elif weapon == "distorter":
+	elif weapon.name == "distorter":
 		w = Distorter(weaponOrigin, weaponDir, energy)
-	elif weapon == "bubble gun":
+	elif weapon.name == "bubble gun":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 10
@@ -6091,17 +6089,17 @@ def fire(weapon = None):
 			Game._game.nextState = PLAYER_CONTROL_2
 			Game._game.camTrack = u
 			decrease = True
-	elif weapon == "acid bottle":
+	elif weapon.name == "acid bottle":
 		w = AcidBottle(weaponOrigin, weaponDir, energy)
-	elif weapon == "seeker":
+	elif weapon.name == "seeker":
 		w = Seeker(weaponOrigin, weaponDir, energy)
-	elif weapon == "chum bucket":
+	elif weapon.name == "chum bucket":
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 2)
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 3)
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
 		w = Chum(weaponOrigin, weaponDir, energy)
-	elif weapon == "fireworks":
+	elif weapon.name == "fireworks":
 		done = False
 		decrease = False
 		if FireWorkRockets._fw:
@@ -6113,7 +6111,7 @@ def fire(weapon = None):
 		if done:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon == "trampoline":
+	elif weapon.name == "trampoline":
 		position = Game._game.objectUnderControl.pos + vectorFromAngle(Game._game.objectUnderControl.shootAngle, 20)
 		anchored = False
 		for i in range(25):
@@ -6127,22 +6125,22 @@ def fire(weapon = None):
 		Game._game.nextState = PLAYER_CONTROL_1
 
 	# artifacts
-	elif weapon == "mjolnir strike":
+	elif weapon.name == "mjolnir strike":
 		MjolnirStrike()
-	elif weapon == "mjolnir throw":
+	elif weapon.name == "mjolnir throw":
 		w = MjolnirThrow(weaponOrigin, weaponDir, energy)
-	elif weapon == "fly":
+	elif weapon.name == "fly":
 		if not MjolnirFly.flying:
 			w = MjolnirFly(weaponOrigin, weaponDir, energy)
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "control plants":
+	elif weapon.name == "control plants":
 		PlantControl()
-	elif weapon == "magic bean":
+	elif weapon.name == "magic bean":
 		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.bean)
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "mine plant":
+	elif weapon.name == "mine plant":
 		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mine)
-	elif weapon == "razor leaf":
+	elif weapon.name == "razor leaf":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 50
@@ -6154,7 +6152,7 @@ def fire(weapon = None):
 		else:
 			Game._game.nextState = PLAYER_CONTROL_2
 			decrease = True
-	elif weapon == "icicle":
+	elif weapon.name == "icicle":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 4
@@ -6167,7 +6165,7 @@ def fire(weapon = None):
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
 		avail = False
-	elif weapon == "earth spike":
+	elif weapon.name == "earth spike":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 2
@@ -6179,7 +6177,7 @@ def fire(weapon = None):
 		if Game._game.shotCount == 0:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon == "fire ball":
+	elif weapon.name == "fire ball":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
 			Game._game.shotCount = 3
@@ -6192,16 +6190,16 @@ def fire(weapon = None):
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
 		avail = False
-	elif weapon == "air tornado":
+	elif weapon.name == "air tornado":
 		w = Tornado()
-	elif weapon == "pick axe":
+	elif weapon.name == "pick axe":
 		if PickAxe._pa:
 			decrease = PickAxe._pa.mine()
 		else:
 			PickAxe()
 			decrease = False
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif weapon == "build":
+	elif weapon.name == "build":
 		if MineBuild._mb:
 			decrease = MineBuild._mb.build()
 		else:

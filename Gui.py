@@ -1,12 +1,21 @@
 
 import pygame
-from math import pi, cos, sin, atan2, sqrt, degrees
+from math import pi, cos, sin, atan2, sqrt, degrees, fmod
 from typing import Any, Tuple, List
 from abc import ABC, abstractmethod
 
 import globals
 
 from pygame import Vector2
+
+SurfacePortion = Tuple[pygame.Surface, Tuple[int, int, int, int]] | None
+
+RADIUS_LEVEL = (
+	(30, 60),
+	(65, 90)
+)
+
+SUB_BUTTON_ANGLE = pi / 10
 
 class GuiBase(ABC):
 	@abstractmethod
@@ -41,158 +50,30 @@ def draw_arc(win, center, outer_radius, inner_radius, start, end, color) -> None
 	pygame.draw.polygon(win, color, points1)
 
 
-def is_pos_in_arc(pos: Vector2, center: Vector2, inner, outer, start, end) -> bool:
+def is_pos_in_arc(pos: Vector2, center: Vector2, inner, outer, start, end, iprint=False) -> bool:
 	''' position in map space '''
 
 	pos_in_center = pos - center
+	if iprint:
+		print(pos_in_center, atan2(pos_in_center.y, pos_in_center.x))
+	
+	mouse_angle = atan2(pos_in_center.y, pos_in_center.x)
+	if mouse_angle < 0:
+		mouse_angle += 2 * pi
+
 	pos_radial = Vector2(sqrt(pos_in_center.x ** 2 + pos_in_center.y ** 2),
 					  	 atan2(pos_in_center.y, pos_in_center.x))
 	if pos_radial.y < 0:
 		pos_radial.y += 2 * pi
 	
+	# print('org', start, end)
+	# start = fmod(start - pi, 2 * pi) - pi
+	# end = fmod(end - pi, 2 * pi) - pi
+	# print('func', start, end)
+
 	if outer > pos_radial.x > inner and end > pos_radial.y > start:
 		return True
 	return False
-
-# class RadialMenu0(GuiBase):
-# 	def __init__(self, layout) -> None:
-# 		self.elements = []
-# 		self.outer_radius = 60
-# 		self.inner_radius = 30
-# 		self.build(layout)
-	
-# 	def build(self, layout) -> None:
-# 		pass
-
-# 	def step(self):
-# 		for e in self.elements:
-# 			e.step()
-			
-# 	def recalculate(self):
-# 		NumButtons = len(self.elements)
-# 		buttonArcAngle = 2 * pi / NumButtons
-# 		# update buttons rects
-# 		for i, button in enumerate(self.elements):
-# 			buttonRect = ((self.inner_radius, i * buttonArcAngle), (self.outer_radius, i * buttonArcAngle + buttonArcAngle))
-# 			button.rect = buttonRect
-			
-# 	def addButton(self, key, bgColor) -> 'RadialButton':
-# 		b = RadialButton(key, bgColor)
-# 		self.elements.insert(0, b)
-# 		self.recalculate()
-# 		return b
-		
-# 	def draw(self):
-# 		for e in self.elements:
-# 			e.draw()
-# 		if self.focus:
-# 			mouse = Vector(pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
-# 			globals.game_manager.win.blit(RadialMenu.toster[0], mouse + Vector(5,5))
-
-
-# class RadialButton0(GuiBase):
-# 	def __init__(self, key: Any, super_script: str, tool_tip: str=None, bgColor: ColorType=WHITE):
-# 		self.rect = None
-# 		self.key = key
-# 		self.bgColor = bgColor
-# 		self.selected = False
-# 		self.color = bgColor
-# 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-# 		self.tool_tip = tool_tip
-# 		self.super_script = super_script
-# 		self.tool_tip_surf = None
-# 		if tool_tip:
-# 			self.tool_tip_surf = globals.pixelFont5.render(str(self.ammo), False, BLACK)
-# 		self.subButtons = []
-# 		self.level = 0
-# 		self.category = None
-		
-# 	def step(self):
-# 		mouse = Vector(pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1]/globals.scalingFactor)
-# 		mouseInMenu = mouse - Vector(globals.winWidth // 2, globals.winHeight // 2)
-# 		mouseinner_radiusadial = Vector(sqrt(mouseInMenu[0]**2 + mouseInMenu[1]**2), atan2(mouseInMenu[1], mouseInMenu[0]))
-# 		if mouseinner_radiusadial[1] < 0:
-# 			mouseinner_radiusadial[1] += 2 * pi
-# 		if mouseinner_radiusadial[0] > self.rect[0][0] and mouseinner_radiusadial[0] < self.rect[1][0]\
-# 			and ((mouseinner_radiusadial[1] > self.rect[0][1] and mouseinner_radiusadial[1] < self.rect[1][1]) or\
-# 			(mouseinner_radiusadial[1] + 2*pi > self.rect[0][1] and mouseinner_radiusadial[1] + 2*pi < self.rect[1][1]) or\
-# 			(mouseinner_radiusadial[1] - 2*pi > self.rect[0][1] and mouseinner_radiusadial[1] - 2*pi < self.rect[1][1])):
-# 			self.selected = True
-# 			if self.level == 1:
-# 				RadialMenu.focus = True
-# 			self.color = RED
-# 			RadialMenu.events[self.level] = self.key
-# 			if self.level == 0:
-# 				RadialMenu.events[self.level + 1] = self.key
-# 			if self.level == 1 and RadialMenu.toster[1] != self.key:
-# 				textSurf = globals.pixelFont5.render(self.key, False, WHITE)
-# 				RadialMenu.toster[0] = pygame.Surface(tup2vec(textSurf.get_size()) + Vector(2,2))
-# 				RadialMenu.toster[0].blit(textSurf, (1,1))
-# 				RadialMenu.toster[1] = self.key
-# 		else:
-# 			self.selected = False
-# 			self.color =  [self.color[i] + (self.bgColor[i] - self.color[i]) * 0.2 for i in range(3)]
-
-# 		# add sub buttons
-# 		if self.level == 0:
-# 			if RadialMenu.events[self.level] == self.key and len(self.subButtons) == 0:
-# 				# self key is category, add all weapons in that category
-# 				for weapon in globals.weapon_manager.weapons:
-# 					if globals.team_manager.currentTeam.ammo(weapon) == 0:
-# 						continue
-# 					active = True
-# 					round_count = globals.game_manager.roundCounter
-# 					if globals.game_manager.useListMode and globals.game_manager.inUsedList(weapon.name) or weapon.round_delay < round_count:
-# 						active = False
-# 					if weapon.category == self.category:
-# 						b = self.addSubButton(weapon)
-# 						b.level = self.level + 1
-# 						globals.weapon_manager.blitWeaponSprite(b.surf, (0,0), weapon.name)
-# 						if not active:
-# 							b.surf.fill((200, 200, 200), special_flags= pygame.BLEND_SUB)
-# 							b.surf.fill((200, 200, 200), special_flags= pygame.BLEND_ADD)
-# 			if RadialMenu.events[self.level] != self.key:
-# 				self.subButtons.clear()
-			
-# 		for e in self.subButtons:
-# 			e.step()
-			
-# 	def recalculate(self):
-# 		offset = (self.rect[1][1] + self.rect[0][1])/2 - ((pi / 10) * len(self.subButtons)) /2
-# 		outer_radius = 90
-# 		inner_radius = 65
-# 		NumButtons = len(self.subButtons)
-# 		buttonArcAngle = pi / 10
-# 		# update buttons rects
-# 		for i, button in enumerate(self.subButtons):
-# 			buttonRect = ((inner_radius, i * buttonArcAngle + offset), (outer_radius, i * buttonArcAngle + buttonArcAngle + offset))
-# 			button.rect = buttonRect
-			
-# 	def addSubButton(self, key):
-# 		b = RadialButton(key, self.bgColor)
-# 		self.subButtons.insert(0, b)
-# 		self.recalculate()
-# 		return b
-		
-# 	def draw(self):
-# 		draw_arc(Vector(globals.winWidth // 2, globals.winHeight // 2), self.rect[1][0], self.rect[0][0], self.rect[0][1], self.rect[1][1], self.color)
-# 		if self.surf:
-# 			posRadial = (tup2vec(self.rect[0]) + tup2vec(self.rect[1])) / 2
-# 			pos = vectorFromAngle(posRadial[1], posRadial[0]) + Vector(globals.winWidth // 2, globals.winHeight // 2)
-# 			globals.game_manager.win.blit(self.surf, pos - Vector(8,8))
-# 			if self.amount:
-# 				globals.game_manager.win.blit(self.amount, pos + Vector(4,4))
-# 		for e in self.subButtons:
-# 			e.draw()
-
-SurfacePortion = Tuple[pygame.Surface, Tuple[int, int, int, int]] | None
-
-RADIUS_LEVEL = (
-	(30, 60),
-	(65, 90)
-)
-
-SUB_BUTTON_ANGLE = pi / 10
 
 class RadialButton(GuiBase):
 	def __init__(self, key: Any, tooltip: str='', super_text: str='', back_color=None, surf_portion: SurfacePortion=None, layout: List['RadialButton']=None):
@@ -256,7 +137,9 @@ class RadialButton(GuiBase):
 
 		self.in_focus = False
 		mouse = Vector2(pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
-		if is_pos_in_arc(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle):
+		if self.key.name == 'missile':
+			print(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle)
+		if is_pos_in_arc(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle, self.key.name=='missile'):
 			self.in_focus = True
 			self.color = (255,0,0)
 		
@@ -364,54 +247,3 @@ class RadialMenu(GuiBase):
 			return event
 		return None
 
-def main_test() -> None:
-	pygame.init()
-	myfont = pygame.font.SysFont('Tahoma', 16)
-	win = pygame.display.set_mode((1280, 720))
-	clock = pygame.time.Clock()
-
-	layout = [
-		RadialButton('weapon_group_1', 'missiles', '', (128,0,0), [
-			RadialButton('missile1', 'missile', '3'),
-			RadialButton('missile2', 'buster', '2'),
-			RadialButton('missile3', 'termin', '1'),
-		]),
-		RadialButton('weapon_group_2', 'grenades', '', (0,128,0), [
-			RadialButton('grenade1', 'g1', '6'),
-			RadialButton('grenade2', 'g2', '3'),
-			RadialButton('grenade3', 'g3', '7'),
-		]),
-		RadialButton('weapon_group_3', 'tools', '', (0,0,128), [
-			RadialButton('tool1', 'tool1', '8'),
-			RadialButton('tool2', 'tool2', '2'),
-			RadialButton('tool3', 'tool3', '9'),
-		]),
-	]
-
-	radial_menu = RadialMenu(layout, Vector2(win.get_width() / 2, win.get_height() / 2))
-	
-	run = True
-	while run:
-		for event in pygame.event.get():
-			radial_menu.handle_event(event)
-			if event.type == pygame.QUIT:
-				run = False
-			
-		keys = pygame.key.get_pressed()
-		if keys[pygame.K_ESCAPE]:
-			run = False
-		
-		# step
-		radial_menu.step()
-		
-		# draw
-		win.fill((255,255,255))
-		radial_menu.draw(win)
-		
-		clock.tick(30)
-		pygame.display.update()
-	pygame.quit()
-		
-
-if __name__ == '__main__':
-	main_test()

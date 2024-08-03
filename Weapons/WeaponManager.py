@@ -195,7 +195,7 @@ class WeaponManager:
             return False
         
         # if not active
-        if not self.currentActive():
+        if not self.is_current_weapon_active():
             return False
 
         # if in use list
@@ -244,22 +244,25 @@ class WeaponManager:
                     globals.team_manager.currentTeam.ammo(w[0], 3, True)
                     continue
                 globals.team_manager.currentTeam.ammo(w[0], -1, True)
+
     def currentArtifact(self):
         if self.getCategory(self.currentWeapon) == CATEGORY_ARTIFACTS:
             return self.weapons[self.currentIndex()][6]
+
     def currentIndex(self):
         return self.currentWeapon.index
     
-    def currentActive(self) -> bool:
+    def is_current_weapon_active(self) -> bool:
         ''' check if current weapon active in this round '''
-        return self.currentWeapon.round_delay <= globals.game_manager.roundCounter
+        return (self.currentWeapon.round_delay <= globals.game_manager.roundCounter and
+                not self.currentWeapon in self.cool_down_list)
     
     def renderWeaponCount(self):
         ''' changes surf to fit current weapon '''
         color = globals.game_manager.HUDColor
         # if no ammo in current team
         ammo = globals.team_manager.currentTeam.ammo(WeaponManager._wm.currentWeapon)
-        if ammo == 0 or not self.currentActive() or (globals.game_manager.useListMode and self.currentWeapon in self.cool_down_list):
+        if ammo == 0 or not self.is_current_weapon_active() or (globals.game_manager.useListMode and self.currentWeapon in self.cool_down_list):
             color = GREY
         weaponStr = self.currentWeapon.name
 
@@ -352,10 +355,10 @@ class WeaponManager:
                 space += self.cool_down_list_surfaces[i-1].get_width() + 10
                 win.blit(surf, (30 + space, globals.winHeight - 5 - surf.get_height()))
 
-    def drawWeaponIndicators(self):
-        return
+    def drawWeaponIndicators(self) -> None:
         ''' draw specific weapon indicator '''
-        if WeaponManager._wm.currentWeapon in ["homing missile", "seeker"] and HomingMissile.showTarget:
+        return
+        if WeaponManager._wm.currentWeapon.name in ["homing missile", "seeker"] and HomingMissile.showTarget:
             drawTarget(HomingMissile.Target)
         if WeaponManager._wm.currentWeapon == "girder" and globals.game_manager.state == PLAYER_CONTROL_1:
             globals.game_manager.drawGirderHint()
