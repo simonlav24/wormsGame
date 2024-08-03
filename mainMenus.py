@@ -18,6 +18,8 @@ import tkinter
 from tkinter.filedialog import askopenfile
 import xml.etree.ElementTree as ET
 
+from GameConfig import *
+
 
 
 trueFalse = ["-f", "-dig", "-dark", "-used", "-closed", "-warped", "-rg", "-place", "-art"]
@@ -216,7 +218,7 @@ class MainMenu:
 
 		subMode = Menu(orientation=HORIZONTAL, customSize=15)
 		subMode.insert(MENU_TEXT, text="game mode")
-		subMode.insert(MENU_COMBOS, key="--game_mode", text="battle", items=["battle", "points", "terminator", "targets", "david vs goliath", "ctf", "arena", "missions"])
+		subMode.insert(MENU_COMBOS, key="--game_mode", text=list(GameMode)[0].value, items=[mode.value for mode in GameMode])
 		optionsMenu.addElement(subMode)
 
 		# toggles
@@ -494,43 +496,38 @@ def menuPop():
 def playOnPress():
 	values = evaluateMenuForm()
 	string = ""
+
+	# create default config
+	game_config = GameConfig()
+
 	for key in values.keys():
 		if key[0] == "-":
 			if key == "--game_mode":
-				modeDict = {"battle": 0, "points": 1, "terminator": 2, "targets": 3, "david vs goliath": 4, "ctf": 5, "arena": 6, "missions": 7}
-				string += key + " " + str(modeDict[values[key]]) + " "
+				game_config.game_mode = GameMode(values[key])
 				continue
 			if key in trueFalse:
 				if values[key]:
 					string += key + " "
 				continue
 			if key == "-random":
-				if values[key] == "none":
-					continue
-				string += key + " "
 				if values[key] == "in team":
-					string += "2" + " "
+					game_config.random_mode = RandomMode.IN_TEAM
 				else:
-					string += "1" + " "
+					game_config.random_mode = RandomMode.COMPLETE
 				continue
 			if key == "-map":
-				string += key + " " + values[key] + " "
+				game_config.map_path = values[key]
 				continue
-			if key == "-ratio" and values[key] == "":
-				continue
-			string += key + " " + str(values[key]) + " "
+			if key == "-ratio" and values[key] != "":
+				game_config.map_ratio = int(values[key])
 		if key == "sudden death style":
 			if values[key] == "tsunami":
-				string += "-sdt "
+				game_config.sudden_death_style = SuddenDeathMode.FLOOD
 			if values[key] == "plague":
-				string += "-sdp "
-		if key == "weapon set":
-			if values[key] == "default":
-				continue
-			string += "-ws " + values[key] + " "
+				game_config.sudden_death_style = SuddenDeathMode.PLAGUE
 
-	if debug: print(string)
-	MainMenu._mm.gameParameters = string
+	print(game_config)
+	MainMenu._mm.gameParameters = game_config
 	MainMenu._mm.run = False
 
 def drawRecordGraph():
@@ -561,14 +558,12 @@ def countWin():
 def continueOnPress():
 	Menu._reg.pop(0)
 
-def mainMenu(args, fromGameParameters=None, toGameParameters=None):
+def mainMenu(fromGameParameters=None, toGameParameters=None):
 
 	# clear menus
 	Menu._reg.clear()
 	graphObject.Graph._reg.clear()
 
-	if args.no_menu:
-		return
 	BackGround()
 	MainMenu()
 	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])

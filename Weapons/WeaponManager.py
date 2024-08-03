@@ -134,11 +134,11 @@ class WeaponManager:
         #self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf, AVATAR: Avatar, MINECRAFT: PickAxeArtifact}
 
         # read weapon set if exits and adjust basic set
-        if globals.game_manager.args.weapon_set != "":
+        if globals.game_manager.game_config.weapon_set is not None:
             # zero out basic set
             self.basic_set = [0 for i in self.basic_set]
 
-            weaponSet = ET.parse('./assets/weaponsSets/' + globals.game_manager.args.weapon_set + '.xml').getroot()
+            weaponSet = ET.parse('./assets/weaponsSets/' + globals.game_manager.game_config.weapon_set + '.xml').getroot()
             for weapon in weaponSet:
                 name = weapon.attrib["name"]
                 amount = int(weapon.attrib["amount"])
@@ -199,7 +199,7 @@ class WeaponManager:
             return False
 
         # if in use list
-        if globals.game_manager.useListMode and self.currentWeapon in self.cool_down_list:
+        if globals.game_manager.game_config.option_cool_down and self.currentWeapon in self.cool_down_list:
             return False
         
         if (not globals.game_manager.playerControl) or (not globals.game_manager.playerMoveable) or (not globals.game_manager.playerShootAble):
@@ -246,7 +246,7 @@ class WeaponManager:
                 globals.team_manager.currentTeam.ammo(w[0], -1, True)
 
     def currentArtifact(self):
-        if self.getCategory(self.currentWeapon) == CATEGORY_ARTIFACTS:
+        if self.currentWeapon.category == WeaponCategory.ARTIFACTS:
             return self.weapons[self.currentIndex()][6]
 
     def currentIndex(self):
@@ -262,7 +262,7 @@ class WeaponManager:
         color = globals.game_manager.HUDColor
         # if no ammo in current team
         ammo = globals.team_manager.currentTeam.ammo(WeaponManager._wm.currentWeapon)
-        if ammo == 0 or not self.is_current_weapon_active() or (globals.game_manager.useListMode and self.currentWeapon in self.cool_down_list):
+        if ammo == 0 or not self.is_current_weapon_active() or (globals.game_manager.game_config.option_cool_down and self.currentWeapon in self.cool_down_list):
             color = GREY
         weaponStr = self.currentWeapon.name
 

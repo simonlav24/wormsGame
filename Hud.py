@@ -5,6 +5,7 @@ from random import choice, uniform
 import globals
 from Constants import *
 from vector import *
+from GameConfig import GameMode
 
 class HealthBar:
 	''' team health bar calculations and drawing '''
@@ -20,11 +21,11 @@ class HealthBar:
 		self.maxHealth = 0
 		HealthBar.drawBar = True
 		HealthBar.drawPoints = True
-		if globals.game_manager.diggingMatch:
+		if globals.game_manager.game_config.option_digging:
 			HealthBar.drawBar = False
 	def calculateInit(self):
-		self.maxHealth = globals.team_manager.nWormsPerTeam * globals.game_manager.initialHealth
-		if globals.game_manager.gameMode == DAVID_AND_GOLIATH:
+		self.maxHealth = globals.team_manager.nWormsPerTeam * globals.game_manager.game_config.worm_initial_health
+		if globals.game_manager.gameMode == GameMode.DAVID_AND_GOLIATH:
 			self.maxHealth = int(globals.game_manager.initialHealth/(1+0.5*(globals.team_manager.nWormsPerTeam - 1))) * globals.team_manager.nWormsPerTeam
 		for i, team in enumerate(globals.team_manager.teams):
 			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
@@ -61,7 +62,7 @@ class HealthBar:
 				value = 1
 			if not value == 0:
 				pygame.draw.rect(globals.game_manager.win, (220,220,220), (int(globals.winWidth - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
-			if globals.game_manager.gameMode == CAPTURE_THE_FLAG:
+			if globals.game_manager.gameMode == GameMode.CAPTURE_THE_FLAG:
 				if globals.team_manager.teams[i].flagHolder:
 					pygame.draw.circle(globals.game_manager.win, (220,0,0), (int(globals.winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
 					
