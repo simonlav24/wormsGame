@@ -54,8 +54,8 @@ def is_pos_in_arc(pos: Vector2, center: Vector2, inner, outer, start, end, iprin
 	''' position in map space '''
 
 	pos_in_center = pos - center
-	if iprint:
-		print(pos_in_center, atan2(pos_in_center.y, pos_in_center.x))
+	# if iprint:
+	# 	print(pos_in_center, atan2(pos_in_center.y, pos_in_center.x))
 	
 	mouse_angle = atan2(pos_in_center.y, pos_in_center.x)
 	if mouse_angle < 0:
@@ -137,8 +137,8 @@ class RadialButton(GuiBase):
 
 		self.in_focus = False
 		mouse = Vector2(pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
-		if self.key.name == 'missile':
-			print(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle)
+		# if self.key.name == 'missile':
+		# 	print(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle)
 		if is_pos_in_arc(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle, self.key.name=='missile'):
 			self.in_focus = True
 			self.color = (255,0,0)
