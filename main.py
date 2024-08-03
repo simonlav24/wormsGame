@@ -74,7 +74,6 @@ class Game:
 		self.airStrikeSpr = pixelFont10.render(">>>", False, BLACK)
 
 		self.killList = []
-		self.useList = []
 		self.lstep = 0
 		self.lstepmax = 1
 
@@ -306,12 +305,27 @@ class Game:
 			args.feel_index = randint(0, len(feels) - 1)
 		self.feelColor = feels[args.feel_index]
 		self.args = args
+	def handle_event(self, event) -> bool:
+		''' handle pygame event, return true if event handled '''
+		is_handled = False
+
+		if self.radial_weapon_menu:
+			self.radial_weapon_menu.handle_event(event)
+			menu_event = self.radial_weapon_menu.get_event()
+			if menu_event:
+				globals.weapon_manager.switchWeapon(menu_event)
+				self.radial_weapon_menu = None
+				is_handled = True
+		
+		is_handled |= globals.weapon_manager.handle_event(event)
+		
+		return is_handled
+				
+
 	def step(self):
 		pass
-	def addToUseList(self, string):
-		self.useList.append([pixelFont5halo.render(string, False, self.HUDColor), string])
-		if len(self.useList) > 4:
-			self.useList.pop(0)
+	
+	
 	def addToScoreList(self, amount=1):
 		"""add to score list if points, list entry: (surf, name, score)"""
 		if len(self.killList) > 0 and self.killList[0][1] == self.objectUnderControl.nameStr:
@@ -319,23 +333,7 @@ class Game:
 			self.killList.pop(0)
 		string = self.objectUnderControl.nameStr + ": " + str(amount)
 		self.killList.insert(0, (pixelFont5halo.render(string, False, self.HUDColor), self.objectUnderControl.nameStr, amount))
-	def drawUseList(self):
-		space = 0
-		for i, usedWeapon in enumerate(self.useList):
-			if i == 0:
-				win.blit(usedWeapon[0], (30 + 80 * i,winHeight - 5 - usedWeapon[0].get_height()))
-			else:
-				space += self.useList[i-1][0].get_width() + 10
-				win.blit(usedWeapon[0], (30 + space, winHeight - 5 - usedWeapon[0].get_height()))
-	def inUsedList(self, string):
-		if not self.useListMode:
-			return False
-		used = False
-		for i in self.useList:
-			if string == i[1]:
-				used = True
-				break
-		return used
+
 	def lstepper(self):
 		self.lstep += 1
 		pos = (winWidth/2 - Game._game.loadingSurf.get_width()/2, winHeight/2 - Game._game.loadingSurf.get_height()/2)
@@ -6237,11 +6235,11 @@ def fire(weapon = None):
 	
 	# for uselist:
 	if Game._game.useListMode and (Game._game.state == PLAYER_CONTROL_2 or Game._game.state == WAIT_STABLE):
-		Game._game.addToUseList(WeaponManager._wm.currentWeapon)
+		globals.weapon_manager.add_to_cool_down(globals.weapon_manager.currentWeapon)
 
 def fireClickable():
 	decrease = True
-	if not Game._game.radial_weapon_menu is None or Game._game.inUsedList(WeaponManager._wm.currentWeapon):
+	if not Game._game.radial_weapon_menu is None:
 		return
 	if TeamManager._tm.currentTeam.ammo(WeaponManager._wm.currentWeapon) == 0:
 		return
@@ -6265,12 +6263,12 @@ def fireClickable():
 		TeamManager._tm.currentTeam.ammo(WeaponManager._wm.currentWeapon, -1)
 	
 	if Game._game.useListMode and (Game._game.nextState == PLAYER_CONTROL_2 or Game._game.nextState == WAIT_STABLE) and addToUsed:
-		Game._game.addToUseList(WeaponManager._wm.currentWeapon)
+		globals.weapon_manager.add_to_cool_down(globals.weapon_manager.currentWeapon)
 	
 	WeaponManager._wm.renderWeaponCount()
 	TimeManager._tm.timeRemaining(Game._game.retreatTime)
 	Game._game.state = Game._game.nextState
-
+  
 def fireUtility(weapon = None):
 	if not weapon:
 		weapon = WeaponManager._wm.currentWeapon
@@ -6534,6 +6532,22 @@ def checkWinners():
 	return end
 
 def cycleWorms():
+	''' switch to next worm and set up 
+		reset special effect
+		comments about damage
+		check for winners
+		make objects that are playing in between play
+		deploy packs / artifacts
+		handle water rise if flood
+		update weapons delay (should be removed)
+		flare reduction
+		sick worms
+		chose next worm
+	
+	'''
+
+
+
 	# reset special effects:
 	Game._game.globalGravity = 0.2
 	Game._game.damageMult = 0.8
@@ -6683,8 +6697,6 @@ def cycleWorms():
 
 	# update weapons delay (and targets)
 	if Game._game.roundCounter % TeamManager._tm.totalTeams == 0:
-		WeaponManager._wm.updateDelay()
-	
 		if Game._game.gameMode == TARGETS:
 			ShootingTarget.numTargets -= 1
 			if ShootingTarget.numTargets == 0:
@@ -6827,26 +6839,7 @@ def dropArtifact(artifact, pos, comment=False):
 	Game._game.camTrack = m
 
 ################################################################################ Gui
-
-def clickInRadialMenu(weapon: Weapon):
-	if weapon == None:
-		return
-	if Game._game.useListMode and Game._game.inUsedList(weapon):
-		return
-	if WeaponManager._wm.weapons[WeaponManager._wm.weaponDict[weapon]][5] != 0:
-		return
 	
-	if WeaponManager._wm.getCategory(weapon) == CATEGORY_WEAPONS:
-		WeaponManager._wm.switchWeapon(weapon)
-		
-	if WeaponManager._wm.getCategory(weapon) == CATEGORY_UTILITIES:
-		fireUtility(weapon)
-		
-	if WeaponManager._wm.getCategory(weapon) == CATEGORY_ARTIFACTS:
-		WeaponManager._wm.switchWeapon(weapon)
-	
-	# delete menu
-	Game._game.radial_weapon_menu = None
 
 def weaponMenuRadialInit():
 	# get categories
@@ -7467,22 +7460,6 @@ def gameDistable():
 	Game._game.gameStable = False
 	Game._game.gameStableCounter = 0
 
-def canShoot(force=False):
-	# if no ammo
-	if TeamManager._tm.currentTeam.ammo(WeaponManager._wm.currentWeapon) == 0:
-		return False
-	# if delayed
-	if WeaponManager._wm.getCurrentDelay() != 0:
-		return False
-	# if in use list
-	if Game._game.useListMode and Game._game.inUsedList(WeaponManager._wm.currentWeapon):
-		return False
-	if force:
-		return True
-	if (not Game._game.playerControl) or (not Game._game.playerMoveable) or (not Game._game.playerShootAble):
-		return False
-	return True
-
 def pickVictim():
 	Game._game.terminatorHit = False
 	worms = []
@@ -7705,7 +7682,7 @@ def stateMachine():
 			MissionManager._mm.cycle()
 		Game._game.camTrack = w
 		TimeManager._tm.timeReset()
-		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon.name, force=True)
+		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon, force=True)
 		Game._game.nextState = PLAYER_CONTROL_1
 		Game._game.state = Game._game.nextState
 	elif Game._game.state == PLAYER_CONTROL_1:
@@ -7770,7 +7747,8 @@ def onKeyPressLeft():
 	Game._game.camTrack = Game._game.objectUnderControl
 
 def onKeyPressSpace():
-	if not canShoot():
+	if not globals.weapon_manager.can_shoot():
+		print('cant shoot')
 		return
 
 	if WeaponManager._wm.currentWeapon.style == WeaponStyle.CHARGABLE:
@@ -7792,7 +7770,7 @@ def onKeyHoldSpace():
 			Game._game.fireWeapon = True
 
 def onKeyReleaseSpace():
-	if canShoot():
+	if globals.weapon_manager.can_shoot():
 		if Game._game.timeTravel:
 			TimeTravel._tt.timeTravelPlay()
 			Game._game.energyLevel = 0
@@ -7898,11 +7876,9 @@ def gameMain(gameParameters=None):
 				
 		# events
 		for event in pygame.event.get():
-			if Game._game.radial_weapon_menu:
-				Game._game.radial_weapon_menu.handle_event(event)
-				menu_event = Game._game.radial_weapon_menu.get_event()
-				if menu_event:
-					clickInRadialMenu(menu_event)
+			is_handled = Game._game.handle_event(event)
+			if is_handled:
+				continue
 			if event.type == pygame.QUIT:
 				globals.exitGame()
 			# mouse click event
@@ -7961,58 +7937,6 @@ def gameMain(gameParameters=None):
 					if event.key == pygame.K_SPACE:
 						onKeyPressSpace()
 					# weapon change by keyboard
-					if Game._game.state == PLAYER_CONTROL_1:
-						weaponsSwitch = False
-						if event.key == pygame.K_1:
-							keyWeapons = ["missile", "gravity missile", "homing missile"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_2:
-							keyWeapons = ["grenade", "sticky bomb", "electric grenade"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_3:
-							keyWeapons = ["mortar", "raon launcher"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_4:
-							keyWeapons = ["petrol bomb", "flame thrower"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_5:
-							keyWeapons = ["TNT", "mine", "sheep"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_6:
-							keyWeapons = ["shotgun", "long bow", "gamma gun", "laser gun"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_7:
-							keyWeapons = ["girder", "baseball"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_8:
-							keyWeapons = ["bunker buster", "laser gun", "minigun"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_9:
-							keyWeapons = ["minigun"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_0:
-							keyWeapons = []
-							for i, w in enumerate(TeamManager._tm.currentTeam.weaponCounter):
-								if w > 0 or w == -1:
-									if WeaponManager._wm.weapons[i][3] in [LEGENDARY, ARTIFACTS]:
-										keyWeapons.append(WeaponManager._wm.weapons[i][0])
-							weaponsSwitch = True
-						elif event.key == pygame.K_MINUS:
-							keyWeapons = ["rope"]
-							weaponsSwitch = True
-						elif event.key == pygame.K_EQUALS:
-							keyWeapons = ["parachute"]
-							weaponsSwitch = True
-						if weaponsSwitch:
-							if len(keyWeapons) > 0:
-								if WeaponManager._wm.currentWeapon in keyWeapons:
-									index = keyWeapons.index(WeaponManager._wm.currentWeapon)
-									index = (index + 1) % len(keyWeapons)
-									weaponSwitch = keyWeapons[index]
-								else:
-									weaponSwitch = keyWeapons[0]
-							WeaponManager._wm.switchWeapon(weaponSwitch)
-							WeaponManager._wm.renderWeaponCount()
 					# misc
 					if event.key == pygame.K_ESCAPE:
 						pause = not pause
@@ -8216,7 +8140,8 @@ def gameMain(gameParameters=None):
 		Commentator._com.step()
 		# draw weapon indicators
 		WeaponManager._wm.drawWeaponIndicators()
-		if Game._game.useListMode: Game._game.drawUseList()
+		WeaponManager._wm.draw()
+		
 		# draw health bar
 		if not Game._game.state in [RESET, GENERATE_MAP, PLACING_WORMS, CHOOSE_STARTER] and Game._game.drawHealthBar: HealthBar._healthBar.step()
 		if not Game._game.state in [RESET, GENERATE_MAP, PLACING_WORMS, CHOOSE_STARTER] and Game._game.drawHealthBar: HealthBar._healthBar.draw() # teamHealthDraw()

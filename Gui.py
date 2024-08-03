@@ -310,6 +310,7 @@ class RadialMenu(GuiBase):
 		self.build()
 
 		self.last_focused: RadialButton = None
+		self.event = None
 
 	def build(self) -> None:
 		element_angle: float = 2 * pi / len(self.layout)
@@ -328,7 +329,7 @@ class RadialMenu(GuiBase):
 	def handle_event(self, event) -> None:
 		for element in self.elements:
 			returned_event = element.handle_event(event)
-			if event is not None:
+			if returned_event is not None:
 				self.event = returned_event
 
 	def step(self) -> None:

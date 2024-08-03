@@ -6,7 +6,7 @@ from typing import List, Dict
 
 import pygame
 import globals
-from Constants import GREY
+from Constants import GREY, PLAYER_CONTROL_1
 from Common import * 
 
 # todo: rename some of this enums
@@ -79,6 +79,10 @@ class WeaponManager:
         globals.weapon_manager = self
         self.weapons: List[Weapon] = [] #	  name					style	amount	category	fused	delay
         weapon_index = 0
+
+        self.cool_down_list: List[Weapon] = [] # weapon cool down list
+        self.cool_down_list_surfaces: List[pygame.Surface] = []
+
         # styleDict = {"CHARGABLE": CHARGABLE, "GUN": GUN, "PUTABLE": PUTABLE, "CLICKABLE": CLICKABLE, "UTILITY": UTILITY}
         # categDict = {"MISSILES": MISSILES, "GRENADES": GRENADES, "GUNS": GUNS, "FIREY": FIREY, "BOMBS": BOMBS, "TOOLS": TOOLS,
         #                 "AIRSTRIKE": AIRSTRIKE, "LEGENDARY": LEGENDARY}
@@ -161,6 +165,15 @@ class WeaponManager:
     #     else:
     #         return CATEGORY_ARTIFACTS
 
+    def add_to_cool_down(self, weapon: Weapon) -> None:
+        ''' add weapon to list of cool downs '''
+        self.cool_down_list_surfaces.append(globals.pixelFont5halo.render(weapon.name, False, globals.game_manager.HUDColor))
+        self.cool_down_list.append(weapon)
+
+        if len(self.cool_down_list) > 4:
+            self.cool_down_list_surfaces.pop(0)
+            self.cool_down_list.pop(0)
+
     def get_weapons_list_of_category(self, category: WeaponCategory) -> List[Weapon]:
         return [weapon for weapon in self.weapons if weapon.category == category]
 
@@ -175,9 +188,28 @@ class WeaponManager:
         ''' get weapon by name '''
         return self.weapon_dict[name]
 
-    def switchWeapon(self, weapon_name: str, force=False):
+    def can_shoot(self) -> bool:
+        ''' check if can shoot current weapon '''
+        # if no ammo
+        if globals.team_manager.currentTeam.ammo(WeaponManager._wm.currentWeapon) == 0:
+            return False
+        
+        # if not active
+        if not self.currentActive():
+            return False
+
+        # if in use list
+        if globals.game_manager.useListMode and self.currentWeapon in self.cool_down_list:
+            return False
+        
+        if (not globals.game_manager.playerControl) or (not globals.game_manager.playerMoveable) or (not globals.game_manager.playerShootAble):
+            return False
+        
+        return True
+
+    def switchWeapon(self, weapon: Weapon, force=False):
         """ switch weapon and draw weapon sprite """
-        self.currentWeapon = self.get_weapon(weapon_name)
+        self.currentWeapon = weapon
         self.renderWeaponCount()
 
         globals.game_manager.weaponHold.fill((0,0,0,0))
@@ -217,16 +249,17 @@ class WeaponManager:
             return self.weapons[self.currentIndex()][6]
     def currentIndex(self):
         return self.currentWeapon.index
+    
     def currentActive(self) -> bool:
         ''' check if current weapon active in this round '''
-        return self.currentWeapon.round_delay < globals.game_manager.roundCounter
+        return self.currentWeapon.round_delay <= globals.game_manager.roundCounter
     
     def renderWeaponCount(self):
         ''' changes surf to fit current weapon '''
         color = globals.game_manager.HUDColor
         # if no ammo in current team
         ammo = globals.team_manager.currentTeam.ammo(WeaponManager._wm.currentWeapon)
-        if ammo == 0 or self.currentActive() or (globals.game_manager.useListMode and globals.game_manager.inUsedList(self.currentWeapon)):
+        if ammo == 0 or not self.currentActive() or (globals.game_manager.useListMode and self.currentWeapon in self.cool_down_list):
             color = GREY
         weaponStr = self.currentWeapon.name
 
@@ -248,6 +281,76 @@ class WeaponManager:
         for w in self.weapons:
             if not w[5] == 0:
                 w[5] -= 1
+
+    def handle_event(self, event) -> bool:
+        ''' handle pygame events '''
+        # weapon change by keyboard
+        if globals.game_manager.state == PLAYER_CONTROL_1:
+            if not event.type == pygame.KEYDOWN:
+                return False
+            weaponsSwitch = False
+            if event.key == pygame.K_1:
+                keyWeapons = [self.weapon_dict[w] for w in ["missile", "gravity missile", "homing missile"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_2:
+                keyWeapons = [self.weapon_dict[w] for w in ["grenade", "sticky bomb", "electric grenade"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_3:
+                keyWeapons = [self.weapon_dict[w] for w in ["mortar", "raon launcher"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_4:
+                keyWeapons = [self.weapon_dict[w] for w in ["petrol bomb", "flame thrower"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_5:
+                keyWeapons = [self.weapon_dict[w] for w in ["TNT", "mine", "sheep"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_6:
+                keyWeapons = [self.weapon_dict[w] for w in ["shotgun", "long bow", "gamma gun", "laser gun"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_7:
+                keyWeapons = [self.weapon_dict[w] for w in ["girder", "baseball"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_8:
+                keyWeapons = [self.weapon_dict[w] for w in ["bunker buster", "laser gun", "minigun"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_9:
+                keyWeapons = [self.weapon_dict[w] for w in ["minigun"]]
+                weaponsSwitch = True
+            elif event.key == pygame.K_0:
+                keyWeapons = []
+                for i, w in enumerate(TeamManager._tm.currentTeam.weaponCounter):
+                    if w > 0 or w == -1:
+                        if WeaponManager._wm.weapons[i][3] in [LEGENDARY, ARTIFACTS]:
+                            keyWeapons.append(WeaponManager._wm.weapons[i][0])
+                weaponsSwitch = True
+            elif event.key == pygame.K_MINUS:
+                keyWeapons = ["rope"]
+                weaponsSwitch = True
+            elif event.key == pygame.K_EQUALS:
+                keyWeapons = ["parachute"]
+                weaponsSwitch = True
+            if weaponsSwitch:
+                if len(keyWeapons) > 0:
+                    if WeaponManager._wm.currentWeapon in keyWeapons:
+                        index = keyWeapons.index(WeaponManager._wm.currentWeapon)
+                        index = (index + 1) % len(keyWeapons)
+                        weaponSwitch = keyWeapons[index]
+                    else:
+                        weaponSwitch = keyWeapons[0]
+                WeaponManager._wm.switchWeapon(weaponSwitch)
+                WeaponManager._wm.renderWeaponCount()
+        return False
+
+    def draw(self) -> None:
+        # draw use list
+        win = globals.game_manager.win
+        space = 0
+        for i, surf in enumerate(self.cool_down_list_surfaces):
+            if i == 0:
+                win.blit(surf, (30 + 80 * i, globals.winHeight - 5 - surf.get_height()))
+            else:
+                space += self.cool_down_list_surfaces[i-1].get_width() + 10
+                win.blit(surf, (30 + space, globals.winHeight - 5 - surf.get_height()))
 
     def drawWeaponIndicators(self):
         return
