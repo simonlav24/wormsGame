@@ -180,7 +180,7 @@ class Game:
 
 		# reset time
 		TimeManager._tm.timeReset()
-		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon, force=True)
+		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon)
 
 		# handle game mode
 		self.init_handle_game_mode()
@@ -6827,7 +6827,7 @@ def cycleWorms():
 	
 		Game._game.objectUnderControl = w
 		Game._game.camTrack = Game._game.objectUnderControl
-		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon, force=True)
+		WeaponManager._wm.switchWeapon(WeaponManager._wm.currentWeapon)
 		if Game._game.gameMode == GameMode.MISSIONS:
 			MissionManager._mm.cycle()
 

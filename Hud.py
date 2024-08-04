@@ -65,7 +65,6 @@ class HealthBar:
 			if globals.game_manager.gameMode == GameMode.CAPTURE_THE_FLAG:
 				if globals.team_manager.teams[i].flagHolder:
 					pygame.draw.circle(globals.game_manager.win, (220,0,0), (int(globals.winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
-					
 
 class Commentator:
 	''' comment pop ups '''

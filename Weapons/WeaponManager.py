@@ -1,5 +1,5 @@
 
-import xml.etree.ElementTree as ET
+import json
 from enum import Enum
 from pydantic import BaseModel
 from typing import List, Dict
@@ -9,7 +9,6 @@ import globals
 from Constants import GREY, PLAYER_CONTROL_1
 from Common import * 
 
-# todo: rename some of this enums
 
 class WeaponStyle(Enum):
     CHARGABLE = 0
@@ -67,59 +66,22 @@ class Weapon(BaseModel):
         ''' returns weapons background color '''
         return weapon_bg_color[self.category]
 
-
-
-# todo: why is missile amount 1??? 
-
 class WeaponManager:
     ''' weapons manager '''
     _wm = None
-    def __init__(self):
+    def __init__(self) -> None:
         WeaponManager._wm = self
         globals.weapon_manager = self
-        self.weapons: List[Weapon] = [] #	  name					style	amount	category	fused	delay
-        weapon_index = 0
 
         self.cool_down_list: List[Weapon] = [] # weapon cool down list
-        self.cool_down_list_surfaces: List[pygame.Surface] = []
+        self.cool_down_list_surfaces: List[pygame.Surface] = [] # weapon cool down surfaces
 
-        # styleDict = {"CHARGABLE": CHARGABLE, "GUN": GUN, "PUTABLE": PUTABLE, "CLICKABLE": CLICKABLE, "UTILITY": UTILITY}
-        # categDict = {"MISSILES": MISSILES, "GRENADES": GRENADES, "GUNS": GUNS, "FIREY": FIREY, "BOMBS": BOMBS, "TOOLS": TOOLS,
-        #                 "AIRSTRIKE": AIRSTRIKE, "LEGENDARY": LEGENDARY}
-        # artifDict = {"MJOLNIR": MJOLNIR, "PLANT_MASTER": PLANT_MASTER, "AVATAR": AVATAR, "MINECRAFT": MINECRAFT}
-
-        groups = ET.parse('weapons.xml').getroot()
-        for weapon in groups[0]:
-            name = weapon.attrib["name"]
-            style = WeaponStyle[weapon.attrib["style"]]
-            amount = int(weapon.attrib["amount"])
-            category = WeaponCategory[weapon.attrib["category"]]
-            fused = True if weapon.attrib["fused"] == "True" else False
-            delay = int(weapon.attrib["delay"])
-            
-            weapon = Weapon(index=weapon_index, name=name, style=style, category=category, initial_amount=amount, is_fused=fused, round_delay=delay)
-            weapon_index += 1
-            self.weapons.append(weapon)
-
-        for weapon in groups[1]:
-            name = weapon.attrib["name"]
-            style = WeaponStyle[weapon.attrib["style"]]
-            weapon = Weapon(index=weapon_index, name=name, style=style, category=WeaponCategory.UTILITIES, initial_amount=0)
-            weapon_index += 1
-            self.weapons.append(weapon)
-
-        for weapon in groups[2]:
-            name = weapon.attrib["name"]
-            style = WeaponStyle[weapon.attrib["style"]]
-            artifact = ArtifactType[weapon.attrib["artifact"]]
-            weapon = Weapon(index=weapon_index, name=name, style=style, category=WeaponCategory.ARTIFACTS, initial_amount=0, artifact=artifact)
-            weapon_index += 1
-            self.weapons.append(weapon)
-
-        self.weaponCount = len(groups[0])
-        self.utilityCount = len(groups[1])
-        self.artifactCount = len(groups[2])
-
+        # load weapons
+        with open('weapons.json', 'r') as file:
+            data = json.load(file)
+        
+        self.weapons: List[Weapon] = [Weapon.model_validate(weapon) for weapon in data]
+        
         mapped = map(lambda x: x.name, self.weapons)
         self.weapon_dict: Dict[str, Weapon] = {key: value for key, value in zip(list(mapped), self.weapons)}
 
@@ -130,9 +92,6 @@ class WeaponManager:
         self.surf = globals.pixelFont5.render(self.currentWeapon.name, False, globals.game_manager.HUDColor)
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
-        # todo: this
-        #self.artifactDict = {MJOLNIR: Mjolnir, PLANT_MASTER: MagicLeaf, AVATAR: Avatar, MINECRAFT: PickAxeArtifact}
-
         # read weapon set if exits and adjust basic set
         if globals.game_manager.game_config.weapon_set is not None:
             # zero out basic set
@@ -144,27 +103,6 @@ class WeaponManager:
                 amount = int(weapon.attrib["amount"])
                 self.basic_set[self.weaponDict[name]] = amount
 
-    # def getStyle(self, string):
-    #     return self.weapons[self.weaponDict[string]][1]
-    # def getCurrentStyle(self):
-    #     return self.getStyle(self.currentWeapon)
-    # def getCurrentDelay(self):
-    #     return self.weapons[self.weaponDict[self.currentWeapon]][5]
-    # def getFused(self, string):
-    #     return self.weapons[self.weaponDict[string]][4]
-    # def getBackColor(self, string):
-    #     return self.weapons[self.weaponDict[string]][3]
-    # def getCategory(self, string):
-    #     if self.weapons[self.weaponDict[string]][1] == UTILITY:
-    #         return CATEGORY_UTILITIES
-    #     index = self.weaponDict[string]
-    #     if index < self.weaponCount:
-    #         return CATEGORY_WEAPONS
-    #     elif index < self.weaponCount + self.utilityCount:
-    #         return CATEGORY_UTILITIES
-    #     else:
-    #         return CATEGORY_ARTIFACTS
-
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
         self.cool_down_list_surfaces.append(globals.pixelFont5halo.render(weapon.name, False, globals.game_manager.HUDColor))
@@ -175,6 +113,7 @@ class WeaponManager:
             self.cool_down_list.pop(0)
 
     def get_weapons_list_of_category(self, category: WeaponCategory) -> List[Weapon]:
+        ''' return a list of all weapons of category '''
         return [weapon for weapon in self.weapons if weapon.category == category]
 
     def get_surface_portion(self, weapon: Weapon) -> Tuple[pygame.Surface, Tuple[int, int, int, int]] | None:
@@ -207,28 +146,28 @@ class WeaponManager:
         
         return True
 
-    def switchWeapon(self, weapon: Weapon, force=False):
+    def switchWeapon(self, weapon: Weapon):
         """ switch weapon and draw weapon sprite """
         self.currentWeapon = weapon
         self.renderWeaponCount()
 
         globals.game_manager.weaponHold.fill((0,0,0,0))
-        if False and canShoot(force):
-            if self.getBackColor(string) in [GRENADES, GUNS, TOOLS, LEGENDARY, FIREY, BOMBS] or string in [""]:
-                if string in ["covid 19", "parachute", "earthquake"]:
+        if self.can_shoot():
+            if weapon.category in [WeaponCategory.GRENADES, WeaponCategory.GUNS, WeaponCategory.TOOLS, WeaponCategory.LEGENDARY, WeaponCategory.FIREY, WeaponCategory.BOMBS]:
+                if weapon.name in ["covid 19", "parachute", "earthquake"]:
                     return
-                if string == "gemino mine":
+                if weapon.name == "gemino mine":
                     WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), "mine")
                     return
-                WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), string)
+                WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), weapon.name)
                 return
-            if string in ["flare", "artillery assist"]:
+            if weapon.name in ["flare", "artillery assist"]:
                 WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), "flare")
                 return
-            if self.getBackColor(string) in [MISSILES]:
+            if weapon.category in [WeaponCategory.MISSILES]:
                 globals.game_manager.weaponHold.blit(globals.game_manager.sprites, (0,0), (64,112,16,16))
-            if self.getBackColor(string) in [AIRSTRIKE]:
-                if string == "chum bucket":
+            if weapon.category in [WeaponCategory.AIRSTRIKE]:
+                if weapon.name == "chum bucket":
                     globals.game_manager.weaponHold.blit(globals.game_manager.sprites, (0,0), (16,96,16,16))
                     return
                 globals.game_manager.weaponHold.blit(globals.game_manager.sprites, (0,0), (64,64,16,16))
@@ -327,10 +266,10 @@ class WeaponManager:
                             keyWeapons.append(WeaponManager._wm.weapons[i][0])
                 weaponsSwitch = True
             elif event.key == pygame.K_MINUS:
-                keyWeapons = ["rope"]
+                keyWeapons = [self.weapon_dict[w] for w in ["rope"]]
                 weaponsSwitch = True
             elif event.key == pygame.K_EQUALS:
-                keyWeapons = ["parachute"]
+                keyWeapons = [self.weapon_dict[w] for w in ["parachute"]]
                 weaponsSwitch = True
             if weaponsSwitch:
                 if len(keyWeapons) > 0:
