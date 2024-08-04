@@ -1,10 +1,14 @@
 # Worms Game
+
 ![Alt text](wormsShoot.png?raw=true "Worms")
-game development practice in python for educational purposes and fun.
+Game development practice in python for educational purposes and fun.
+
+This game was developed during my first year of studying computer science, in the early stages of learning Python, so it isn't very clean and lacks an object-oriented design.
 
 **requirements**: Python3, Pygame, PySimpleGui
 
-# :question: ​how to play
+# ❓ how to play
+
 - right/left arrow keys - movement.
 - up/down arrow keys - pointing.
 - enter - jump in pointing direction.
@@ -15,18 +19,19 @@ game development practice in python for educational purposes and fun.
 - mouse left click - press for clickable weapons. (airstrikes, teleport etc).
 - mouse right click - open weapons menu.
 
-# :crossed_swords: Weapons
-## :rocket: Missiles
+# ⚔️ Weapons
+
+## 🚀 Missiles
 
 ![](/assets/anims/missile.gif)
 
 - **MISSILE** - shoot a missile, wind sensitive.
 - **GRAVITY MISSILE** - shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
 - **BUNKER BUSTER** - shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
-- **HOMING MISSILE** - mouse click to select target and shoot. 
+- **HOMING MISSILE** - mouse click to select target and shoot.
 - **SEEKER** - target seeking missile.
 
-## :comet: Grenades
+## ☄ Grenades
 
 ![](/assets/anims/grenade.gif)
 
@@ -37,7 +42,7 @@ game development practice in python for educational purposes and fun.
 - **ELECTRIC GRENADE** - electrifying grenade
 - **RAON LAUNCHER** - shoot two raons - small proximity mines that moving closer to target every turn. will explode if electrocuted.
 
-## :gun: Guns
+## 🔫 Guns
 
 ![](/assets/anims/minigun.gif)
 
@@ -49,14 +54,14 @@ game development practice in python for educational purposes and fun.
 - **LASER GUN** - destructive laser destroy destructively every thing on its way.
 - **BUBBLE GUN** - shoot bubbles that captures worms and more
 
-## :fire: Incendiary
+## 🔥 Incendiary
 
 ![](/assets/anims/fire.gif)
 
 - **PETROL BOMB** - explosive fire spreader.
 - **FLAME THROWER** - it werfs flammen
 
-## :bomb: Bombs and Animals
+## 💣 Bombs and Animals
 
 ![](/assets/anims/snail.gif)
 
@@ -68,7 +73,7 @@ game development practice in python for educational purposes and fun.
 - **VENUS FLY TRAP** - throw seed that grows a venus fly trap - vicious plant that will devour anything. can turn to MUTANT VENUS FLY TRAP if hit by GAMMA GUN radiation. press tab to switch to PLANT BOMB that grows on impact in all directions.
 - **COVID19** - very contagious. sick worms will cough and spread the virus.
 
-## :wrench: Tools
+## 🔧 Tools
 
 ![](/assets/anims/tools.gif)
 
@@ -81,7 +86,7 @@ game development practice in python for educational purposes and fun.
 - **ENDER PEARL** - throw and teleport to where it lands.
 - **TRAMPOLINE** - place a trampoline. any object will bounce off.
 
-## :small_airplane: Aerial
+## 🛩 Aerial
 
 ![](/assets/anims/airstrike.gif)
 
@@ -91,11 +96,12 @@ game development practice in python for educational purposes and fun.
 - **NAPALM STRIKE** - smelly, firey mess. wind sensitive.
 - **MINE STRIKE** - mine strike.
 
-## :hot_pepper: Super weapons
+## 🌶 Super weapons
 
 ![](/assets/anims/electro.gif)
 
  Legendary weapons can be obtained by weapon crates.
+
 - **HOLY GRENADE** - feast upon the lambs and sloths and carp and anchovies and orangutans and breakfast cereals, and fruit bats. lobbest thou thy Holy Hand Grenade of Antioch towards thy foe, who, being naughty in My sight, shall snuff it.
 - **BANANA** - multiplying banana of mass destruction.
 - **EARTHQUAKE** - quakes the earth.
@@ -110,22 +116,23 @@ game development practice in python for educational purposes and fun.
 - **GUIDED MISSILE** - controllable missile. use RIGHT KEY and LEFT KEY to control.
 - **FIREWORKS** - tie 3 worms or any object to firework rocket and light the sky.
 
-# :hammer: Utilities:
+# 🔨 Utilities:
 
 ![](/assets/anims/jetpack.gif)
 
  Utilities can be obtained by utility crates.
+
 - **moon gravity** - big step for wormanity.
 - **double damage** - twice as fun.
 - **aim aid** - laser sight for guns.
 - **teleport** - activate and click somewhere.
 - **switch worms** - activate and press tab to switch worms in team.
-- **time travel** - activate and continue with your turn. shoot a 'chargeable' weapon or 'place and run'. 
+- **time travel** - activate and continue with your turn. shoot a 'chargeable' weapon or 'place and run'.
 - **jet pack** - thrust with arrow keys.
 - **tool set** - receive some useful tools to use in weapons.
 - **traveling kit** - more ropes and parachutes.
 
-## :moyai: Artifacts
+## 🗿 Artifacts
 
 ![](/assets/anims/mjolnir.gif)
 
@@ -149,7 +156,7 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
   * **Pick Axe** - use a diamond pickaxe to mine the ground
   * **Build** - ability to place dirt blocks around you
 
-## :hammer_and_pick: Game modes
+## ⚒ Game modes
 
 - **Battle** - last team standing wins.
 - **Points** - damage = points. The team with the most points wins.
@@ -160,7 +167,7 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 - **Arena** - worms get points for standing on top of the arena at the end of each turn. The team with the most points wins.
 - **Missions** - each worm is assinged three renewable missions. upon completing a mission the worm receives points. The team with the most points wins.
 
-## :gear: Options
+## ⚙️ Options
 
 - **Cooldown** - weapons have a cooldown for 4 turns.
 - **Warped** - horizontal map warp. *experimental*
@@ -172,6 +179,6 @@ Artifacts is a game option that unlocks magical items and weapons. the artifacts
 - **Digging** - worms are underground. dig your way around. recommended with darkness.
 - **Artifacts** - enable artifacts in the games.
 
-### :ocean: Sudden Death
+### 🌊 Sudden Death
 
 Sudden death activates after several number of rounds, defined in the options. the sudden death types are: plague - worms loose half their health and get sick, water rise - water level rising after each turn. the types can both be used.
