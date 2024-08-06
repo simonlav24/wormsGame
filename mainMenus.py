@@ -218,11 +218,19 @@ class MainMenu:
 
 		subMode = Menu(orientation=HORIZONTAL, customSize=15)
 		subMode.insert(MENU_TEXT, text="game mode")
-		subMode.insert(MENU_COMBOS, key="--game_mode", text=list(GameMode)[0].value, items=[mode.value for mode in GameMode])
+		subMode.insert(MENU_COMBOS, key="game_mode", text=list(GameMode)[0].value, items=[mode.value for mode in GameMode])
 		optionsMenu.addElement(subMode)
 
 		# toggles
-		toggles = [("cool down", "-used", True), ("artifacts", "-art", True), ("closed map", "-closed", False), ("forts", "-f", False), ("digging", "-dig", False), ("darkness", "-dark", False)]
+		toggles = [
+			('cool down', 'option_cool_down', True),
+			('artifacts', 'option_artifacts', True),
+			('closed map', 'option_closed_map', False),
+			('forts', 'option_forts', False),
+			('digging', 'option_digging', False),
+			('darkness', 'option_darkness', False)
+		]
+		
 		for i in range(0, len(toggles) - 1, 2):
 			first = toggles[i]
 			second = toggles[i + 1]
@@ -232,31 +240,36 @@ class MainMenu:
 			optionsMenu.addElement(subOpt)
 
 		# counters
-		counters = [("worms per team", 8, 1, 8, 1, "-wpt"), ("worm health", 100, 0, 1000, 50, "-ih"), ("packs", 1, 0, 10, 1, "-pm")]
+		counters = [
+			('worms per team', 'worms_per_team', 8, 1, 8, 1),
+			('worm health', 'worm_initial_health', 100, 0, 1000, 50),
+			('packs', 'deployed_packs', 1, 0, 10, 1)
+		]
+
 		for c in counters:
 			subOpt = Menu(orientation=HORIZONTAL)
 			subOpt.insert(MENU_TEXT, text=c[0])
-			subOpt.insert(MENU_UPDOWN, key=c[5], value=c[1], text=str(c[1]), limitMax=True, limitMin=True, limMin=c[2], limMax=c[3], stepSize=c[4])		
+			subOpt.insert(MENU_UPDOWN, key=c[1], text=c[0], value=c[2], limitMax=True, limitMin=True, limMin=c[3], limMax=c[4], stepSize=c[5])		
 			optionsMenu.addElement(subOpt)
 
 		# random turns
 		subMode = Menu(orientation=HORIZONTAL)
 		subMode.insert(MENU_TEXT, text="random turns")
-		subMode.insert(MENU_COMBOS, key="-random", items=["none", "in team", "complete"])	
+		subMode.insert(MENU_COMBOS, key="random_mode", items=[mode.value for mode in RandomMode])	
 		optionsMenu.addElement(subMode)
 
 		# sudden death
 		subMode = Menu(orientation=HORIZONTAL)
-		subMode.insert(MENU_TOGGLE, key="sudden death toggle", value=True, text="sudden death")
-		subMode.insert(MENU_UPDOWN, key="-sd", value=16, text="16", limitMin=True, limMin=0, customSize=19)
-		subMode.insert(MENU_COMBOS, key="sudden death style", items=["all", "tsunami", "plague"])
+		subMode.insert(MENU_TEXT, text="sudden death")
+		subMode.insert(MENU_UPDOWN, key="rounds_for_sudden_death", value=16, text="16", limitMin=True, limMin=0, customSize=19)
+		subMode.insert(MENU_COMBOS, key="sudden_death_style", items=[style.value for style in SuddenDeathMode])
 		optionsMenu.addElement(subMode)
 
 		optionsAndPictureMenu.addElement(optionsMenu)
 
 		# map options vertical sub menu
 		mapMenu = Menu(name="map menu", orientation=VERTICAL)
-		MainMenu._picture = mapMenu.insert(MENU_DRAGIMAGE, key="-map", image=choice(MainMenu._maps))
+		MainMenu._picture = mapMenu.insert(MENU_DRAGIMAGE, key="map_path", image=choice(MainMenu._maps))
 
 		# map buttons
 		subMap = Menu(orientation = HORIZONTAL, customSize=15)
@@ -268,9 +281,9 @@ class MainMenu:
 
 		# recolor & ratio
 		subMap = Menu(orientation = HORIZONTAL, customSize = 15)
-		subMap.insert(MENU_TOGGLE, key="-rg", text="recolor")
+		subMap.insert(MENU_TOGGLE, key="is_recolor", text="recolor")
 		subMap.insert(MENU_TEXT, text="ratio")
-		subMap.insert(MENU_INPUT, key="-ratio", text="enter ratio")
+		subMap.insert(MENU_INPUT, key="map_ratio", text="enter ratio", evaluatedType='int')
 
 		mapMenu.addElement(subMap)
 		optionsAndPictureMenu.addElement(mapMenu)
@@ -278,14 +291,15 @@ class MainMenu:
 
 		# weapons setup
 		subweapons = Menu(orientation=HORIZONTAL, customSize=14)
-		subweapons.insert(MENU_BUTTON, key="weaponssetup", text="weapons setup")
+		subweapons.insert(MENU_BUTTON, key="weapons setup", text="weapons setup")
 		weaponsSets = ['default']
 
 		if os.path.exists("./assets/weaponsSets"):
 			for file in os.listdir("./assets/weaponsSets"):
 				weaponsSets.append(file.split(".")[0])
+
 		subweapons.insert(MENU_TEXT, text="weapons set:")
-		subweapons.insert(MENU_COMBOS, name="weapon_combo", key="weapon set", items=weaponsSets)
+		subweapons.insert(MENU_COMBOS, name="weapon_combo", key="weapon_set", items=weaponsSets)
 		mainMenu.addElement(subweapons)
 
 		subMore = Menu(orientation=HORIZONTAL, customSize=14)
@@ -298,7 +312,7 @@ class MainMenu:
 
 		# background feel menu
 		bgMenu = Menu(pos=[globals.winWidth - 20, globals.winHeight - 20], size=[20, 20], register=True)
-		bgMenu.insert(MENU_UPDOWN, text="bg", key="-feel", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
+		bgMenu.insert(MENU_UPDOWN, text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
 	def initializeRecordMenu(self):
 		# clear graphs
@@ -495,38 +509,11 @@ def menuPop():
 
 def playOnPress():
 	values = evaluateMenuForm()
-	string = ""
 
 	# create default config
 	game_config = GameConfig()
+	game_config = GameConfig.model_validate(values)
 
-	for key in values.keys():
-		if key[0] == "-":
-			if key == "--game_mode":
-				game_config.game_mode = GameMode(values[key])
-				continue
-			if key in trueFalse:
-				if values[key]:
-					string += key + " "
-				continue
-			if key == "-random":
-				if values[key] == "in team":
-					game_config.random_mode = RandomMode.IN_TEAM
-				else:
-					game_config.random_mode = RandomMode.COMPLETE
-				continue
-			if key == "-map":
-				game_config.map_path = values[key]
-				continue
-			if key == "-ratio" and values[key] != "":
-				game_config.map_ratio = int(values[key])
-		if key == "sudden death style":
-			if values[key] == "tsunami":
-				game_config.sudden_death_style = SuddenDeathMode.FLOOD
-			if values[key] == "plague":
-				game_config.sudden_death_style = SuddenDeathMode.PLAGUE
-
-	print(game_config)
 	MainMenu._mm.gameParameters = game_config
 	MainMenu._mm.run = False
 
@@ -568,9 +555,6 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 	MainMenu()
 	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
 	
-	# test:
-	# fromGameParameters = {"teams": {"yellow":[(255,255,0), 25], "red":[(255,0,0),66], "green":[(0,255,0),50], "blue":[(0,0,255),80]},"winner": "yellow", "damager": "flur", "mostDamage":256}
-
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()
 		endPos = Menu._reg[0].pos

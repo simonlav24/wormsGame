@@ -93,15 +93,15 @@ class WeaponManager:
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
         # read weapon set if exits and adjust basic set
-        if globals.game_manager.game_config.weapon_set is not None:
-            # zero out basic set
-            self.basic_set = [0 for i in self.basic_set]
+        # if globals.game_manager.game_config.weapon_set is not None:
+        #     # zero out basic set
+        #     self.basic_set = [0 for i in self.basic_set]
 
-            weaponSet = ET.parse('./assets/weaponsSets/' + globals.game_manager.game_config.weapon_set + '.xml').getroot()
-            for weapon in weaponSet:
-                name = weapon.attrib["name"]
-                amount = int(weapon.attrib["amount"])
-                self.basic_set[self.weaponDict[name]] = amount
+        #     weaponSet = ET.parse('./assets/weaponsSets/' + globals.game_manager.game_config.weapon_set + '.xml').getroot()
+        #     for weapon in weaponSet:
+        #         name = weapon.attrib["name"]
+        #         amount = int(weapon.attrib["amount"])
+        #         self.basic_set[self.weaponDict[name]] = amount
 
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
@@ -193,8 +193,17 @@ class WeaponManager:
     
     def is_current_weapon_active(self) -> bool:
         ''' check if current weapon active in this round '''
-        return (self.currentWeapon.round_delay <= globals.game_manager.roundCounter and
-                not self.currentWeapon in self.cool_down_list)
+        # check for round delay
+        # if self.currentWeapon.round_delay < globals.game_manager.roundCounter:
+        #     return False
+        # todo this
+        
+        # check for cool down
+        if globals.game_manager.game_config.option_cool_down and self.currentWeapon in self.cool_down_list:
+            return False
+        
+        return True
+
     
     def renderWeaponCount(self):
         ''' changes surf to fit current weapon '''
@@ -206,8 +215,8 @@ class WeaponManager:
         weaponStr = self.currentWeapon.name
 
         # special addings
-        if self.currentWeapon == "bunker buster":
-            weaponStr += " (drill)" if BunkerBuster.mode else " (rocket)"
+        # if self.currentWeapon == "bunker buster":
+        #     weaponStr += " (drill)" if BunkerBuster.mode else " (rocket)"
         
         # add quantity
         if ammo != -1:
@@ -259,12 +268,7 @@ class WeaponManager:
                 keyWeapons = [self.weapon_dict[w] for w in ["minigun"]]
                 weaponsSwitch = True
             elif event.key == pygame.K_0:
-                keyWeapons = []
-                for i, w in enumerate(TeamManager._tm.currentTeam.weaponCounter):
-                    if w > 0 or w == -1:
-                        if WeaponManager._wm.weapons[i][3] in [LEGENDARY, ARTIFACTS]:
-                            keyWeapons.append(WeaponManager._wm.weapons[i][0])
-                weaponsSwitch = True
+                pass
             elif event.key == pygame.K_MINUS:
                 keyWeapons = [self.weapon_dict[w] for w in ["rope"]]
                 weaponsSwitch = True

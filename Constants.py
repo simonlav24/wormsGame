@@ -1,4 +1,6 @@
+from typing import Tuple
 
+ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
 
 SKY = (0,0,0,0)
 GRD = (255,255,255,255)

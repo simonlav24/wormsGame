@@ -7,6 +7,8 @@ from Constants import *
 from vector import *
 from GameConfig import GameMode
 
+HEALTH_BAR_WIDTH = 40
+
 class HealthBar:
 	''' team health bar calculations and drawing '''
 	_healthBar = None

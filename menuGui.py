@@ -1,4 +1,6 @@
 import pygame
+from abc import ABC
+
 from vector import *
 
 class Gui:
@@ -196,7 +198,7 @@ class Menu:
 			element.draw()
 	def insert(self, type=MENU_BUTTON, name="element", key="key", value="value", text=None, customSize=None, items=None, stepSize=None,
 					limitMin=False, limitMax=False, limMin=0, limMax=100, values=None, showValue=True, image=None, inputText="",
-					color = WHITE, maxValue=100, draggable=True, comboMap={}, tooltip=None):
+					color = WHITE, maxValue=100, draggable=True, comboMap={}, tooltip=None, **kwargs):
 		if type == MENU_BUTTON:
 			b = MenuElementButton()
 		elif type == MENU_TOGGLE:
@@ -220,6 +222,7 @@ class Menu:
 		elif type == MENU_INPUT:
 			b = MenuElementInput()
 			b.inputText = inputText
+			b.evaluatedType = kwargs.get('evaluatedType', 'str')
 		elif type == MENU_DRAGIMAGE:
 			b = MenuElementDragImage()
 			if image:
@@ -253,7 +256,7 @@ class Menu:
 		self.addElement(b)
 		return b
 
-class MenuElement:
+class MenuElement(ABC):
 	def __init__(self):
 		self.pos = Vector()
 		self.size = Vector()
@@ -270,33 +273,42 @@ class MenuElement:
 		self.cursor = pygame.SYSTEM_CURSOR_ARROW
 		self.animation_offset = 0
 		self.initialize()
+	
 	def getSuperPos(self):
 		return self.menu.getSuperPos()
+	
 	def initialize(self):
 		pass
+	
 	def setIndex(self, num):
 		self.index = num
+	
 	def renderSurf(self, text=None):
 		if text == "":
 			text="input"
 		if text:
 			self.text = text
 		self.surf = Gui._instance.font.render(self.text, True, WHITE)
+	
 	def evaluate(self, dic):
 		dic[self.key] = self.value
+	
 	def drawRect(self):
 		buttonPos = self.getSuperPos() + self.pos
 		color = [self.color[i] * (1 - self.animation_offset) + Menu._selectedColor[i] * self.animation_offset for i in range(3)]
 		pygame.draw.rect(Gui._instance.win, color, (buttonPos, self.size))
+	
 	def drawText(self):
 		buttonPos = self.getSuperPos() + self.pos
 		if self.surf:
 			Gui._instance.win.blit(self.surf, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2, buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
+	
 	def drawHighLight(self):
 		buttonPos = self.getSuperPos() + self.pos
 
 	def step(self):
 		pass
+	
 	def draw(self):
 		self.drawRect()
 		self.drawText()
@@ -561,12 +573,20 @@ class MenuElementInput(MenuElementButton):
 		self.timer = 0
 		self.cursorText = Gui._instance.font.render("|", True, (255,255,255))
 		self.cursor = pygame.SYSTEM_CURSOR_IBEAM
+		self.evaluatedType = 'str'
 	def processKey(self, event):
 		if event.key == pygame.K_BACKSPACE:
 			self.inputText = self.inputText[:-1]
 		else:
 			self.inputText += event.unicode
 		self.value = self.inputText
+	def evaluate(self, dic):
+		if self.evaluatedType == 'str':
+			dic[self.key] = self.value
+		if self.evaluatedType == 'int':
+			if self.value == '':
+				return
+			dic[self.key] = int(self.value)
 	def step(self):
 		if self.mode == "editing":
 			self.timer += 1

@@ -15,14 +15,15 @@ class GameMode(Enum):
     MISSIONS = 'missions'
 
 class RandomMode(Enum):
-    NONE = 0
-    IN_TEAM = 1
-    COMPLETE = 2
+    NONE = 'none'
+    IN_TEAM = 'in team'
+    COMPLETE = 'complete'
 
 class SuddenDeathMode(Enum):
-    ALL = 0
-    FLOOD = 1
-    PLAGUE = 2
+    ALL = 'all'
+    FLOOD = 'flood'
+    PLAGUE = 'plague'
+    NONE = 'none'
 
 class GameConfig(BaseModel):
     ''' game parameters and configuration '''
