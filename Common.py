@@ -32,7 +32,7 @@ def clamp(value, upper, lower):
 
 # color utilities
 
-ColorType = Tuple[int, int, int]
+ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
 
 def grayen(color: ColorType) -> ColorType:
 	''' grays color '''
