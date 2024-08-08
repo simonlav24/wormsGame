@@ -2,11 +2,11 @@
 import pygame
 from vector import *
 
-
 import globals
 from random import randint, uniform, choice
 from math import exp, pi, sin, cos
 
+from GameVariables import GameVariables
 
 class Effect:
 	''' visual effects '''
@@ -40,7 +40,7 @@ class Blast(Effect):
 			SmokeParticles._sp.addSmoke(self.pos, Vector())
 		self.timeCounter += 0.5 * globals.game_manager.dt
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
-		self.pos.x += (4.0 * globals.game_manager.wind / self.rad) * globals.game_manager.dt
+		self.pos.x += (4.0 * GameVariables().physics.wind / self.rad) * globals.game_manager.dt
 		self.pos.y -= (2.0 / self.rad) * globals.game_manager.dt
 		if globals.game_manager.darkness:
 			color = self.color[int(max(min(self.timeCounter, 5), 0))]
@@ -76,7 +76,7 @@ class FireBlast(Effect):
 		
 	def step(self):
 		self.pos.y -= (2 - 0.4 * self.radius) * globals.game_manager.dt
-		self.pos.x += globals.game_manager.wind * globals.game_manager.dt
+		self.pos.x += GameVariables().physics.wind * globals.game_manager.dt
 		if randint(0, 10) < 3:
 			self.radius -= 1 * globals.game_manager.dt
 		if self.radius < 0:
@@ -160,7 +160,7 @@ class SmokeParticles(Effect):
 				particle[3] -= 1 * globals.game_manager.dt
 				if particle[3] <= 0:
 					SmokeParticles._particlesRemove.append(particle)
-			particle[1] += Vector(globals.game_manager.wind * 0.1 * globals.game_manager.windMult * uniform(0.2,1) * globals.game_manager.dt, -0.1)
+			particle[1] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2,1) * globals.game_manager.dt, -0.1)
 			particle[0] += particle[1] * globals.game_manager.dt
 		for p in SmokeParticles._particlesRemove:
 			SmokeParticles._particles.remove(p)
@@ -172,7 +172,7 @@ class SmokeParticles(Effect):
 				particle[3] -= 1
 				if particle[3] <= 0:
 					SmokeParticles._sickParticles.remove(particle)
-			particle[1] += Vector(globals.game_manager.wind * 0.1 * globals.game_manager.windMult * uniform(0.2,1), -0.1)
+			particle[1] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2,1), -0.1)
 			particle[0] += particle[1]
 			for worm in globals.game_manager.get_worms():
 				if distus(particle[0], worm.pos) < (particle[3] + worm.radius) * (particle[3] + worm.radius):

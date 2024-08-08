@@ -8,6 +8,7 @@ import pygame
 import globals
 from Constants import GREY, PLAYER_CONTROL_1
 from Common import * 
+from GameVariables import GameVariables
 
 
 class WeaponStyle(Enum):
@@ -89,7 +90,7 @@ class WeaponManager:
         self.basic_set: List[int] = [weapon.initial_amount for weapon in self.weapons]
 
         self.currentWeapon: Weapon = self.weapons[0]
-        self.surf = globals.pixelFont5.render(self.currentWeapon.name, False, globals.game_manager.HUDColor)
+        self.surf = globals.pixelFont5.render(self.currentWeapon.name, False, GameVariables().initial_variables.hud_color)
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
         # read weapon set if exits and adjust basic set
@@ -105,7 +106,7 @@ class WeaponManager:
 
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
-        self.cool_down_list_surfaces.append(globals.pixelFont5halo.render(weapon.name, False, globals.game_manager.HUDColor))
+        self.cool_down_list_surfaces.append(globals.pixelFont5halo.render(weapon.name, False, GameVariables().initial_variables.hud_color))
         self.cool_down_list.append(weapon)
 
         if len(self.cool_down_list) > 4:
@@ -207,7 +208,7 @@ class WeaponManager:
     
     def renderWeaponCount(self):
         ''' changes surf to fit current weapon '''
-        color = globals.game_manager.HUDColor
+        color = GameVariables().initial_variables.hud_color
         # if no ammo in current team
         ammo = globals.team_manager.currentTeam.ammo(WeaponManager._wm.currentWeapon)
         if ammo == 0 or not self.is_current_weapon_active() or (globals.game_manager.game_config.option_cool_down and self.currentWeapon in self.cool_down_list):
@@ -309,7 +310,7 @@ class WeaponManager:
             globals.game_manager.drawTrampolineHint()
         if WeaponManager._wm.getBackColor(WeaponManager._wm.currentWeapon) == AIRSTRIKE:
             mousePos = pygame.mouse.get_pos()
-            mouse = Vector(mousePos[0]/scalingFactor + globals.game_manager.camPos.x, mousePos[1]/scalingFactor + globals.game_manager.camPos.y)
+            mouse = globals.mouse_pos_in_world()
             win.blit(pygame.transform.flip(globals.game_manager.airStrikeSpr, False if globals.game_manager.airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(globals.game_manager.airStrikeSpr.get_size())/2))
         if WeaponManager._wm.currentWeapon == "earth spike" and globals.game_manager.state in [PLAYER_CONTROL_1, FIRE_MULTIPLE] and globals.team_manager.currentTeam.ammo("earth spike") != 0:
             spikeTarget = calcEarthSpikePos()

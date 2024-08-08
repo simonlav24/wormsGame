@@ -6,15 +6,23 @@ from math import sin, pi
 from vector import *
 
 import globals
+from Constants import ColorType
 
 # paths
 PATH_ASSETS = r'./assets'
 
+class SingletonMeta(type):
+    ''' singleton metaclass '''
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
 class Entity(ABC):
-    ''' an object that has pos, step and draw '''
-    def __init__(self, pos=(0,0)):
-        self.pos = pos
-    
+    ''' an object that has step and draw '''
+	
     @abstractmethod
     def step(self) -> None:
         ...
@@ -23,16 +31,8 @@ class Entity(ABC):
     def draw(self) -> None:
         ...
 
-def clamp(value, upper, lower):
-	if value > upper:
-		value = upper
-	if value < lower:
-		value = lower
-	return value
 
 # color utilities
-
-ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
 
 def grayen(color: ColorType) -> ColorType:
 	''' grays color '''
@@ -60,3 +60,13 @@ def drawTarget(pos):
 		angle = i * pi / 2
 		triangle = [triangle[0].rotate(angle), triangle[1].rotate(angle), triangle[2].rotate(angle)]
 		pygame.draw.polygon(globals.game_manager.win, (255,0,0), [point2world(pos + j) for j in triangle])
+
+# math utilities
+
+def clamp(value, upper, lower):
+	if value > upper:
+		value = upper
+	if value < lower:
+		value = lower
+	return value
+

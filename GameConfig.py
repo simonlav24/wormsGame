@@ -1,8 +1,10 @@
 
 from typing import Any
 from pydantic import BaseModel
-from Constants import *
 from enum import Enum
+
+from typing import Any, Dict
+
 
 class GameMode(Enum):
     BATTLE = 'battle'

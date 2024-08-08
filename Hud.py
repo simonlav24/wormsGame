@@ -6,6 +6,7 @@ import globals
 from Constants import *
 from vector import *
 from GameConfig import GameMode
+from GameVariables import GameVariables
 
 HEALTH_BAR_WIDTH = 40
 
@@ -122,7 +123,7 @@ class Commentator:
 		surfs = []
 		for string in strings:
 			text = string.get('text')
-			color = string.get('color', globals.game_manager.HUDColor)
+			color = string.get('color', GameVariables().initial_variables.hud_color)
 			surfs.append(globals.pixelFont5halo.render(text, False, color))
 		width = sum([i.get_width() for i in surfs])
 		surf = pygame.Surface((width, surfs[0].get_height()), pygame.SRCALPHA)
@@ -215,7 +216,7 @@ class WindFlag:
 				# gravity
 				self.acc[i] += Vector(0, 0.01)
 				# wind
-				self.acc[i] += Vector(globals.game_manager.wind * 0.05, 0)
+				self.acc[i] += Vector(GameVariables().physics.wind * 0.05, 0)
 				# turbulence
 				self.acc[i] += vectorUnitRandom() * 0.01
 

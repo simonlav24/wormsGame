@@ -1,19 +1,6 @@
 
 import pygame
-from pygame import Vector2
-
-class Transformations:
-    def __init__(self):
-        self.scaling_factor = 3
-        self.scaling_max = 3
-        self.scaling_min = 1
-        self.cam: Vector2 = Vector2(0,0)
-    
-    def point_to_world(self, pos: Vector2) -> Vector2:
-        return Vector2((pos[0] - self.cam[0]), int(pos[1]) - int(self.cam[1]))
-
-    def world_to_point(self, pos: Vector2) -> Vector2:
-        ...
+from vector import Vector
 
 class HaloFont:
     def __init__(self, font):
@@ -28,6 +15,11 @@ class HaloFont:
         surf.blit(haloSurf, (2,1))
         surf.blit(textSurf, (1,1))
         return surf
+
+def mouse_pos_in_world():
+    mouse_pos = pygame.mouse.get_pos()
+    return Vector(mouse_pos[0] / scalingFactor + game_manager.camPos.x,
+                   mouse_pos[1] / scalingFactor + game_manager.camPos.y)
 
 def globalsInit():
     global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen

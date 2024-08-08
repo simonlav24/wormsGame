@@ -1,11 +1,18 @@
 from math import exp
 import pygame, os, datetime, ast
-import globals
 from random import randint, choice, uniform
+import tkinter
+from tkinter.filedialog import askopenfile
+import xml.etree.ElementTree as ET
+
+import globals
 from perlinNoise import generateNoise
 from vector import *
 from menuGui import *
 from Constants import *
+from MapManager import grab_maps
+from GameConfig import *
+
 if not os.path.exists("graphObject.py"):
 	print("fetching graphObject")
 	import urllib.request
@@ -14,12 +21,6 @@ if not os.path.exists("graphObject.py"):
 		with open("graphObject.py", "w+") as graphpy:
 			graphpy.write(text)
 import graphObject
-import tkinter
-from tkinter.filedialog import askopenfile
-import xml.etree.ElementTree as ET
-
-from GameConfig import *
-
 
 
 trueFalse = ["-f", "-dig", "-dark", "-used", "-closed", "-warped", "-rg", "-place", "-art"]
@@ -457,19 +458,6 @@ class PauseMenu:
 			self.run = False
 			self.result[0] = 1
 
-def grabMapsFrom(paths):
-	maps = []
-	for path in paths:
-		if not os.path.isdir(path):
-			continue
-		for imageFile in os.listdir(path):
-			if imageFile[-4:] != ".png":
-				continue
-			string = path + "/" + imageFile
-			string = os.path.abspath(string)
-			maps.append(string)
-	return maps
-
 def saveWeaponsXml(values, filename):
 	weaponsStrings = {}
 	weapons = ET.parse('weapons.xml').getroot()[0]
@@ -553,7 +541,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 
 	BackGround()
 	MainMenu()
-	MainMenu._maps = grabMapsFrom(['wormsMaps', 'wormsMaps/moreMaps'])
+	MainMenu._maps = grab_maps(['wormsMaps', 'wormsMaps/moreMaps'])
 	
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()
