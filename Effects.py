@@ -38,10 +38,10 @@ class Blast(Effect):
 	def step(self):
 		if randint(0,self.smoke) == 0 and self.rad > 1:
 			SmokeParticles._sp.addSmoke(self.pos, Vector())
-		self.timeCounter += 0.5 * globals.game_manager.dt
+		self.timeCounter += 0.5 * GameVariables().dt
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
-		self.pos.x += (4.0 * GameVariables().physics.wind / self.rad) * globals.game_manager.dt
-		self.pos.y -= (2.0 / self.rad) * globals.game_manager.dt
+		self.pos.x += (4.0 * GameVariables().physics.wind / self.rad) * GameVariables().dt
+		self.pos.y -= (2.0 / self.rad) * GameVariables().dt
 		if globals.game_manager.darkness:
 			color = self.color[int(max(min(self.timeCounter, 5), 0))]
 			globals.game_manager.lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
@@ -75,10 +75,10 @@ class FireBlast(Effect):
 		self.color = choice(self._color)
 		
 	def step(self):
-		self.pos.y -= (2 - 0.4 * self.radius) * globals.game_manager.dt
-		self.pos.x += GameVariables().physics.wind * globals.game_manager.dt
+		self.pos.y -= (2 - 0.4 * self.radius) * GameVariables().dt
+		self.pos.x += GameVariables().physics.wind * GameVariables().dt
 		if randint(0, 10) < 3:
-			self.radius -= 1 * globals.game_manager.dt
+			self.radius -= 1 * GameVariables().dt
 		if self.radius < 0:
 			globals.game_manager.nonPhysToRemove.append(self)
 			
@@ -157,11 +157,11 @@ class SmokeParticles(Effect):
 		for particle in SmokeParticles._particles:
 			particle[4] += 1
 			if particle[4] % 5 == 0:
-				particle[3] -= 1 * globals.game_manager.dt
+				particle[3] -= 1 * GameVariables().dt
 				if particle[3] <= 0:
 					SmokeParticles._particlesRemove.append(particle)
-			particle[1] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2,1) * globals.game_manager.dt, -0.1)
-			particle[0] += particle[1] * globals.game_manager.dt
+			particle[1] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2,1) * GameVariables().dt, -0.1)
+			particle[0] += particle[1] * GameVariables().dt
 		for p in SmokeParticles._particlesRemove:
 			SmokeParticles._particles.remove(p)
 		SmokeParticles._particlesRemove = []

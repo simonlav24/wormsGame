@@ -47,7 +47,7 @@ class Game:
 		self.map_manager = MapManager()
 
 		self.clearLists()
-
+		
 		self.initiateGameSettings()
 		self.initiateGameVariables()
 		self.game_vars = GameVariables()
@@ -63,6 +63,7 @@ class Game:
 		self.layersCircles = [[], [], []]
 		self.layersLines = [] #color, start, end, width, delay
 
+		
 		self.nonPhys = []
 		self.nonPhysToRemove = []
 
@@ -95,8 +96,6 @@ class Game:
 		self.weaponHold = pygame.Surface((16,16), pygame.SRCALPHA)
 
 		self.radial_weapon_menu: RadialMenu = None
-
-		self.dt = 1
 
 	@property
 	def win(self) -> pygame.Surface:
@@ -609,9 +608,9 @@ class Cloud:
 		self.randomness = uniform(0.97, 1.02)
 	def step(self):
 		self.acc.x = GameVariables().physics.wind
-		self.vel += self.acc * Game._game.dt
+		self.vel += self.acc * GameVariables().dt
 		self.vel *= 0.85 * self.randomness
-		self.pos += self.vel * Game._game.dt
+		self.pos += self.vel * GameVariables().dt
 		
 		if self.pos.x > Game._game.camPos.x + winWidth + 100 or self.pos.x < Game._game.camPos.x - 100 - self.cWidth:
 			self._toRemove.append(self)
@@ -796,16 +795,16 @@ def place_object(cls: Any, args, girder_place: bool=False) -> Any:
 def move(obj):
 	dir = obj.facing
 	if checkFreePos(obj, obj.pos + Vector(dir, 0)):
-		obj.pos += Vector(dir, 0) * Game._game.dt
+		obj.pos += Vector(dir, 0) * GameVariables().dt
 		return True
 	else:
 		for i in range(1,5):
 			if checkFreePos(obj, obj.pos + Vector(dir, -i)):
-				obj.pos += Vector(dir, -i) * Game._game.dt
+				obj.pos += Vector(dir, -i) * GameVariables().dt
 				return True
 		for i in range(1,5):
 			if checkFreePos(obj, obj.pos + Vector(dir, i)):
-				obj.pos += Vector(dir, i) * Game._game.dt
+				obj.pos += Vector(dir, i) * GameVariables().dt
 				return True
 	return False
 
@@ -1017,10 +1016,10 @@ class PhysObj:
 		self.applyForce()
 		
 		# velocity
-		self.vel += self.acc * Game._game.dt
+		self.vel += self.acc * GameVariables().dt
 		self.limitVel()
 		# position
-		ppos = self.pos + self.vel * Game._game.dt
+		ppos = self.pos + self.vel * GameVariables().dt
 		
 		# reset forces
 		self.acc *= 0
@@ -1236,8 +1235,8 @@ class Grenade (PhysObj):#2
 			rad *= 2
 		boom(self.pos, rad)
 	def secondaryStep(self):
-		self.angle -= self.vel.x * 4 * Game._game.dt
-		self.timer += 1 * Game._game.dt
+		self.angle -= self.vel.x * 4 * GameVariables().dt
+		self.timer += 1 * GameVariables().dt
 		if self.timer >= Game._game.fuseTime:
 			self.dead = True
 		self.stable = False
@@ -1752,6 +1751,8 @@ class Worm (PhysObj):
 						worm.vel = vectorCopy(self.vel)
 						# print(self.nameStr, "collided with", worm.nameStr)
 
+
+
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
 		self.initialize()
@@ -1777,7 +1778,7 @@ class Fire(PhysObj):
 		if randint(0,50) < 1:
 			SmokeParticles._sp.addSmoke(self.pos)
 			# Smoke(self.pos)
-		self.timer += 1 * Game._game.dt
+		self.timer += 1 * GameVariables().dt
 		if self.fallen:
 			self.life -= 1
 		if Game._game.darkness:
@@ -1988,7 +1989,7 @@ class Baseball:
 						worm.vel += self.direction * 8
 						Game._game.camTrack = worm
 	def step(self):
-		self.timer += 1 * Game._game.dt
+		self.timer += 1 * GameVariables().dt
 		if self.timer >= 15:
 			Game._game.nonPhysToRemove.append(self)
 	def draw(self):
@@ -2313,7 +2314,7 @@ class Earthquake:
 					continue
 				if randint(0,5) == 1:
 					obj.vel += Vector(randint(-1,1), -uniform(0,1))
-		self.timer -= 1 * Game._game.dt
+		self.timer -= 1 * GameVariables().dt
 		if self.timer <= 0:
 			Game._game.nonPhysToRemove.append(self)
 			Earthquake.earthquake = 0
@@ -2649,13 +2650,13 @@ class BunkerBuster(PhysObj):
 				self.vel = self.drillVel
 				self.vel.setMag(2)
 			else:
-				self.vel += self.acc * Game._game.dt
+				self.vel += self.acc * GameVariables().dt
 				self.vel.limit(5)
 		else:
-			self.vel += self.acc * Game._game.dt
+			self.vel += self.acc * GameVariables().dt
 		
 		# position
-		ppos = self.pos + self.vel * Game._game.dt
+		ppos = self.pos + self.vel * GameVariables().dt
 		
 		# reset forces
 		self.acc *= 0
@@ -2671,7 +2672,7 @@ class BunkerBuster(PhysObj):
 				self.inGround = True
 				self.drillVel = vectorCopy(self.vel)
 		if self.inGround:
-			self.timer += 1 * Game._game.dt
+			self.timer += 1 * GameVariables().dt
 					
 		checkPos = (self.pos + direction*(self.radius + 2)).vec2tupint()
 		if not(checkPos[0] >= Game._game.map_manager.game_map.get_width() or checkPos[0] < 0 or checkPos[1] >= Game._game.map_manager.game_map.get_height() or checkPos[1] < 0):
@@ -4555,13 +4556,13 @@ class Bubble:
 	def step(self):
 		gameDistable()
 		self.applyForce()
-		self.vel += self.acc * Game._game.dt
-		self.pos += self.vel * Game._game.dt
+		self.vel += self.acc * GameVariables().dt
+		self.pos += self.vel * GameVariables().dt
 		self.vel.x *= 0.99
 		self.acc *= 0
 		
 		if self.radius <= self.grow and TimeManager._tm.timeOverall % 5 == 0:
-			self.radius += 1 * Game._game.dt
+			self.radius += 1 * GameVariables().dt
 			
 		if not self.catch:
 			for worm in PhysObj._reg:
@@ -5731,13 +5732,13 @@ class TimeSlow:
 	def step(self):
 		self.time += 1
 		if self.state == "slow":
-			Game._game.dt *= 0.9
-			if Game._game.dt < 0.1:
+			GameVariables().dt *= 0.9
+			if GameVariables().dt < 0.1:
 				self.state = "fast"
 		elif self.state == "fast":
-			Game._game.dt *= 1.1
-			if Game._game.dt > 1:
-				Game._game.dt = 1
+			GameVariables().dt *= 1.1
+			if GameVariables().dt > 1:
+				GameVariables().dt = 1
 				Game._game.nonPhysToRemove.append(self)
 	def draw(self):
 		pass
@@ -7539,7 +7540,7 @@ def stateMachine():
 		Game._game.playerControl = True #can play
 		Game._game.playerShootAble = True
 		
-		if WeaponManager._wm.currentWeapon in WeaponManager._wm.multipleFires:
+		if WeaponManager._wm.currentWeapon.name in WeaponManager._wm.multipleFires:
 			Game._game.fireWeapon = True
 			if not Game._game.shotCount == 0:
 				Game._game.nextState = FIRE_MULTIPLE

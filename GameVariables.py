@@ -35,7 +35,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.wind_mult = 1.5
         self.damp_mult = 1.5
 
-
+        self.dt = 1.0
         
 
 
