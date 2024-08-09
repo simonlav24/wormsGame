@@ -2,6 +2,8 @@
 import pygame
 from vector import Vector
 
+from GameVariables import GameVariables
+
 class HaloFont:
     def __init__(self, font):
         self.fontObject = font
@@ -16,13 +18,17 @@ class HaloFont:
         surf.blit(textSurf, (1,1))
         return surf
 
+def point2world(point):
+	''' point in vector space to point in world map space '''
+	return (int(point[0]) - int(GameVariables().cam_pos[0]), int(point[1]) - int(GameVariables().cam_pos[1]))
+
 def mouse_pos_in_world():
     mouse_pos = pygame.mouse.get_pos()
-    return Vector(mouse_pos[0] / scalingFactor + game_manager.camPos.x,
-                   mouse_pos[1] / scalingFactor + game_manager.camPos.y)
+    return Vector(mouse_pos[0] / scalingFactor + GameVariables().cam_pos[0],
+                   mouse_pos[1] / scalingFactor + GameVariables().cam_pos[1])
 
 def globalsInit():
-    global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
+    global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, win, screen
     global scalingMax, scalingMin
 
     pygame.init()
@@ -42,17 +48,16 @@ def globalsInit():
     scalingMax = 3
     scalingMin = 1
     
-    winWidth = int(screenWidth / scalingFactor)
-    winHeight = int(screenHeight / scalingFactor)
-    win = pygame.Surface((winWidth, winHeight))
+    GameVariables().win_width = int(screenWidth / scalingFactor)
+    GameVariables().win_height = int(screenHeight / scalingFactor)
+
+    win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
     
     pygame.display.set_caption("Simon's Worms")
     # screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF | pygame.NOFRAME)
     screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
 
 win = None
-winWidth = 0
-winHeight = 0
 scalingFactor = 0
 
 game_manager = None

@@ -124,7 +124,7 @@ class FloatingText(Effect): #pos, text, color
 			globals.game_manager.nonPhysToRemove.append(self)
 			
 	def draw(self):
-		globals.game_manager.win.blit(self.surf , (int(self.pos.x - globals.game_manager.camPos.x - self.surf.get_size()[0]/2), int(self.pos.y - globals.game_manager.camPos.y)))
+		globals.game_manager.win.blit(self.surf , (int(self.pos.x - GameVariables().cam_pos[0] - self.surf.get_size()[0]/2), int(self.pos.y - GameVariables().cam_pos[1])))
 		
 
 class SmokeParticles(Effect):

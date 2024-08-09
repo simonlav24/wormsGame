@@ -5,6 +5,8 @@ from GameConfig import GameConfig
 from Common import SingletonMeta, ColorType
 from Constants import WHITE
 
+from vector import Vector
+
 class WorldPhysics:
     ''' holds physics related data '''
     def __init__(self) -> None:
@@ -36,8 +38,12 @@ class GameVariables(metaclass=SingletonMeta):
         self.damp_mult = 1.5
 
         self.dt = 1.0
-        
 
+        self.cam_pos: Vector = Vector(0,0)
+
+        self.win_width: int = 0
+        self.win_height: int = 0
+        
 
 
 if __name__ == '__main__':

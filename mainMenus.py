@@ -12,6 +12,8 @@ from menuGui import *
 from Constants import *
 from MapManager import grab_maps
 from GameConfig import *
+from Background import BackGround
+from GameVariables import GameVariables
 
 if not os.path.exists("graphObject.py"):
 	print("fetching graphObject")
@@ -33,104 +35,12 @@ def initGui():
 def updateWin(win, scalingFactor):
 	Gui._instance.updateWindow(win)
 	Gui._instance.scalingFactor = scalingFactor
+ 
 
-def perlinNoise1D(count, seed, octaves, bias):
-	output = []
-	for x in range(count):
-		noise = 0.0
-		scaleAcc = 0.0
-		scale = 1.0
-		
-		for o in range(octaves):
-			pitch = count >> o
-			sample1 = (x // pitch) * pitch
-			sample2 = (sample1 + pitch) % count
-			blend = (x - sample1) / pitch
-			sample = (1 - blend) * seed[int(sample1)] + blend * seed[int(sample2)]
-			scaleAcc += scale
-			noise += sample * scale
-			scale = scale / bias
-		output.append(noise / scaleAcc)
-	return output
 
-def renderMountains(dims, color):
-	mount = pygame.Surface(dims, pygame.SRCALPHA)
-	mount.fill((0,0,0,0))
-	
-	noiseSeed = []
-	
-	for i in range(dims[0]):
-		noiseSeed.append(uniform(0,1))
-	noiseSeed[0] = 0.5
-	surface = perlinNoise1D(dims[0], noiseSeed, 7, 2) # 8 , 2.0
-	
-	for x in range(0,dims[0]):
-		for y in range(0,dims[1]):
-			if y >= surface[x] * dims[1]:
-				mount.set_at((x,y), color)
-
-	return mount
-
-def renderCloud(colors=[(224, 233, 232), (192, 204, 220)]):
-	c1 = colors[0]
-	c2 = colors[1]
-	surf = pygame.Surface((170, 70), pygame.SRCALPHA)
-	circles = []
-	leng = randint(15,30)
-	space = 5
-	gpos = (20, 40) 
-	for i in range(leng):
-		pos = Vector(gpos[0] + i * space, gpos[1]) + vectorUnitRandom() * uniform(0, 10)
-		radius = max(20 * (exp(-(1/(5*leng)) * ((pos[0]-gpos[0])/space -leng/2)**2)), 5) * uniform(0.8,1.2)
-		circles.append((pos, radius))
-	circles.sort(key=lambda x: x[0][0])
-	for c in circles:
-		pygame.draw.circle(surf, c2, c[0], c[1])
-	for c in circles:
-		pygame.draw.circle(surf, c1, c[0] - Vector(1,1) * 0.7 * 0.2 * c[1], c[1] * 0.8)
-	for i in range(0,len(circles),int(len(circles)/4)):
-		pygame.draw.circle(surf, c2, circles[i][0], circles[i][1])
-	for i in range(0,len(circles),int(len(circles)/8)):
-		pygame.draw.circle(surf, c1, circles[i][0] - Vector(1,1) * 0.8 * 0.2 * circles[i][1], circles[i][1] * 0.8)
-	
-	return surf
 
 def spriteIndex2rect(index):
 	return (index % 8) * 16, (index // 8) * 16, 16, 16
-
-class BackGround:
-	_bg = None
-	def __init__(self):
-		BackGround._bg = self
-		self.feelIndex = feelIndex
-		self.recreate()
-		self.cloudsPos = [i * (globals.winWidth + 170)/3 for i in range(3)]
-		self.animationStep = 0 # in
-		self.fireworks = None
-	def recreate(self):
-		feel = feels[self.feelIndex]
-		self.imageMountain = renderMountains((180, 110), feel[3])
-		self.imageMountain2 = renderMountains((180, 150), feel[2])
-		colorRect = pygame.Surface((2,2))
-		pygame.draw.line(colorRect, feel[0], (0,0), (2,0))
-		pygame.draw.line(colorRect, feel[1], (0,1), (2,1))
-		self.imageSky = pygame.transform.smoothscale(colorRect, (globals.winWidth, globals.winHeight))
-		self.clouds = [renderCloud() for i in range(3)]
-	def step(self):
-		if self.fireworks:
-			pass
-	def draw(self):
-		globals.win.blit(self.imageSky, (0,0))
-		x = 0
-		while x < globals.winWidth:
-			globals.win.blit(self.imageMountain, (x, globals.winWidth - self.imageMountain.get_height()))
-			globals.win.blit(self.imageMountain2, (x, globals.winWidth - self.imageMountain.get_height()))
-			x += self.imageMountain.get_width()
-		for i, c in enumerate(self.clouds):
-			self.cloudsPos[i] = self.cloudsPos[i] + 0.1
-			if self.cloudsPos[i] > globals.winWidth:
-				self.cloudsPos[i] = -170
-			globals.win.blit(c, (self.cloudsPos[i] ,globals.winHeight // 2))
 
 class MainMenu:
 	_mm = None
@@ -142,7 +52,7 @@ class MainMenu:
 		MainMenu._mm = self
 
 	def initializeEndGameMenu(self, parameters):
-		endMenu = Menu(name="endMenu", pos=[globals.winWidth//2  - globals.winWidth//4, (globals.winHeight - 160)//2], size=[globals.winWidth // 2, 160], register=True)
+		endMenu = Menu(name="endMenu", pos=[GameVariables().win_width // 2  - GameVariables().win_width//4, (GameVariables().win_height - 160)//2], size=[GameVariables().win_width // 2, 160], register=True)
 		endMenu.insert(MENU_TEXT, text="Game Over", customSize=15)
 		if "winner" in parameters.keys():
 			endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
@@ -162,7 +72,7 @@ class MainMenu:
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
 	def initializeWeaponMenu(self, zero=False):
-		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (globals.winHeight - 180)//2], size=[globals.winWidth - 80, 180], register=True)
+		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (GameVariables().win_height - 180)//2], size=[GameVariables().win_width - 80, 180], register=True)
 		
 		weapons = ET.parse('weapons.xml').getroot()[0]
 		weaponCount = len(weapons)
@@ -209,7 +119,7 @@ class MainMenu:
 		wepMenu.addElement(sub)
 
 	def initializeMenuOptions(self):
-		mainMenu = Menu(name="menu", pos=[40, (globals.winHeight - 196)//2], size=[globals.winWidth - 80, 196], register=True)
+		mainMenu = Menu(name="menu", pos=[40, (GameVariables().win_height - 196)//2], size=[GameVariables().win_width - 80, 196], register=True)
 		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 
 		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
@@ -312,14 +222,14 @@ class MainMenu:
 		mainMenu.addElement(subMore)
 
 		# background feel menu
-		bgMenu = Menu(pos=[globals.winWidth - 20, globals.winHeight - 20], size=[20, 20], register=True)
+		bgMenu = Menu(pos=[GameVariables().win_width - 20, GameVariables().win_height - 20], size=[20, 20], register=True)
 		bgMenu.insert(MENU_UPDOWN, text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
 	def initializeRecordMenu(self):
 		# clear graphs
 		graphObject.Graph._reg.clear()
 
-		recordMenu = Menu(name="record menu", pos=[globals.winWidth//2  - globals.winWidth//4, (globals.winHeight - 180)//2], size=[globals.winWidth // 2, 180], register=True)
+		recordMenu = Menu(name="record menu", pos=[GameVariables().win_width//2  - GameVariables().win_width//4, (GameVariables().win_height - 180)//2], size=[GameVariables().win_width // 2, 180], register=True)
 		recordMenu.insert(MENU_TEXT, text="worms game records", customSize=15)
 		b = recordMenu.insert(MENU_SURF)
 		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
@@ -377,34 +287,34 @@ class MainMenu:
 			pygame.image.save(noise, imageString)
 			MainMenu._picture.setImage(imageString)
 		if key == "play":
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -globals.winHeight), trigger=playOnPress)
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameVariables().win_height), trigger=playOnPress)
 		if key == "continue":
 			self.initializeMenuOptions()
-			MenuAnimator(Menu._reg[1], Menu._reg[1].pos + Vector(0, -globals.winHeight), Menu._reg[1].pos)
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, globals.winHeight), trigger=continueOnPress)
+			MenuAnimator(Menu._reg[1], Menu._reg[1].pos + Vector(0, -GameVariables().win_height), Menu._reg[1].pos)
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, GameVariables().win_height), trigger=continueOnPress)
 			# remove the end menu
 			# Menu._reg.pop(0)
 		if key == "scoreboard":
 			# create the scoreboard menu
 			self.initializeRecordMenu()
 			# animate record menu in
-			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, globals.winHeight), Menu._reg[-1].pos)
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, GameVariables().win_height), Menu._reg[-1].pos)
 			# animate main menu out
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -globals.winHeight))
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameVariables().win_height))
 		if key == "back":
 			# animate record menu out
-			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos, Menu._reg[-1].pos + Vector(0, globals.winHeight))
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos, Menu._reg[-1].pos + Vector(0, GameVariables().win_height))
 			# animate main menu in
-			endPos = Menu._reg[0].pos + Vector(0, globals.winHeight)
+			endPos = Menu._reg[0].pos + Vector(0, GameVariables().win_height)
 			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, endPos, trigger=menuPop)
 			self.updateWeaponSets()
 		if key == "weaponssetup":
 			# create the weapons menu
 			self.initializeWeaponMenu()
 			# animate weapons menu in
-			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, globals.winHeight), Menu._reg[-1].pos)
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, GameVariables().win_height), Menu._reg[-1].pos)
 			# animate main menu out
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -globals.winHeight))
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameVariables().win_height))
 		if key == "defaultweapons":
 			wepmenu = getMenubyName("weapons")
 			Menu._reg.remove(wepmenu)
@@ -428,7 +338,7 @@ class PauseMenu:
 		self.run = True
 		PauseMenu._pm = self
 	def initializePauseMenu(self, args):
-		pauseMenu = Menu(name="endMenu", pos=[globals.winWidth//2  - globals.winWidth//4, 40], size=[globals.winWidth // 2, 160], register=True)
+		pauseMenu = Menu(name="endMenu", pos=[GameVariables().win_width//2  - GameVariables().win_width//4, 40], size=[GameVariables().win_width // 2, 160], register=True)
 		pauseMenu.insert(MENU_TEXT, text="Game paused")
 
 		if "showPoints" in args.keys() and args["showPoints"]:
@@ -448,7 +358,7 @@ class PauseMenu:
 
 		pauseMenu.insert(MENU_BUTTON, key="resume", text="resume")
 		pauseMenu.insert(MENU_BUTTON, key="toMainMenu", text="back to main menu")
-		pauseMenu.pos = Vector(globals.winWidth//2 - pauseMenu.size[0]//2, globals.winHeight//2 - pauseMenu.size[1]//2)
+		pauseMenu.pos = Vector(GameVariables().win_width//2 - pauseMenu.size[0]//2, GameVariables().win_height//2 - pauseMenu.size[1]//2)
 
 	def handlePauseMenu(self, event):
 		key = event.key
@@ -539,18 +449,18 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 	Menu._reg.clear()
 	graphObject.Graph._reg.clear()
 
-	BackGround()
+	background = BackGround(feels[0])
 	MainMenu()
 	MainMenu._maps = grab_maps(['wormsMaps', 'wormsMaps/moreMaps'])
 	
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()
 		endPos = Menu._reg[0].pos
-		MenuAnimator(Menu._reg[0], endPos + Vector(0, globals.winHeight), endPos)
+		MenuAnimator(Menu._reg[0], endPos + Vector(0, GameVariables().win_height), endPos)
 	else:
 		MainMenu._mm.initializeEndGameMenu(fromGameParameters)
 		endPos = Menu._reg[0].pos
-		MenuAnimator(Menu._reg[0], endPos + Vector(0, globals.winHeight), endPos)
+		MenuAnimator(Menu._reg[0], endPos + Vector(0, GameVariables().win_height), endPos)
 
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
@@ -562,7 +472,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 				globals.exitGame()
 
 		# step
-		BackGround._bg.step()
+		background.step()
 		
 		Gui._instance.step()
 		
@@ -571,7 +481,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 			g.step(Vector(mousePos[0] // globals.scalingFactor, mousePos[1] // globals.scalingFactor))
 
 		# draw
-		BackGround._bg.draw()
+		background.draw(globals.win)
 
 		Gui._instance.draw()
 

@@ -294,10 +294,10 @@ class WeaponManager:
         space = 0
         for i, surf in enumerate(self.cool_down_list_surfaces):
             if i == 0:
-                win.blit(surf, (30 + 80 * i, globals.winHeight - 5 - surf.get_height()))
+                win.blit(surf, (30 + 80 * i, GameVariables().win_height - 5 - surf.get_height()))
             else:
                 space += self.cool_down_list_surfaces[i-1].get_width() + 10
-                win.blit(surf, (30 + space, globals.winHeight - 5 - surf.get_height()))
+                win.blit(surf, (30 + space, GameVariables().win_height - 5 - surf.get_height()))
 
     def drawWeaponIndicators(self) -> None:
         ''' draw specific weapon indicator '''

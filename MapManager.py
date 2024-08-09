@@ -28,14 +28,17 @@ def grab_maps(paths: List[str]) -> List[str]:
     return maps
 
 class MapManager(metaclass=SingletonMeta):
-
     def __init__(self) -> None:
-        self.game_map: pygame.Surface = None
+        # default value for game map dimensions
+        self.game_map: pygame.Surface = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
         self.ground_map: pygame.Surface = None
         self.ground_secondary: pygame.Surface = None
 
         self.draw_ground_secondary = True
-    
+
+    def get_map_height(self):
+        return self.game_map.get_height()
+
     def create_map_image(self, image_path: str, map_height: int, recolor: bool=False) -> None:
         ''' craete a map by an image '''
         

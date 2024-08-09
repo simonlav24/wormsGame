@@ -46,14 +46,14 @@ class HealthBar:
 		maxPoints = sum(i.points for i in globals.team_manager.teams)
 		
 		for i, team in enumerate(globals.team_manager.teams):
-			pygame.draw.rect(globals.game_manager.win, (220,220,220), (int(globals.winWidth - (HealthBar.width + 10)), 10 + i * 3, HealthBar.width, 2))
+			pygame.draw.rect(globals.game_manager.win, (220,220,220), (int(GameVariables().win_width - (HealthBar.width + 10)), 10 + i * 3, HealthBar.width, 2))
 			
 			# health:
 			value = min(self.teamHealthMod[i] / self.maxHealth, 1) * HealthBar.width
 			if value < 1 and value > 0:
 				value = 1
 			if not value <= 0:
-				pygame.draw.rect(globals.game_manager.win, globals.team_manager.teams[i].color, (int(globals.winWidth - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
+				pygame.draw.rect(globals.game_manager.win, globals.team_manager.teams[i].color, (int(GameVariables().win_width - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
 			
 			# points:
 			if not HealthBar.drawPoints:
@@ -64,10 +64,10 @@ class HealthBar:
 			if value < 1 and value > 0:
 				value = 1
 			if not value == 0:
-				pygame.draw.rect(globals.game_manager.win, (220,220,220), (int(globals.winWidth - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
+				pygame.draw.rect(globals.game_manager.win, (220,220,220), (int(GameVariables().win_width - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
 			if globals.game_manager.gameMode == GameMode.CAPTURE_THE_FLAG:
 				if globals.team_manager.teams[i].flagHolder:
-					pygame.draw.circle(globals.game_manager.win, (220,0,0), (int(globals.winWidth - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
+					pygame.draw.circle(globals.game_manager.win, (220,0,0), (int(GameVariables().win_width - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
 
 class Commentator:
 	''' comment pop ups '''
@@ -99,7 +99,7 @@ class Commentator:
 			self.mode = Commentator.SHOW
 			self.timer = 2 * globals.fps + 1 * globals.fps / 2
 		elif self.mode == Commentator.SHOW:
-			globals.game_manager.win.blit(self.textSurf, (int(globals.winWidth/2 - self.textSurf.get_width()/2), 5))
+			globals.game_manager.win.blit(self.textSurf, (int(GameVariables().win_width/2 - self.textSurf.get_width()/2), 5))
 			
 			self.timer -= 1
 			if self.timer == 0:
@@ -146,9 +146,9 @@ class Toast:
 		self.time = 0
 		self.mode = mode
 		if self.mode == Toast.bottom:
-			self.anchor = Vector(globals.winWidth / 2, globals.winHeight)
+			self.anchor = Vector(GameVariables().win_width / 2, GameVariables().win_height)
 		else:
-			self.anchor = Vector(globals.winWidth // 2, globals.winHeight // 2) - tup2vec(self.surf.get_size()) / 2
+			self.anchor = Vector(GameVariables().win_width // 2, GameVariables().win_height // 2) - tup2vec(self.surf.get_size()) / 2
 		self.pos = Vector()
 		self.state = 0
 		Toast.toastCount += 1

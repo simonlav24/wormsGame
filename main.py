@@ -1,12 +1,13 @@
 from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fabs
 from random import shuffle ,randint, uniform, choice
 from vector import *
-import globals
-from mainMenus import renderMountains, renderCloud, feels, grab_maps, mainMenu, pauseMenu, initGui, updateWin
+from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 import pygame
 import os
 from typing import Any
 
+import globals
+from globals import point2world
 from Constants import *
 from Common import *
 from Effects import *
@@ -17,11 +18,12 @@ from MapManager import *
 from GameConfig import *
 from TeamManager import *
 from GameVariables import GameVariables
+from Background import BackGround
 
 from Weapons.WeaponManager import *
 
 def getGlobals():
-	global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, winWidth, winHeight, win, screen
+	global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, win, screen
 	fpsClock = globals.fpsClock
 	fps = globals.fps
 	pixelFont5halo = globals.pixelFont5halo
@@ -30,13 +32,20 @@ def getGlobals():
 	screenWidth = globals.screenWidth
 	screenHeight = globals.screenHeight
 	scalingFactor = globals.scalingFactor
-	winWidth = globals.winWidth
-	winHeight = globals.winHeight
 	win = globals.win
 	screen = globals.screen
+
 globals.globalsInit()
 initGui()
 getGlobals()
+
+def drawTarget(pos):
+	offset = sin(globals.time_manager.timeOverall / 5) * 4 + 3
+	triangle = [Vector(5 + offset,0), Vector(10 + offset,-2), Vector(10 + offset,2)]
+	for i in range(4):
+		angle = i * pi / 2
+		triangle = [triangle[0].rotate(angle), triangle[1].rotate(angle), triangle[2].rotate(angle)]
+		pygame.draw.polygon(globals.game_manager.win, (255,0,0), [point2world(pos + j) for j in triangle])
 
 class Game:
 	_game = None
@@ -243,7 +252,7 @@ class Game:
 			pickVictim()
 			
 	def point_to_world(self, point):
-		return (int(point[0]) - int(self.camPos[0]), int(point[1]) - int(self.camPos[1]))
+		return (int(point[0]) - int(GameVariables().cam_pos[0]), int(point[1]) - int(GameVariables().cam_pos[1]))
 
 	def get_worms(self):
 		return PhysObj._worms
@@ -304,7 +313,6 @@ class Game:
 		self.shotCount = 0 # number of gun shots fired
 		self.lights = [] # list of lights in darkenss mode
 
-		self.camPos = Vector(0,0) # camera position
 		self.camTrack = None # object to track
 
 		self.objectUnderControl = None # object under control
@@ -420,7 +428,7 @@ class Game:
 
 	def lstepper(self):
 		self.lstep += 1
-		pos = (winWidth/2 - Game._game.loadingSurf.get_width()/2, winHeight/2 - Game._game.loadingSurf.get_height()/2)
+		pos = (GameVariables().win_width/2 - Game._game.loadingSurf.get_width()/2, GameVariables().win_height/2 - Game._game.loadingSurf.get_height()/2)
 		width = Game._game.loadingSurf.get_width()
 		height = Game._game.loadingSurf.get_height()
 		pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((self.lstep / self.lstepmax)*width, height)))
@@ -577,14 +585,14 @@ class Water:
 	def draw(self, offsetY=0):
 		width = 200
 		height = 10
-		offset = (Game._game.camPos.x)//width
-		times = winWidth//width + 2
+		offset = (GameVariables().cam_pos[0])//width
+		times = GameVariables().win_width//width + 2
 		for i in range(times):
-			x = int(-Game._game.camPos.x) + int(int(offset) * width + i * width)
-			y =  int(Game._game.map_manager.game_map.get_height() - Water.level - 3 - Water.waterAmp - offsetY) - int(Game._game.camPos.y)
+			x = int(-GameVariables().cam_pos[0]) + int(int(offset) * width + i * width)
+			y =  int(Game._game.map_manager.game_map.get_height() - Water.level - 3 - Water.waterAmp - offsetY) - int(GameVariables().cam_pos[1])
 			win.blit(self.surf, (x, y))
 		
-		pygame.draw.rect(win, Water.waterColor[0], ((0,y + height), (winWidth, Water.level)))
+		pygame.draw.rect(win, Water.waterColor[0], ((0,y + height), (GameVariables().win_width, Water.level)))
 	def createLayers():
 		Water.layerTop = Water()
 		Water.layerMiddle = Water()
@@ -593,96 +601,6 @@ class Water:
 		Water.layerTop.step()
 		Water.layerMiddle.step()
 		Water.layerBottom.step()
-
-class Cloud:
-	''' single cloud, procedurally rendered, affected by wind '''
-	_reg = []
-	_toRemove = []
-	cWidth = 170
-	def __init__(self, pos):
-		self._reg.append(self)
-		self.pos = Vector(pos[0],pos[1])
-		self.vel = Vector(0,0)
-		self.acc = Vector(0,0)
-		self.surf = renderCloud()
-		self.randomness = uniform(0.97, 1.02)
-	def step(self):
-		self.acc.x = GameVariables().physics.wind
-		self.vel += self.acc * GameVariables().dt
-		self.vel *= 0.85 * self.randomness
-		self.pos += self.vel * GameVariables().dt
-		
-		if self.pos.x > Game._game.camPos.x + winWidth + 100 or self.pos.x < Game._game.camPos.x - 100 - self.cWidth:
-			self._toRemove.append(self)
-	def draw(self):
-		win.blit(self.surf, point2world(self.pos))
-
-class BackGround:
-	''' manages background entitiey: clouds, water '''
-	_bg = None
-	def __init__(self, feelColor, isDark=False):
-		BackGround._bg = self
-		self.mountains = [renderMountains((180, 110), feelColor[3]), renderMountains((180, 150), feelColor[2])]
-		colorRect = pygame.Surface((2,2))
-		pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
-		pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
-		self.imageSky = pygame.transform.smoothscale(colorRect, (winWidth, winHeight))
-
-		self.backColor = feelColor[0]
-		if isDark:
-			self.backColor = DARK_COLOR
-
-		Water.level = GameVariables().initial_variables.water_level
-		Water.waterColor = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
-		Water.waterColor.append(tuple(min(int(Water.waterColor[0][i] * 1.5), 255) for i in range(3)))
-
-		Water.createLayers()
-	def step(self):
-		self.manageClouds()
-		Water.stepAll()
-	def manageClouds(self):
-		if Game._game.map_manager.game_map.get_height() == 0:
-			return
-		if len(Cloud._reg) < 8 and randint(0,10) == 1:
-			pos = Vector(choice([Game._game.camPos.x - Cloud.cWidth - 100, Game._game.camPos.x + winWidth + 100]), randint(5, Game._game.map_manager.game_map.get_height() - 150))
-			Cloud(pos)
-		for cloud in Cloud._reg: cloud.step()
-		for cloud in Cloud._toRemove: Cloud._reg.remove(cloud)
-		Cloud._toRemove = []
-	def draw(self):
-		win.fill(self.backColor)
-		win.blit(pygame.transform.scale(self.imageSky, (win.get_width(), Game._game.map_manager.game_map.get_height())), (0,0 - Game._game.camPos[1]))
-		
-		for cloud in Cloud._reg:
-			cloud.draw()
-		self.drawBackGround(self.mountains[1],4)
-		self.drawBackGround(self.mountains[0],2)
-		Water.layerTop.draw(22)
-	def drawSecondary(self):
-		# draw top layer of water
-		Water.layerMiddle.draw(12)
-		Water.layerBottom.draw(2)
-	def drawBackGround(self, surf, parallax):
-		width = surf.get_width()
-		height = surf.get_height()
-		offset = (Game._game.camPos.x/parallax)//width
-		times = winWidth//width + 2
-		for i in range(times):
-			x = int(-Game._game.camPos.x/parallax) + int(int(offset) * width + i * width)
-			y = int(Game._game.map_manager.game_map.get_height() - GameVariables().initial_variables.water_level - height) - int(Game._game.camPos.y) + int((Game._game.map_manager.game_map.get_height() - GameVariables().initial_variables.water_level - winHeight - int(Game._game.camPos.y))/(parallax*1.5)) + 20 - parallax * 3
-			win.blit(surf, (x, y))
-	def drawBackGroundxy(self, surf, parallax):
-		width = surf.get_width()
-		height = surf.get_height()
-		offsetx = (Game._game.camPos.x/parallax)//width
-		offsety = (Game._game.camPos.y/parallax)//height
-		timesx = winWidth//width + 2
-		timesy = winHeight//height + 2
-		for i in range(timesx):
-			for j in range(timesy):
-				x = int(-Game._game.camPos.x/parallax) + int(int(offsetx) * width + i * width)
-				y = int(-Game._game.camPos.y/parallax) + int(int(offsety) * height + j * height)
-				win.blit(surf, (x, y))
 
 # todo: determine where this belongs
 def giveGoodPlace(div = 0, girderPlace = True):
@@ -1404,7 +1322,7 @@ class Worm (PhysObj):
 			self.acc.y -= GameVariables().physics.global_gravity
 	def drawCursor(self):
 		shootVec = self.pos + Vector((cos(self.shootAngle) * 20) ,sin(self.shootAngle) * 20)
-		pygame.draw.circle(win, (255,255,255), (int(shootVec.x) - int(Game._game.camPos.x), int(shootVec.y) - int(Game._game.camPos.y)), 2)
+		pygame.draw.circle(win, (255,255,255), (int(shootVec.x) - int(GameVariables().cam_pos[0]), int(shootVec.y) - int(GameVariables().cam_pos[1])), 2)
 	def sicken(self, sickness = 1):
 		self.sick = sickness
 		self.surf.fill((0,0,0,0))
@@ -1795,7 +1713,7 @@ class Fire(PhysObj):
 		if self.life > 10:
 			radius += 1
 		self.yellow = int(sin(0.3*TimeManager._tm.timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
-		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - Game._game.camPos.x), int(self.pos.y - Game._game.camPos.y)), radius)
+		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - GameVariables().cam_pos[0]), int(self.pos.y - GameVariables().cam_pos[1])), radius)
 
 class TNT(PhysObj):#5
 	def __init__(self, pos):
@@ -1814,7 +1732,7 @@ class TNT(PhysObj):#5
 	def deathResponse(self):
 		boom(self.pos, 40)
 	def draw(self):
-		pygame.draw.rect(win, self.color, (int(self.pos.x -2) - int(Game._game.camPos.x),int(self.pos.y -4) - int(Game._game.camPos.y) , 3,8))
+		pygame.draw.rect(win, self.color, (int(self.pos.x -2) - int(GameVariables().cam_pos[0]),int(self.pos.y -4) - int(GameVariables().cam_pos[1]) , 3,8))
 		pygame.draw.line(win, (90,90,90), point2world(self.pos + Vector(-1,-4)), point2world(self.pos + Vector(-1, -5*(fps*4 - self.timer)/(fps*4) - 4)), 1)
 		if randint(0,10) == 1:
 			Blast(self.pos + Vector(-1, -5*(fps*4 - self.timer)/(fps*4) - 4), randint(3,6), 150)
@@ -2335,8 +2253,8 @@ class Gemino(PhysObj):
 		# m = Gemino(self.pos, vectorUnitRandom(), uniform(0,2))
 		m.vel = vectorUnitRandom() 
 	def draw(self):
-		pygame.draw.circle(win, self.color, (int(self.pos.x) - int(Game._game.camPos.x), int(self.pos.y) - int(Game._game.camPos.y)), int(self.radius)+1)
-		pygame.draw.circle(win, (222,63,49), (int(self.pos.x) - int(Game._game.camPos.x), int(self.pos.y) - int(Game._game.camPos.y)), 1)
+		pygame.draw.circle(win, self.color, (int(self.pos.x) - int(GameVariables().cam_pos[0]), int(self.pos.y) - int(GameVariables().cam_pos[1])), int(self.radius)+1)
+		pygame.draw.circle(win, (222,63,49), (int(self.pos.x) - int(GameVariables().cam_pos[0]), int(self.pos.y) - int(GameVariables().cam_pos[1])), 1)
 
 class Plant:
 	def __init__(self, pos, radius = 5, angle = -1, mode = 0):
@@ -2929,7 +2847,7 @@ class Vortex():
 				direction = Vector(x,y) - self.pos
 				direction.rotate(rot)
 				getAt = point2world(self.pos + direction)
-				if getAt[0] < 0 or getAt[0] >= winWidth or getAt[1] < 0 or getAt[1] >= winHeight:
+				if getAt[0] < 0 or getAt[0] >= GameVariables().win_width or getAt[1] < 0 or getAt[1] >= GameVariables().win_height:
 					arr.append((0,0,0))
 				else:
 					pixelColor = win.get_at(getAt)
@@ -2988,18 +2906,18 @@ class TimeAgent:
 		pygame.draw.circle(win, Game._game.objectUnderControl.color, point2world(self.pos), 3+1)
 		facing = self.facings.pop(0)
 		win.blit(pygame.transform.flip(self.surf, facing == 1, False), point2world(tup2vec(self.pos) - tup2vec(self.surf.get_size()) / 2))
-		win.blit(self.nameSurf , ((int(self.pos[0]) - int(Game._game.camPos.x) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(Game._game.camPos.y) - 21)))
-		pygame.draw.rect(win, (220,220,220),(int(self.pos[0]) -10 -int(Game._game.camPos.x), int(self.pos[1]) -15 -int(Game._game.camPos.y), 20,3))
+		win.blit(self.nameSurf , ((int(self.pos[0]) - int(GameVariables().cam_pos[0]) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(GameVariables().cam_pos[1]) - 21)))
+		pygame.draw.rect(win, (220,220,220),(int(self.pos[0]) -10 -int(GameVariables().cam_pos[0]), int(self.pos[1]) -15 -int(GameVariables().cam_pos[1]), 20,3))
 		value = 20 * self.health / Game._game.game_config.worm_initial_health
 		if value < 1:
 			value = 1
-		pygame.draw.rect(win, (0,220,0),(int(self.pos[0]) -10 -int(Game._game.camPos.x), int(self.pos[1]) -15 -int(Game._game.camPos.y), int(value),3))
+		pygame.draw.rect(win, (0,220,0),(int(self.pos[0]) -10 -int(GameVariables().cam_pos[0]), int(self.pos[1]) -15 -int(GameVariables().cam_pos[1]), int(value),3))
 		
 		i = 0
 		while i < 20 * self.energy:
 			cPos = vectorCopy(self.pos)
 			angle = TimeTravel._tt.timeTravelList["weaponDir"].getAngle()
-			pygame.draw.line(win, (0,0,0), (int(cPos[0] - Game._game.camPos.x), int(cPos[1] - Game._game.camPos.y)), ((int(cPos[0] + cos(angle) * i - Game._game.camPos.x), int(cPos[1] + sin(angle) * i - Game._game.camPos.y))))
+			pygame.draw.line(win, (0,0,0), (int(cPos[0] - GameVariables().cam_pos[0]), int(cPos[1] - GameVariables().cam_pos[1])), ((int(cPos[0] + cos(angle) * i - GameVariables().cam_pos[0]), int(cPos[1] + sin(angle) * i - GameVariables().cam_pos[1]))))
 			i += 1
 
 class TimeTravel:
@@ -3058,7 +2976,7 @@ class ChilliPepper(PhysObj):
 	def draw(self):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , (int(self.pos.x - Game._game.camPos.x - surf.get_size()[0]/2), int(self.pos.y - Game._game.camPos.y - surf.get_size()[1]/2)))
+		win.blit(surf , (int(self.pos.x - GameVariables().cam_pos[0] - surf.get_size()[0]/2), int(self.pos.y - GameVariables().cam_pos[1] - surf.get_size()[1]/2)))
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
 		self.stable = False
@@ -6835,7 +6753,7 @@ def weaponMenuRadialInit():
 		main_button = RadialButton(weapons_in_category[0], '', '', weapon_bg_color[category], WeaponManager._wm.get_surface_portion(weapons_in_category[0]), sub_layout)
 		layout.append(main_button)
 
-	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(winWidth // 2, winHeight // 2))
+	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(GameVariables().win_width // 2, GameVariables().win_height // 2))
 
 
 	# Game._game.radial_weapon_menu = RadialMenu()
@@ -7126,7 +7044,7 @@ class MissionManager:
 		yOffset = 0
 		for mission in self.wormMissionDict[currentWorm]:
 			surf = mission.surf
-			win.blit(surf, (winWidth - surf.get_width() - 5, winHeight - surf.get_height() - 5 - yOffset))
+			win.blit(surf, (GameVariables().win_width - surf.get_width() - 5, GameVariables().win_height - surf.get_height() - 5 - yOffset))
 			yOffset += surf.get_height() + 2
 		
 		# draw mission indicators
@@ -7450,16 +7368,16 @@ def pickVictim():
 
 def drawDirInd(pos):
 	border = 20
-	if not (pos[0] < Game._game.camPos[0] - border/4 or pos[0] > (Vector(winWidth, winHeight) + Game._game.camPos)[0] + border/4 or pos[1] < Game._game.camPos[1] - border/4 or pos[1] > (Vector(winWidth, winHeight) + Game._game.camPos)[1] + border/4):
+	if not (pos[0] < GameVariables().cam_pos[0] - border/4 or pos[0] > (Vector(GameVariables().win_width, GameVariables().win_height) + GameVariables().cam_pos)[0] + border/4 or pos[1] < GameVariables().cam_pos[1] - border/4 or pos[1] > (Vector(GameVariables().win_width, GameVariables().win_height) + GameVariables().cam_pos)[1] + border/4):
 		return
 
-	cam = Game._game.camPos + Vector(winWidth//2, winHeight//2)
+	cam = GameVariables().cam_pos + Vector(GameVariables().win_width//2, GameVariables().win_height//2)
 	direction = pos - cam
 	
-	intersection = tup2vec(point2world((winWidth, winHeight))) + pos -  Vector(winWidth, winHeight)
+	intersection = tup2vec(point2world((GameVariables().win_width, GameVariables().win_height))) + pos -  Vector(GameVariables().win_width, GameVariables().win_height)
 	
-	intersection[0] = min(max(intersection[0], border), winWidth - border)
-	intersection[1] = min(max(intersection[1], border), winHeight - border)
+	intersection[0] = min(max(intersection[0], border), GameVariables().win_width - border)
+	intersection[1] = min(max(intersection[1], border), GameVariables().win_height - border)
 	
 	points = [Vector(0,2), Vector(0,-2), Vector(5,0)]
 	angle = direction.getAngle()
@@ -7676,14 +7594,14 @@ def onKeyPressEnter():
 ################################################################################ Main
 
 def gameMain(game_config: GameConfig=None):
-	global winWidth, winHeight, scalingFactor, win
+	global scalingFactor, win
 
 	Game(game_config)
 	TimeManager()
 	WeaponManager()
 	TeamManager()
 
-	BackGround(feels[GameVariables().config.feel_index], Game._game.darkness)
+	background = BackGround(feels[GameVariables().config.feel_index], Game._game.darkness)
 	HealthBar()
 	SmokeParticles()
 	
@@ -7827,41 +7745,41 @@ def gameMain(game_config: GameConfig=None):
 			if mousePos[1] > screenHeight - EDGE_BORDER:
 				scroll.y += MAP_SCROLL_SPEED * (2.5 - scalingFactor / 2)
 			if scroll != Vector():
-				Game._game.camTrack = Camera(Game._game.camPos + Vector(winWidth, winHeight)/2 + scroll)
+				Game._game.camTrack = Camera(GameVariables().cam_pos + Vector(GameVariables().win_width, GameVariables().win_height)/2 + scroll)
 		
 		# handle scale:
-		oldSize = (winWidth, winHeight)
-		winWidth += (globals.screenWidth / scalingFactor - winWidth) * 0.2
-		winHeight += (globals.screenHeight / scalingFactor - winHeight) * 0.2
-		winWidth = int(winWidth)
-		winHeight = int(winHeight)
+		oldSize = (GameVariables().win_width, GameVariables().win_height)
+		GameVariables().win_width += (globals.screenWidth / scalingFactor - GameVariables().win_width) * 0.2
+		GameVariables().win_height += (globals.screenHeight / scalingFactor - GameVariables().win_height) * 0.2
+		GameVariables().win_width = int(GameVariables().win_width)
+		GameVariables().win_height = int(GameVariables().win_height)
 		
-		if oldSize != (winWidth, winHeight):
-			globals.win = pygame.Surface((winWidth, winHeight))
+		if oldSize != (GameVariables().win_width, GameVariables().win_height):
+			globals.win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
 			win = globals.win
-			globals.winWidth = winWidth
-			globals.winHeight = winHeight
+			globals.GameVariables().win_width = GameVariables().win_width
+			globals.GameVariables().win_height = GameVariables().win_height
 			updateWin(win, scalingFactor)
 		
 		# handle position:
 		if Game._game.camTrack:
 			# actual position target:
-			### Game._game.camPos = Game._game.camTrack.pos - Vector(winWidth, winHeight)/2
+			### GameVariables().cam_pos = Game._game.camTrack.pos - Vector(GameVariables().win_width, GameVariables().win_height)/2
 			# with smooth transition:
-			Game._game.camPos += ((Game._game.camTrack.pos - Vector(int(globals.screenWidth / scalingFactor), int(globals.screenHeight / scalingFactor))/2) - Game._game.camPos) * 0.2
+			GameVariables().cam_pos += ((Game._game.camTrack.pos - Vector(int(globals.screenWidth / scalingFactor), int(globals.screenHeight / scalingFactor))/2) - GameVariables().cam_pos) * 0.2
 		
 		# constraints:
-		if Game._game.camPos.y < 0: Game._game.camPos.y = 0
-		if Game._game.camPos.y >= Game._game.map_manager.game_map.get_height() - winHeight: Game._game.camPos.y = Game._game.map_manager.game_map.get_height() - winHeight
+		if GameVariables().cam_pos[1] < 0: GameVariables().cam_pos[1] = 0
+		if GameVariables().cam_pos[1] >= Game._game.map_manager.game_map.get_height() - GameVariables().win_height: GameVariables().cam_pos[1] = Game._game.map_manager.game_map.get_height() - GameVariables().win_height
 		if Game._game.mapClosed or Game._game.darkness:
-			if Game._game.camPos.x < 0:
-				Game._game.camPos.x = 0
-			if Game._game.camPos.x >= Game._game.map_manager.game_map.get_width() - winWidth:
-				Game._game.camPos.x = Game._game.map_manager.game_map.get_width() - winWidth
+			if GameVariables().cam_pos[0] < 0:
+				GameVariables().cam_pos[0] = 0
+			if GameVariables().cam_pos[0] >= Game._game.map_manager.game_map.get_width() - GameVariables().win_width:
+				GameVariables().cam_pos[0] = Game._game.map_manager.game_map.get_width() - GameVariables().win_width
 		
 		if Earthquake.earthquake > 0:
-			Game._game.camPos.x += Earthquake.earthquake * 25 * sin(TimeManager._tm.timeOverall)
-			Game._game.camPos.y += Earthquake.earthquake * 15 * sin(TimeManager._tm.timeOverall * 1.8)
+			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(TimeManager._tm.timeOverall)
+			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(TimeManager._tm.timeOverall * 1.8)
 		
 		# Fire
 		if Game._game.fireWeapon and Game._game.playerShootAble: fire()
@@ -7904,7 +7822,7 @@ def gameMain(game_config: GameConfig=None):
 		
 		# advance timer
 		TimeManager._tm.step()
-		BackGround._bg.step()
+		background.step()
 		
 		if ArenaManager._arena: ArenaManager._arena.step()
 		if MissionManager._mm: MissionManager._mm.step()
@@ -7919,20 +7837,20 @@ def gameMain(game_config: GameConfig=None):
 		WindFlag._instance.step()
 
 		# draw:
-		BackGround._bg.draw()
+		background.draw(win)
 		drawLand()
 		for p in PhysObj._reg: 
 			p.draw()
 		for f in Game._game.nonPhys:
 			f.draw()
-		BackGround._bg.drawSecondary()
+		background.drawSecondary()
 		for t in Toast._toasts:
 			t.draw()
 		
 		if ArenaManager._arena: ArenaManager._arena.draw()
 		SmokeParticles._sp.draw()
 
-		if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(Game._game.camPos.x), -int(Game._game.camPos.y)))
+		if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
 		# draw shooting indicator
 		if Game._game.objectUnderControl and Game._game.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and Game._game.objectUnderControl.health > 0:
 			Game._game.objectUnderControl.drawCursor()
@@ -7977,9 +7895,9 @@ def gameMain(game_config: GameConfig=None):
 		if len(Toast._toasts) > 0:
 			for t in Toast._toasts:
 				if t.mode == Toast.bottom:
-					t.updateWinPos((winWidth/2, winHeight))
+					t.updateWinPos((GameVariables().win_width/2, GameVariables().win_height))
 				elif t.mode == Toast.middle:
-					t.updateWinPos(Vector(winWidth/2, winHeight/2) - tup2vec(t.surf.get_size())/2)
+					t.updateWinPos(Vector(GameVariables().win_width/2, GameVariables().win_height/2) - tup2vec(t.surf.get_size())/2)
 		
 		if Game._game.radial_weapon_menu:
 			Game._game.radial_weapon_menu.draw(win)
@@ -7989,16 +7907,16 @@ def gameMain(game_config: GameConfig=None):
 			while len(Game._game.killList) > 8:
 				Game._game.killList.pop(-1)
 			for i, killed in enumerate(Game._game.killList):
-				win.blit(killed[0], (5, winHeight - 20 - i * (killed[0].get_height() + 1)))
+				win.blit(killed[0], (5, GameVariables().win_height - 20 - i * (killed[0].get_height() + 1)))
 		
 		# debug:
 		if damageText[0] != Game._game.damageThisTurn: damageText = (Game._game.damageThisTurn, pixelFont5halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
-		win.blit(damageText[1], ((int(5), int(winHeight -5 -damageText[1].get_height()))))
+		win.blit(damageText[1], ((int(5), int(GameVariables().win_height -5 -damageText[1].get_height()))))
 		
 		# draw loading screen
 		if Game._game.state in [RESET]:
 			win.fill((0,0,0))
-			pos = (winWidth/2 - Game._game.loadingSurf.get_width()/2, winHeight/2 - Game._game.loadingSurf.get_height()/2)
+			pos = (GameVariables().win_width/2 - Game._game.loadingSurf.get_width()/2, GameVariables().win_height/2 - Game._game.loadingSurf.get_height()/2)
 			win.blit(Game._game.loadingSurf, pos)
 			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + 20))
 			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + Game._game.loadingSurf.get_height() + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + Game._game.loadingSurf.get_height() + 20))
@@ -8027,7 +7945,7 @@ def splashScreen():
 			break
 
 		win.fill((11,126,193))
-		win.blit(splashImage, ((winWidth/2 - splashImage.get_width()/2, winHeight/2 - splashImage.get_height()/2)))
+		win.blit(splashImage, ((GameVariables().win_width/2 - splashImage.get_width()/2, GameVariables().win_height/2 - splashImage.get_height()/2)))
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 		pygame.display.update()
 		fpsClock.tick(fps)
