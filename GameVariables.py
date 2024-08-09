@@ -41,9 +41,15 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.cam_pos: Vector = Vector(0,0)
 
-        self.win_width: int = 0
-        self.win_height: int = 0
-        
+        self.win_width = 0
+        self.win_height = 0
+
+        self.water_level = self.initial_variables.water_level
+
+
+def point2world(point):
+	''' point in vector space to point in world map space '''
+	return (int(point[0]) - int(GameVariables().cam_pos[0]), int(point[1]) - int(GameVariables().cam_pos[1]))
 
 
 if __name__ == '__main__':

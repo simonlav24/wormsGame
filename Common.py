@@ -5,7 +5,6 @@ import pygame
 from math import sin, pi
 from vector import *
 
-import globals
 from Constants import ColorType
 
 # paths

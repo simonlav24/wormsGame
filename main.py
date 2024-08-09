@@ -7,7 +7,6 @@ import os
 from typing import Any
 
 import globals
-from globals import point2world
 from Constants import *
 from Common import *
 from Effects import *
@@ -17,7 +16,7 @@ from tempFuncs import *
 from MapManager import *
 from GameConfig import *
 from TeamManager import *
-from GameVariables import GameVariables
+from GameVariables import GameVariables, point2world
 from Background import BackGround
 
 from Weapons.WeaponManager import *
@@ -53,7 +52,11 @@ class Game:
 		Game._game = self
 		globals.game_manager = self
 
+		self.evaluate_config(game_config)
+		GameVariables().config = game_config
+
 		self.map_manager = MapManager()
+		self.background = BackGround(feels[GameVariables().config.feel_index], Game._game.darkness)
 
 		self.clearLists()
 		
@@ -65,8 +68,7 @@ class Game:
 		self.damageThisTurn = 0
 		self.mostDamage = (0, None)
 
-		GameVariables().config = game_config
-		self.evaluateArgs(game_config)
+		
 
 		self.extra = []
 		self.layersCircles = [[], [], []]
@@ -273,9 +275,6 @@ class Game:
 		Raon._raons.clear()
 		Seagull._reg.clear()
 		Chum._chums.clear()
-		Water.layerTop = None
-		Water.layerMiddle = None
-		Water.layerBottom = None
 
 		ArenaManager._arena = None
 		MissionManager._mm = None
@@ -393,7 +392,7 @@ class Game:
 		
 		win.blit(surf, point2world(position - Vector(24,7) / 2))
 	
-	def evaluateArgs(self, game_config: GameConfig):
+	def evaluate_config(self, game_config: GameConfig):
 		self.game_config: GameConfig = game_config
 
 		if self.game_config.feel_index == -1:
@@ -536,71 +535,11 @@ def stain(pos, surf, size, alphaMore):
 def splash(pos, vel):
 	amount = 10 + int(vel.getMag())
 	for i in range(amount):
-		d = Debrie(Vector(pos.x, Game._game.map_manager.game_map.get_height() - Water.level - 3), 10, [Water.waterColor[1]], 1, False, True)
+		d = Debrie(Vector(pos.x, Game._game.map_manager.game_map.get_height() - GameVariables().water_level - 3), 10, [feels[GameVariables().config.feel_index]], 1, False, True)
 		d.vel = vectorUnitRandom()
 		d.vel.y = uniform(-1,0) * vel.getMag()
 		d.vel.x *= vel.getMag() * 0.17
 		d.radius = choice([2,1])
-
-class Water:
-	''' water manager '''
-	level = 50
-	quiet = 0
-	waterAmp = 2
-	rising = 1
-	layerTop = None
-	layerMiddle = None
-	layerBottom = None
-	waterColor = []
-	def __init__(self):
-		self.points = [Vector(i * 20, 3 + Water.waterAmp + Water.waterAmp * (-1)**i) for i in range(-1,12)]
-		self.speeds = [uniform(0.95, 1.05) for i in range(-1,11)]
-		self.phase = [sin(TimeManager._tm.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-		
-		self.surf = pygame.Surface((200, Water.waterAmp * 2 + 6), pygame.SRCALPHA)
-		self.state = Water.quiet
-		self.amount = 0
-	def rise(amount):
-		Water.layerTop.amount = amount
-		Water.layerMiddle.amount = amount
-		Water.layerBottom.amount = amount
-		Water.layerTop.state = Water.rising
-		Water.layerMiddle.state = Water.rising
-		Water.layerBottom.state = Water.rising
-	def step(self):
-		self.surf.fill((0,0,0,0))
-		self.points = [Vector(i * 20, 3 + Water.waterAmp + self.phase[i % 10] * Water.waterAmp * (-1)**i) for i in range(-1,12)]
-		pygame.draw.polygon(self.surf, Water.waterColor[0], self.points + [(200, Water.waterAmp * 2 + 6), (0, Water.waterAmp * 2 + 6)])
-		pygame.draw.lines(self.surf, Water.waterColor[1], False, self.points, 2)
-		
-		self.phase = [sin(TimeManager._tm.timeOverall/(3 * self.speeds[i])) for i in range(-1,11)]
-	
-		if self.state == Water.rising:
-			gameDistable()
-			Water.level += 1
-			self.amount -= 1
-			if self.amount <= 0:
-				self.amount = 0
-				self.state = Water.quiet
-	def draw(self, offsetY=0):
-		width = 200
-		height = 10
-		offset = (GameVariables().cam_pos[0])//width
-		times = GameVariables().win_width//width + 2
-		for i in range(times):
-			x = int(-GameVariables().cam_pos[0]) + int(int(offset) * width + i * width)
-			y =  int(Game._game.map_manager.game_map.get_height() - Water.level - 3 - Water.waterAmp - offsetY) - int(GameVariables().cam_pos[1])
-			win.blit(self.surf, (x, y))
-		
-		pygame.draw.rect(win, Water.waterColor[0], ((0,y + height), (GameVariables().win_width, Water.level)))
-	def createLayers():
-		Water.layerTop = Water()
-		Water.layerMiddle = Water()
-		Water.layerBottom = Water()
-	def stepAll():
-		Water.layerTop.step()
-		Water.layerMiddle.step()
-		Water.layerBottom.step()
 
 # todo: determine where this belongs
 def giveGoodPlace(div = 0, girderPlace = True):
@@ -747,7 +686,7 @@ def checkFreePos(obj, pos, wormCol = False):
 	r = 0
 	while r < 2 * pi:
 		testPos = Vector((obj.radius) * cos(r) + pos.x, (obj.radius) * sin(r) + pos.y)
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level or testPos.x < 0:
+		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 			if Game._game.mapClosed:
 				return False
 			else:
@@ -775,7 +714,7 @@ def checkFreePosFallProof(obj, pos):
 	r = 0
 	while r < 2 * pi:
 		testPos = Vector((obj.radius) * cos(r) + pos.x, (obj.radius) * sin(r) + pos.y)
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level or testPos.x < 0:
+		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 			if Game._game.mapClosed:
 				return False
 			else:
@@ -825,7 +764,7 @@ def getNormal(pos, vel, radius, wormCollision: bool, extraCollision: bool) -> Ve
 	r = angle - pi
 	while r < angle + pi:
 		testPos = Vector((radius) * cos(r) + pos.x, (radius) * sin(r) + pos.y)
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level or testPos.x < 0:
+		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 			if Game._game.mapClosed:
 				response += pos - testPos
 				r += pi /8
@@ -951,7 +890,7 @@ class PhysObj:
 		r = angle - pi
 		while r < angle + pi:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level or testPos.x < 0:
+			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 				if Game._game.mapClosed:
 					response += ppos - testPos
 					collision = True
@@ -1022,13 +961,13 @@ class PhysObj:
 			self.pos = ppos
 			
 		# flew out Game._game.map_manager.game_map but not worms !
-		if self.pos.y > Game._game.map_manager.game_map.get_height() - Water.level and not self in self._worms:
+		if self.pos.y > Game._game.map_manager.game_map.get_height() - GameVariables().water_level and not self in self._worms:
 			if self not in Debrie._debries:
 				splash(self.pos, self.vel)
 			angle = self.vel.getAngle()
 			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
 				if self.vel.getMag() > 7:
-					self.pos.y = Game._game.map_manager.game_map.get_height() - Water.level - 1
+					self.pos.y = Game._game.map_manager.game_map.get_height() - GameVariables().water_level - 1
 					self.vel.y *= -1
 					self.vel.x *= 0.8
 			else:
@@ -1643,12 +1582,12 @@ class Worm (PhysObj):
 			self.dieded()
 		
 		# check if on Game._game.map_manager.game_map:
-		if self.pos.y > Game._game.map_manager.game_map.get_height() - Water.level:
+		if self.pos.y > Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
 			splash(self.pos, self.vel)
 			angle = self.vel.getAngle()
 			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
 				if self.vel.getMag() > 7:
-					self.pos.y = Game._game.map_manager.game_map.get_height() - Water.level - 1
+					self.pos.y = Game._game.map_manager.game_map.get_height() - GameVariables().water_level - 1
 					self.vel.y *= -1
 					self.vel.x *= 0.7
 			else:
@@ -1668,8 +1607,6 @@ class Worm (PhysObj):
 					if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
 						worm.vel = vectorCopy(self.vel)
 						# print(self.nameStr, "collided with", worm.nameStr)
-
-
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
@@ -1743,7 +1680,7 @@ def fireShotgun(start, direction, power=15):#6
 		testPos = start + direction * t
 		Game._game.addExtra(testPos, (255, 204, 102), 3)
 		
-		if testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level:
+		if testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
 			splash(testPos, Vector(10,0))
 			break
 		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
@@ -2040,7 +1977,7 @@ def deployPack(pack):
 		
 		# test2
 		for i in range(Game._game.map_manager.game_map.get_height()):
-			if y + i >= Game._game.map_manager.game_map.get_height() - Water.level:
+			if y + i >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
 				# no Game._game.map_manager.ground_map bellow
 				goodPlace = False
 				continue
@@ -3087,7 +3024,7 @@ class LongBow:
 				if self.pos.y < 0:
 					self.destroy()
 					return
-				if self.pos.y > Game._game.map_manager.game_map.get_height() - Water.level:
+				if self.pos.y > Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
 					splash(self.pos, self.vel)
 					self.destroy()
 					return
@@ -3565,7 +3502,7 @@ class Venus:
 		else:
 			Game._game.nonPhysToRemove.append(self)
 			Venus._reg.remove(self)
-		if self.pos.y >= Game._game.map_manager.game_map.get_height() - Water.level:
+		if self.pos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
 			Game._game.nonPhysToRemove.append(self)
 			Venus._reg.remove(self)
 	def mutate(self):
@@ -4028,7 +3965,7 @@ class GuidedMissile(PhysObj):
 		collision = False
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + self.pos.x, (self.radius) * sin(r) + self.pos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level or testPos.x < 0:
+			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 				if Game._game.mapClosed:
 					collision = True
 					r += pi /8
@@ -4101,7 +4038,7 @@ class EndPearl(PhysObj):
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level or testPos.x < 0:
+			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 				if Game._game.mapClosed:
 					response += ppos - testPos
 					r += pi /8
@@ -4493,7 +4430,7 @@ class Bubble:
 		else:
 			self.catch.pos = self.pos
 			self.catch.vel *= 0
-		if Game._game.mapClosed and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= Game._game.map_manager.game_map.get_width() - Water.level):
+		if Game._game.mapClosed and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= Game._game.map_manager.game_map.get_width() - GameVariables().water_level):
 			self.burst()
 		if self.pos.y < 0 and (Game._game.map_manager.is_ground_at((self.pos.x + self.radius, 0)) or Game._game.map_manager.is_ground_at((self.pos.x - self.radius, 0))):
 			self.burst()
@@ -4962,7 +4899,7 @@ class MjolnirFly(PhysObj):
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - Water.level or testPos.x < 0:
+			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 				if Game._game.mapClosed:
 					response += ppos - testPos
 					r += pi /8
@@ -6419,7 +6356,7 @@ def checkWinners():
 		Game._game.endGameDict = dic
 		Game._game.nextState = WIN
 		
-		GroundScreenShoot = pygame.Surface((Game._game.map_manager.ground_map.get_width(), Game._game.map_manager.ground_map.get_height() - Water.level), pygame.SRCALPHA)
+		GroundScreenShoot = pygame.Surface((Game._game.map_manager.ground_map.get_width(), Game._game.map_manager.ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
 		GroundScreenShoot.blit(Game._game.map_manager.ground_map, (0,0))
 		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
 	return end
@@ -6542,7 +6479,7 @@ def cycleWorms():
 	
 	# rise water:
 	if Game._game.waterRise and not Game._game.waterRising:
-		Water.rise(20)
+		Game._game.background.water_rise(20)
 		Game._game.nextState = WAIT_STABLE
 		Game._game.roundCounter -= 1
 		Game._game.waterRising = True
@@ -7573,14 +7510,14 @@ def onKeyPressTab():
 		if Game._game.girderAngle == 360:
 			Game._game.girderSize = 50
 			Game._game.girderAngle = 0
-	elif WeaponManager._wm.getFused(WeaponManager._wm.currentWeapon):
+	elif WeaponManager._wm.currentWeapon.is_fused:
 		Game._game.fuseTime += fps
 		if Game._game.fuseTime > fps*4:
 			Game._game.fuseTime = fps
 		string = "delay " + str(Game._game.fuseTime//fps) + " sec"
 		FloatingText(Game._game.objectUnderControl.pos + Vector(0,-5), string, (20,20,20))
 		WeaponManager._wm.renderWeaponCount()
-	elif WeaponManager._wm.getBackColor(WeaponManager._wm.currentWeapon) == AIRSTRIKE:
+	elif WeaponManager._wm.currentWeapon.category == WeaponCategory.AIRSTRIKE:
 		Game._game.airStrikeDir *= -1
 	elif Game._game.switchingWorms:
 		switchWorms()
@@ -7843,7 +7780,7 @@ def gameMain(game_config: GameConfig=None):
 			p.draw()
 		for f in Game._game.nonPhys:
 			f.draw()
-		background.drawSecondary()
+		background.drawSecondary(win)
 		for t in Toast._toasts:
 			t.draw()
 		
@@ -7953,6 +7890,16 @@ def splashScreen():
 if __name__ == "__main__":
 	gameParameters = [None]
 	splashScreen()
+
+	wip = '''refactoring stage:
+	still in wip:
+		water rise
+		loading screen
+		artifacts
+		splashes
+	'''
+	print(wip)
+
 	while True:
 		mainMenu(Game._game.endGameDict if Game._game else None, gameParameters)
 		gameMain(gameParameters[0])

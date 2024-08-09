@@ -41,6 +41,7 @@ SHOCK_RADIUS = 1.5
 LIGHT_RADIUS = 70
 CRITICAL_FALL_VELOCITY = 5
 JUMP_VELOCITY = 3
+WATER_AMP = 2
 
 # color feel 0:up 1:down 2:mountfar 3:mountclose
 feels = [

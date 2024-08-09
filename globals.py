@@ -18,9 +18,7 @@ class HaloFont:
         surf.blit(textSurf, (1,1))
         return surf
 
-def point2world(point):
-	''' point in vector space to point in world map space '''
-	return (int(point[0]) - int(GameVariables().cam_pos[0]), int(point[1]) - int(GameVariables().cam_pos[1]))
+
 
 def mouse_pos_in_world():
     mouse_pos = pygame.mouse.get_pos()
