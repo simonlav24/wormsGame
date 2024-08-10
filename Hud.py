@@ -72,7 +72,7 @@ class Commentator:
 
 		if self.state == CommentatorState.IDLE:
 			if len(self.surf_que) > 0:
-				self.timer = 2 * globals.fps + globals.fps // 2
+				self.timer = int(2.5 * GameVariables().fps)
 				self.current_surf = self.surf_que.pop(0)
 				self.state = CommentatorState.SHOW
 		
@@ -140,7 +140,7 @@ class Toast:
 					self.state = 1
 			if self.state == 1:
 				self.time += 1
-				if self.time == globals.fps * 3:
+				if self.time == GameVariables().fps * 3:
 					self.state = 2
 			if self.state == 2:
 				self.pos.y += 3
@@ -149,7 +149,7 @@ class Toast:
 					Toast.toastCount -= 1
 		elif self.mode == Toast.middle:
 			self.time += 1
-			if self.time == globals.fps * 3:
+			if self.time == GameVariables().fps * 3:
 				Toast._toasts.remove(self)
 				Toast.toastCount -= 1
 			self.pos = uniform(0,2) * vectorUnitRandom()

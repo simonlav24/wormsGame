@@ -3,6 +3,7 @@ import pygame
 from vector import Vector
 
 from GameVariables import GameVariables
+import Constants
 
 class HaloFont:
     def __init__(self, font):
@@ -18,21 +19,18 @@ class HaloFont:
         surf.blit(textSurf, (1,1))
         return surf
 
-
-
 def mouse_pos_in_world():
     mouse_pos = pygame.mouse.get_pos()
     return Vector(mouse_pos[0] / scalingFactor + GameVariables().cam_pos[0],
                    mouse_pos[1] / scalingFactor + GameVariables().cam_pos[1])
 
 def globalsInit():
-    global fpsClock, fps, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, win, screen
+    global fpsClock, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, win, screen
     global scalingMax, scalingMin
 
     pygame.init()
 
     fpsClock = pygame.time.Clock()
-    fps = 30
         
     # pygame.font.init()
     pixelFont5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
@@ -54,6 +52,8 @@ def globalsInit():
     pygame.display.set_caption("Simon's Worms")
     # screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF | pygame.NOFRAME)
     screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
+
+    Constants.initialize()
 
 win = None
 scalingFactor = 0

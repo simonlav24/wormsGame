@@ -1,3 +1,6 @@
+import pygame
+from dataclasses import dataclass
+
 from typing import Tuple, List
 
 ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
@@ -79,3 +82,22 @@ comments_flew = [
 	("", " has gone to marry a mermaid"),
 	("", " has divided by zero")
 ]
+
+# sprites
+
+@dataclass
+class Sprites:
+    blood: pygame.Surface = None
+    hole: pygame.Surface = None
+    sprite_atlas: pygame.Surface = None
+
+sprites = Sprites()
+
+def initialize() -> None:
+    global sprites
+    ''' initialize constants '''
+    sprites.blood = pygame.image.load("assets/blood.png").convert_alpha()
+    sprites.hole = pygame.image.load("assets/hole.png").convert_alpha()
+    sprites.sprite_atlas = pygame.image.load("assets/sprites.png").convert_alpha()
+
+

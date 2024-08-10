@@ -1,11 +1,12 @@
 import os
 import pygame
 from random import choice, randint
-from typing import List
+from typing import List, Tuple
 
 from Common import PATH_ASSETS
 from Constants import feels
 from GameVariables import GameVariables, SingletonMeta
+from vector import *
 
 SKY = (0,0,0,0)
 GRD = (255,255,255,255)
@@ -156,6 +157,24 @@ class MapManager(metaclass=SingletonMeta):
         ground_copy.set_alpha(64)
         self.ground_secondary.blit(ground_copy, (0,0))
         self.ground_secondary.set_colorkey(feel_color[0])
+
+    def stain(self, pos: Vector, surf: pygame.Surface, size: Tuple[int], alphaMore: bool):
+        rotated = pygame.transform.rotate(pygame.transform.scale(surf, size), randint(0, 360))
+        if alphaMore:
+            rotated.set_alpha(randint(100,180))
+        size = rotated.get_size()
+        grounder = pygame.Surface(size, pygame.SRCALPHA)
+        grounder.blit(self.ground_map, (0,0), (pos - tup2vec(size)/2, size))
+        patch = pygame.Surface(size, pygame.SRCALPHA)
+        
+        patch.blit(self.game_map, (0,0), (pos - tup2vec(size)/2, size))
+        patch.set_colorkey(GRD)
+        
+        grounder.blit(rotated, (0,0))
+        grounder.blit(patch, (0,0))
+        
+        grounder.set_colorkey(SKY)
+        self.ground_map.blit(grounder, pos - tup2vec(size)/2)
 
 
     

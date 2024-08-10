@@ -10,6 +10,7 @@ from Weapons.WeaponManager import Weapon
 from Common import desaturate, ColorType
 from Hud import HealthBar
 from GameVariables import GameVariables
+from Constants import sprites
 
 class TeamData(BaseModel):
     team_name: str
@@ -35,7 +36,7 @@ class Team:
     
     def makeHat(self, index):
         self.hatSurf = pygame.Surface((16, 16), pygame.SRCALPHA)
-        self.hatSurf.blit(globals.game_manager.sprites, (0,0), (16 * (index % 8),16 * (index // 8),16,16))
+        self.hatSurf.blit(sprites.sprite_atlas, (0,0), (16 * (index % 8),16 * (index // 8),16,16))
         pixels = pygame.PixelArray(self.hatSurf)
         color = desaturate(self.color)
         pixels.replace((101, 101, 101), color)

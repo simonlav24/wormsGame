@@ -37,6 +37,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.wind_mult = 1.5
         self.damp_mult = 1.5
 
+        self.fps = 30
         self.dt = 1.0
 
         self.cam_pos: Vector = Vector(0,0)

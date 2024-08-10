@@ -6,7 +6,7 @@ from typing import List, Dict
 
 import pygame
 import globals
-from Constants import GREY, PLAYER_CONTROL_1
+from Constants import GREY, PLAYER_CONTROL_1, sprites
 from Common import * 
 from GameVariables import GameVariables
 
@@ -122,7 +122,7 @@ class WeaponManager:
         x = index % 8
         y = 9 + index // 8
         rect = (x * 16, y * 16, 16, 16)
-        return (globals.game_manager.sprites, rect)
+        return (sprites.sprite_atlas, rect)
 
     def get_weapon(self, name: str) -> Weapon:
         ''' get weapon by name '''
@@ -166,12 +166,12 @@ class WeaponManager:
                 WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), "flare")
                 return
             if weapon.category in [WeaponCategory.MISSILES]:
-                globals.game_manager.weaponHold.blit(globals.game_manager.sprites, (0,0), (64,112,16,16))
+                globals.game_manager.weaponHold.blit(sprites.sprite_atlas, (0,0), (64,112,16,16))
             if weapon.category in [WeaponCategory.AIRSTRIKE]:
                 if weapon.name == "chum bucket":
-                    globals.game_manager.weaponHold.blit(globals.game_manager.sprites, (0,0), (16,96,16,16))
+                    globals.game_manager.weaponHold.blit(sprites.sprite_atlas, (0,0), (16,96,16,16))
                     return
-                globals.game_manager.weaponHold.blit(globals.game_manager.sprites, (0,0), (64,64,16,16))
+                globals.game_manager.weaponHold.blit(sprites.sprite_atlas, (0,0), (64,64,16,16))
     
     def addArtifactMoves(self, artifact):
         # when team pick up artifact add them to weaponCounter
@@ -225,7 +225,7 @@ class WeaponManager:
             
         # add fuse
         if self.currentWeapon.is_fused:
-            weaponStr += "  delay: " + str(globals.game_manager.fuseTime // globals.fps)
+            weaponStr += "  delay: " + str(globals.game_manager.fuseTime // GameVariables().fps)
             
         self.surf = globals.pixelFont5halo.render(weaponStr, False, color)
 
@@ -323,4 +323,4 @@ class WeaponManager:
         x = index % 8
         y = 9 + index // 8
         rect = (x * 16, y * 16, 16, 16)
-        dest.blit(globals.game_manager.sprites, pos, rect)
+        dest.blit(sprites.sprite_atlas, pos, rect)

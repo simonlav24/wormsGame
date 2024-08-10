@@ -30,7 +30,7 @@ feelIndex = randint(0, len(feels) - 1)
 debug = False
 
 def initGui():
-	Gui(globals.win, globals.pixelFont5, globals.scalingFactor, globals.fps)
+	Gui(globals.win, globals.pixelFont5, globals.scalingFactor, GameVariables().fps)
 
 def updateWin(win, scalingFactor):
 	Gui._instance.updateWindow(win)
@@ -67,7 +67,7 @@ class MainMenu:
 			teamScore.insert(MENU_TEXT, text=team, customSize=50)
 			bar = teamScore.insert(MENU_LOADBAR, value = 0, color=parameters["teams"][team][0], maxValue=maxpoints)
 			endMenu.addElement(teamScore)
-			ElementAnimator(bar, 0, parameters["teams"][team][1], duration = globals.fps, timeOffset=2 * globals.fps)
+			ElementAnimator(bar, 0, parameters["teams"][team][1], duration = GameVariables().fps, timeOffset=2 * GameVariables().fps)
 
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
@@ -490,7 +490,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 			drawRecordGraph()
 
 		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
-		globals.fpsClock.tick(globals.fps)
+		globals.fpsClock.tick(GameVariables().fps)
 		pygame.display.update()
 	
 	clearMenu()
@@ -517,7 +517,7 @@ def pauseMenu(args, result=None):
 
 		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
 		pygame.display.update()
-		globals.fpsClock.tick(globals.fps)
+		globals.fpsClock.tick(GameVariables().fps)
 	pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 	clearMenu()
 	return
