@@ -57,3 +57,25 @@ feels = [
 		((37,145,184), (232, 213, 155), (85,179,191), (16, 160, 187)),
 		((246,153,121), (255, 205, 187), (252,117,92), (196, 78, 63))
 	]
+
+comments_damage = [
+	("", " is no more"),
+	("", " is an ex-worm"),
+	("", " bit the dust"),
+	("", " has been terminated"),
+	("poor ", ""),
+	("so long ", ""),
+	("", " will see you on the other side"), 
+	("", " diededed"),
+	("", " smells the flower from bellow")
+]
+
+comments_flew = [
+	(""," is swimming with the fishes"),
+	("there goes ", " again"),
+	("its bye bye for ", ""),
+	("", " has drowed"),
+	("", " swam like a brick"),
+	("", " has gone to marry a mermaid"),
+	("", " has divided by zero")
+]

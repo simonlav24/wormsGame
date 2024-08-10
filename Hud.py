@@ -1,137 +1,119 @@
 
 import pygame
 from random import choice, uniform
+from typing import List, Dict, Any
+from enum import Enum
 
 import globals
-from Constants import *
+from Constants import ColorType
 from vector import *
-from GameConfig import GameMode
 from GameVariables import GameVariables
+from GameEvent import GameEvents, EventComment
 
 HEALTH_BAR_WIDTH = 40
+HEALTH_BAR_HEIGHT = 2
 
 class HealthBar:
 	''' team health bar calculations and drawing '''
-	_healthBar = None
-	drawBar = True
-	drawPoints = True
-	width = 40
-	def __init__(self):
-		HealthBar._healthBar = self
-		self.mode = 0
-		self.teamHealthMod = [0] * globals.team_manager.totalTeams
-		self.teamHealthAct = [0] * globals.team_manager.totalTeams
-		self.maxHealth = 0
-		HealthBar.drawBar = True
-		HealthBar.drawPoints = True
-		if globals.game_manager.game_config.option_digging:
-			HealthBar.drawBar = False
-	def calculateInit(self):
-		self.maxHealth = globals.team_manager.nWormsPerTeam * globals.game_manager.game_config.worm_initial_health
-		if globals.game_manager.gameMode == GameMode.DAVID_AND_GOLIATH:
-			self.maxHealth = int(globals.game_manager.initialHealth/(1+0.5*(globals.team_manager.nWormsPerTeam - 1))) * globals.team_manager.nWormsPerTeam
-		for i, team in enumerate(globals.team_manager.teams):
-			self.teamHealthMod[i] = sum(worm.health for worm in team.worms)
+	# drawBar = True
+	# drawPoints = True
+	def __init__(self, amount_of_teams: int, initial_health_per_player: int, players_in_team: int, colors: List[ColorType]):
+		self.max_health = players_in_team * initial_health_per_player
+		self.team_health_visual = [self.max_health] * amount_of_teams
+		self.team_health_actual = [self.max_health] * amount_of_teams
+		self.colors = colors
+	
+	def update(self, health_list: List[int], special_marks: List[bool]=None):
+		''' update '''
+		self.team_health_actual = health_list
+		# todo marks
+	
 	def step(self):
-		for i, team in enumerate(globals.team_manager.teams):
-			# calculate teamhealth
-			self.teamHealthAct[i] = sum(worm.health for worm in team.worms)
-			
-			# animate health bar
-			self.teamHealthMod[i] += (self.teamHealthAct[i] - self.teamHealthMod[i]) * 0.1
-			if int(self.teamHealthMod[i]) == self.teamHealthAct[i]:
-				self.teamHealthMod[i] = self.teamHealthAct[i]
-	def draw(self):
-		if not HealthBar.drawBar: return
-		maxPoints = sum(i.points for i in globals.team_manager.teams)
+		recalc = lambda current, target: current + (target - current) * 0.1
+		self.team_health_visual = [recalc(visual, self.team_health_actual[i]) for i, visual in enumerate(self.team_health_visual)]
+	
+	def draw(self, win):
+		x = int(GameVariables().win_width - HEALTH_BAR_WIDTH - 10)
+		y = 10
+
+		width = HEALTH_BAR_WIDTH
+		height = HEALTH_BAR_HEIGHT
 		
-		for i, team in enumerate(globals.team_manager.teams):
-			pygame.draw.rect(globals.game_manager.win, (220,220,220), (int(GameVariables().win_width - (HealthBar.width + 10)), 10 + i * 3, HealthBar.width, 2))
-			
-			# health:
-			value = min(self.teamHealthMod[i] / self.maxHealth, 1) * HealthBar.width
-			if value < 1 and value > 0:
-				value = 1
-			if not value <= 0:
-				pygame.draw.rect(globals.game_manager.win, globals.team_manager.teams[i].color, (int(GameVariables().win_width - (HealthBar.width + 10)), 10 + i * 3, int(value), 2))
-			
-			# points:
-			if not HealthBar.drawPoints:
-				continue
-			if maxPoints == 0:
-				continue
-			value = (globals.team_manager.teams[i].points / maxPoints) * HealthBar.width
-			if value < 1 and value > 0:
-				value = 1
-			if not value == 0:
-				pygame.draw.rect(globals.game_manager.win, (220,220,220), (int(GameVariables().win_width - (HealthBar.width + 10)) - 1 - int(value), int(10+i*3), int(value), 2))
-			if globals.game_manager.gameMode == GameMode.CAPTURE_THE_FLAG:
-				if globals.team_manager.teams[i].flagHolder:
-					pygame.draw.circle(globals.game_manager.win, (220,0,0), (int(GameVariables().win_width - (HealthBar.width + 10)) - 1 - int(value) - 4, int(10+i*3) + 1) , 2)
+		for i, health in enumerate(self.team_health_visual):
+			pygame.draw.rect(win, (220,220,220), (x, y + i * 3, width, height))
+			value = health / self.max_health
+			pygame.draw.rect(win, self.colors[i], (x, y + i * 3, int(value) * width, height))
+
+class CommentatorState(Enum):
+	IDLE = 0
+	SHOW = 2
 
 class Commentator:
 	''' comment pop ups '''
-	_com = None
-	surf_que = []
-	timer = 0 #0-wait, 1-render, 2-show
-	WAIT = 0
-	PREPARE = 1
-	SHOW = 2
-	mode = 0
-	textSurf = None
-	name = None
-	stringsDmg = [("", " is no more"), ("", " is an ex-worm"), ("", " bit the dust"), ("", " has been terminated"), ("poor ", ""), ("so long ", ""), ("", " will see you on the other side"), ("", " diededed"), ("", " smells the flower from bellow")]
-	stringsFlw = [(""," is swimming with the fishes"), ("there goes ", " again"), ("its bye bye for ", ""), ("", " has drowed"), ("", " swam like a brick"), ("", " has gone to marry a mermaid"), ("", " has divided by zero")]
-	CAUSE_DAMAGE = 0
-	CAUSE_FLEW = 1
-	def __init__(self):
-		Commentator._com = self
-    
-	def step(self):
-		if self.mode == Commentator.WAIT:
-			if len(self.surf_que) == 0:
-				return
-			else:
-				self.mode = Commentator.PREPARE
-		elif self.mode == Commentator.PREPARE:
-			self.textSurf = self.surf_que.pop(0)
+	def __init__(self) -> None:
+		self.state: CommentatorState = CommentatorState.IDLE
+		self.surf_que: List[pygame.Surface] = []
+		self.timer = 0
+		self.current_surf: pygame.Surface = None
+	
+	def step(self) -> None:
+		# handle events
+		my_events: List[EventComment] = []
+		events_list = GameEvents().get_events()
+		for event in events_list:
+			if isinstance(event, EventComment):
+				my_events.append(event)
+		
+		[events_list.remove(event) for event in my_events]
 
-			self.mode = Commentator.SHOW
-			self.timer = 2 * globals.fps + 1 * globals.fps / 2
-		elif self.mode == Commentator.SHOW:
-			globals.game_manager.win.blit(self.textSurf, (int(GameVariables().win_width/2 - self.textSurf.get_width()/2), 5))
-			
+		for event in my_events:
+			surf = self.render_comment(event.text_dict)
+			self.surf_que.append(surf)
+
+		if self.state == CommentatorState.IDLE:
+			if len(self.surf_que) > 0:
+				self.timer = 2 * globals.fps + globals.fps // 2
+				self.current_surf = self.surf_que.pop(0)
+				self.state = CommentatorState.SHOW
+		
+		elif self.state == CommentatorState.SHOW:
 			self.timer -= 1
 			if self.timer == 0:
-				self.mode = Commentator.WAIT
-	
-	@staticmethod
-	def commentDeath(worm, cause):
-		if cause == Commentator.CAUSE_DAMAGE:
-			strings = choice(Commentator.stringsDmg)
-		elif cause == Commentator.CAUSE_FLEW:
-			strings = choice(Commentator.stringsFlw)
-		output = [
-			{'text': strings[0]},
-			{'text': worm.nameStr, 'color': worm.team.color},
-			{'text': strings[1]},
-		]
-		Commentator.comment(output)
+				self.current_surf = None
+				self.state = CommentatorState.IDLE
 
-	@staticmethod
-	def comment(strings):
-		surfs = []
-		for string in strings:
-			text = string.get('text')
-			color = string.get('color', GameVariables().initial_variables.hud_color)
-			surfs.append(globals.pixelFont5halo.render(text, False, color))
-		width = sum([i.get_width() for i in surfs])
-		surf = pygame.Surface((width, surfs[0].get_height()), pygame.SRCALPHA)
+	def draw(self, win: pygame.Surface) -> None:
+		if self.current_surf is not None:
+			win.blit(self.current_surf, (int(GameVariables().win_width/2 - self.current_surf.get_width() / 2), 5))
+	
+	def render_comment(self, text_dict: List[Dict[str, Any]]) -> pygame.Surface:
+		text_surfs: List[pygame.Surface] = []
+		for entry in text_dict:
+			text = entry.get('text')
+			color = entry.get('color', GameVariables().initial_variables.hud_color)
+			text_surfs.append(globals.pixelFont5halo.render(text, False, color))
+		width = sum([i.get_width() for i in text_surfs])
+		surf = pygame.Surface((width, text_surfs[0].get_height()), pygame.SRCALPHA)
 		x = 0
-		for s in surfs:
+		for s in text_surfs:
 			surf.blit(s, (x, 0))
 			x += s.get_width()
-		Commentator.surf_que.append(surf)
+		return surf
+
+	# @staticmethod
+	# def commentDeath(worm, cause):
+	# 	if cause == Commentator.CAUSE_DAMAGE:
+	# 		strings = choice(Commentator.stringsDmg)
+	# 	elif cause == Commentator.CAUSE_FLEW:
+	# 		strings = choice(Commentator.stringsFlw)
+	# 	output = [
+	# 		{'text': strings[0]},
+	# 		{'text': worm.nameStr, 'color': worm.team.color},
+	# 		{'text': strings[1]},
+	# 	]
+	# 	Commentator.comment(output)
+
+	
 		
 
 class Toast:

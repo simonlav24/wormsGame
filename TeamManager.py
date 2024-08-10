@@ -8,6 +8,8 @@ from pydantic import BaseModel
 import globals
 from Weapons.WeaponManager import Weapon
 from Common import desaturate, ColorType
+from Hud import HealthBar
+from GameVariables import GameVariables
 
 class TeamData(BaseModel):
     team_name: str
@@ -82,5 +84,17 @@ class TeamManager:
         self.totalTeams = len(self.teams)
         self.currentTeam: Team = None
         self.teamChoser = 0
-        self.nWormsPerTeam = 0
         shuffle(self.teams)
+
+        # todo: calculate for david vs goliath
+        self.health_bar_hud = HealthBar(self.totalTeams,
+                                        GameVariables().config.worm_initial_health,
+                                        GameVariables().config.worms_per_team,
+                                        [team.color for team in self.teams])
+    
+    def step(self) -> None:
+
+        self.health_bar_hud.step()
+    
+    def draw(self, win: pygame.Surface) -> None:
+        self.health_bar_hud.draw(win)
