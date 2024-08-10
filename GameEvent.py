@@ -5,6 +5,9 @@ from random import choice
 from Common import SingletonMeta
 from Constants import comments_flew, comments_damage, ColorType
 
+class ToManyUnhandeledEventsException(Exception):
+    ''' too many unhandeled events exception '''
+
 class Event:
     ''' game event '''
 
@@ -34,3 +37,5 @@ class GameEvents(metaclass=SingletonMeta):
 
     def post(self, event: Event):
         self.events.append(event)
+        if len(self.events) > 100:
+            raise ToManyUnhandeledEventsException('above 100 events')

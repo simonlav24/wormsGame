@@ -288,6 +288,33 @@ class Game:
 	def initiateGameSettings(self):
 		self.jetPackFuel = 100 # fuel for jetpack # used as global
 	
+	def dropArtifact(self, artifact, pos, comment=False):
+		deploy = False
+		if not pos:
+			# find good position for artifact
+			goodPlace = False
+			count = 0
+			deploy = False
+			while not goodPlace:
+				pos = Vector(randint(20, self.map_manager.game_map.get_width() - 20), -50)
+				if not self.map_manager.is_ground_at((pos.x, 0)):
+					goodPlace = True
+				count += 1
+				if count > 2000:
+					break
+			if not goodPlace:
+				deploy = True
+		
+		if not deploy:
+			m = artifact(pos)
+		else:
+			m = deployPack(artifact)
+		
+		if comment:
+			m.commentCreation()
+		Game._game.camTrack = m
+
+
 	def initiateGameVariables(self):
 		self.waterRise = False # whether water rises at the end of each turn
 		self.waterRising = False # water rises in current state
@@ -301,6 +328,7 @@ class Game:
 		self.cheatCode = "" # cheat code
 		self.holdArtifact = True # whether to hold artifact
 		self.worldArtifacts = [MJOLNIR, PLANT_MASTER, AVATAR, MINECRAFT] # world artifacts
+		self.worldArtifactsClasses = [Mjolnir, MagicLeaf, Avatar, PickAxeArtifact]
 		self.trigerArtifact = False # whether to trigger artifact drop next turn
 		self.shotCount = 0 # number of gun shots fired
 		self.lights = [] # list of lights in darkenss mode
@@ -527,8 +555,8 @@ def stain(pos, surf, size, alphaMore):
 
 def splash(pos, vel):
 	amount = 10 + int(vel.getMag())
-	for i in range(amount):
-		d = Debrie(Vector(pos.x, Game._game.map_manager.game_map.get_height() - GameVariables().water_level - 3), 10, [feels[GameVariables().config.feel_index]], 1, False, True)
+	for _ in range(amount):
+		d = Debrie(Vector(pos.x, Game._game.map_manager.game_map.get_height() - GameVariables().water_level - 3), 10, feels[GameVariables().config.feel_index], 1, False, True)
 		d.vel = vectorUnitRandom()
 		d.vel.y = uniform(-1,0) * vel.getMag()
 		d.vel.x *= vel.getMag() * 0.17
@@ -1003,7 +1031,7 @@ class PhysObj:
 class Debrie (PhysObj):
 	''' debrie resulting from explossions '''
 	_debries = []
-	def __init__(self, pos, blast, colors, bounces=2, firey=True, water=False):
+	def __init__(self, pos, blast, colors: List[ColorType], bounces=2, firey=True, water=False):
 		Debrie._debries.append(self)
 		self.initialize()
 		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
@@ -1443,7 +1471,7 @@ class Worm (PhysObj):
 		if Game._game.game_config.option_artifacts and len(self.team.worms) == 0:
 			if len(self.team.artifacts) > 0:
 				for artifact in self.team.artifacts:
-					dropArtifact(WeaponManager._wm.artifactDict[artifact], self.pos)
+					Game._game.dropArtifact(WeaponManager._wm.artifactDict[artifact], self.pos)
 
 		# if mission
 		if Game._game.gameMode == GameMode.MISSIONS:
@@ -6194,40 +6222,43 @@ def fireUtility(weapon = None):
 	if not weapon:
 		weapon = WeaponManager._wm.currentWeapon
 	decrease = True
-	if weapon == "moon gravity":
+	if weapon.name == "moon gravity":
 		GameVariables().physics.global_gravity = 0.1
 		GameEvents().post(EventComment([{'text': "small step for wormanity"}]))
 
-	elif weapon == "double damage":
+	elif weapon.name == "double damage":
 		GameVariables().damage_mult *= 2
 		GameVariables().boom_radius_mult *= 1.5
 		comments = ["that's will hurt", "that'll leave a mark"]
 		GameEvents().post(EventComment([{'text': choice(comments)}]))
 
-	elif weapon == "aim aid":
+	elif weapon.name == "aim aid":
 		Game._game.aimAid = True
 		GameEvents().post(EventComment([{'text': "snipe em'"}]))
 
-	elif weapon == "teleport":
+	elif weapon.name == "teleport":
 		WeaponManager._wm.switchWeapon(weapon)
 		decrease = False
-	elif weapon == "switch worms":
+	
+	elif weapon.name == "switch worms":
 		if Game._game.switchingWorms:
 			decrease = False
 		Game._game.switchingWorms = True
 		GameEvents().post(EventComment([{'text': "the ol' switcheroo"}]))
 
-	elif weapon == "time travel":
+	elif weapon.name == "time travel":
 		if not Game._game.timeTravel:
 			TimeTravel._tt.timeTravelInitiate()
 		GameEvents().post(EventComment([{'text': "great scott"}]))
 
-	elif weapon == "jet pack":
+	elif weapon.name == "jet pack":
 		Game._game.objectUnderControl.toggleJetpack()
-	elif weapon == "flare":
+	
+	elif weapon.name == "flare":
 		WeaponManager._wm.switchWeapon(weapon)
 		decrease = False
-	elif weapon == "control plants":
+	
+	elif weapon.name == "control plants":
 		PlantControl()
 	
 	if decrease:
@@ -6526,7 +6557,7 @@ def cycleWorms():
 				Game._game.deployingArtifact = True
 				artifact = choice(Game._game.worldArtifacts)
 				Game._game.worldArtifacts.remove(artifact)
-				dropArtifact(WeaponManager._wm.artifactDict[artifact], None, comment=True)
+				Game._game.dropArtifact(Game._game.worldArtifactsClasses[artifact], None, comment=True)
 				Game._game.nextState = WAIT_STABLE
 				Game._game.roundCounter -= 1
 				return
@@ -6667,34 +6698,7 @@ def randomPlacing():
 def squareCollision(pos1, pos2, rad1, rad2):
 	return True if pos1.x < pos2.x + rad2*2 and pos1.x + rad1*2 > pos2.x and pos1.y < pos2.y + rad2*2 and pos1.y + rad1*2 > pos2.y else False
 
-def dropArtifact(artifact, pos, comment=False):
-	deploy = False
-	if not pos:
-		# find good position for artifact
-		goodPlace = False
-		count = 0
-		deploy = False
-		while not goodPlace:
-			pos = Vector(randint(20, Game._game.map_manager.game_map.get_width() - 20), -50)
-			if not Game._game.map_manager.is_ground_at((pos.x, 0)):
-				goodPlace = True
-			count += 1
-			if count > 2000:
-				break
-		if not goodPlace:
-			deploy = True
-	
-	if not deploy:
-		m = artifact(pos)
-	else:
-		m = deployPack(artifact)
-	
-	if comment:
-		m.commentCreation()
-	Game._game.camTrack = m
-
 ################################################################################ Gui
-	
 
 def weaponMenuRadialInit():
 	# get categories
@@ -6714,18 +6718,6 @@ def weaponMenuRadialInit():
 		layout.append(main_button)
 
 	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(GameVariables().win_width // 2, GameVariables().win_height // 2))
-
-
-	# Game._game.radial_weapon_menu = RadialMenu()
-	# categories = []
-	# for _, weapon in enumerate(WeaponManager._wm.weapons):
-	# 	if globals.team_manager.currentTeam.ammo(weapon) == 0:
-	# 		continue
-	# 	if not weapon.category in categories:
-	# 		categories.append(weapon.category)
-	# 		b = Game._game.radial_weapon_menu.addButton(weapon, weapon.get_bg_color())
-	# 		b.category = weapon.category
-	# 		WeaponManager._wm.blitWeaponSprite(b.surf, (0,0), weapon.name)
 
 class Camera:
 	def __init__(self, pos):
@@ -7285,6 +7277,7 @@ def cheatActive(code):
 		MasterOfPuppets()
 	elif code == "artifact":
 		Game._game.trigerArtifact = True
+		GameEvents().post(EventComment([{'text': 'next turn artifact drop'}]))
 	elif code == "minecraft":
 		PickAxeArtifact(mouse_pos)
 	elif code == "deathtouch":
@@ -7494,6 +7487,9 @@ def onKeyReleaseSpace():
 		elif (WeaponManager._wm.currentWeapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN]):
 			Game._game.fireWeapon = True
 			Game._game.playerShootAble = False
+		
+		elif (WeaponManager._wm.currentWeapon.style in [WeaponStyle.UTILITY]):
+			fireUtility()
 			
 		Game._game.energising = False
 	elif Game._game.objectUnderControl.rope:
@@ -7569,7 +7565,7 @@ def gameMain(game_config: GameConfig=None):
 	commentator = Commentator()
 	TimeTravel()
 
-	WindFlag()
+	wind_flag = WindFlag()
 
 	run = True
 	pause = False
@@ -7795,7 +7791,7 @@ def gameMain(game_config: GameConfig=None):
 		# reset actions
 		Game._game.actionMove = False
 
-		WindFlag._instance.step()
+		wind_flag.step()
 		commentator.step()
 
 
@@ -7832,7 +7828,7 @@ def gameMain(game_config: GameConfig=None):
 		Game._game.drawLayers()
 		
 		# HUD
-		WindFlag._instance.draw()
+		wind_flag.draw(win)
 		TimeManager._tm.draw()
 		if WeaponManager._wm.surf: win.blit(WeaponManager._wm.surf, (25, 5))
 		commentator.draw(win)
@@ -7852,7 +7848,7 @@ def gameMain(game_config: GameConfig=None):
 				drawDirInd(target.pos)
 		if Game._game.gameMode == GameMode.MISSIONS:
 			if MissionManager._mm: MissionManager._mm.draw()
-			
+		
 		
 		# weapon menu:
 		# move menus
@@ -7922,8 +7918,6 @@ if __name__ == "__main__":
 	still in wip:
 		water rise
 		loading screen
-		artifacts
-		splashes
 		health bar update
 	'''
 	print(wip)

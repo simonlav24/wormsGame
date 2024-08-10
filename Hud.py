@@ -113,9 +113,6 @@ class Commentator:
 	# 	]
 	# 	Commentator.comment(output)
 
-	
-		
-
 class Toast:
 	_toasts = []
 	toastCount = 0
@@ -165,20 +162,16 @@ class Toast:
 	def updateWinPos(self, pos):
 		self.anchor[0] = pos[0]
 		self.anchor[1] = pos[1]
-		
 
 class WindFlag:
 	''' hud widget, represents wind speed and direction '''
-	_instance = None
-	
 	def __init__(self):
-		WindFlag._instance = self
 		self.vertices = [Vector(i * 10, 0) for i in range(5)]
-		self.acc = [Vector() for i in range(len(self.vertices))]
-		self.vel = [Vector() for i in range(len(self.vertices))]
+		self.acc = [Vector() for _ in range(len(self.vertices))]
+		self.vel = [Vector() for _ in range(len(self.vertices))]
 	
 	def step(self):
-		for step in range(3):
+		for _ in range(3):
 			# calculate acc
 			for i in range(len(self.vertices)):
 				if i == 0:
@@ -211,14 +204,14 @@ class WindFlag:
 				# calculate pos
 				self.vertices[i] += self.vel[i]
 				
-	def draw(self):
+	def draw(self, win: pygame.Surface):
 		it = 0
 		rad = 6
 		pos = Vector(25, 18)
 		scale = 0.5
-		pygame.draw.line(globals.game_manager.win, (204, 102, 0), pos, pos + Vector(0, 40) * scale, 1)
+		pygame.draw.line(win, (204, 102, 0), pos, pos + Vector(0, 40) * scale, 1)
 		for i in range(len(self.vertices) - 1):
 			# draw alternating lines red and white
-			pygame.draw.line(globals.game_manager.win, (255, 255*it, 255*it), self.vertices[i] * scale + pos, self.vertices[i + 1] * scale + pos, rad)
+			pygame.draw.line(win, (255, 255 * it, 255 * it), self.vertices[i] * scale + pos, self.vertices[i + 1] * scale + pos, rad)
 			it = (it + 1) % 2
 			rad -= 1
