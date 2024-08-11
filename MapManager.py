@@ -1,5 +1,7 @@
+
 import os
 import pygame
+from math import cos, pi, sin
 from random import choice, randint
 from typing import List, Tuple
 
@@ -158,7 +160,38 @@ class MapManager(metaclass=SingletonMeta):
         self.ground_secondary.blit(ground_copy, (0,0))
         self.ground_secondary.set_colorkey(feel_color[0])
 
-    def stain(self, pos: Vector, surf: pygame.Surface, size: Tuple[int], alphaMore: bool):
+    def check_free_pos(self, radius, pos: Vector, worm_col = False) -> bool:
+        r = 0
+        while r < 2 * pi:
+            testPos = Vector(radius * cos(r) + pos.x, radius * sin(r) + pos.y)
+            if testPos.x >= self.game_map.get_width() or testPos.y >= self.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+                if GameVariables().config.option_closed_map:
+                    return False
+                else:
+                    r += pi /8
+                    continue
+            if testPos.y < 0:
+                if self.game_map.get_at((int(testPos.x), 0)) == GRD:
+                    return False
+                else:
+                    r += pi /8
+                    continue
+            
+            getAt = testPos.vec2tupint()
+            if self.game_map.get_at(getAt) == GRD:
+                return False
+            if self.objects_col_map.get_at(getAt) != (0,0,0):
+                return False
+            if worm_col and self.worm_col_map.get_at(getAt) != (0,0,0):
+                return False
+            
+            r += pi /8
+        return True
+
+    def is_on_map(self, vec: Vector) -> bool:
+        return not (vec[0] < 0 or vec[0] >= self.game_map.get_width() or vec[1] < 0 or vec[1] >= self.game_map.get_height())
+
+    def stain(self, pos: Vector, surf: pygame.Surface, size: Tuple[int], alphaMore: bool) -> None:
         rotated = pygame.transform.rotate(pygame.transform.scale(surf, size), randint(0, 360))
         if alphaMore:
             rotated.set_alpha(randint(100,180))

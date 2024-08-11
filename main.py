@@ -474,7 +474,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 		colors = []
 		for _ in range(10):
 			sample = (pos + vectorUnitRandom() * uniform(0,radius)).vec2tupint()
-			if isOnMap(sample):
+			if MapManager().is_on_map(sample):
 				color = Game._game.map_manager.ground_map.get_at(sample)
 				if not color == SKY:
 					colors.append(color)
@@ -644,16 +644,16 @@ def place_object(cls: Any, args, girder_place: bool=False) -> Any:
 	
 def move(obj):
 	dir = obj.facing
-	if checkFreePos(obj, obj.pos + Vector(dir, 0)):
+	if MapManager().check_free_pos(obj.radius, obj.pos + Vector(dir, 0)):
 		obj.pos += Vector(dir, 0) * GameVariables().dt
 		return True
 	else:
 		for i in range(1,5):
-			if checkFreePos(obj, obj.pos + Vector(dir, -i)):
+			if MapManager().check_free_pos(obj.radius, obj.pos + Vector(dir, -i)):
 				obj.pos += Vector(dir, -i) * GameVariables().dt
 				return True
 		for i in range(1,5):
-			if checkFreePos(obj, obj.pos + Vector(dir, i)):
+			if MapManager().check_free_pos(obj.radius, obj.pos + Vector(dir, i)):
 				obj.pos += Vector(dir, i) * GameVariables().dt
 				return True
 	return False
@@ -673,35 +673,6 @@ def moveFallProof(obj):
 				obj.pos += Vector(dir, i)
 				return True
 	return False
-
-def checkFreePos(obj, pos, wormCol = False):
-	## moveable objs only
-	r = 0
-	while r < 2 * pi:
-		testPos = Vector((obj.radius) * cos(r) + pos.x, (obj.radius) * sin(r) + pos.y)
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
-			if GameVariables().config.option_closed_map:
-				return False
-			else:
-				r += pi /8
-				continue
-		if testPos.y < 0:
-			if Game._game.map_manager.game_map.get_at((int(testPos.x), 0)) == GRD:
-				return False
-			else:
-				r += pi /8
-				continue
-		
-		getAt = testPos.vec2tupint()
-		if Game._game.map_manager.game_map.get_at(getAt) == GRD:
-			return False
-		if Game._game.map_manager.objects_col_map.get_at(getAt) != (0,0,0):
-			return False
-		if wormCol and Game._game.map_manager.worm_col_map.get_at(getAt) != (0,0,0):
-			return False
-		
-		r += pi /8
-	return True
 
 def checkFreePosFallProof(obj, pos):
 	r = 0
@@ -738,7 +709,7 @@ def getClosestPosAvail(obj):
 	while not found:
 		checkPos = orgPos + t * vectorFromAngle(r)
 		# addExtra(checkPos, (255,255,255), 100)
-		if checkFreePos(obj, checkPos, True):
+		if MapManager().check_free_pos(obj.radius, checkPos, True):
 			found = checkPos
 			break
 		# t += 1
@@ -815,11 +786,7 @@ class TimeManager:
 			
 		elif Game._game.state == FIRE_MULTIPLE:
 			Game._game.state = PLAYER_CONTROL_2
-			
-		if Game._game.objectUnderControl.rope:
-			Game._game.objectUnderControl.toggleRope(None)
-		if Game._game.objectUnderControl.parachuting:
-			Game._game.objectUnderControl.toggleParachute()
+
 	def draw(self):
 		if self.timeSurf[0] != self.timeCounter:
 			self.generateTimeSurf()
@@ -1200,8 +1167,6 @@ class Worm (PhysObj):
 		self.name = pixelFont5.render(self.nameStr, False, self.team.color)
 		self.healthStr = pixelFont5.render(str(self.health), False, self.team.color)
 		self.score = 0
-		self.rope = None #[pos, radius]
-		self.parachuting = False
 		self.wormCollider = True
 		self.flagHolder = False
 		self.sleep = False
@@ -1210,39 +1175,13 @@ class Worm (PhysObj):
 		self.surf.blit(self.team.hatSurf, (0,0))
 		self.angle = 0
 		self.stableCount = 0
-		self.worm_tools: List[WormTool] = []
+		self.worm_tool = WormTool()
 	
 	def applyForce(self):
 		# gravity:
 		if self.gravity == DOWN:
-			#### ROPE
-			if self.rope and Game._game.playerControl:
-				if pygame.key.get_pressed()[pygame.K_LEFT]:
-					self.acc.x -= 0.1
-				if pygame.key.get_pressed()[pygame.K_RIGHT]:
-					self.acc.x += 0.1
-				if pygame.key.get_pressed()[pygame.K_UP]:
-					if self.rope[1] > 5:
-						self.rope[1] = self.rope[1]-2
-						directionToRope = (self.rope[0][-1] - self.pos).getDir()
-						ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
-						if not checkFreePos(self, ppos):
-							self.rope[1] = self.rope[1]+2
-				if pygame.key.get_pressed()[pygame.K_DOWN]:
-					self.rope[1] = self.rope[1]+2
-					directionToRope = (self.rope[0][-1] - self.pos).getDir()
-					ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
-					if not checkFreePos(self, ppos):
-						self.rope[1] = self.rope[1]-2
-			
-			self.acc.y += GameVariables().physics.global_gravity
-			
-			if self.parachuting:
-				if self.vel.y > 1:
-					self.vel.y = 1
-			
-			for tool in self.worm_tools:
-				tool.apply_force()
+			self.acc.y += GameVariables().physics.global_gravity			
+			self.worm_tool.apply_force()
 
 		else:# up
 			self.acc.y -= GameVariables().physics.global_gravity
@@ -1268,20 +1207,7 @@ class Worm (PhysObj):
 		self.surf.fill((0,0,0,0))
 		self.surf.blit(sprites.sprite_atlas, (0,0), (0,0,16,16))
 		self.surf.blit(self.team.hatSurf, (0,0))
-		
-	def toggleRope(self, pos):
-		if pos:
-			self.rope = [[pos], dist(self.pos, pos)]
-			self.damp = 0.7
-			self.fallAffected = False
-		else:
-			self.rope = None
-			self.damp = 0.2
-			self.fallAffected = True
-
-	def toggleParachute(self):
-		self.parachuting = not self.parachuting
-	
+			
 	def damage(self, value, damageType=0):
 		if self.alive:
 			dmg = int(value * GameVariables().damage_mult)
@@ -1314,11 +1240,8 @@ class Worm (PhysObj):
 		if not self is Game._game.objectUnderControl and self.alive:
 			pygame.draw.circle(Game._game.map_manager.worm_col_map, GRD, self.pos.vec2tupint(), int(self.radius)+1)
 
-		for tool in self.worm_tools:
-			tool.draw(win)
+		self.worm_tool.draw(win)
 
-		if self.parachuting:
-			win.blit(sprites.sprite_atlas, point2world(self.pos - Vector(46,31)//2 + Vector(0,-15)), (80, 64, 46, 31))
 		if self.flagHolder:
 			pygame.draw.line(win, (51, 51, 0), point2world(self.pos), point2world(self.pos + Vector(0, -3 * self.radius)))
 			pygame.draw.rect(win, (220,0,0), (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
@@ -1347,10 +1270,6 @@ class Worm (PhysObj):
 			num = pixelFont5.render(str(int(-self.pos.y)), False, self.team.color)
 			win.blit(num, point2world(namePos + Vector(self.name.get_width() + 2,0)))
 		
-		if self.rope:
-			rope = [point2world(x) for x in self.rope[0]]
-			rope.append(point2world(self.pos))
-			pygame.draw.lines(win, (250,250,0), False, rope)
 		if self.alive and GameVariables().initial_variables.draw_health_bar:
 			self.drawHealth()
 		if self.sleep and self.alive:
@@ -1470,8 +1389,6 @@ class Worm (PhysObj):
 				self.angle = self.angle % 360
 		
 		if Game._game.objectUnderControl == self and Game._game.playerControl and self.alive:
-			if not self.rope: self.damp = 0.1
-			else: self.damp = 0.5
 			keys = pygame.key.get_pressed()
 			if keys[pygame.K_UP]:# or joystick.get_axis(1) < -0.5:
 				self.shootAcc = -0.04
@@ -1485,65 +1402,7 @@ class Worm (PhysObj):
 			self.shootAcc = 0
 			self.shootVel = 0
 
-		
-		for tool in self.worm_tools:
-			tool.step()
-		tools_done = [tool for tool in self.worm_tools if tool.is_done]
-		for tool in tools_done:
-			self.worm_tools.remove(tool)
-		
-		## roping
-		if self.rope:
-			if dist(self.pos, self.rope[0][-1]) > self.rope[1]:
-				directionToRope = (self.rope[0][-1] - self.pos).getDir()
-				ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
-				# if checkFreePos(self, ppos):
-				self.pos = ppos
-				normal = directionToRope.normal()
-				mul = dotProduct(self.vel, normal)/(normal.getMag()**2)
-				self.vel = normal * mul
-			
-			if dist(self.pos, self.rope[0][-1]) < self.rope[1] - 2:
-				directionToRope = (self.rope[0][-1] - self.pos).getDir()
-				ppos = self.pos + directionToRope * (dist(self.pos, self.rope[0][-1]) - self.rope[1])
-				# if checkFreePos(self, ppos):
-				self.pos = ppos
-				normal = directionToRope.normal()
-				mul = dotProduct(self.vel, normal)/(normal.getMag()**2)
-				self.vel = normal * mul
-			
-			# check secondary rope position
-			for i in range(int(self.rope[1])-2):
-				start = self.pos
-				direction = (self.rope[0][-1] - self.pos).normalize()
-				testPos = start + direction * i
-				if not isOnMap(testPos):
-					break
-				if Game._game.map_manager.game_map.get_at(testPos.vec2tupint()) == GRD:
-					self.rope[0].append(testPos)
-					self.rope[1] = dist(self.pos, self.rope[0][-1])
-					break
-			if len(self.rope[0]) > 1:
-				count = int(dist(self.pos, self.rope[0][-2]))
-				for i in range(int(dist(self.pos, self.rope[0][-2]))):
-					start = self.pos
-					direction = (self.rope[0][-2] - self.pos).normalize()
-					testPos = start + direction * i
-					if not isOnMap(testPos):
-						break
-					if Game._game.map_manager.game_map.get_at(testPos.vec2tupint()) == GRD:
-						break
-					if i == count-1:
-						self.rope[1] = dist(self.pos, self.rope[0][-2])
-						self.rope[0].pop(-1)
-			self.damp = 0.7
-		
-		## parachuting
-		if self.parachuting:
-			# print(self.vel.y)
-			if self.vel.y < 1:
-				self.toggleParachute()
-			self.vel.x = GameVariables().physics.wind * 1.5
+		self.worm_tool.step()
 		
 		# virus
 		if self.sick == 2 and self.health > 0 and not Game._game.state == WAIT_STABLE:
@@ -1576,7 +1435,7 @@ class Worm (PhysObj):
 		if self.pos.y < 0:
 			self.gravity = DOWN
 		if Game._game.actionMove:
-			if Game._game.objectUnderControl == self and self.health > 0 and not self.rope:
+			if Game._game.objectUnderControl == self and self.health > 0 and not self.worm_tool.in_use():
 				move(self)
 
 		if not self.stable:
@@ -1587,7 +1446,6 @@ class Worm (PhysObj):
 						continue
 					if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
 						worm.vel = vectorCopy(self.vel)
-						# print(self.nameStr, "collided with", worm.nameStr)
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
@@ -2997,7 +2855,7 @@ class LongBow:
 						self.destroy()
 						return
 				# check Game._game.map_manager.game_map collision
-				if isOnMap(testPos.vec2tupint()):
+				if MapManager().is_on_map(testPos.vec2tupint()):
 					if Game._game.map_manager.is_ground_at(testPos.vec2tupint()):
 						self.stuck = vectorCopy(testPos)
 				if self.pos.y < 0:
@@ -3080,16 +2938,6 @@ class Sheep(PhysObj):
 		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(3*pi/4 - wig), rad * sin(3*pi/4 - wig))), 2)
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(self.facing*self.radius,0)), 4)
-
-def shootRope(start, direction):
-	for t in range(5,500):
-		testPos = start + direction * t
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
-			continue
-		if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-			Game._game.objectUnderControl.toggleRope(testPos)
-			Worm.roped = True
-			break
 
 class Armageddon:
 	def __init__(self):
@@ -3467,7 +3315,7 @@ class Venus:
 				self.mode = Venus.idle
 		
 		# check if self is destroyed
-		if isOnMap(self.pos.vec2tupint()):
+		if MapManager().is_on_map(self.pos.vec2tupint()):
 			if not Game._game.map_manager.game_map.get_at(self.pos.vec2tupint()) == GRD:
 				Game._game.nonPhysToRemove.append(self)
 				Venus._reg.remove(self)
@@ -5477,7 +5325,7 @@ class PickAxe:
 		colors = []
 		for i in range(10):
 			sample = (position + Vector(8,8) + vectorUnitRandom() * uniform(0,8)).vec2tupint()
-			if isOnMap(sample):
+			if MapManager().is_on_map(sample):
 				color = Game._game.map_manager.ground_map.get_at(sample)
 				if not color == SKY:
 					colors.append(color)
@@ -5890,11 +5738,10 @@ def fire(weapon = None):
 		w.facing = Game._game.objectUnderControl.facing
 	elif weapon.name == "rope":
 		angle = weaponDir.getAngle()
-		if angle > 0:
-			decrease = False
-		else:
-			decrease = False
-			shootRope(weaponOrigin, weaponDir)
+		decrease = False
+		if angle <= 0:
+			Game._game.objectUnderControl.worm_tool.set(Rope(Game._game.objectUnderControl, weaponOrigin, weaponDir))
+
 		Game._game.nextState = PLAYER_CONTROL_1
 	elif weapon.name == "raging bull":
 		w = Bull(weaponOrigin + Vector(0,-5))
@@ -5914,14 +5761,13 @@ def fire(weapon = None):
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_1
 	elif weapon.name == "parachute":
-		if Game._game.objectUnderControl.parachuting:
-			Game._game.objectUnderControl.toggleParachute()
-			decrease = False
-		else:
-			if Game._game.objectUnderControl.vel.y > 1:
-				Game._game.objectUnderControl.toggleParachute()
-			else:
+		if Game._game.objectUnderControl.vel.y > 1:
+			tool_set = Game._game.objectUnderControl.worm_tool.set(Parachute(Game._game.objectUnderControl))
+			if not tool_set:
 				decrease = False
+		else:
+			decrease = False
+
 		Game._game.nextState = PLAYER_CONTROL_1
 	elif weapon.name == "pokeball":
 		w = PokeBall(weaponOrigin, weaponDir, energy)
@@ -6209,7 +6055,9 @@ def fireUtility(weapon = None):
 		GameEvents().post(EventComment([{'text': "great scott"}]))
 
 	elif weapon.name == "jet pack":
-		Game._game.objectUnderControl.worm_tools.append(JetPack(Game._game.objectUnderControl))
+		tool_set = Game._game.objectUnderControl.worm_tool.set(JetPack(Game._game.objectUnderControl))
+		if not tool_set:
+			decrease = False
 	
 	elif weapon.name == "flare":
 		WeaponManager._wm.switchWeapon(weapon)
@@ -6395,7 +6243,7 @@ def cycleWorms():
 	Game._game.aimAid = False
 	if Game._game.timeTravel: TimeTravel._tt.timeTravelReset()
 
-	# todo: remove worm-tools from worm
+	Game._game.objectUnderControl.worm_tool.release()
 
 	Game._game.switchingWorms = False
 	if Worm.roped:
@@ -7174,9 +7022,6 @@ def suddenDeath():
 	text = pixelFont10.render("sudden death", False, (220,0,0))
 	Toast(pygame.transform.scale(text, tup2vec(text.get_size()) * 2), Toast.middle)
 
-def isOnMap(vec):
-	return not (vec[0] < 0 or vec[0] >= Game._game.map_manager.game_map.get_width() or vec[1] < 0 or vec[1] >= Game._game.map_manager.game_map.get_height())
-
 def cheatActive(code):
 	code = code[:-1].lower()
 	mouse_pos = globals.mouse_pos_in_world()
@@ -7427,16 +7272,6 @@ def onKeyReleaseSpace():
 		if Game._game.timeTravel:
 			TimeTravel._tt.timeTravelPlay()
 			Game._game.energyLevel = 0
-			
-		#rope
-		elif WeaponManager._wm.currentWeapon == "rope":
-			# if not currently roping:
-			Game._game.fireWeapon = True
-			Game._game.playerShootAble = False
-			# if currently roping:
-			if Game._game.objectUnderControl.rope: 
-				Game._game.objectUnderControl.toggleRope(None)
-				Game._game.fireWeapon = False
 		
 		# chargeable
 		elif WeaponManager._wm.currentWeapon.style == WeaponStyle.CHARGABLE and Game._game.energising:
@@ -7451,10 +7286,6 @@ def onKeyReleaseSpace():
 			fireUtility()
 			
 		Game._game.energising = False
-	elif Game._game.objectUnderControl.rope:
-		Game._game.objectUnderControl.toggleRope(None)
-	elif Game._game.objectUnderControl.parachuting:
-		Game._game.objectUnderControl.toggleParachute()
 	elif Sheep.trigger == False:
 		Sheep.trigger = True
 
