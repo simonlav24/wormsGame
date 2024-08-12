@@ -30,7 +30,7 @@ feelIndex = randint(0, len(feels) - 1)
 debug = False
 
 def initGui():
-	Gui(globals.win, globals.pixelFont5, globals.scalingFactor, GameVariables().fps)
+	Gui(globals.win, fonts.pixel5, globals.scalingFactor, GameVariables().fps)
 
 def updateWin(win, scalingFactor):
 	Gui._instance.updateWindow(win)
@@ -134,7 +134,7 @@ class MainMenu:
 
 		# toggles
 		toggles = [
-			('cool down', 'option_cool_down', True),
+			('cool down', 'option_cool_down', False),
 			('artifacts', 'option_artifacts', True),
 			('closed map', 'option_closed_map', False),
 			('forts', 'option_forts', False),
@@ -234,7 +234,7 @@ class MainMenu:
 		b = recordMenu.insert(MENU_SURF)
 		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
 	
-		graph = graphObject.Graph(b.getSuperPos(), b.size, globals.pixelFont5, False)
+		graph = graphObject.Graph(b.getSuperPos(), b.size, fonts.pixel5, False)
 		graph._reg[0].draw()
 		b.setSurf(graph.surf)
 

@@ -204,8 +204,9 @@ class WormTool:
             return False
 
     def release(self):
-        self.tool.release()
-        self.tool = None
+        if self.tool is not None:
+            self.tool.release()
+            self.tool = None
 
     def apply_force(self):
         if self.tool:

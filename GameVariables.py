@@ -1,8 +1,9 @@
 
 from pydantic import BaseModel
+from typing import List
 
 from GameConfig import GameConfig
-from Common import SingletonMeta, ColorType
+from Common import SingletonMeta, ColorType, Entity
 from Constants import WHITE
 
 from vector import Vector
@@ -46,6 +47,16 @@ class GameVariables(metaclass=SingletonMeta):
         self.win_height = 0
 
         self.water_level = self.initial_variables.water_level
+        self.water_color = (255,255,255)
+
+        self.non_physicals: List[Entity] = []
+        self.non_physicals_done: List[Entity] = []
+
+    def register_non_physical(self, entity: Entity) -> None:
+        self.non_physicals.append(entity)
+    
+    def unregister_non_physical(self, entity: Entity) -> None:
+        self.non_physicals_done.append(entity)
 
 
 def point2world(point):

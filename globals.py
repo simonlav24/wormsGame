@@ -25,17 +25,12 @@ def mouse_pos_in_world():
                    mouse_pos[1] / scalingFactor + GameVariables().cam_pos[1])
 
 def globalsInit():
-    global fpsClock, pixelFont5, pixelFont5halo, pixelFont10, screenWidth, screenHeight, scalingFactor, win, screen
+    global fpsClock, screenWidth, screenHeight, scalingFactor, win, screen
     global scalingMax, scalingMin
 
     pygame.init()
 
     fpsClock = pygame.time.Clock()
-        
-    # pygame.font.init()
-    pixelFont5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
-    pixelFont5halo = HaloFont(pixelFont5)
-    pixelFont10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
 
     screenWidth = 1280
     screenHeight = 720

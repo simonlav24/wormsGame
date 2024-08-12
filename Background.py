@@ -144,16 +144,16 @@ class BackGround:
         if isDark:
             self.backColor = DARK_COLOR
 
-        water_color = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
-        water_color.append(tuple(min(int(water_color[0][i] * 1.5), 255) for i in range(3)))
+        GameVariables().water_color = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
+        GameVariables().water_color.append(tuple(min(int(GameVariables().water_color[0][i] * 1.5), 255) for i in range(3)))
 
         self.water_layers_bottom = [
-            WaterLayer(water_color, 22),
+            WaterLayer(GameVariables().water_color, 22),
         ]
 
         self.water_layers_top = [
-            WaterLayer(water_color, 12),
-            WaterLayer(water_color, 2),
+            WaterLayer(GameVariables().water_color, 12),
+            WaterLayer(GameVariables().water_color, 2),
         ]
         self.water_rise_amount = 0
 
@@ -200,7 +200,7 @@ class BackGround:
         for layer in self.water_layers_top:
             layer.draw(win)
     
-    def drawBackGround(self, surf, parallax, win):
+    def drawBackGround(self, surf: pygame.Surface, parallax: float, win: pygame.Surface):
         width = surf.get_width()
         height = surf.get_height()
         offset = (GameVariables().cam_pos[0] / parallax) // width

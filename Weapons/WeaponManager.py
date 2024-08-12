@@ -6,7 +6,7 @@ from typing import List, Dict
 
 import pygame
 import globals
-from Constants import GREY, PLAYER_CONTROL_1, sprites
+from Constants import GREY, PLAYER_CONTROL_1, sprites, fonts
 from Common import * 
 from GameVariables import GameVariables
 
@@ -90,7 +90,7 @@ class WeaponManager:
         self.basic_set: List[int] = [weapon.initial_amount for weapon in self.weapons]
 
         self.currentWeapon: Weapon = self.weapons[0]
-        self.surf = globals.pixelFont5.render(self.currentWeapon.name, False, GameVariables().initial_variables.hud_color)
+        self.surf = fonts.pixel5.render(self.currentWeapon.name, False, GameVariables().initial_variables.hud_color)
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
         # read weapon set if exits and adjust basic set
@@ -106,7 +106,7 @@ class WeaponManager:
 
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
-        self.cool_down_list_surfaces.append(globals.pixelFont5halo.render(weapon.name, False, GameVariables().initial_variables.hud_color))
+        self.cool_down_list_surfaces.append(fonts.pixel5_halo.render(weapon.name, False, GameVariables().initial_variables.hud_color))
         self.cool_down_list.append(weapon)
 
         if len(self.cool_down_list) > 4:
@@ -227,7 +227,7 @@ class WeaponManager:
         if self.currentWeapon.is_fused:
             weaponStr += "  delay: " + str(globals.game_manager.fuseTime // GameVariables().fps)
             
-        self.surf = globals.pixelFont5halo.render(weaponStr, False, color)
+        self.surf = fonts.pixel5_halo.render(weaponStr, False, color)
 
     def updateDelay(self):
         for w in self.weapons:

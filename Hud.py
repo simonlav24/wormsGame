@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 from enum import Enum
 
 import globals
-from Constants import ColorType
+from Constants import ColorType, fonts
 from vector import *
 from GameVariables import GameVariables
 from GameEvent import GameEvents, EventComment
@@ -91,7 +91,7 @@ class Commentator:
 		for entry in text_dict:
 			text = entry.get('text')
 			color = entry.get('color', GameVariables().initial_variables.hud_color)
-			text_surfs.append(globals.pixelFont5halo.render(text, False, color))
+			text_surfs.append(fonts.pixel5_halo.render(text, False, color))
 		width = sum([i.get_width() for i in text_surfs])
 		surf = pygame.Surface((width, text_surfs[0].get_height()), pygame.SRCALPHA)
 		x = 0
@@ -99,19 +99,6 @@ class Commentator:
 			surf.blit(s, (x, 0))
 			x += s.get_width()
 		return surf
-
-	# @staticmethod
-	# def commentDeath(worm, cause):
-	# 	if cause == Commentator.CAUSE_DAMAGE:
-	# 		strings = choice(Commentator.stringsDmg)
-	# 	elif cause == Commentator.CAUSE_FLEW:
-	# 		strings = choice(Commentator.stringsFlw)
-	# 	output = [
-	# 		{'text': strings[0]},
-	# 		{'text': worm.nameStr, 'color': worm.team.color},
-	# 		{'text': strings[1]},
-	# 	]
-	# 	Commentator.comment(output)
 
 class Toast:
 	_toasts = []

@@ -2,6 +2,7 @@ import pygame
 from dataclasses import dataclass
 
 from typing import Tuple, List
+# --- no game related imports ---
 
 ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
 
@@ -93,11 +94,40 @@ class Sprites:
 
 sprites = Sprites()
 
+class HaloFont:
+    def __init__(self, font):
+        self.font: pygame.font.Font = font
+
+    def render(self, text, aa, color, halo=(0,0,0)) -> pygame.Surface:
+        halo_surf = self.font.render(text, aa, halo)
+        text_surf = self.font.render(text, aa, color)
+        
+        surf = pygame.Surface((text_surf.get_width() + 2, text_surf.get_height() + 2), pygame.SRCALPHA)
+        for i in [(0,1), (1,0), (1,2), (2,1)]:
+            surf.blit(halo_surf, i)
+
+        surf.blit(text_surf, (1,1))
+        return surf
+
+# fonts
+@dataclass
+class Fonts:
+    pixel5: pygame.font.Font = None
+    pixel5_halo: pygame.font.Font = None
+    pixel10: pygame.font.Font = None
+
+sprites = Sprites()
+fonts = Fonts()
+
 def initialize() -> None:
-    global sprites
     ''' initialize constants '''
+    global sprites, fonts
     sprites.blood = pygame.image.load("assets/blood.png").convert_alpha()
     sprites.hole = pygame.image.load("assets/hole.png").convert_alpha()
     sprites.sprite_atlas = pygame.image.load("assets/sprites.png").convert_alpha()
+    
+    fonts.pixel5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
+    fonts.pixel10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
+    fonts.pixel5_halo = HaloFont(fonts.pixel5)
 
 

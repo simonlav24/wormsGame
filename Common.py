@@ -19,16 +19,15 @@ class SingletonMeta(type):
             cls._instances[cls] = instance
         return cls._instances[cls]
 
+
 class Entity(ABC):
     ''' an object that has step and draw '''
 	
-    @abstractmethod
     def step(self) -> None:
-        ...
+        pass
     
-    @abstractmethod
-    def draw(self) -> None:
-        ...
+    def draw(self, win: pygame.Surface) -> None:
+        pass
 
 
 # color utilities

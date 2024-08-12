@@ -5,6 +5,7 @@ from typing import Any, Tuple, List
 from abc import ABC, abstractmethod
 
 import globals
+from Constants import fonts
 
 from pygame import Vector2
 
@@ -78,11 +79,11 @@ def is_pos_in_arc(pos: Vector2, center: Vector2, inner, outer, start, end, iprin
 class RadialButton(GuiBase):
 	def __init__(self, key: Any, tooltip: str='', super_text: str='', back_color=None, surf_portion: SurfacePortion=None, layout: List['RadialButton']=None):
 		self.key = key
-		self.tooltip = globals.pixelFont5halo.render(tooltip, False, (255,255,255))
+		self.tooltip = fonts.pixel5_halo.render(tooltip, False, (255,255,255))
 		self.super_text = None
 		self.surf_portion = surf_portion
 		if super_text != '':
-			self.super_text = globals.pixelFont5.render(super_text, False, (0,0,0))
+			self.super_text = fonts.pixel5.render(super_text, False, (0,0,0))
 		self.layout = layout
 
 		self.level = 0 # level of button in menu hierarchy
