@@ -6,7 +6,7 @@ from typing import Any, List, Tuple
 import globals
 from random import randint, uniform, choice
 from math import exp, pi, sin, cos
-from Constants import feels, ColorType, fonts
+from Constants import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts
 from Common import Entity, SingletonMeta, clamp
 
 from MapManager import MapManager
@@ -25,6 +25,10 @@ class EffectManager(metaclass=SingletonMeta):
 		self.effects_to_remove: List[Effect] = []
 
 		self.circles_layers: List[List[Tuple[Any]]] = [[], [], []]
+
+		self.dark_mask = pygame.Surface(MapManager().get_map_size(), pygame.SRCALPHA)
+		self.is_dark_mode = False
+		self.lights: List[Tuple[Vector, int, ColorType]] = []
 	
 	def register(self, effect: Effect) -> None:
 		self.effects_in_play.append(effect)
@@ -36,6 +40,11 @@ class EffectManager(metaclass=SingletonMeta):
 		self.circles_layers[layer_num].append(
 			(color,	pos, radius)
 		)
+	
+	def add_light(self, pos: Vector, radius: int, color: ColorType) -> None:
+		if not self.is_dark_mode:
+			return
+		self.lights.append((pos, radius, color))
 
 	def step(self) -> None:
 		for effect in self.effects_in_play:
@@ -52,6 +61,15 @@ class EffectManager(metaclass=SingletonMeta):
 			for circle in layer:
 				pygame.draw.circle(win, circle[0], point2world(circle[1]), int(circle[2]))
 			layer.clear()
+
+	def get_dark_mask(self, main_obj_pos: Vector) -> pygame.Surface:
+		''' render and return dark mask '''
+		self.dark_mask.fill(DARK_COLOR)
+		pygame.draw.circle(self.dark_mask, (0,0,0,0), main_obj_pos.vec2tupint(), LIGHT_RADIUS)
+		for light in self.lights:
+			pygame.draw.circle(self.dark_mask, light[3], (light[0], light[1]), light[2])
+		self.lights.clear()
+
 
 
 class Blast(Effect):

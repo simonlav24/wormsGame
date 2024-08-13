@@ -317,7 +317,6 @@ class Game:
 		self.worldArtifactsClasses = [Mjolnir, MagicLeaf, Avatar, PickAxeArtifact]
 		self.trigerArtifact = False # whether to trigger artifact drop next turn
 		self.shotCount = 0 # number of gun shots fired
-		self.lights = [] # list of lights in darkenss mode
 
 		self.camTrack = None # object to track
 
@@ -450,15 +449,6 @@ def drawLand():
 	if MapManager().draw_ground_secondary:
 		win.blit(Game._game.map_manager.ground_secondary, point2world((0,0)))
 	win.blit(Game._game.map_manager.ground_map, point2world((0,0)))
-	
-	if Game._game.darkness:
-		Game._game.map_manager.dark_mask.fill(DARK_COLOR)
-		if Game._game.objectUnderControl:
-			pygame.draw.circle(Game._game.map_manager.dark_mask, (0,0,0,0), Game._game.objectUnderControl.pos.vec2tupint(), LIGHT_RADIUS)
-	
-		for light in Game._game.lights:
-			pygame.draw.circle(Game._game.map_manager.dark_mask, light[3], (int(light[0]), int(light[1])), int(light[2]))
-		Game._game.lights = []
 	
 	Game._game.map_manager.worm_col_map.fill(SKY)
 	Game._game.map_manager.objects_col_map.fill(SKY)
@@ -1466,8 +1456,8 @@ class Fire(PhysObj):
 		self.timer += 1 * GameVariables().dt
 		if self.fallen:
 			self.life -= 1
-		if Game._game.darkness:
-			Game._game.lights.append((self.pos[0], self.pos[1], 20, (0,0,0,0)))
+
+		EffectManager().add_light(vectorCopy(self.pos), 20, (0,0,0,0))
 		if self.life == 0:
 			self.removeFromGame()
 			return
@@ -1632,8 +1622,8 @@ class Mine(PhysObj):
 			if self.timer == self.exploseTime:
 				self.dead = True
 				
-		if Game._game.darkness and self.activated:
-			Game._game.lights.append((self.pos[0], self.pos[1], 50, (100,0,0,100)))
+		if self.activated:
+			EffectManager().add_light(vectorCopy(self.pos), 50, (100,0,0,100))
 	def deathResponse(self):
 		boom(self.pos, 30)
 	def draw(self):
@@ -2416,9 +2406,9 @@ def drawLightning(start, end, color = (153, 255, 255)):
 			point = ((start + direction * t) + vectorUnitRandom() * uniform(-10,10)).vec2tupint()
 		lightings.append(point)
 		points.append(point2world(point))
-	if Game._game.darkness:
-		for i in lightings:
-			Game._game.lights.append((i[0], i[1], 50, [color[0], color[1], color[2], 100]))
+
+	for i in lightings:
+		EffectManager().add_light(vectorCopy(i), 50, [color[0], color[1], color[2], 100])
 	if len(points) > 1:
 		points.append(point2world(end))
 		for i, point in enumerate(points):
@@ -3836,7 +3826,8 @@ class Flare(PhysObj):
 			self.removeFromGame()
 			Flare._flares.remove(self)
 			return
-		Game._game.lights.append((self.pos[0], self.pos[1], self.lightRadius, (100,0,0,100)))
+		
+		EffectManager().add_light(vectorCopy(self.pos), self.lightRadius, (100,0,0,100))
 	def draw(self):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)

@@ -39,8 +39,11 @@ class MapManager(metaclass=SingletonMeta):
 
         self.draw_ground_secondary = True
 
-    def get_map_height(self):
+    def get_map_height(self) -> int:
         return self.game_map.get_height()
+
+    def get_map_size(self) -> Vector:
+        return Vector(self.game_map.get_width(), self.game_map.get_height())
 
     def create_map_image(self, image_path: str, map_height: int, recolor: bool=False) -> None:
         ''' craete a map by an image '''
@@ -108,7 +111,6 @@ class MapManager(metaclass=SingletonMeta):
 
         self.ground_map = pygame.Surface(dims).convert_alpha()
         self.ground_secondary = pygame.Surface(dims).convert_alpha()
-        self.dark_mask = pygame.Surface(dims).convert_alpha()
 
     def is_ground_at(self, pos) -> bool:
         try:

@@ -2,8 +2,9 @@
 from typing import List, Dict, Any
 from random import choice
 
+from vector import Vector
 from Common import SingletonMeta
-from Constants import comments_flew, comments_damage, ColorType
+from Constants import ColorType
 
 class ToManyUnhandeledEventsException(Exception):
     ''' too many unhandeled events exception '''
@@ -26,6 +27,7 @@ class EventComment(Event):
             {'text': comment[1]},
         ]
         GameEvents().post(EventComment(text_dict))
+
 
 class GameEvents(metaclass=SingletonMeta):
     ''' event manager class '''
