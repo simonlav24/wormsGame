@@ -38,6 +38,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.wind_mult = 1.5
         self.damp_mult = 1.5
 
+        self.time_overall = 0
         self.fps = 30
         self.dt = 1.0
 

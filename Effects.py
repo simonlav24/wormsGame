@@ -101,9 +101,9 @@ class Blast(Effect):
 		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
 		self.pos.x += (4.0 * GameVariables().physics.wind / self.rad) * GameVariables().dt
 		self.pos.y -= (2.0 / self.rad) * GameVariables().dt
-		if globals.game_manager.darkness:
-			color = self.color[int(max(min(self.timeCounter, 5), 0))]
-			globals.game_manager.lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
+
+		color = self.color[int(clamp(self.timeCounter, 5, 0))]
+		EffectManager().lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
 		if self.timeCounter >= 10:
 			EffectManager().unregister(self)
 			
@@ -177,7 +177,7 @@ class FloatingText(Effect): #pos, text, color
 	def step(self) -> None:
 		self.timeCounter += 1
 		self.pos.y -= 0.5
-		self.pos.x += 0.25 * sin(0.1 * globals.time_manager.timeOverall + self.phase)
+		self.pos.x += 0.25 * sin(0.1 * GameVariables().time_overall + self.phase)
 		if self.timeCounter == 50:
 			EffectManager().unregister(self)
 			
@@ -237,9 +237,9 @@ class SmokeParticles(Effect):
 					worm.sicken(particle[5])
 					
 	def draw(self) -> None:
-		smokeSurf = pygame.Surface(globals.game_manager.win.get_size(), pygame.SRCALPHA)
+		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
 		for particle in SmokeParticles._particles + SmokeParticles._sickParticles:
-			pygame.draw.circle(smokeSurf, particle[2], globals.game_manager.point_to_world(particle[0]), particle[3])
+			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
 		smokeSurf.set_alpha(100)
 		globals.game_manager.win.blit(smokeSurf, (0,0))
 

@@ -20,6 +20,9 @@ from GameVariables import GameVariables, point2world
 from Background import BackGround
 from GameEvent import *
 from WormTools import *
+from GamePlayMode import GamePlay, TerminatorGamePlay, DarknessGamePlay
+
+from PhysicalEntity import PhysObj
 
 from Weapons.WeaponManager import *
 
@@ -38,7 +41,7 @@ initGui()
 getGlobals()
 
 def drawTarget(pos):
-	offset = sin(globals.time_manager.timeOverall / 5) * 4 + 3
+	offset = sin(GameVariables().time_overall / 5) * 4 + 3
 	triangle = [Vector(5 + offset,0), Vector(10 + offset,-2), Vector(10 + offset,2)]
 	for i in range(4):
 		angle = i * pi / 2
@@ -51,11 +54,12 @@ class Game:
 		Game._game = self
 		globals.game_manager = self
 
+		self.game_play = GamePlay()
 		self.evaluate_config(game_config)
 		GameVariables().config = game_config
-
+		
 		self.map_manager = MapManager()
-		self.background = BackGround(feels[GameVariables().config.feel_index], Game._game.darkness)
+		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
 
 		self.clearLists()
 		
@@ -110,12 +114,7 @@ class Game:
 	@property
 	def gameMode(self) -> GameMode:
 		return self.game_config.game_mode
-	
-	# remove later
-	@property
-	def darkness(self) -> bool:
-		return self.game_config.option_darkness
-	
+		
 	def create_new_game(self):
 		''' initialize new game '''
 
@@ -216,10 +215,12 @@ class Game:
 		if Game._game.gameMode in [GameMode.BATTLE]:
 			HealthBar.drawPoints = False
 
-		if Game._game.darkness:
-			WeaponManager._wm.renderWeaponCount()
-			for team in globals.team_manager.teams:
-				team.ammo(WeaponManager._wm.weapon_dict['flare'], 3)
+		# if Game._game.darkness:
+		# 	WeaponManager._wm.renderWeaponCount()
+		# 	for team in globals.team_manager.teams:
+		# 		team.ammo(WeaponManager._wm.weapon_dict['flare'], 3)
+
+		self.game_play.on_game_init()
 
 		if Game._game.gameMode == GameMode.CAPTURE_THE_FLAG:
 			place_object(Flag, None)
@@ -403,6 +404,17 @@ class Game:
 
 		if self.game_config.feel_index == -1:
 			self.game_config.feel_index = randint(0, len(feels) - 1)
+
+		game_mode_map = {
+			GameMode.TERMINATOR: TerminatorGamePlay
+		}
+		self.game_play.add_mode(game_mode_map.get(self.game_config.game_mode, None))
+
+		if self.game_config.option_darkness:
+			self.game_play.modes.append(DarknessGamePlay())
+
+		
+
 	
 	def handle_event(self, event) -> bool:
 		''' handle pygame event, return true if event handled '''
@@ -740,13 +752,12 @@ class TimeManager:
 		self.wormDieTime = 3
 
 		self.timeCounter: int = self.turnTime
-		self.timeOverall: int = 0
 		self.generateTimeSurf()
 	def generateTimeSurf(self):
 		self.timeSurf = (self.timeCounter, fonts.pixel5_halo.render(str(self.timeCounter), False, GameVariables().initial_variables.hud_color))
 	def step(self):
-		self.timeOverall += 1
-		if self.timeOverall % fps == 0:
+		GameVariables().time_overall += 1
+		if GameVariables().time_overall % fps == 0:
 			self.timeStep()
 	def timeStep(self):
 		if self.timeCounter == 0:
@@ -775,175 +786,6 @@ class TimeManager:
 		self.timeRemaining(self.retreatTime)
 	def timeRemainingDie(self):
 		self.timeRemaining(self.wormDieTime)
-
-class PhysObj:
-	''' a physical object '''
-	_reg = []
-	_toRemove = []
-	_worms = []
-	_mines = []
-	_fastest = 10
-	def initialize(self):
-		PhysObj._reg.append(self)
-		self.vel = Vector(0,0)
-		self.acc = Vector(0,0)
-		
-		self.stable = False
-		self.damp = 0.4
-		
-		self.bounceBeforeDeath = -1
-		self.dead = False
-		self.color = (255,0,0)
-		self.windAffected = GameVariables().initial_variables.all_wind_affected
-		self.boomAffected = True
-		self.fallAffected = True
-		self.health = None
-		self.extraCollider = False
-		self.wormCollider = False
-	
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = Vector(pos[0],pos[1])
-		
-		self.radius = 4
-	
-	def step(self):
-		self.applyForce()
-		
-		# velocity
-		self.vel += self.acc * GameVariables().dt
-		self.limitVel()
-		# position
-		ppos = self.pos + self.vel * GameVariables().dt
-		
-		# reset forces
-		self.acc *= 0
-		self.stable = False
-		
-		angle = atan2(self.vel.y, self.vel.x)
-		response = Vector(0,0)
-		collision = False
-		
-		# colission with world:
-		r = angle - pi
-		while r < angle + pi:
-			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
-				if GameVariables().config.option_closed_map:
-					response += ppos - testPos
-					collision = True
-					r += pi /8
-					continue
-				else:
-					r += pi /8
-					continue
-			if testPos.y < 0:
-				if MapManager().is_ground_at((int(testPos.x), 0)):
-					response += ppos - testPos
-					collision = True
-					r += pi /8
-					continue
-				else:
-					r += pi /8
-				continue
-			
-			# collission with Game._game.map_manager.game_map:
-			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-				response += ppos - testPos
-				collision = True
-				r += pi /8; continue
-
-			else:
-				if not self.wormCollider and MapManager().worm_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
-					response += ppos - testPos
-					collision = True
-				elif not self.extraCollider and MapManager().objects_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
-					response += ppos - testPos
-					collision = True
-			
-			r += pi / 8
-		
-		magVel = self.vel.getMag()
-		
-		if collision:
-			
-			self.collisionRespone(ppos)
-			if magVel > CRITICAL_FALL_VELOCITY and self.fallAffected:
-				self.damage(magVel * 1.5 * GameVariables().fall_damage_mult, 1)
-				# blood
-				if self in PhysObj._worms:
-					MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
-			self.stable = True
-			
-			response.normalize()
-			#addExtra(self.pos + 5 * response, (0,0,0), 1)
-			fdot = self.vel.dot(response)
-			if not self.bounceBeforeDeath == 1:
-				
-				# damp formula 1 - logarithmic
-				# dampening = max(self.damp, self.damp * log(magVel) if magVel > 0.001 else 1)
-				# dampening = min(dampening, min(self.damp * 2, 0.9))
-				# newVel = ((response * -2 * fdot) + self.vel) * dampening
-				
-				# legacy formula
-				newVel = ((response * -2 * fdot) + self.vel) * self.damp * GameVariables().damp_mult
-					
-				self.vel = newVel
-				# max speed recorded ~ 25
-			
-			if self.bounceBeforeDeath > 0:
-				self.bounceBeforeDeath -= 1
-				self.dead = self.bounceBeforeDeath == 0
-				
-		else:
-			self.pos = ppos
-			
-		# flew out Game._game.map_manager.game_map but not worms !
-		if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level and not self in self._worms:
-			if self not in Debrie._debries:
-				splash(self.pos, self.vel)
-			angle = self.vel.getAngle()
-			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
-				if self.vel.getMag() > 7:
-					self.pos.y = MapManager().game_map.get_height() - GameVariables().water_level - 1
-					self.vel.y *= -1
-					self.vel.x *= 0.8
-			else:
-				self.outOfMapResponse()
-				self.removeFromGame()
-				return
-		
-		if magVel < 0.1: # creates a double jump problem
-			self.stable = True
-		
-		self.secondaryStep()
-		
-		if self.dead:
-			self.removeFromGame()
-			self.deathResponse()
-	def applyForce(self):
-		# gravity:
-		self.acc.y += GameVariables().physics.global_gravity
-		if self.windAffected > 0:
-			if self.pos.x < - 3 * MapManager().game_map.get_width() or self.pos.x > 4 * MapManager().game_map.get_width():
-				return
-			self.acc.x += GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * self.windAffected
-	def deathResponse(self):
-		pass
-	def secondaryStep(self):
-		pass
-	def removeFromGame(self):
-		PhysObj._toRemove.append(self)
-	def damage(self, value, damageType=0):
-		pass
-	def collisionRespone(self, ppos):
-		pass
-	def outOfMapResponse(self):
-		pass
-	def limitVel(self):
-		pass
-	def draw(self):
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 
 class Debrie (PhysObj):
 	''' debrie resulting from explossions '''
@@ -1202,6 +1044,7 @@ class Worm (PhysObj):
 			if not self == Game._game.objectUnderControl:
 				if not Game._game.sentring and not Game._game.raoning and not Game._game.waterRising and not self in globals.team_manager.currentTeam.worms:
 					Game._game.damageThisTurn += dmg
+			Game._game.game_play.on_worm_damage(self)
 			if Game._game.gameMode == GameMode.CAPTURE_THE_FLAG and damageType != 2:
 				if self.flagHolder:
 					self.team.flagHolder = False
@@ -1251,7 +1094,7 @@ class Worm (PhysObj):
 		if self.alive and GameVariables().initial_variables.draw_health_bar:
 			self.drawHealth()
 		if self.sleep and self.alive:
-			if TimeManager._tm.timeOverall % fps == 0:
+			if GameVariables().time_overall % fps == 0:
 				FloatingText(self.pos, "z", (0,0,0))
 				
 		# draw holding weapon
@@ -1469,7 +1312,7 @@ class Fire(PhysObj):
 			radius += 1
 		if self.life > 10:
 			radius += 1
-		self.yellow = int(sin(0.3*TimeManager._tm.timeOverall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
+		self.yellow = int(sin(0.3 * GameVariables().time_overall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
 		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - GameVariables().cam_pos[0]), int(self.pos.y - GameVariables().cam_pos[1])), radius)
 
 class TNT(PhysObj):#5
@@ -2157,12 +2000,12 @@ class SentryGun(PhysObj):
 						self.health = 0
 		
 		if self.electrified:
-			if TimeManager._tm.timeOverall % 2 == 0:
+			if GameVariables().time_overall % 2 == 0:
 				self.angle = uniform(0,2*pi)
 				fireMiniGun(self.pos, vectorFromAngle(self.angle))
 		
 		self.angle += (self.angle2for - self.angle)*0.2
-		if not self.target and TimeManager._tm.timeOverall % (fps*2) == 0:
+		if not self.target and GameVariables().time_overall % (fps*2) == 0:
 			self.angle2for = uniform(0,2*pi)
 		
 		# extra "damp"
@@ -2930,7 +2773,7 @@ class Armageddon:
 		if self.timer == 0:
 			Game._game.nonPhysToRemove.append(self)
 			return
-		if TimeManager._tm.timeOverall % 10 == 0:
+		if GameVariables().time_overall % 10 == 0:
 			for i in range(randint(1,2)):
 				x = randint(-100, Game._game.map_manager.game_map.get_width() + 100)
 				m = Missile((x, -10), Vector(randint(-10,10), 5).normalize(), 1)
@@ -4226,7 +4069,7 @@ class Bubble:
 		self.vel.x *= 0.99
 		self.acc *= 0
 		
-		if self.radius <= self.grow and TimeManager._tm.timeOverall % 5 == 0:
+		if self.radius <= self.grow and GameVariables().time_overall % 5 == 0:
 			self.radius += 1 * GameVariables().dt
 			
 		if not self.catch:
@@ -4430,7 +4273,7 @@ class Seagull(Seeker):
 		dir = self.vel.x > 0
 		width = 16
 		height = 13
-		frame = TimeManager._tm.timeOverall//2 % 3
+		frame = GameVariables().time_overall // 2 % 3
 		surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		surf.blit(sprites.sprite_atlas, (0,0), (frame * 16,80, 16, 16))
 		win.blit(pygame.transform.flip(surf, dir, False), point2world(self.pos - Vector(width//2, height//2)))
@@ -4474,7 +4317,7 @@ class Covid19(Seeker):
 	def draw(self):
 		width = 16
 		height = 16
-		frame = TimeManager._tm.timeOverall//2 % 5
+		frame = GameVariables().time_overall // 2 % 5
 		win.blit(sprites.sprite_atlas, point2world(self.pos - Vector(8, 8)), ((frame * 16, 32), (16, 16)) )
 
 class Chum(Grenade):
@@ -6168,7 +6011,7 @@ def checkWinners():
 	if end:
 		if winningTeam != None:
 			print("Team", winningTeam.name, "won!")
-			dic["time"] = str(TimeManager._tm.timeOverall//fps)
+			dic["time"] = str(GameVariables().time_overall // fps)
 			dic["winner"] = winningTeam.name
 			if Game._game.mostDamage[1]:
 				dic["mostDamage"] = str(int(Game._game.mostDamage[0]))
@@ -6312,11 +6155,11 @@ def cycleWorms():
 		for i in range(Game._game.game_config.deployed_packs):
 			w = deployPack(choice([HealthPack,UtilityPack, WeaponPack]))
 			Game._game.camTrack = w
-		if Game._game.darkness:
-			for team in globals.team_manager.teams:
-				team.ammo("flare", 1)
-				if team.ammo("flare") > 3:
-					team.ammo("flare", -1)
+		# if Game._game.darkness:
+		# 	for team in globals.team_manager.teams:
+		# 		team.ammo("flare", 1)
+		# 		if team.ammo("flare") > 3:
+		# 			team.ammo("flare", -1)
 		return
 	
 	# rise water:
@@ -6383,11 +6226,11 @@ def cycleWorms():
 	GameVariables().physics.wind = uniform(-1, 1)
 	
 	# flares reduction
-	if Game._game.darkness:
-		for flare in Flare._flares:
-			if not flare in PhysObj._reg:
-				Flare._flares.remove(flare)
-			flare.lightRadius -= 10
+	# if Game._game.darkness:
+	# 	for flare in Flare._flares:
+	# 		if not flare in PhysObj._reg:
+	# 			Flare._flares.remove(flare)
+	# 		flare.lightRadius -= 10
 	
 	# sick:
 	for worm in PhysObj._worms:
@@ -6893,7 +6736,7 @@ class Mission:
 		if self.missionType == "hit distant worm":
 			radius = 300
 			da = 2 * pi / 40
-			time = da * int(TimeManager._tm.timeOverall / 2)
+			time = da * int(GameVariables().time_overall / 2)
 			timeAngles = [time + i * pi/2 for i in range(4)]
 			for ta in timeAngles:
 				for i in range(9):
@@ -6902,7 +6745,7 @@ class Mission:
 					pygame.draw.circle(win, (255,0,0), point2world(pos), size)
 		# draw marker
 		elif self.marker:
-			offset = sin(TimeManager._tm.timeOverall / 5) * 5
+			offset = sin(GameVariables().time_overall / 5) * 5
 			pygame.draw.circle(win, (255,0,0), point2world(self.marker), 10 + offset, 1)
 			drawDirInd(self.marker)
 		# draw indicators
@@ -7124,7 +6967,7 @@ def drawDirInd(pos):
 	for point in points:
 		point.rotate(angle)
 	
-	pygame.draw.polygon(win, (255,0,0), [intersection + i + normalize(direction) * 4 * sin(TimeManager._tm.timeOverall / 5) for i in points])
+	pygame.draw.polygon(win, (255,0,0), [intersection + i + normalize(direction) * 4 * sin(GameVariables().time_overall / 5) for i in points])
 
 class Anim:
 	_a = None
@@ -7329,7 +7172,6 @@ def gameMain(game_config: GameConfig=None):
 	WeaponManager()
 	TeamManager()
 
-	background = BackGround(feels[GameVariables().config.feel_index], Game._game.darkness)
 	SmokeParticles()
 	
 	damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
@@ -7422,8 +7264,7 @@ def gameMain(game_config: GameConfig=None):
 						globals.scalingFactor = scalingFactor
 						if Game._game.camTrack == None:
 							Game._game.camTrack = Game._game.objectUnderControl
-					# if event.key == pygame.K_n:
-						# pygame.image.save(win, "wormshoot" + str(timeManager.timeOverall) + ".png")	
+
 					Game._game.cheatCode += event.unicode
 					if event.key == pygame.K_EQUALS:
 						cheatActive(Game._game.cheatCode)
@@ -7499,15 +7340,15 @@ def gameMain(game_config: GameConfig=None):
 		# constraints:
 		if GameVariables().cam_pos[1] < 0: GameVariables().cam_pos[1] = 0
 		if GameVariables().cam_pos[1] >= Game._game.map_manager.game_map.get_height() - GameVariables().win_height: GameVariables().cam_pos[1] = Game._game.map_manager.game_map.get_height() - GameVariables().win_height
-		if GameVariables().config.option_closed_map or Game._game.darkness:
-			if GameVariables().cam_pos[0] < 0:
-				GameVariables().cam_pos[0] = 0
-			if GameVariables().cam_pos[0] >= Game._game.map_manager.game_map.get_width() - GameVariables().win_width:
-				GameVariables().cam_pos[0] = Game._game.map_manager.game_map.get_width() - GameVariables().win_width
+		# if GameVariables().config.option_closed_map or Game._game.darkness:
+		# 	if GameVariables().cam_pos[0] < 0:
+		# 		GameVariables().cam_pos[0] = 0
+		# 	if GameVariables().cam_pos[0] >= Game._game.map_manager.game_map.get_width() - GameVariables().win_width:
+		# 		GameVariables().cam_pos[0] = Game._game.map_manager.game_map.get_width() - GameVariables().win_width
 		
 		if Earthquake.earthquake > 0:
-			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(TimeManager._tm.timeOverall)
-			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(TimeManager._tm.timeOverall * 1.8)
+			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
+			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(GameVariables().time_overall * 1.8)
 		
 		# Fire
 		if Game._game.fireWeapon and Game._game.playerShootAble: fire()
@@ -7544,7 +7385,7 @@ def gameMain(game_config: GameConfig=None):
 			TimeTravel._tt.step()
 			
 		# camera for wait to stable:
-		if Game._game.state == WAIT_STABLE and TimeManager._tm.timeOverall % 20 == 0:
+		if Game._game.state == WAIT_STABLE and GameVariables().time_overall % 20 == 0:
 			for worm in PhysObj._worms:
 				if worm.stable:
 					continue
@@ -7554,7 +7395,7 @@ def gameMain(game_config: GameConfig=None):
 		
 		# advance timer
 		TimeManager._tm.step()
-		background.step()
+		Game._game.background.step()
 		
 		if ArenaManager._arena: ArenaManager._arena.step()
 		if MissionManager._mm: MissionManager._mm.step()
@@ -7571,7 +7412,7 @@ def gameMain(game_config: GameConfig=None):
 
 
 		# draw:
-		background.draw(win)
+		Game._game.background.draw(win)
 		drawLand()
 		for p in PhysObj._reg: 
 			p.draw()
@@ -7581,14 +7422,14 @@ def gameMain(game_config: GameConfig=None):
 		# draw effects
 		EffectManager().draw(win)
 
-		background.drawSecondary(win)
+		Game._game.background.drawSecondary(win)
 		for t in Toast._toasts:
 			t.draw()
 		
 		if ArenaManager._arena: ArenaManager._arena.draw()
 		SmokeParticles._sp.draw()
 
-		if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
+		# if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
 		# draw shooting indicator
 		if Game._game.objectUnderControl and Game._game.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and Game._game.objectUnderControl.health > 0:
 			Game._game.objectUnderControl.drawCursor()
