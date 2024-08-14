@@ -3,19 +3,15 @@ import pygame
 from math import cos, pi, sin, radians, degrees
 from random import uniform, randint, choice
 
-from vector import *
-
-from GameVariables import GameVariables
-from Common import Entity
-from Constants import sprites, SHOCK_RADIUS
-from MapManager import MapManager, SKY
-
-from Effects import Blast, Explossion
-from PhysicalEntity import PhysObj
-from Entities.Debrie import Debrie
-
 import globals
 
+from common.vector import *
+from common import GameVariables, Entity, sprites, SHOCK_RADIUS
+
+from game.map_manager import MapManager, SKY
+from game.visual_effects import Blast, Explossion
+from entities.physical_entity import PhysObj
+from entities.debrie import Debrie
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
 	if not fire: radius *= GameVariables().boom_radius_mult

@@ -3,12 +3,11 @@ import pygame
 from random import uniform, randint, choice
 from typing import List
 from math import exp, sin
-from enum import Enum
 
-from vector import Vector, vectorUnitRandom
-from GameVariables import GameVariables, point2world
-from Constants import DARK_COLOR, WATER_AMP
-from MapManager import MapManager
+from common import GameVariables, point2world, DARK_COLOR, WATER_AMP
+from common.vector import *
+
+from game.map_manager import MapManager
 
 def perlinNoise1D(count, seed, octaves, bias) -> List[float]:
     output = []

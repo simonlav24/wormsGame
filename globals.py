@@ -1,9 +1,9 @@
 
 import pygame
-from vector import Vector
+from common.vector import Vector
 
-from GameVariables import GameVariables
-import Constants
+from common.game_variables import GameVariables
+import common.constants
 
 class HaloFont:
     def __init__(self, font):
@@ -48,7 +48,7 @@ def globalsInit():
     # screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF | pygame.NOFRAME)
     screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
 
-    Constants.initialize()
+    common.constants.initialize()
 
 win = None
 scalingFactor = 0

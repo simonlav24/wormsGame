@@ -2,9 +2,9 @@
 from typing import List, Dict, Any
 from random import choice
 
-from vector import Vector
-from Common import SingletonMeta
-from Constants import ColorType
+from common.vector import Vector
+from common import SingletonMeta
+from common.constants import ColorType
 
 class ToManyUnhandeledEventsException(Exception):
     ''' too many unhandeled events exception '''

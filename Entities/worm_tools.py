@@ -1,15 +1,13 @@
 
 import pygame
 from random import randint
-from typing import List
 
-from GameVariables import GameVariables, point2world
-from Effects import Blast
-from vector import *
-from MapManager import MapManager, GRD
-from Constants import sprites
-from Common import blit_weapon_sprite
-from PhysicalEntity import PhysObj
+from common import GameVariables, point2world, sprites, blit_weapon_sprite
+from common.vector import *
+
+from game.visual_effects import Blast
+from game.map_manager import MapManager, GRD
+from entities.physical_entity import PhysObj
 
 class WormUtility:
     def __init__(self):
@@ -68,7 +66,7 @@ class JetPack(WormUtility):
         pygame.draw.rect(win, (0,0,220),(point2world(self.worm.pos + Vector(-10, -25)), (int(value),3)))
 
 class Rope(WormUtility):
-    def __init__(self, worm: 'physical', pos: Vector, direction: Vector):
+    def __init__(self, worm: PhysObj, pos: Vector, direction: Vector):
         super().__init__()
         self.worm = worm
         self.rope = []
@@ -173,7 +171,7 @@ class Rope(WormUtility):
         pygame.draw.lines(win, (250,250,0), False, rope)
 
 class Parachute(WormUtility):
-    def __init__(self, worm: 'physical'):
+    def __init__(self, worm: PhysObj):
         super().__init__()
         self.worm = worm
 

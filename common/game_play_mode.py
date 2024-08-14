@@ -2,8 +2,8 @@
 import pygame
 from typing import Dict, List
 
-from GameVariables import GameVariables
-from Common import SingletonMeta
+from common.game_variables import GameVariables
+from common import SingletonMeta
 
 class GamePlayMode:
     ''' handles game mode '''

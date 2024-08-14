@@ -5,13 +5,12 @@ from typing import List
 from math import cos, pi, sin, radians, degrees
 from random import uniform, randint, choice
 
-from Common import blit_weapon_sprite
-from Constants import ColorType
-from GameVariables import GameVariables, point2world
-from PhysicalEntity import PhysObj
-from WorldEffects import boom
-from vector import *
-from Effects import Blast
+from common import blit_weapon_sprite, ColorType, GameVariables, point2world
+from common.vector import *
+
+from entities.physical_entity import PhysObj
+from game.world_effects import boom
+from game.visual_effects import Blast
 
 class Missile (PhysObj):
 	def __init__(self, pos, direction, energy):

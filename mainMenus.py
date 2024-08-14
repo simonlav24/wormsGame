@@ -6,24 +6,16 @@ from tkinter.filedialog import askopenfile
 import xml.etree.ElementTree as ET
 
 import globals
+
+from common import GameConfig, GameVariables, fonts, feels
+from common.constants import *
+from common.game_config import RandomMode, GameMode, SuddenDeathMode
+from common.vector import *
+
 from perlinNoise import generateNoise
-from vector import *
-from menuGui import *
-from Constants import *
-from MapManager import grab_maps
-from GameConfig import *
-from Background import BackGround
-from GameVariables import GameVariables
-
-if not os.path.exists("graphObject.py"):
-	print("fetching graphObject")
-	import urllib.request
-	with urllib.request.urlopen('https://raw.githubusercontent.com/simonlav24/Graph-plotter/master/graphObject.py') as f:
-		text = f.read().decode('utf-8')
-		with open("graphObject.py", "w+") as graphpy:
-			graphpy.write(text)
-import graphObject
-
+from gui.menu_gui import *
+from game.map_manager import grab_maps
+from game.background import BackGround
 
 trueFalse = ["-f", "-dig", "-dark", "-used", "-closed", "-warped", "-rg", "-place", "-art"]
 feelIndex = randint(0, len(feels) - 1)
@@ -227,17 +219,12 @@ class MainMenu:
 
 	def initializeRecordMenu(self):
 		# clear graphs
-		graphObject.Graph._reg.clear()
 
 		recordMenu = Menu(name="record menu", pos=[GameVariables().win_width//2  - GameVariables().win_width//4, (GameVariables().win_height - 180)//2], size=[GameVariables().win_width // 2, 180], register=True)
 		recordMenu.insert(MENU_TEXT, text="worms game records", customSize=15)
 		b = recordMenu.insert(MENU_SURF)
 		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
 	
-		graph = graphObject.Graph(b.getSuperPos(), b.size, fonts.pixel5, False)
-		graph._reg[0].draw()
-		b.setSurf(graph.surf)
-
 		readRecord = countWin()
 		if readRecord is None:
 			self.graphteams = None
@@ -254,7 +241,6 @@ class MainMenu:
 		x = self.graphtime[-1]
 
 		pos = (x,y_average)
-		graph.setCam(Vector(pos[0]*5, -pos[1]*5)) # arbitrary '5' that works for some reason
 	
 	def updateWeaponSets(self):
 		weaponSetCombo = getElementByName("weapon_combo")
@@ -403,7 +389,6 @@ def evaluateMenuForm():
 
 def menuPop():
 	Menu._reg.pop()
-	graphObject.Graph._reg.clear()
 
 def playOnPress():
 	values = evaluateMenuForm()
@@ -414,12 +399,6 @@ def playOnPress():
 
 	MainMenu._mm.gameParameters = game_config
 	MainMenu._mm.run = False
-
-def drawRecordGraph():
-	if MainMenu._mm.graphteams is None:
-		return
-	for key in MainMenu._mm.graphteams.keys():
-		graphObject.Graph._reg[0].drawGraph2(MainMenu._mm.graphtime, MainMenu._mm.graphteams[key][1], ast.literal_eval(MainMenu._mm.graphteams[key][0]))
 
 def countWin():
 	if not os.path.exists("wormsRecord.xml"):
@@ -447,11 +426,10 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 
 	# clear menus
 	Menu._reg.clear()
-	graphObject.Graph._reg.clear()
 
 	background = BackGround(feels[0])
 	MainMenu()
-	MainMenu._maps = grab_maps(['wormsMaps', 'wormsMaps/moreMaps'])
+	MainMenu._maps = grab_maps(['assets/worms_maps', 'assets/more_maps'])
 	
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()
@@ -465,8 +443,6 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
 			mousePos = pygame.mouse.get_pos()
-			for g in graphObject.Graph._reg:
-				g.handleGraphEvent(event, Vector(mousePos[0] // globals.scalingFactor, mousePos[1] // globals.scalingFactor))
 			handleEvents(event, MainMenu._mm.handleMainMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
@@ -476,18 +452,10 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 		
 		Gui._instance.step()
 		
-		for g in graphObject.Graph._reg:
-			mousePos = pygame.mouse.get_pos()
-			g.step(Vector(mousePos[0] // globals.scalingFactor, mousePos[1] // globals.scalingFactor))
-
 		# draw
 		background.draw(globals.win)
 
 		Gui._instance.draw()
-
-		for g in graphObject.Graph._reg:
-			g.draw()
-			drawRecordGraph()
 
 		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
 		globals.fpsClock.tick(GameVariables().fps)

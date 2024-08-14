@@ -6,11 +6,8 @@ from typing import List, Dict, Tuple
 
 import pygame
 import globals
-from Constants import GREY, PLAYER_CONTROL_1, sprites, fonts
-import Common
-from Common import ColorType, blit_weapon_sprite
-from GameVariables import GameVariables
-
+import common
+from common import GREY, PLAYER_CONTROL_1, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables
 
 class WeaponStyle(Enum):
     CHARGABLE = 0
@@ -87,7 +84,7 @@ class WeaponManager:
         # initialize dicts
         mapped = map(lambda x: x.name, self.weapons)
         self.weapon_dict: Dict[str, Weapon] = {key: value for key, value in zip(list(mapped), self.weapons)}
-        Common.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
+        common.common.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
 
         # basic set for teams 
         self.basic_set: List[int] = [weapon.initial_amount for weapon in self.weapons]

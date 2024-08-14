@@ -5,10 +5,8 @@ from math import cos, pi, sin
 from random import choice, randint
 from typing import List, Tuple
 
-from Common import PATH_ASSETS
-from Constants import feels
-from GameVariables import GameVariables, SingletonMeta
-from vector import *
+from common import PATH_ASSETS, feels, GameVariables, SingletonMeta
+from common.vector import *
 
 SKY = (0,0,0,0)
 GRD = (255,255,255,255)

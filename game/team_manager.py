@@ -6,11 +6,11 @@ from random import choice, shuffle
 from pydantic import BaseModel
 
 import globals
-from Weapons.WeaponManager import Weapon
-from Common import desaturate, ColorType
-from Hud import HealthBar
-from GameVariables import GameVariables
-from Constants import sprites
+
+from common import desaturate, ColorType, GameVariables, sprites
+
+from weapons.weapon_manager import Weapon
+from game.hud import HealthBar
 
 class TeamData(BaseModel):
     team_name: str

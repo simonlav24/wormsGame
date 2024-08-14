@@ -4,11 +4,11 @@ from typing import List
 from math import cos, pi, sin, radians
 from random import uniform, randint, choice
 
-from GameVariables import GameVariables, point2world
-from PhysicalEntity import PhysObj
-from Constants import ColorType
-from vector import *
-from Effects import Blast
+from common import GameVariables, point2world, ColorType
+from common.vector import *
+
+from entities.physical_entity import PhysObj
+from game.visual_effects import Blast
 
 class Debrie (PhysObj):
 	''' debrie resulting from explossions '''

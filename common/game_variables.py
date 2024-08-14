@@ -2,11 +2,11 @@
 from pydantic import BaseModel
 from typing import List, Dict
 
-from GameConfig import GameConfig
-from Common import SingletonMeta, ColorType, Entity
-from Constants import WHITE
+from common.game_config import GameConfig
+from common import SingletonMeta, ColorType, Entity
+from common.constants import WHITE
 
-from vector import Vector
+from common.vector import Vector
 
 class WorldPhysics:
     ''' holds physics related data '''
@@ -50,16 +50,16 @@ class GameVariables(metaclass=SingletonMeta):
         self.water_level = self.initial_variables.water_level
         self.water_color = (255,255,255)
 
-        self.non_physicals: List[Entity] = []
-        self.non_physicals_done: List[Entity] = []
+        # self.non_physicals: List[Entity] = []
+        # self.non_physicals_done: List[Entity] = []
 
         self.mega_weapon_trigger = False
 
-    def register_non_physical(self, entity: Entity) -> None:
-        self.non_physicals.append(entity)
+    # def register_non_physical(self, entity: Entity) -> None:
+    #     self.non_physicals.append(entity)
     
-    def unregister_non_physical(self, entity: Entity) -> None:
-        self.non_physicals_done.append(entity)
+    # def unregister_non_physical(self, entity: Entity) -> None:
+    #     self.non_physicals_done.append(entity)
 
 
 def point2world(point):

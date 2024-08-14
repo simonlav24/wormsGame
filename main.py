@@ -1,33 +1,33 @@
 from math import pi, cos, sin, atan2, sqrt, exp, degrees, radians, copysign, fabs
 from random import shuffle ,randint, uniform, choice
-from vector import *
-from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 import pygame
 import os
 from typing import Any
 
+from common import *
+from common.vector import *
+from common.game_config import *
+from common.game_event import *
+from common.game_play_mode import *
+
+from mainMenus import mainMenu, pauseMenu, initGui, updateWin
+
 import globals
-from Constants import *
-from Common import *
-from Effects import *
-from Hud import *
-from Gui.RadialMenu import *
-from tempFuncs import *
-from MapManager import *
-from GameConfig import *
-from TeamManager import *
-from GameVariables import GameVariables, point2world
-from Background import BackGround
-from GameEvent import *
-from WormTools import *
-from GamePlayMode import GamePlay, TerminatorGamePlay, DarknessGamePlay
 
-from PhysicalEntity import PhysObj
-from Entities.Debrie import Debrie
-from WorldEffects import *
+from game.visual_effects import *
+from game.world_effects import *
+from game.hud import *
+from gui.radial_menu import *
+from game.map_manager import *
+from game.team_manager import *
+from game.background import BackGround
 
-from Weapons.WeaponManager import *
-from Weapons.Missiles import *
+from entities.worm_tools import *
+from entities.physical_entity import PhysObj
+from entities.debrie import Debrie
+
+from weapons.weapon_manager import *
+from weapons.missiles import *
 
 def getGlobals():
 	global fpsClock, fps, screenWidth, screenHeight, scalingFactor, win, screen
@@ -303,7 +303,6 @@ class Game:
 		if comment:
 			m.commentCreation()
 		Game._game.camTrack = m
-
 
 	def initiateGameVariables(self):
 		self.waterRise = False # whether water rises at the end of each turn

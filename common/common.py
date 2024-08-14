@@ -3,9 +3,9 @@ from abc import ABC, abstractmethod
 from typing import Tuple, Dict
 import pygame
 from math import sin, pi
-from vector import *
 
-from Constants import ColorType, sprites
+from common.vector import *
+from common.constants import ColorType, sprites
 
 # paths
 PATH_ASSETS = r'./assets'

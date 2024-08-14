@@ -1,7 +1,7 @@
 import pygame
 from abc import ABC
 
-from vector import *
+from common.vector import *
 
 class Gui:
 	_instance = None

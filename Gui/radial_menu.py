@@ -5,8 +5,8 @@ from typing import Any, Tuple, List
 from abc import ABC, abstractmethod
 
 import globals
-from Constants import fonts
 
+from common import fonts
 from pygame import Vector2
 
 SurfacePortion = Tuple[pygame.Surface, Tuple[int, int, int, int]] | None

@@ -4,15 +4,13 @@ import pygame
 from math import atan2, pi, sin, cos
 from typing import List
 
-from Common import Entity
-from vector import Vector
-from GameVariables import GameVariables, point2world
-from Constants import CRITICAL_FALL_VELOCITY, sprites
+from common import Entity, GameVariables, point2world, CRITICAL_FALL_VELOCITY, sprites
+from common.vector import Vector
 
-from MapManager import MapManager, GRD
-from Effects import splash
+from game.map_manager import MapManager, GRD
+from game.visual_effects import splash
 
-# need to remove all _regs
+# todo: to remove all _regs
 
 class PhysObj(Entity):
 	''' a physical object '''

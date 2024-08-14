@@ -5,10 +5,10 @@ from typing import List, Dict, Any
 from enum import Enum
 
 import globals
-from Constants import ColorType, fonts
-from vector import *
-from GameVariables import GameVariables
-from GameEvent import GameEvents, EventComment
+
+from common import ColorType, fonts, GameVariables
+from common.game_event import GameEvents, EventComment
+from common.vector import *
 
 HEALTH_BAR_WIDTH = 40
 HEALTH_BAR_HEIGHT = 2

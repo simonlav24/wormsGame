@@ -1,17 +1,15 @@
 
 import pygame
-from vector import *
 from typing import Any, List, Tuple
 from random import randint, uniform, choice
 from math import exp, pi, sin, cos
 
 import globals
-from Constants import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts
-from Common import Entity, SingletonMeta, clamp
 
-from MapManager import MapManager
-from GameVariables import GameVariables, point2world
+from common import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts, Entity, SingletonMeta, clamp, GameVariables, point2world
+from common.vector import *
 
+from game.map_manager import MapManager
 
 class Effect(Entity):
 	''' visual effects '''
