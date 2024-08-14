@@ -2,19 +2,21 @@
 
 import pygame
 from math import atan2, pi, sin, cos
+from typing import List
 
 from Common import Entity
 from vector import Vector
 from GameVariables import GameVariables, point2world
-from MapManager import MapManager, GRD
 from Constants import CRITICAL_FALL_VELOCITY, sprites
+
+from MapManager import MapManager, GRD
 from Effects import splash
 
 # need to remove all _regs
 
-class PhysObj:
+class PhysObj(Entity):
 	''' a physical object '''
-	_reg = []
+	_reg: List['PhysObj'] = []
 	_toRemove = []
 	_worms = []
 	_mines = []

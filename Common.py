@@ -1,11 +1,11 @@
 
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Tuple, Dict
 import pygame
 from math import sin, pi
 from vector import *
 
-from Constants import ColorType
+from Constants import ColorType, sprites
 
 # paths
 PATH_ASSETS = r'./assets'
@@ -47,7 +47,14 @@ def darken(color: ColorType) -> ColorType:
 
 # drawing utilities
 
+weapon_name_to_index: Dict[str, int] = None
 
+def blit_weapon_sprite(dest: pygame.Surface, pos: Tuple[int, int], weapon_name: str):
+    weapon_index = weapon_name_to_index[weapon_name]
+    x = weapon_index % 8
+    y = 9 + weapon_index // 8
+    rect = (x * 16, y * 16, 16, 16)
+    dest.blit(sprites.sprite_atlas, pos, rect)
 
 # math utilities
 

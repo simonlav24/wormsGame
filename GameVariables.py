@@ -1,6 +1,6 @@
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict
 
 from GameConfig import GameConfig
 from Common import SingletonMeta, ColorType, Entity
@@ -52,6 +52,8 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.non_physicals: List[Entity] = []
         self.non_physicals_done: List[Entity] = []
+
+        self.mega_weapon_trigger = False
 
     def register_non_physical(self, entity: Entity) -> None:
         self.non_physicals.append(entity)

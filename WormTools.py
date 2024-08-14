@@ -6,9 +6,10 @@ from typing import List
 from GameVariables import GameVariables, point2world
 from Effects import Blast
 from vector import *
-import globals
 from MapManager import MapManager, GRD
 from Constants import sprites
+from Common import blit_weapon_sprite
+from PhysicalEntity import PhysObj
 
 class WormUtility:
     def __init__(self):
@@ -30,7 +31,7 @@ class WormUtility:
         pass
 
 class JetPack(WormUtility):
-    def __init__(self, worm: 'physical'):
+    def __init__(self, worm: PhysObj):
         super().__init__()
         self.worm = worm
         self.fuel = 100
@@ -59,7 +60,7 @@ class JetPack(WormUtility):
             Blast(self.worm.pos + Vector(-self.worm.radius * 1.5, 0) + vectorUnitRandom() * 2, randint(5,8), 80)
 
     def draw(self, win):
-        globals.weapon_manager.blitWeaponSprite(win, point2world(self.worm.pos - Vector(8,8)), "jet pack")
+        blit_weapon_sprite(win, point2world(self.worm.pos - Vector(8,8)), "jet pack")
         value = 20 * (self.fuel/100)
         if value < 1:
             value = 1

@@ -2,12 +2,13 @@
 import json
 from enum import Enum
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import pygame
 import globals
 from Constants import GREY, PLAYER_CONTROL_1, sprites, fonts
-from Common import * 
+import Common
+from Common import ColorType, blit_weapon_sprite
 from GameVariables import GameVariables
 
 
@@ -83,8 +84,10 @@ class WeaponManager:
         
         self.weapons: List[Weapon] = [Weapon.model_validate(weapon) for weapon in data]
         
+        # initialize dicts
         mapped = map(lambda x: x.name, self.weapons)
         self.weapon_dict: Dict[str, Weapon] = {key: value for key, value in zip(list(mapped), self.weapons)}
+        Common.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
 
         # basic set for teams 
         self.basic_set: List[int] = [weapon.initial_amount for weapon in self.weapons]
@@ -158,12 +161,12 @@ class WeaponManager:
                 if weapon.name in ["covid 19", "parachute", "earthquake"]:
                     return
                 if weapon.name == "gemino mine":
-                    WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), "mine")
+                    blit_weapon_sprite(globals.game_manager.weaponHold, (0,0), "mine")
                     return
-                WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), weapon.name)
+                blit_weapon_sprite(globals.game_manager.weaponHold, (0,0), weapon.name)
                 return
             if weapon.name in ["flare", "artillery assist"]:
-                WeaponManager._wm.blitWeaponSprite(globals.game_manager.weaponHold, (0,0), "flare")
+                blit_weapon_sprite(globals.game_manager.weaponHold, (0,0), "flare")
                 return
             if weapon.category in [WeaponCategory.MISSILES]:
                 globals.game_manager.weaponHold.blit(sprites.sprite_atlas, (0,0), (64,112,16,16))
@@ -288,7 +291,7 @@ class WeaponManager:
                 WeaponManager._wm.renderWeaponCount()
         return False
 
-    def draw(self) -> None:
+    def draw(self, win: pygame.Surface) -> None:
         # draw use list
         win = globals.game_manager.win
         space = 0
@@ -316,11 +319,3 @@ class WeaponManager:
             spikeTarget = calcEarthSpikePos()
             if spikeTarget:
                 drawTarget(spikeTarget)
-
-    def blitWeaponSprite(self, dest, pos, weapon_name: str):
-        weapon = self.get_weapon(weapon_name)
-        index = weapon.index
-        x = index % 8
-        y = 9 + index // 8
-        rect = (x * 16, y * 16, 16, 16)
-        dest.blit(sprites.sprite_atlas, pos, rect)

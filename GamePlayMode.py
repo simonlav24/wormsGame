@@ -58,11 +58,11 @@ class GamePlay(metaclass=SingletonMeta):
 
     def draw(self, win: pygame.Surface):
         for mode in self.modes:
-            mode.draw()
+            mode.draw(win)
 
     def hud_draw(self, win: pygame.Surface):
         for mode in self.modes:
-            mode.hud_draw()
+            mode.hud_draw(win)
 
     def on_worm_damage(self, worm):
         for mode in self.modes:

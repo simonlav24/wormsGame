@@ -2,10 +2,10 @@
 import pygame
 from vector import *
 from typing import Any, List, Tuple
-
-import globals
 from random import randint, uniform, choice
 from math import exp, pi, sin, cos
+
+import globals
 from Constants import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts
 from Common import Entity, SingletonMeta, clamp
 
@@ -236,12 +236,12 @@ class SmokeParticles(Effect):
 				if distus(particle[0], worm.pos) < (particle[3] + worm.radius) * (particle[3] + worm.radius):
 					worm.sicken(particle[5])
 					
-	def draw(self) -> None:
+	def draw(self, win: pygame.Surface) -> None:
 		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
 		for particle in SmokeParticles._particles + SmokeParticles._sickParticles:
 			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
 		smokeSurf.set_alpha(100)
-		globals.game_manager.win.blit(smokeSurf, (0,0))
+		win.blit(smokeSurf, (0,0))
 
 
 def splash(pos: Vector, vel: Vector) -> None:
