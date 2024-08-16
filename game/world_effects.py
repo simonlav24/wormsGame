@@ -10,8 +10,8 @@ from common import GameVariables, Entity, sprites, SHOCK_RADIUS
 
 from game.map_manager import MapManager, SKY
 from game.visual_effects import Blast, Explossion
-from entities.physical_entity import PhysObj
-from entities.debrie import Debrie
+from entities import PhysObj
+from entities import Debrie
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
 	if not fire: radius *= GameVariables().boom_radius_mult

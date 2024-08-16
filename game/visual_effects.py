@@ -16,7 +16,6 @@ class Effect(Entity):
 	def __init__(self):
 		EffectManager().register(self)
 
-
 class EffectManager(metaclass=SingletonMeta):
 	def __init__(self) -> None:
 		self.effects_in_play: List[Effect] = []
@@ -67,8 +66,6 @@ class EffectManager(metaclass=SingletonMeta):
 		for light in self.lights:
 			pygame.draw.circle(self.dark_mask, light[3], (light[0], light[1]), light[2])
 		self.lights.clear()
-
-
 
 class Blast(Effect):
 	''' firey effect, emmited by explossions, jetpack etc '''
@@ -122,7 +119,6 @@ class Blast(Effect):
 		EffectManager().add_circle_effect(1, self.color[int(clamp(self.timeCounter - 1, 5, 0))], self.pos + self.rand, self.rad * 0.6)
 		EffectManager().add_circle_effect(2, self.color[int(clamp(self.timeCounter - 2, 5, 0))], self.pos + self.rand, self.rad * 0.3)
 
-
 class FireBlast(Effect):
 	''' fire effect, fire color circles changing colors '''
 	_color = [(255, 222, 3), (242, 74, 1), (255, 109, 10), (254, 153, 35)]
@@ -146,7 +142,6 @@ class FireBlast(Effect):
 			win.set_at(point2world(self.pos), self.color)
 		EffectManager().add_circle_effect(2, self.color, self.pos, self.radius)
 
-
 class Explossion(Effect):
 	''' explossion effect, creates blast in changing sizes according to radius '''
 	def __init__(self, pos, radius):	
@@ -161,7 +156,6 @@ class Explossion(Effect):
 		self.timeCounter += 1
 		if self.timeCounter == self.times:
 			EffectManager().unregister(self)
-
 
 class FloatingText(Effect): #pos, text, color
 	''' floating text effect for damage indication, crate content '''
@@ -265,7 +259,6 @@ class SmokeParticles(Effect):
 		smokeSurf.set_alpha(100)
 		win.blit(smokeSurf, (0,0))
 
-
 def splash(pos: Vector, vel: Vector) -> None:
 	amount = 10 + int(vel.getMag())
 	for _ in range(amount):
@@ -273,7 +266,6 @@ def splash(pos: Vector, vel: Vector) -> None:
 		vel.y = uniform(-1,0) * vel.getMag() * 10
 		vel.x *= vel.getMag() * 0.17
 		DropLet(Vector(pos.x, pos.y), vel)
-
 
 class DropLet(Effect):
 	def __init__(self, pos: Vector, vel: Vector):

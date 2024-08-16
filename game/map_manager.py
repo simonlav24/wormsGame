@@ -102,8 +102,10 @@ class MapManager(metaclass=SingletonMeta):
 
         self.game_map = pygame.Surface(dims)
         self.game_map.fill(SKY)
+
         self.worm_col_map = pygame.Surface(dims)
         self.worm_col_map.fill(SKY)
+
         self.objects_col_map = pygame.Surface(dims)
         self.objects_col_map.fill(SKY)
 
