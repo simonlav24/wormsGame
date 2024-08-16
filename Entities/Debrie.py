@@ -36,7 +36,7 @@ class Debrie (PhysObj):
 		self.firey = randint(0, 5) == 0 and firey
 	
 	def applyForce(self):
-		factor = 1
+		factor = 1.5
 		self.acc.y += GameVariables().physics.global_gravity * factor
 	
 	def secondaryStep(self):

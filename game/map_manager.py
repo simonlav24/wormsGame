@@ -115,6 +115,8 @@ class MapManager(metaclass=SingletonMeta):
     def is_ground_at(self, pos) -> bool:
         try:
             map_at = self.game_map.get_at(pos)
+        except TypeError:
+            map_at = self.game_map.get_at((int(pos[0]), int(pos[1])))
         except IndexError:
             return False
 

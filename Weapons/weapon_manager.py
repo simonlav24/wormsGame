@@ -287,6 +287,12 @@ class WeaponManager:
             elif event.key == pygame.K_EQUALS:
                 keyWeapons = [self.weapon_dict[w] for w in ["parachute"]]
                 weaponsSwitch = True
+            
+            elif event.key == pygame.K_KP1:
+                keyWeapons = [self.weapon_dict[w] for w in ["fireworks", "fire ball", "earth spike"]]
+                weaponsSwitch = True
+            
+
             if weaponsSwitch:
                 if len(keyWeapons) > 0:
                     if WeaponManager._wm.currentWeapon in keyWeapons:
@@ -323,7 +329,7 @@ class WeaponManager:
             mousePos = pygame.mouse.get_pos()
             mouse = globals.mouse_pos_in_world()
             win.blit(pygame.transform.flip(globals.game_manager.airStrikeSpr, False if globals.game_manager.airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(globals.game_manager.airStrikeSpr.get_size())/2))
-        if WeaponManager._wm.currentWeapon == "earth spike" and globals.game_manager.state in [PLAYER_CONTROL_1, FIRE_MULTIPLE] and globals.team_manager.currentTeam.ammo("earth spike") != 0:
+        if WeaponManager._wm.currentWeapon == "earth spike" and globals.game_manager.state in [PLAYER_CONTROL_1] and globals.team_manager.currentTeam.ammo("earth spike") != 0:
             spikeTarget = calcEarthSpikePos()
             if spikeTarget:
                 drawTarget(spikeTarget)

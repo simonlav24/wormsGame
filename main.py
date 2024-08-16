@@ -2118,6 +2118,18 @@ def fireFireBall(pos: Vector, direction: Vector, power: int=15):
 	w.ignore = Game._game.player
 	return w
 
+def fireFireWork(pos: Vector, direction: Vector, power: int=15):
+	if FireWorkRockets._fw is None:
+		FireWorkRockets()
+		return
+
+	FireWorkRockets._fw.fire()
+
+def fireEarthSpike(pos: Vector, direction: Vector, power: int=15):
+	pos = calcEarthSpikePos()
+	if pos is not None:
+		EarthSpike(pos)
+
 class Sheep(PhysObj):
 	trigger = False
 	def __init__(self, pos):
@@ -4254,6 +4266,7 @@ class Icicle(LongBow):
 		self.stuck = None
 		self.color = (112, 74, 255)
 		self.ignore = None
+		self.radius = 1
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "icicle")
 		self.timer = 0
@@ -4295,24 +4308,24 @@ class Icicle(LongBow):
 def calcEarthSpikePos():
 	amount = (pi/2 - Game._game.player.shootAngle) * Game._game.player.facing / pi
 	xFromWorm = Game._game.player.pos.x + Game._game.player.facing * amount * 70
-	if Game._game.map_manager.is_ground_at(Vector(xFromWorm, Game._game.player.pos.y)):
+	if Game._game.map_manager.is_ground_at(Vector(xFromWorm, Game._game.player.pos.y).integer()):
 		y = Game._game.player.pos.y
-		while Game._game.map_manager.is_ground_at(Vector(xFromWorm, y)):
+		while Game._game.map_manager.is_ground_at(Vector(xFromWorm, y).integer()):
 			y -= 2
 			if y < 0:
 				return None
 	else:
 		y = Game._game.player.pos.y
-		while not Game._game.map_manager.is_ground_at(Vector(xFromWorm, y)):
+		while not Game._game.map_manager.is_ground_at(Vector(xFromWorm, y).integer()):
 			y += 2
 			if y > Game._game.map_manager.game_map.get_height():
 				return None
 	return Vector(xFromWorm, y)
 
 class EarthSpike:
-	def __init__(self):
+	def __init__(self, pos):
 		self.squareSize = Vector(16,32)
-		self.pos = calcEarthSpikePos()
+		self.pos = pos
 		Game._game.nonPhys.append(self)
 		self.timer = 0
 		self.surf = pygame.Surface((32, 32), pygame.SRCALPHA)
@@ -4323,7 +4336,7 @@ class EarthSpike:
 	def step(self):
 		if self.timer < 5:
 			for i in range(randint(5,10)):
-				d = Debrie(self.pos + Vector(randint(-8,8), -3), 10, self.colors, 1, False, True)
+				d = Debrie(self.pos + Vector(randint(-8,8), -2), 10, self.colors, 1, False)
 				d.vel = vectorUnitRandom()
 				d.vel.y = uniform(-10, -8)
 				d.radius = choice([2,1])
@@ -4360,6 +4373,7 @@ class EarthSpike:
 class FireBall(LongBow):
 	def __init__(self, pos, direction):
 		Game._game.nonPhys.append(self)
+		self.radius = 1
 		self.pos = vectorCopy(pos)
 		self.direction = direction
 		self.vel = direction.normalize() * 20
@@ -4599,6 +4613,7 @@ class FireWorkRockets:
 		self.state = "tag"
 		self.timer = 0
 		self.picked = 0
+	
 	def step(self):
 		if self.state == "thrusting":
 			self.timer += 1
@@ -4612,10 +4627,12 @@ class FireWorkRockets:
 				FireWork(obj.pos, Game._game.player.team.color)
 				boom(obj.pos, 22)
 			self.done()
+	
 	def done(self):
 		if self in Game._game.nonPhys:
 			Game._game.nonPhysToRemove.append(self)
 		FireWorkRockets._fw = None
+	
 	def fire(self):
 		"""return true if fired"""
 		if self.state == "tag":
@@ -4640,6 +4657,7 @@ class FireWorkRockets:
 				GameVariables().cam_track = choice(self.objects)
 			return True
 		return False
+	
 	def draw(self, win: pygame.Surface):
 		if self.state in ["tag"]:
 			for obj in PhysObj._reg:
@@ -4773,12 +4791,15 @@ def fire(weapon = None):
 		'razor leaf':    {'count': 50, 'func': fireRazorLeaf, 'burst': True},
 		'icicle':        {'count': 4,  'func': fireIcicle},
 		'fire ball':     {'count': 3,  'func': fireFireBall},
+		'fireworks':     {'count': 5,  'func': fireFireWork},
+		'earth spike':   {'count': 2,  'func': fireEarthSpike},
 	}
 
 	avail = True
 	w = None
 
 	if weapon.name in gun_weapons_map.keys():
+		# fire gun weapon
 		if WeaponManager._wm.current_gun is None:
 			WeaponManager._wm.current_gun = ShootGun(**gun_weapons_map[weapon.name])
 		
@@ -4909,18 +4930,6 @@ def fire(weapon = None):
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 3)
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
 		w = Chum(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "fireworks":
-		done = False
-		decrease = False
-		if FireWorkRockets._fw:
-			done = FireWorkRockets._fw.fire()
-			Game._game.nextState = FIRE_MULTIPLE
-		else:
-			FireWorkRockets()
-			Game._game.nextState = FIRE_MULTIPLE
-		if done:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
 	elif weapon.name == "trampoline":
 		position = Game._game.player.pos + vectorFromAngle(Game._game.player.shootAngle, 20)
 		anchored = False
@@ -4950,18 +4959,6 @@ def fire(weapon = None):
 		Game._game.nextState = PLAYER_CONTROL_1
 	elif weapon.name == "mine plant":
 		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mine)
-	elif weapon.name == "earth spike":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 2
-		if calcEarthSpikePos():
-			EarthSpike()
-			Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
 	elif weapon.name == "air tornado":
 		w = Tornado()
 	elif weapon.name == "pick axe":
@@ -6234,14 +6231,6 @@ def stateMachine():
 				Game._game.state = Game._game.nextState
 
 		Game._game.nextState = PLAYER_CONTROL_1
-	elif Game._game.state == FIRE_MULTIPLE:
-		Game._game.playerControl = True #can play
-		Game._game.playerShootAble = True
-		
-		if WeaponManager._wm.currentWeapon.name in WeaponManager._wm.multipleFires:
-			Game._game.fireWeapon = True
-			if not Game._game.shotCount == 0:
-				Game._game.nextState = FIRE_MULTIPLE
 	elif Game._game.state == WIN:
 		Game._game.gameStableCounter += 1
 		if Game._game.gameStableCounter == 30*3:
@@ -6312,10 +6301,6 @@ def onKeyReleaseSpace():
 		Sheep.trigger = True
 
 def onKeyPressTab():
-	if not Game._game.state == PLAYER_CONTROL_1:
-		if Game._game.state == FIRE_MULTIPLE and Game._game.switchingWorms:
-			switchWorms()
-		return
 	if WeaponManager._wm.currentWeapon.name == "drill missile":
 		DrillMissile.mode = not DrillMissile.mode
 		if DrillMissile.mode:
@@ -6634,7 +6619,7 @@ def gameMain(game_config: GameConfig=None):
 
 		# if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
 		# draw shooting indicator
-		if Game._game.player and Game._game.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE] and Game._game.player.health > 0:
+		if Game._game.player and Game._game.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2] and Game._game.player.health > 0:
 			Game._game.player.drawCursor()
 			if Game._game.aimAid and WeaponManager._wm.currentWeapon.style == WeaponStyle.GUN:
 				p1 = vectorCopy(Game._game.player.pos)
