@@ -216,8 +216,8 @@ class WeaponManager:
         weaponStr = self.currentWeapon.name
 
         # special addings
-        # if self.currentWeapon == "bunker buster":
-        #     weaponStr += " (drill)" if BunkerBuster.mode else " (rocket)"
+        # if self.currentWeapon == "drill missile":
+        #     weaponStr += " (drill)" if DrillMissile.mode else " (rocket)"
         
         # add quantity
         if ammo != -1:
@@ -225,7 +225,7 @@ class WeaponManager:
             
         # add fuse
         if self.currentWeapon.is_fused:
-            weaponStr += "  delay: " + str(globals.game_manager.fuseTime // GameVariables().fps)
+            weaponStr += "  delay: " + str(GameVariables().fuse_time // GameVariables().fps)
             
         self.surf = fonts.pixel5_halo.render(weaponStr, False, color)
 
@@ -248,7 +248,7 @@ class WeaponManager:
                 keyWeapons = [self.weapon_dict[w] for w in ["grenade", "sticky bomb", "electric grenade"]]
                 weaponsSwitch = True
             elif event.key == pygame.K_3:
-                keyWeapons = [self.weapon_dict[w] for w in ["mortar", "raon launcher"]]
+                keyWeapons = [self.weapon_dict[w] for w in ["cluster grenade", "raon launcher"]]
                 weaponsSwitch = True
             elif event.key == pygame.K_4:
                 keyWeapons = [self.weapon_dict[w] for w in ["petrol bomb", "flame thrower"]]
@@ -263,7 +263,7 @@ class WeaponManager:
                 keyWeapons = [self.weapon_dict[w] for w in ["girder", "baseball"]]
                 weaponsSwitch = True
             elif event.key == pygame.K_8:
-                keyWeapons = [self.weapon_dict[w] for w in ["bunker buster", "laser gun", "minigun"]]
+                keyWeapons = [self.weapon_dict[w] for w in ["drill missile", "laser gun", "minigun"]]
                 weaponsSwitch = True
             elif event.key == pygame.K_9:
                 keyWeapons = [self.weapon_dict[w] for w in ["minigun"]]

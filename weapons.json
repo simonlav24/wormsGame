@@ -21,7 +21,7 @@
     },
     {
         "index": 2,
-        "name": "bunker buster",
+        "name": "drill missile",
         "style": 0,
         "category": 0,
         "initial_amount": 2,
@@ -61,7 +61,7 @@
     },
     {
         "index": 6,
-        "name": "mortar",
+        "name": "cluster grenade",
         "style": 0,
         "category": 1,
         "initial_amount": 3,

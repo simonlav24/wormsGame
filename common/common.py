@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Protocol
 import pygame
 from math import sin, pi
 
@@ -29,6 +29,10 @@ class Entity(ABC):
     def draw(self, win: pygame.Surface) -> None:
         pass
 
+
+class EntityOnMap(Protocol):
+    ''' a object with position  '''
+    pos: Vector
 
 # color utilities
 

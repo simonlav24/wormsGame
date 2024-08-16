@@ -65,7 +65,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 				if gravity:
 					p.gravity = p.gravity * -1
 				if not fire:
-					globals.game_manager.camTrack = p
+					GameVariables().cam_track = p
 	if debries:
 		for _ in range(int(radius)):
 			d = Debrie(pos, radius/5, colors, 2, radius > 25)

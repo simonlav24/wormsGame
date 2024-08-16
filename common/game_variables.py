@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Dict
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity
+from common import SingletonMeta, ColorType, Entity, EntityOnMap
 from common.constants import WHITE
 
 from common.vector import Vector
@@ -43,6 +43,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.dt = 1.0
 
         self.cam_pos: Vector = Vector(0,0)
+        self.cam_track: EntityOnMap = None
 
         self.win_width = 0
         self.win_height = 0
@@ -51,7 +52,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.water_color = (255,255,255)
 
         self.mega_weapon_trigger = False
-
+        self.fuse_time = 2 * self.fps
 
 
 def point2world(point):
