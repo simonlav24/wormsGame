@@ -75,7 +75,7 @@ class Earthquake(Entity):
 	earthquake = 0
 	def __init__(self, timer = 7 * GameVariables().fps, decorative = False, strength = 1):
 		self.timer = timer
-		globals.game_manager.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.stable = False
 		self.boomAffected = False
 		Earthquake.earthquake = strength
@@ -92,5 +92,5 @@ class Earthquake(Entity):
 			
 		self.timer -= 1 * GameVariables().dt
 		if self.timer <= 0:
-			globals.game_manager.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Earthquake.earthquake = 0

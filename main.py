@@ -86,15 +86,9 @@ class Game:
 		self.damageThisTurn = 0
 		self.mostDamage = (0, None)
 
-		
-
 		self.extra = []
 		self.layersCircles = [[], [], []]
 		self.layersLines = [] #color, start, end, width, delay
-
-		
-		self.nonPhys = []
-		self.nonPhysToRemove = []
 
 		self.girderAngle = 0
 		self.girderSize = 50
@@ -1048,7 +1042,8 @@ class Worm (PhysObj):
 					if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
 						worm.vel = vectorCopy(self.vel)
 
-def fireShotgun(pos: Vector, direction: Vector, power: int=15):#6
+# refactor add extra and draw extra, layers (of game object) first
+def fireShotgun(pos: Vector, direction: Vector, power: int=15):
 	GunShell(pos + Vector(0, -4), direction=direction)
 	for t in range(5,500):
 		testPos = pos + direction * t
@@ -1067,14 +1062,14 @@ def fireShotgun(pos: Vector, direction: Vector, power: int=15):#6
 			boom(testPos, power)
 			break
 
-def fireFlameThrower(pos: Vector, direction: Vector, power: int=0):#8
+def fireFlameThrower(pos: Vector, direction: Vector, power: int=0):
 	offset = uniform(1,2)
 	f = Fire(pos + direction * 5)
 	f.vel = direction * offset * 2.4
 
 class ShootGun:
 	def __init__(self, **kwargs) -> None:
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.ammo = kwargs.get('count')
 		self.shoot_action = kwargs.get('func')
 		self.power = kwargs.get('power', 0)
@@ -1113,8 +1108,8 @@ class ShootGun:
 		return self.end_turn
 	
 	def remove(self) -> None:
-		Game._game.nonPhysToRemove.append(self)
-	
+		GameVariables().unregister_non_physical(self)
+
 
 
 def fireMiniGun(pos: Vector, direction: Vector, power: int=0):#0
@@ -1180,7 +1175,7 @@ class Mine(PhysObj):
 class Baseball:
 	def __init__(self):	
 		self.direction = vectorFromAngle(Game._game.player.shootAngle)
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.timer = 0
 		hitted = []
 		for t in range(5, 25):
@@ -1203,12 +1198,13 @@ class Baseball:
 	def step(self):
 		self.timer += 1 * GameVariables().dt
 		if self.timer >= 15:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 
 	def draw(self, win: pygame.Surface):
 		weaponSurf = pygame.transform.rotate(pygame.transform.flip(Game._game.weaponHold, False, Game._game.player.facing == LEFT), -degrees(Game._game.player.shootAngle) + 180)
 		win.blit(weaponSurf, point2world(Game._game.player.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
 
+# refactor gas first
 class GasGrenade(Grenade):
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -1242,6 +1238,7 @@ class GasGrenade(Grenade):
 			if self.timer >= GameVariables().fuse_time + 5 * fps:
 				self.dead = True
 
+# worm, player dependant
 class Deployable(ExplodingProp):
 	def __init__(self, pos = (0,0)):
 		self.initialize()
@@ -1414,7 +1411,7 @@ def fireGammaGun(pos: Vector, direction: Vector, power: int=15):
 			if distus(testPos, target.pos) < target.radius * target.radius:
 				target.explode()
 
-
+# mine dependant
 class Gemino(PhysObj):
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -1433,8 +1430,9 @@ class Gemino(PhysObj):
 		pygame.draw.circle(win, (222,63,49), (int(self.pos.x) - int(GameVariables().cam_pos[0]), int(self.pos.y) - int(GameVariables().cam_pos[1])), 1)
 
 class Plant:
+	''' growing plant that sprouts from the ground '''
 	def __init__(self, pos, radius = 5, angle = -1, mode = 0):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = Vector(pos[0], pos[1])
 		if angle == -1:
 			self.angle = uniform(0, 2*pi)
@@ -1446,6 +1444,7 @@ class Plant:
 		self.timeCounter = 0
 		self.green = 135
 		self.mode = mode
+
 	def step(self):
 		self.pos += vectorFromAngle(self.angle + uniform(-1,1))
 		if randint(1,100) <= 2 and not self.mode == PlantBomb.venus:
@@ -1463,17 +1462,19 @@ class Plant:
 		if randint(0, 100) <= 10:
 			leaf(self.pos, self.angle + 90, (55,self.green,40))
 		if self.radius == 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			if self.mode == PlantBomb.venus:
 				pygame.draw.circle(Game._game.map_manager.game_map, GRD, (int(self.pos[0]), int(self.pos[1])), 3)
 				pygame.draw.circle(Game._game.map_manager.ground_map, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), 3)
 				Venus(self.pos, self.angle)
 			if self.mode == PlantBomb.mine:
 				Mine(self.pos, fps * 2)
+
 	def draw(self, win: pygame.Surface):
 		pass
 
 class PlantBomb(PhysObj):
+	''' a seed that turn into a plant of some kind on impact '''
 	bomb = 0
 	venus = 1
 	bean = 2
@@ -1846,7 +1847,7 @@ class ElectricGrenade(PhysObj):
 class Vortex():
 	vortexRadius = 180
 	def __init__(self, pos):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.rot = 0
 		self.inhale = True
@@ -1876,7 +1877,7 @@ class Vortex():
 					worm.acc -= (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
 			
 		if not self.inhale and self.rot < 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 	def draw(self, win: pygame.Surface):
 		width = 50
 		arr = []
@@ -1919,7 +1920,7 @@ class VortexGrenade(Grenade):
 
 class TimeAgent:
 	def __init__(self):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.positions = TimeTravel._tt.timeTravelPositions
 		self.facings = TimeTravel._tt.timeTravelFacings
 		self.timeCounter = 0
@@ -1935,7 +1936,7 @@ class TimeAgent:
 		if len(self.positions) == 0:
 			TimeTravel._tt.timeTravelFire = True
 			fire(TimeTravel._tt.timeTravelList["weapon"])
-			Game._game.nonPhys.remove(self)
+			GameVariables().unregister_non_physical(self)
 			TimeTravel._tt.timeTravelPositions = []
 			TimeTravel._tt.timeTravelList = {}
 			return
@@ -2004,7 +2005,7 @@ class TimeTravel:
 class LongBow:
 	_sleep = False #0-regular 1-sleep
 	def __init__(self, pos, direction, sleep=False):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = vectorCopy(pos)
 		self.direction = direction
 		self.vel = direction.normalize() * 20
@@ -2018,7 +2019,7 @@ class LongBow:
 			vec.rotate(self.direction.getAngle())
 		self.timer = 0
 	def destroy(self):
-		Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 	def step(self):
 		self.timer += 1
 		if self.timer >= fps * 3:
@@ -2175,14 +2176,14 @@ class Sheep(PhysObj):
 
 class Armageddon:
 	def __init__(self):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.stable = False
 		self.boomAffected = False
 		self.timer = 700
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			return
 		if GameVariables().time_overall % 10 == 0:
 			for i in range(randint(1,2)):
@@ -2345,7 +2346,7 @@ class Portal:
 	radiusOfRelease = 10
 	def __init__(self, pos, direction):
 		Portal._reg.append(self)
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.direction = direction
 		self.dirNeg = direction * -1
 		self.pos = pos - direction * 5
@@ -2370,16 +2371,16 @@ class Portal:
 		self.posBro = Vector()
 	def step(self):
 		if not Game._game.map_manager.game_map.get_at(self.holdPos.vec2tupint()) == GRD:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Portal._reg.remove(self)
 			
 			if self.brother:
-				Game._game.nonPhysToRemove.append(self.brother)
+				GameVariables().unregister_non_physical(self.brother)
 				Portal._reg.remove(self.brother)			
 			return
 			
 		if Game._game.state == PLAYER_CONTROL_1 and not self.brother:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			if self in Portal._reg:
 				Portal._reg.remove(self)
 			return
@@ -2422,7 +2423,7 @@ class Venus:
 	hold = 2
 	release = 3
 	def __init__(self, pos, angle = -1):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		Venus._reg.append(self)
 		self.pos = pos
 		self.offset = Vector(25, 0)
@@ -2464,7 +2465,7 @@ class Venus:
 				pos = self.pos + self.direction * 25
 				for worm in PhysObj._worms:
 					if distus(worm.pos, pos) <= 625:
-						Game._game.nonPhysToRemove.append(self)
+						GameVariables().unregister_non_physical(self)
 						Venus._reg.remove(self)
 						return
 			
@@ -2551,7 +2552,7 @@ class Venus:
 		# check if self is destroyed
 		if MapManager().is_on_map(self.pos.vec2tupint()):
 			if not Game._game.map_manager.game_map.get_at(self.pos.vec2tupint()) == GRD:
-				Game._game.nonPhysToRemove.append(self)
+				GameVariables().unregister_non_physical(self)
 				Venus._reg.remove(self)
 				
 				gs = GunShell(vectorCopy(self.pos))
@@ -2561,10 +2562,10 @@ class Venus:
 				gs.angle = self.angle + self.snap
 				gs.surf = self.surf
 		else:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Venus._reg.remove(self)
 		if self.pos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Venus._reg.remove(self)
 	def mutate(self):
 		if self.mutant:
@@ -3157,7 +3158,7 @@ class ShootingTarget:
 	numTargets = 10
 	_reg = []
 	def __init__(self):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		ShootingTarget._reg.append(self)
 		self.pos = Vector(randint(10, Game._game.map_manager.game_map.get_width() - 10), randint(10, Game._game.map_manager.game_map.get_height() - 50))
 		self.radius = 10
@@ -3170,7 +3171,7 @@ class ShootingTarget:
 				return
 	def explode(self):
 		boom(self.pos, 15)
-		Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 		if self in ShootingTarget._reg:
 			ShootingTarget._reg.remove(self)
 		globals.team_manager.currentTeam.points += 1
@@ -3326,7 +3327,7 @@ class Spear(PhysObj):
 class Snail:
 	around = [Vector(1,0), Vector(1,-1), Vector(0,-1), Vector(-1,-1), Vector(-1,0), Vector(-1,1), Vector(0,1), Vector(1,1)]
 	def __init__(self, pos, anchor, clockwise=RIGHT):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = pos
 		self.pos.integer()
 		self.clockwise = clockwise
@@ -3359,7 +3360,7 @@ class Snail:
 				self.climb()
 		for worm in PhysObj._worms:
 			if distus(self.pos, worm.pos) < (3 + worm.radius) * (3 + worm.radius):
-				Game._game.nonPhysToRemove.append(self)
+				GameVariables().unregister_non_physical(self)
 				boom(self.pos, 30)
 				return
 	def draw(self, win: pygame.Surface):
@@ -3409,7 +3410,7 @@ class SnailShell(PhysObj):
 class Bubble:
 	cought = []
 	def __init__(self, pos, direction, energy):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = vectorCopy(pos)
 		self.acc = Vector()
 		self.vel = Vector(direction[0], direction[1]).rotate(uniform(-0.1, 0.1)) * energy * 5
@@ -3461,7 +3462,7 @@ class Bubble:
 		self.catch = None
 		pygame.draw.circle(Game._game.map_manager.game_map, SKY, self.pos, self.radius)
 		pygame.draw.circle(Game._game.map_manager.ground_map, SKY, self.pos, self.radius)
-		Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 		for i in range(min(int(self.radius), 8)):
 			d = DropLet(self.pos + vectorUnitRandom() * self.radius, vectorUnitRandom())
 			d.vel += self.vel
@@ -3541,7 +3542,7 @@ class Seeker:
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "seeker")
 	def initialize(self, pos, direction, energy):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = vectorCopy(pos)
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.acc = Vector()
@@ -3600,7 +3601,7 @@ class Seeker:
 		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
 	def deathResponse(self):
 		boom(self.pos, 30)
-		Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 		HomingMissile.showTarget = False
 	def applyForce(self, force):
 		force.limit(self.maxForce)
@@ -3624,7 +3625,7 @@ class Seagull(Seeker):
 	def removeFromGame(self):
 		if self in Seagull._reg:
 			Seagull._reg.remove(self)
-		Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 		self.chum.dead = True
 	def secondaryStep(self):
 		self.target = self.chum.pos
@@ -3793,7 +3794,7 @@ class MjolnirThrow(PhysObj):
 
 class MjolnirReturn:
 	def __init__(self, pos, angle):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.acc = Vector()
 		self.vel = Vector()
@@ -3810,7 +3811,7 @@ class MjolnirReturn:
 		self.angle += (0 - self.angle) * 0.1
 		gameDistable()
 		if distus(self.pos, Game._game.player.pos) < Game._game.player.radius * Game._game.player.radius * 2:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Game._game.holdArtifact = True
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
@@ -3950,7 +3951,7 @@ class MjolnirFly(PhysObj):
 class MjolnirStrike:
 	def __init__(self):
 		self.pos = Game._game.player.pos
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		Game._game.holdArtifact = False
 		self.stage = 0
 		self.timer = 0
@@ -3986,7 +3987,7 @@ class MjolnirStrike:
 			self.angle += -30
 			if self.timer >= fps * 0.25:
 				boom(self.pos, 40)
-				Game._game.nonPhysToRemove.append(self)
+				GameVariables().unregister_non_physical(self)
 				Game._game.player.boomAffected = True
 		self.timer += 1
 		gameDistable()
@@ -4030,7 +4031,7 @@ class MagicLeaf(Artifact):
 
 class MagicBeanGrow:
 	def __init__(self, pos, vel):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		if vel.getMag() < 0.1:
 			vel = Vector(0, -1)
 		self.vel = vel
@@ -4086,7 +4087,7 @@ class MagicBeanGrow:
 		self.p3 = self.pos + growRadius * sin(self.timer * 0.1 + 4*pi/3) * self.vel.getNormal()
 
 		if self.timer >= 5 * fps:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Game._game.playerMoveable = True
 	def draw(self, win: pygame.Surface):
 		pass
@@ -4153,13 +4154,13 @@ class RazorLeaf(PhysObj):
 
 class PlantControl:
 	def __init__(self):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.timer = 5 * fps
 		Game._game.playerMoveable = False
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Game._game.playerMoveable = True
 		if pygame.key.get_pressed()[pygame.K_LEFT]:
 			for plant in Venus._reg:
@@ -4173,7 +4174,7 @@ class PlantControl:
 
 class MasterOfPuppets:
 	def __init__(self):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.springs = []
 		self.timer = 0
 		for worm in PhysObj._worms:
@@ -4191,7 +4192,7 @@ class MasterOfPuppets:
 		self.timer += 1
 		if self.timer >= fps * 15:
 			self.springs.clear()
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 		for p in self.springs:
 			p.step()
 	def draw(self, win: pygame.Surface):
@@ -4228,7 +4229,7 @@ class Frost:
 		self.timer = fps * randint(2, 6)
 		if not Game._game.map_manager.is_ground_at(self.pos):
 			return
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 	def step(self):
 		color = Game._game.map_manager.ground_map.get_at(self.pos)
 		r = color[0] + (256 - color[0]) // 2
@@ -4246,20 +4247,20 @@ class Frost:
 			if Game._game.map_manager.is_ground_at(checkPos) and not checkPos in self.visited:
 				self.next.append(checkPos)
 		if len(self.next) == 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			return
 		self.pos = choice(self.next)
 		self.next.remove(self.pos)
 		
 		self.timer -= 1
 		if self.timer <= 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 	def draw(self, win: pygame.Surface):
 		pass
 
 class Icicle(LongBow):
 	def __init__(self, pos, direction):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = vectorCopy(pos)
 		self.direction = direction
 		self.vel = direction.normalize() * 20
@@ -4274,7 +4275,7 @@ class Icicle(LongBow):
 		if randint(0,5) == 0:
 			Frost(self.pos + vectorUnitRandom() * 3)
 	def destroy(self):
-		Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 		for _ in range(8):
 			DropLet(self.pos, vectorUnitRandom())
 	def stamp(self):
@@ -4326,7 +4327,7 @@ class EarthSpike:
 	def __init__(self, pos):
 		self.squareSize = Vector(16,32)
 		self.pos = pos
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.timer = 0
 		self.surf = pygame.Surface((32, 32), pygame.SRCALPHA)
 		self.surf.blit(sprites.sprite_atlas, (0,0), ((32, 96), (32, 32)))
@@ -4372,7 +4373,7 @@ class EarthSpike:
 
 class FireBall(LongBow):
 	def __init__(self, pos, direction):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.radius = 1
 		self.pos = vectorCopy(pos)
 		self.direction = direction
@@ -4396,7 +4397,7 @@ class FireBall(LongBow):
 		for i in range(40):
 			s = Fire(boomPos, 5)
 			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
-		Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 	def stamp(self):
 		self.destroy()
 	def wormCollision(self, worm):
@@ -4411,7 +4412,7 @@ class Tornado:
 		self.width = 30
 		self.pos = Game._game.player.pos + Vector(Game._game.player.radius + self.width / 2, 0) * Game._game.player.facing
 		self.facing = Game._game.player.facing
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		amount = Game._game.map_manager.game_map.get_height() // 10
 		self.points = [Vector(0, 10 * i) for i in range(amount)]
 		self.swirles = []
@@ -4442,7 +4443,7 @@ class Tornado:
 		if self.timer >= fps * 10 and len(self.swirles) > 0:
 			self.swirles.pop(-1)
 			if len(self.swirles) == 0:
-				Game._game.nonPhysToRemove.append(self)
+				GameVariables().unregister_non_physical(self)
 		self.timer += 1
 	def draw(self, win: pygame.Surface):
 		for i, swirl in enumerate(self.swirles):
@@ -4470,7 +4471,7 @@ class PickAxe:
 	_pa = None
 	def __init__(self):
 		PickAxe._pa = self
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.count = 6
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "pick axe")
@@ -4505,14 +4506,14 @@ class PickAxe:
 		return False
 	def step(self):
 		if self.count == 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			PickAxe._pa = None
 		if self.animating > 0:
 			self.animating -= 5
 			if self.animating < 0:
 				self.animating = 0
 		if not Game._game.player.alive:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			PickAxe._pa = None
 	def draw(self, win: pygame.Surface):
 		worm = Game._game.player
@@ -4530,7 +4531,7 @@ class MineBuild:
 	_mb = None
 	def __init__(self):
 		MineBuild._mb = self
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.count = 6
 		self.locations = []
 	def build(self):
@@ -4555,11 +4556,11 @@ class MineBuild:
 		return False
 	def step(self):
 		if self.count == 0:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			MineBuild._mb = None
 			
 		if not Game._game.player.alive:
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			MineBuild._mb = None
 	def draw(self, win: pygame.Surface):
 		worm = Game._game.player
@@ -4587,7 +4588,7 @@ class PickAxeArtifact(Artifact):
 
 class TimeSlow:
 	def __init__(self):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.time = 0
 		self.state = "slow"
 	def step(self):
@@ -4600,14 +4601,14 @@ class TimeSlow:
 			GameVariables().dt *= 1.1
 			if GameVariables().dt > 1:
 				GameVariables().dt = 1
-				Game._game.nonPhysToRemove.append(self)
+				GameVariables().unregister_non_physical(self)
 	def draw(self, win: pygame.Surface):
 		pass
 
 class FireWorkRockets:
 	_fw = None
 	def __init__(self):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		FireWorkRockets._fw = self
 		self.objects = []
 		self.state = "tag"
@@ -4629,8 +4630,7 @@ class FireWorkRockets:
 			self.done()
 	
 	def done(self):
-		if self in Game._game.nonPhys:
-			Game._game.nonPhysToRemove.append(self)
+		GameVariables().unregister_non_physical(self)
 		FireWorkRockets._fw = None
 	
 	def fire(self):
@@ -4672,7 +4672,7 @@ class FireWorkRockets:
 class FireWork:
 	_reg = []
 	def __init__(self, pos, color):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.blasts = []
 		
@@ -4694,8 +4694,7 @@ class FireWork:
 		
 		self.timer += 1
 		if self.timer > 0.9 * fps:
-			if self in Game._game.nonPhys:
-				Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 	def draw(self, win: pygame.Surface):
 		pass
 
@@ -4703,7 +4702,7 @@ class Trampoline:
 	_reg = []
 	_sprite = None
 	def __init__(self, pos):
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		self.pos = vectorCopy(pos)
 		self.directionalVel = 0
 		self.offset = 0
@@ -4732,7 +4731,7 @@ class Trampoline:
 				self.offset = 0
 				self.stable = True
 		if not Game._game.map_manager.is_ground_at(self.anchor):
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			Trampoline._reg.remove(self)
 			gs = GunShell(vectorCopy(self.pos))
 			gs.surf = Trampoline._sprite
@@ -6168,7 +6167,7 @@ class Anim:
 	_a = None
 	def __init__(self):
 		Anim._a = self
-		Game._game.nonPhys.append(self)
+		GameVariables().register_non_physical(self)
 		num = -1
 		for folder in os.listdir("./anims"):
 			if not os.path.isdir("./anims/" + folder):
@@ -6190,7 +6189,7 @@ class Anim:
 		self.time += 1
 		if self.time == 5 * fps:
 			Anim._a = None
-			Game._game.nonPhysToRemove.append(self)
+			GameVariables().unregister_non_physical(self)
 			print("record End")
 	def draw(self, win: pygame.Surface):
 		pass
@@ -6552,14 +6551,8 @@ def gameMain(game_config: GameConfig=None):
 			except ValueError:
 				print("remove from phys list error")
 		PhysObj._toRemove = []
-		for f in Game._game.nonPhys:
-			f.step()
-		for f in Game._game.nonPhysToRemove:
-			try:
-				Game._game.nonPhys.remove(f)
-			except ValueError:
-				print("remove from nonphys list error")
-		Game._game.nonPhysToRemove = []
+
+		GameVariables().step_non_physicals()
 
 		# step effects
 		EffectManager().step()
@@ -6597,14 +6590,12 @@ def gameMain(game_config: GameConfig=None):
 		wind_flag.step()
 		commentator.step()
 
-
 		# draw:
 		Game._game.background.draw(win)
 		drawLand()
 		for p in PhysObj._reg: 
 			p.draw(win)
-		for f in Game._game.nonPhys:
-			f.draw(win)
+		GameVariables().draw_non_physicals(win)
 		
 		# draw effects
 		EffectManager().draw(win)

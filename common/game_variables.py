@@ -1,6 +1,7 @@
 
 from pydantic import BaseModel
 from typing import List, Dict
+import pygame
 
 from common.game_config import GameConfig
 from common import SingletonMeta, ColorType, Entity, EntityOnMap
@@ -53,6 +54,30 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.mega_weapon_trigger = False
         self.fuse_time = 2 * self.fps
+
+        self._non_pysicals: List[Entity] = []
+        self._non_pysicals_to_remove: List[Entity] = []
+    
+    def register_non_physical(self, entity: Entity) -> None:
+        self._non_pysicals.append(entity)
+
+    def unregister_non_physical(self, entity: Entity) -> None:
+        self._non_pysicals_to_remove.append(entity)
+
+    def step_non_physicals(self) -> None:
+        try:
+            for entity in self._non_pysicals_to_remove:
+                self._non_pysicals.remove(entity)
+        except Exception as e:
+            print(e)
+        self._non_pysicals_to_remove.clear()
+
+        for entity in self._non_pysicals:
+            entity.step()
+    
+    def draw_non_physicals(self, win: pygame.Surface) -> None:
+        for entity in self._non_pysicals:
+            entity.draw(win)
 
 
 def point2world(point):

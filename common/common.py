@@ -20,7 +20,7 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-class Entity(ABC):
+class Entity(Protocol):
     ''' an object that has step and draw '''
 	
     def step(self) -> None:
