@@ -1,8 +1,9 @@
 from math import pi, cos, sin, atan2, sqrt, degrees, radians, copysign, fabs
 from random import shuffle ,randint, uniform, choice
 import pygame
+import pygame.gfxdraw
 import os
-from typing import Any
+from typing import Any, Callable
 
 from common import *
 from common.vector import *
@@ -463,7 +464,7 @@ class Game:
 		pygame.display.update()
 	
 	def isPlayingState(self):
-		return self.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2, FIRE_MULTIPLE]
+		return self.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2]
 
 def drawLand():
 	if Game._game.map_manager.game_map.get_width() == 0:
@@ -642,15 +643,15 @@ def checkFreePosFallProof(obj, pos):
 			break
 	return groundUnder
 
-def getClosestPosAvail(obj):
+def getClosestPosAvail(pos: Vector, radius: int):
 	r = 0
 	found = None
-	orgPos = vectorCopy(obj.pos)
+	orgPos = vectorCopy(pos)
 	t = 0
 	while not found:
 		checkPos = orgPos + t * vectorFromAngle(r)
 		# addExtra(checkPos, (255,255,255), 100)
-		if MapManager().check_free_pos(obj.radius, checkPos, True):
+		if MapManager().check_free_pos(radius, checkPos, True):
 			found = checkPos
 			break
 		# t += 1
@@ -724,9 +725,6 @@ class TimeManager:
 		elif Game._game.state == PLAYER_CONTROL_2:
 			Game._game.state = Game._game.nextState
 			
-		elif Game._game.state == FIRE_MULTIPLE:
-			Game._game.state = PLAYER_CONTROL_2
-
 	def draw(self, win: pygame.Surface):
 		if self.timeSurf[0] != self.timeCounter:
 			self.generateTimeSurf()
@@ -742,38 +740,7 @@ class TimeManager:
 
 
 
-class PetrolBomb(PhysObj):#4
-	def __init__(self, pos, direction, energy):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		self.radius = 2
-		self.color = (158,66,43)
-		self.bounceBeforeDeath = 1 
-		self.damp = 0.5
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "petrol bomb")
-		self.angle = 0
-	
-	def secondaryStep(self):
-		self.angle -= self.vel.x * 4
-		Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
-	
-	def deathResponse(self):
-		boom(self.pos, 15)
-		if randint(0,50) == 1 or GameVariables().mega_weapon_trigger:
-			for i in range(80):
-				s = Fire(self.pos, 5)
-				s.vel = Vector(cos(2*pi*i/80), sin(2*pi*i/80))*uniform(3,4)
-		else:
-			for i in range(40):
-				s = Fire(self.pos, 5)
-				s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
-	
-	def draw(self, win: pygame.Surface):
-		angle = 45 * round(self.angle / 45)
-		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+
 
 class Worm (PhysObj):
 	healthMode = 0
@@ -912,7 +879,7 @@ class Worm (PhysObj):
 				FloatingText(self.pos, "z", (0,0,0))
 				
 		# draw holding weapon
-		if self is Game._game.player and Game._game.state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
+		if self is Game._game.player and Game._game.state in [PLAYER_CONTROL_1]:
 			weaponSurf = pygame.transform.rotate(pygame.transform.flip(Game._game.weaponHold, False, self.facing == LEFT), -degrees(self.shootAngle))
 			win.blit(weaponSurf, point2world(self.pos - tup2vec(weaponSurf.get_size())/2 + Vector(0, 5)))
 
@@ -976,10 +943,6 @@ class Worm (PhysObj):
 		
 		# if under control 
 		if Game._game.player == self:
-			if Game._game.state == FIRE_MULTIPLE:
-				if WeaponManager._wm.currentWeapon.style == WeaponStyle.GUN:
-					self.team.ammo(WeaponManager._wm.currentWeapon, -1)
-					WeaponManager._wm.renderWeaponCount()
 			Game._game.nextState = PLAYER_CONTROL_2
 			Game._game.state = Game._game.nextState
 			TimeManager._tm.timeRemainingDie()
@@ -989,7 +952,7 @@ class Worm (PhysObj):
 			if not Game._game.terminatorHit:
 				globals.team_manager.currentTeam.points += 1
 				Game._game.addToScoreList()
-			if Game._game.state in [PLAYER_CONTROL_1, FIRE_MULTIPLE]:
+			if Game._game.state == PLAYER_CONTROL_1:
 				pickVictim()
 		
 		# if team kill and artifacts
@@ -1085,67 +1048,80 @@ class Worm (PhysObj):
 					if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
 						worm.vel = vectorCopy(self.vel)
 
-def fireShotgun(start, direction, power=15):#6
-	GunShell(start + Vector(0, -4), direction=direction)
+def fireShotgun(pos: Vector, direction: Vector, power: int=15):#6
+	GunShell(pos + Vector(0, -4), direction=direction)
 	for t in range(5,500):
-		testPos = start + direction * t
+		testPos = pos + direction * t
 		Game._game.addExtra(testPos, (255, 204, 102), 3)
 		
-		if testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
+		if testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level:
 			splash(testPos, Vector(10,0))
 			break
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
+		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
 			continue
 
-		# hit worms or Game._game.map_manager.ground_map:
-		# hit Game._game.map_manager.ground_map:
 		at = (int(testPos.x), int(testPos.y))
-		if Game._game.map_manager.game_map.get_at(at) == GRD or Game._game.map_manager.worm_col_map.get_at(at) != (0,0,0) or Game._game.map_manager.objects_col_map.get_at(at) != (0,0,0):
-			if Game._game.map_manager.worm_col_map.get_at(at) != (0,0,0):
+		if MapManager().game_map.get_at(at) == GRD or MapManager().worm_col_map.get_at(at) != (0,0,0) or MapManager().objects_col_map.get_at(at) != (0,0,0):
+			if MapManager().worm_col_map.get_at(at) != (0,0,0):
 				MapManager().stain(testPos, sprites.blood, sprites.blood.get_size(), False)
 			boom(testPos, power)
 			break
 
-def fireFlameThrower(pos, direction):#8
+def fireFlameThrower(pos: Vector, direction: Vector, power: int=0):#8
 	offset = uniform(1,2)
 	f = Fire(pos + direction * 5)
 	f.vel = direction * offset * 2.4
 
-class StickyBomb (Grenade):#9
-	def __init__(self, pos, direction, energy):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		GunShell(self.pos, index=1, direction=direction)
-		self.radius = 2
-		self.color = (117,47,7)
-		self.bounceBeforeDeath = -1
-		self.damp = 0.5
-		self.timer = 0
-		self.sticked = False
-		self.stick = None
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "sticky bomb")
-		self.angle = 0
-	def collisionRespone(self, ppos):
-		if not self.sticked:
-			self.sticked = True
-			self.stick = vectorCopy((self.pos + ppos)/2)
-		self.vel *= 0
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
-		self.stable = False
-		if self.stick:
-			self.pos = self.stick
-		self.timer += 1
-		if self.timer == GameVariables().fuse_time:
-			self.dead = True
+class ShootGun:
+	def __init__(self, **kwargs) -> None:
+		Game._game.nonPhys.append(self)
+		self.ammo = kwargs.get('count')
+		self.shoot_action = kwargs.get('func')
+		self.power = kwargs.get('power', 0)
+		self.end_turn = kwargs.get('end_turn', True)
+		self.burst = kwargs.get('burst', False)
 
-def fireMiniGun(start, direction):#0
+		self.shooted_object: EntityOnMap | None = None
+
+	def step(self) -> None:
+		if self.burst:
+			fire()
+
+	def draw(self, win: pygame.Surface) -> None:
+		pass
+
+	def shoot(self) -> None:
+		if self.ammo == 0:
+			return
+		args = (
+			vectorCopy(Game._game.player.pos),
+			vectorFromAngle(Game._game.player.shootAngle),
+			self.power
+		)
+		self.shooted_object = self.shoot_action(*args)
+		self.ammo -= 1
+	
+	def get_object(self) -> EntityOnMap:
+		result = self.shooted_object
+		self.shooted_object = None
+		return result
+
+	def is_done(self) -> bool:
+		return self.ammo == 0
+	
+	def is_end_turn(self) -> bool:
+		return self.end_turn
+	
+	def remove(self) -> None:
+		Game._game.nonPhysToRemove.append(self)
+	
+
+
+def fireMiniGun(pos: Vector, direction: Vector, power: int=0):#0
 	angle = atan2(direction[1], direction[0])
 	angle += uniform(-0.2, 0.2)
 	direction[0], direction[1] = cos(angle), sin(angle)
-	fireShotgun(start, direction,randint(7,9))
+	fireShotgun(pos, direction, randint(7,9))
 
 class Mine(PhysObj):
 	def __init__(self, pos=(0,0), delay=0):
@@ -1412,11 +1388,11 @@ def fireNapalmStrike(pos):
 
 
 
-def fireGammaGun(start, direction):
+def fireGammaGun(pos: Vector, direction: Vector, power: int=15):
 	hitted = []
 	normal = Vector(-direction.y, direction.x).normalize()
 	for t in range(5,500):
-		testPos = start + direction * t + normal * 1.5 * sin(t * 0.6) * (t + 1)/70
+		testPos = pos + direction * t + normal * 1.5 * sin(t * 0.6) * (t + 1)/70
 		Game._game.addExtra(testPos, (0,255,255), 10)
 		
 		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
@@ -2036,6 +2012,7 @@ class LongBow:
 		self.color = (112, 74, 37)
 		self.ignore = None
 		self.sleep = sleep
+		self.radius = 1
 		self.triangle = [Vector(0,3), Vector(6,0), Vector(0,-3)]
 		for vec in self.triangle:
 			vec.rotate(self.direction.getAngle())
@@ -2115,6 +2092,31 @@ class LongBow:
 		
 		points = [point2world(self.pos + i) for i in self.triangle]
 		pygame.draw.polygon(win, (230,235,240), points)
+
+def fireLongBow(pos: Vector, direction: Vector, power: int=15):
+	w = LongBow(pos + direction * 5, direction, LongBow._sleep)
+	w.ignore = Game._game.player
+	return w
+
+def fireSpear(pos: Vector, direction: Vector, power: int=15):
+	w = Spear(pos, direction, power * 0.95)
+	return w
+
+def fireBubbleGun(pos: Vector, direction: Vector, power: int=15):
+	Bubble(getClosestPosAvail(pos, 3.5), direction, uniform(0.5, 0.9))
+
+def fireRazorLeaf(pos: Vector, direction: Vector, power: int=15):
+	RazorLeaf(pos + direction * 10, direction)
+
+def fireIcicle(pos: Vector, direction: Vector, power: int=15):
+	w = Icicle(pos + direction * 5, direction)
+	w.ignore = Game._game.player
+	return w
+
+def fireFireBall(pos: Vector, direction: Vector, power: int=15):
+	w = FireBall(pos + direction * 5, direction)
+	w.ignore = Game._game.player
+	return w
 
 class Sheep(PhysObj):
 	trigger = False
@@ -2284,10 +2286,10 @@ class ElectroBoom(PhysObj):
 			for worm in net[1]:
 				drawLightning(net[0], worm, (250, 250, 21))
 
-def firePortal(start, direction):
+def firePortal(pos: Vector, direction: Vector, power: int=15):
 	steps = 500
 	for t in range(5,steps):
-		testPos = start + direction * t
+		testPos = pos + direction * t
 		Game._game.addExtra(testPos, (255,255,255), 3)
 		
 		# missed
@@ -2930,7 +2932,7 @@ class GreenShell(PhysObj):
 			index = 0	
 		win.blit(sprites.sprite_atlas, point2world(self.pos - Vector(16,16)/2), ((index*16, 48), (16,16)))
 
-def fireLaser(start, direction):
+def fireLaser(pos: Vector, direction: Vector, power: int=15):
 	hit = False
 	color = (254, 153, 35)
 	square = [Vector(1,5), Vector(1,-5), Vector(-10,-5), Vector(-10,5)]
@@ -2938,13 +2940,13 @@ def fireLaser(start, direction):
 		i.rotate(direction.getAngle())
 	
 	for t in range(5,500):
-		testPos = start + direction * t
+		testPos = pos + direction * t
 		# extra.append((testPos.x, testPos.y, (255,0,0), 3))
 		
 		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
-			Game._game.layersCircles[0].append((color, start, 5))
+			Game._game.layersCircles[0].append((color, pos, 5))
 			Game._game.layersCircles[0].append((color, testPos, 5))
-			Game._game.layersLines.append((color, start, testPos, 10, 1))
+			Game._game.layersLines.append((color, pos, testPos, 10, 1))
 			continue
 			
 		# if hits worm:
@@ -2953,9 +2955,9 @@ def fireLaser(start, direction):
 				continue
 			if distus(testPos, worm.pos) < (worm.radius + 2) * (worm.radius + 2):
 				if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
-				Game._game.layersCircles[0].append((color, start + direction * 5, 5))
+				Game._game.layersCircles[0].append((color, pos + direction * 5, 5))
 				Game._game.layersCircles[0].append((color, testPos, 5))
-				Game._game.layersLines.append((color, start + direction * 5, testPos, 10, 1))
+				Game._game.layersLines.append((color, pos + direction * 5, testPos, 10, 1))
 				
 				boom(worm.pos + Vector(randint(-1,1),randint(-1,1)), 2, False, False, True)
 				# worm.damage(randint(1,5))
@@ -2974,9 +2976,9 @@ def fireLaser(start, direction):
 		# if hits Game._game.map_manager.game_map:
 		if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
-			Game._game.layersCircles[0].append((color, start + direction * 5, 5))
+			Game._game.layersCircles[0].append((color, pos + direction * 5, 5))
 			Game._game.layersCircles[0].append((color, testPos, 5))
-			Game._game.layersLines.append((color, start + direction * 5, testPos, 10, 1))
+			Game._game.layersLines.append((color, pos + direction * 5, testPos, 10, 1))
 			points = []
 			for i in square:
 				points.append((testPos + i).vec2tupint())
@@ -3169,43 +3171,6 @@ class ShootingTarget:
 		pygame.draw.circle(win, RED, point2world(self.pos), int(self.radius - 4))
 		pygame.draw.circle(win, WHITE, point2world(self.pos), int(self.radius - 8))
 
-class Distorter(Grenade):# EXPERIMENTAL
-	def deathResponse(self):
-		width = randint(100, 150)
-		rotMult = uniform(0.05, 0.1)
-		arr = []
-		for x in range(int(self.pos.x) - width//2, int(self.pos.x) + width//2):
-			for y in range(int(self.pos.y) - width//2, int(self.pos.y) + width//2):
-				if dist(Vector(x,y), self.pos) > width//2:
-					continue
-				rot = (dist(Vector(x,y), self.pos) - width//2) * rotMult
-				direction = Vector(x,y) - self.pos
-				direction.rotate(rot)
-				getAt = (self.pos + direction)
-				getAt = getAt.vec2tupint()
-				if getAt[0] < 0 or getAt[0] >= Game._game.map_manager.game_map.get_width() or getAt[1] < 0 or getAt[1] >= Game._game.map_manager.game_map.get_height():
-					arr.append((0,0,0,0))
-				else:
-					pixelColor = Game._game.map_manager.ground_map.get_at(getAt)
-					arr.append(pixelColor)
-		# for worm in PhysObj._worms:
-			# if dist(self.pos, worm.pos) < width//2:
-				# rot = (dist(worm.pos, self.pos) - width//2) * 0.1
-				# direction = worm.pos - self.pos
-				# direction.rotate(rot)
-				# getAt = (self.pos + direction)
-				# worm.pos = getAt
-		for x in range(int(self.pos.x) - width//2, int(self.pos.x) + width//2):
-			for y in range(int(self.pos.y) - width//2, int(self.pos.y) + width//2):
-				if dist(Vector(x,y), self.pos) > width//2:
-					continue
-				color = arr.pop(0)
-				if len(color) == 4 and color[3] == 0:
-					Game._game.map_manager.game_map.set_at((x,y), SKY)
-				else:
-					Game._game.map_manager.game_map.set_at((x,y), GRD)
-				Game._game.map_manager.ground_map.set_at((x,y), color)
-
 class Raon(PhysObj):
 	_raons = []
 	searching = 0
@@ -3292,21 +3257,6 @@ class Raon(PhysObj):
 		if self.state == Raon.idle or self.state == Raon.wait:
 			pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 			win.set_at(point2world(self.pos), (0,0,0))
-
-def fireFusrodah(start, direction):# EXPERIMENTAL
-	# layersCircles[0].append(((0,0,0), start + direction * 40, 40))
-	# layersCircles[0].append(((0,0,0), start + direction * 80, 26))
-	# layersCircles[0].append(((0,0,0), start + direction * 110, 10))
-	
-	circles = [(start + direction * 40, 40), (start + direction * 80, 26), (start + direction * 110, 10)]
-	tagged = []
-	for circle in circles:
-		for worm in PhysObj._reg:
-			if worm == Game._game.player:
-				continue
-			if not worm in tagged and dist(worm.pos, circle[0]) < circle[1]:
-				tagged.append(worm)
-				worm.vel += (direction * 6) + Vector(0, -2)
 
 class Spear(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -3482,14 +3432,14 @@ class Bubble:
 			self.catch.vel *= 0
 		if GameVariables().config.option_closed_map and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= Game._game.map_manager.game_map.get_width() - GameVariables().water_level):
 			self.burst()
-		if self.pos.y < 0 and (Game._game.map_manager.is_ground_at((self.pos.x + self.radius, 0)) or Game._game.map_manager.is_ground_at((self.pos.x - self.radius, 0))):
+		if self.pos.y < 0 and (Game._game.map_manager.is_ground_at((int(self.pos.x + self.radius), 0)) or Game._game.map_manager.is_ground_at((int(self.pos.x - self.radius), 0))):
 			self.burst()
 		if self.pos.y < -50:
 			self.burst()
-		if self.pos.y - self.radius <= 0 and Game._game.map_manager.is_ground_at((self.pos.x, 0)):
+		if self.pos.y - self.radius <= 0 and Game._game.map_manager.is_ground_at((int(self.pos.x), 0)):
 			self.burst()
 		if randint(0, 300) == 1:
-			if not Game._game.map_manager.is_ground_at(self.pos):
+			if not Game._game.map_manager.is_ground_at(self.pos.integer()):
 				self.burst()
 	def burst(self):
 		if self.catch:
@@ -3501,7 +3451,7 @@ class Bubble:
 		pygame.draw.circle(Game._game.map_manager.ground_map, SKY, self.pos, self.radius)
 		Game._game.nonPhysToRemove.append(self)
 		for i in range(min(int(self.radius), 8)):
-			d = Debrie(self.pos + vectorUnitRandom() * self.radius, self.radius/5, [self.color], 1, False, True)
+			d = DropLet(self.pos + vectorUnitRandom() * self.radius, vectorUnitRandom())
 			d.vel += self.vel
 			d.radius = 1
 	def draw(self, win: pygame.Surface):
@@ -4129,8 +4079,8 @@ class MagicBeanGrow:
 	def draw(self, win: pygame.Surface):
 		pass
 
-def leaf(pos, direction, color):
-	# create procedural leaf
+def leaf(pos, direction, color) -> None:
+	# draw procedural leaf
 	points = []
 	width = max(0.3, uniform(0,1))
 	length = 1 + uniform(0,1)
@@ -4312,8 +4262,8 @@ class Icicle(LongBow):
 			Frost(self.pos + vectorUnitRandom() * 3)
 	def destroy(self):
 		Game._game.nonPhysToRemove.append(self)
-		for i in range(8):
-			d = Debrie(self.pos, 5, [(200,200,255)], 1, False, True)
+		for _ in range(8):
+			DropLet(self.pos, vectorUnitRandom())
 	def stamp(self):
 		self.pos = self.stuck
 		Frost(self.stuck)
@@ -4336,7 +4286,7 @@ class Icicle(LongBow):
 		worm.damage(randint(20,30))
 		GameVariables().cam_track = worm
 		for i in range(8):
-			d = Debrie(self.pos, 5, [(200,200,255)], 1, False, True)
+			DropLet(self.pos, vectorUnitRandom())
 		self.destroy()
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
@@ -4810,9 +4760,43 @@ def fire(weapon = None):
 		energy = TimeTravel._tt.timeTravelList["energy"]
 		weaponDir = TimeTravel._tt.timeTravelList["weaponDir"]
 	
+	gun_weapons_map = {
+		'shotgun':       {'count': 3,  'func': fireShotgun, 'power': 15},
+		'flame thrower': {'count': 70, 'func': fireFlameThrower, 'burst': True},
+		'minigun':       {'count': 20, 'func': fireMiniGun, 'burst': True},
+		'gamma gun':     {'count': 2,  'func': fireGammaGun},
+		'long bow':      {'count': 3,  'func': fireLongBow},
+		'portal gun':    {'count': 2,  'func': firePortal, 'end_turn': False},
+		'laser gun':     {'count': 70, 'func': fireLaser, 'burst': True},
+		'spear':         {'count': 2,  'func': fireSpear, 'power': energy},
+		'bubble gun':    {'count': 10, 'func': fireBubbleGun, 'burst': True},
+		'razor leaf':    {'count': 50, 'func': fireRazorLeaf, 'burst': True},
+		'icicle':        {'count': 4,  'func': fireIcicle},
+		'fire ball':     {'count': 3,  'func': fireFireBall},
+	}
+
 	avail = True
 	w = None
-	if weapon.name == "missile":
+
+	if weapon.name in gun_weapons_map.keys():
+		if WeaponManager._wm.current_gun is None:
+			WeaponManager._wm.current_gun = ShootGun(**gun_weapons_map[weapon.name])
+		
+		WeaponManager._wm.current_gun.shoot()
+		w = WeaponManager._wm.current_gun.get_object()
+		decrease = False
+		Game._game.nextState = PLAYER_CONTROL_1
+
+		if WeaponManager._wm.current_gun.is_done():
+			decrease = True
+			if WeaponManager._wm.current_gun.is_end_turn():
+				Game._game.nextState = PLAYER_CONTROL_2
+			else:
+				Game._game.nextState = PLAYER_CONTROL_1
+			WeaponManager._wm.current_gun.remove()
+			WeaponManager._wm.current_gun = None
+
+	elif weapon.name == "missile":
 		w = Missile(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "grenade":
 		w = Grenade(weaponOrigin, weaponDir, energy)
@@ -4824,44 +4808,8 @@ def fire(weapon = None):
 		w = TNT(weaponOrigin)
 		w.vel.x = Game._game.player.facing * 0.5
 		w.vel.y = -0.8
-	elif weapon.name == "shotgun":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 3 # three shots
-		fireShotgun(weaponOrigin, weaponDir) # fire
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon.name == "flame thrower":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 70
-		fireFlameThrower(weaponOrigin, weaponDir)
-		if not Game._game.shotCount == 0:
-			Game._game.shotCount -= 1
-			Game._game.nextState = FIRE_MULTIPLE
-		else:
-			Game._game.nextState = PLAYER_CONTROL_2
-			decrease = True
 	elif weapon.name == "sticky bomb":
 		w = StickyBomb(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "minigun":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 20
-			if randint(0,50) == 1 or GameVariables().mega_weapon_trigger:
-				Game._game.shotCount = 60
-		
-		fireMiniGun(weaponOrigin, weaponDir)
-		if not Game._game.shotCount == 0:
-			Game._game.shotCount -= 1
-			Game._game.nextState = FIRE_MULTIPLE
-		else:
-			Game._game.nextState = PLAYER_CONTROL_2
-			decrease = True
 	elif weapon.name == "mine":
 		w = Mine(weaponOrigin, fps * 2.5)
 		w.vel.x = Game._game.player.facing * 0.5
@@ -4871,17 +4819,6 @@ def fire(weapon = None):
 		w = GasGrenade(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "gravity missile":
 		w = GravityMissile(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "gamma gun":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 2 # two shots
-		fireGammaGun(weaponOrigin, weaponDir) # fire
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
 	elif weapon.name == "holy grenade":
 		w = HolyGrenade(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "banana":
@@ -4914,19 +4851,6 @@ def fire(weapon = None):
 			w.bitten.append(worm)
 	elif weapon.name == "artillery assist":
 		w = Artillery(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "long bow":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 3 # three shots
-		w = LongBow(weaponOrigin + weaponDir * 5, weaponDir, LongBow._sleep) # fire
-		w.ignore = Game._game.player
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
-		avail = False
 	elif weapon.name == "sheep":
 		w = Sheep(weaponOrigin + Vector(0,-5))
 		w.facing = Game._game.player.facing
@@ -4943,17 +4867,6 @@ def fire(weapon = None):
 		w.ignore.append(Game._game.player)
 	elif weapon.name == "electro boom":
 		w = ElectroBoom(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "portal gun":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 2
-		firePortal(weaponOrigin, weaponDir)
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_1
 	elif weapon.name == "parachute":
 		if Game._game.player.vel.y > 1:
 			tool_set = Game._game.player.worm_tool.set(Parachute(Game._game.player))
@@ -4969,17 +4882,6 @@ def fire(weapon = None):
 		w = GreenShell(weaponOrigin + Vector(0,-5))
 		w.facing = Game._game.player.facing
 		w.ignore.append(Game._game.player)
-	elif weapon.name == "laser gun":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 70
-		fireLaser(weaponOrigin, weaponDir)
-		if not Game._game.shotCount == 0:
-			Game._game.shotCount -= 1
-			Game._game.nextState = FIRE_MULTIPLE
-		else:
-			Game._game.nextState = PLAYER_CONTROL_2
-			decrease = True
 	elif weapon.name == "guided missile":
 		w = GuidedMissile(weaponOrigin + Vector(0,-5))
 		Game._game.nextState = WAIT_STABLE
@@ -4997,45 +4899,6 @@ def fire(weapon = None):
 			w = Raon(weaponOrigin, weaponDir, energy * 0.92)
 	elif weapon.name == "snail":
 		w = SnailShell(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "fus ro duh":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 3 # three shots
-		fireFusrodah(weaponOrigin, weaponDir) # fire
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon.name == "spear":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 2
-		w = Spear(weaponOrigin, weaponDir, energy * 0.95)
-		# w.ignore = Game._game.player
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
-		avail = False
-	elif weapon.name == "distorter":
-		w = Distorter(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "bubble gun":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 10
-		
-		u = Bubble(getClosestPosAvail(Game._game.player), weaponDir, uniform(0.5, 0.9))
-		if not Game._game.shotCount == 0:
-			Game._game.shotCount -= 1
-			Game._game.nextState = FIRE_MULTIPLE
-		else:
-			Game._game.nextState = PLAYER_CONTROL_2
-			GameVariables().cam_track = u
-			decrease = True
 	elif weapon.name == "acid bottle":
 		w = AcidBottle(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "seeker":
@@ -5087,31 +4950,6 @@ def fire(weapon = None):
 		Game._game.nextState = PLAYER_CONTROL_1
 	elif weapon.name == "mine plant":
 		w = PlantBomb(weaponOrigin, weaponDir, energy, PlantBomb.mine)
-	elif weapon.name == "razor leaf":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 50
-		
-		RazorLeaf(weaponOrigin + weaponDir * 10, weaponDir)
-		if not Game._game.shotCount == 0:
-			Game._game.shotCount -= 1
-			Game._game.nextState = FIRE_MULTIPLE
-		else:
-			Game._game.nextState = PLAYER_CONTROL_2
-			decrease = True
-	elif weapon.name == "icicle":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 4
-		w = Icicle(weaponOrigin + weaponDir * 5, weaponDir) # fire
-		w.ignore = Game._game.player
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
-		avail = False
 	elif weapon.name == "earth spike":
 		decrease = False
 		if Game._game.state == PLAYER_CONTROL_1:
@@ -5124,19 +4962,6 @@ def fire(weapon = None):
 		if Game._game.shotCount == 0:
 			decrease = True
 			Game._game.nextState = PLAYER_CONTROL_2
-	elif weapon.name == "fire ball":
-		decrease = False
-		if Game._game.state == PLAYER_CONTROL_1:
-			Game._game.shotCount = 3
-		w = FireBall(weaponOrigin + weaponDir * 5, weaponDir) # fire
-		w.ignore = Game._game.player
-		Game._game.shotCount -= 1
-		if Game._game.shotCount > 0:
-			Game._game.nextState = FIRE_MULTIPLE
-		if Game._game.shotCount == 0:
-			decrease = True
-			Game._game.nextState = PLAYER_CONTROL_2
-		avail = False
 	elif weapon.name == "air tornado":
 		w = Tornado()
 	elif weapon.name == "pick axe":
@@ -5158,7 +4983,7 @@ def fire(weapon = None):
 	
 	# position to available position
 	if w and avail:
-		availpos = getClosestPosAvail(w)
+		availpos = getClosestPosAvail(w.pos, w.radius)
 		if availpos:
 			w.pos = availpos
 	
@@ -6583,7 +6408,8 @@ def gameMain(game_config: GameConfig=None):
 				# this is the next Game._game.state after placing all worms
 				if Game._game.state == PLAYER_CONTROL_1:
 					if Game._game.radial_weapon_menu is None:
-						weaponMenuRadialInit()
+						if WeaponManager._wm.can_open_menu():
+							weaponMenuRadialInit()
 					else:
 						Game._game.radial_weapon_menu = None
 			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down

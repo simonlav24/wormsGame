@@ -93,6 +93,8 @@ class WeaponManager:
         self.surf = fonts.pixel5.render(self.currentWeapon.name, False, GameVariables().initial_variables.hud_color)
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
+        self.current_gun = None
+
         # read weapon set if exits and adjust basic set
         # if globals.game_manager.game_config.weapon_set is not None:
         #     # zero out basic set
@@ -103,6 +105,12 @@ class WeaponManager:
         #         name = weapon.attrib["name"]
         #         amount = int(weapon.attrib["amount"])
         #         self.basic_set[self.weaponDict[name]] = amount
+
+    def can_open_menu(self) -> bool:
+        return self.current_gun is None
+    
+    def can_switch_weapon(self) -> bool:
+        return self.current_gun is None
 
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
@@ -149,6 +157,9 @@ class WeaponManager:
 
     def switchWeapon(self, weapon: Weapon):
         """ switch weapon and draw weapon sprite """
+
+        if not self.can_switch_weapon():
+            return
         self.currentWeapon = weapon
         self.renderWeaponCount()
 

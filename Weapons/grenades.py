@@ -46,6 +46,39 @@ class Grenade (PhysObj):
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 
+class StickyBomb (Grenade):
+	def __init__(self, pos, direction, energy):
+		self.initialize()
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1, direction=direction)
+		self.radius = 2
+		self.color = (117,47,7)
+		self.bounceBeforeDeath = -1
+		self.damp = 0.5
+		self.timer = 0
+		self.sticked = False
+		self.stick = None
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blit_weapon_sprite(self.surf, (0,0), "sticky bomb")
+		self.angle = 0
+	
+	def collisionRespone(self, ppos):
+		if not self.sticked:
+			self.sticked = True
+			self.stick = vectorCopy((self.pos + ppos)/2)
+		self.vel *= 0
+	
+	def secondaryStep(self):
+		self.angle -= self.vel.x*4
+		self.stable = False
+		if self.stick:
+			self.pos = self.stick
+		self.timer += 1
+		if self.timer == GameVariables().fuse_time:
+			self.dead = True
+
+
 class HolyGrenade(Grenade):
 	def __init__(self, pos, direction, energy):
 		self.initialize()
