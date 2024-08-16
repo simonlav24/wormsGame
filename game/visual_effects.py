@@ -182,6 +182,46 @@ class FloatingText(Effect): #pos, text, color
 	def draw(self, win: pygame.Surface) -> None:
 		win.blit(self.surf, (int(self.pos.x - GameVariables().cam_pos[0] - self.surf.get_size()[0] / 2), int(self.pos.y - GameVariables().cam_pos[1])))
 
+class GasParticles:
+	''' smoke manager, calculates and draws smoke'''
+	_sp = None
+	_particlesRemove = []
+	_particles = []
+	
+	def __init__(self):
+		GasParticles._sp = self
+		
+	def addSmoke(self, pos, vel=None, color=None):
+		if not color:
+			color = (20, 20, 20)
+		radius = randint(8,10)
+		pos = tup2vec(pos)
+		timeCounter = 0
+		if not vel:
+			vel = Vector()
+		particle = [pos, vel, color, radius, timeCounter]
+
+		GasParticles._particles.append(particle)
+			
+	def step(self) -> None:
+		for particle in GasParticles._particles:
+			particle[4] += 1
+			if particle[4] % 8 == 0:
+				particle[3] -= 1
+				if particle[3] <= 0:
+					GasParticles._particles.remove(particle)
+			particle[1] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2,1), -0.1)
+			particle[0] += particle[1]
+			for worm in globals.game_manager.get_worms():
+				if distus(particle[0], worm.pos) < (particle[3] + worm.radius) * (particle[3] + worm.radius):
+					worm.sicken(1)
+					
+	def draw(self, win: pygame.Surface) -> None:
+		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
+		for particle in GasParticles._particles + GasParticles._particles:
+			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
+		smokeSurf.set_alpha(100)
+		win.blit(smokeSurf, (0,0))
 
 class SmokeParticles(Effect):
 	''' smoke manager, calculates and draws smoke'''
@@ -193,7 +233,7 @@ class SmokeParticles(Effect):
 	def __init__(self):
 		SmokeParticles._sp = self
 		
-	def addSmoke(self, pos, vel=None, color=None, sick=0):
+	def addSmoke(self, pos, vel=None, color=None):
 		if not color:
 			color = (20, 20, 20)
 		radius = randint(8,10)
@@ -202,12 +242,8 @@ class SmokeParticles(Effect):
 		if not vel:
 			vel = Vector()
 		particle = [pos, vel, color, radius, timeCounter]
-		if sick == 0:
-			SmokeParticles._particles.append(particle)
-		else:
-			particle[3] = randint(8,18)
-			particle.append(sick)
-			SmokeParticles._sickParticles.append(particle)
+
+		SmokeParticles._particles.append(particle)
 			
 	def step(self) -> None:
 		for particle in SmokeParticles._particles:
@@ -222,18 +258,6 @@ class SmokeParticles(Effect):
 			SmokeParticles._particles.remove(p)
 		SmokeParticles._particlesRemove = []
 
-		for particle in SmokeParticles._sickParticles:
-			particle[4] += 1
-			if particle[4] % 8 == 0:
-				particle[3] -= 1
-				if particle[3] <= 0:
-					SmokeParticles._sickParticles.remove(particle)
-			particle[1] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2,1), -0.1)
-			particle[0] += particle[1]
-			for worm in globals.game_manager.get_worms():
-				if distus(particle[0], worm.pos) < (particle[3] + worm.radius) * (particle[3] + worm.radius):
-					worm.sicken(particle[5])
-					
 	def draw(self, win: pygame.Surface) -> None:
 		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
 		for particle in SmokeParticles._particles + SmokeParticles._sickParticles:

@@ -28,6 +28,7 @@ from entities.debrie import Debrie
 
 from weapons.weapon_manager import *
 from weapons.missiles import *
+from weapons.bombs import *
 
 def getGlobals():
 	global fpsClock, fps, screenWidth, screenHeight, scalingFactor, win, screen
@@ -731,10 +732,6 @@ class TimeManager:
 	def timeRemainingDie(self):
 		self.timeRemaining(self.wormDieTime)
 
-
-
-
-
 class Grenade (PhysObj):#2
 	def __init__(self, pos, direction, energy):
 		self.initialize()
@@ -824,9 +821,11 @@ class PetrolBomb(PhysObj):#4
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "petrol bomb")
 		self.angle = 0
+	
 	def secondaryStep(self):
 		self.angle -= self.vel.x * 4
 		Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
+	
 	def deathResponse(self):
 		boom(self.pos, 15)
 		if randint(0,50) == 1 or GameVariables().mega_weapon_trigger:
@@ -837,6 +836,7 @@ class PetrolBomb(PhysObj):#4
 			for i in range(40):
 				s = Fire(self.pos, 5)
 				s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
+	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
@@ -1112,7 +1112,7 @@ class Worm (PhysObj):
 		# virus
 		if self.sick == 2 and self.health > 0 and not Game._game.state == WAIT_STABLE:
 			if randint(1,200) == 1:
-				SmokeParticles._sp.addSmoke(self.pos, color=(102, 255, 127), sick=2)
+				GasParticles._sp.addSmoke(self.pos, color=(102, 255, 127))
 		
 		# shooting angle
 		self.shootVel = clamp(self.shootVel + self.shootAcc, 0.1, -0.1)
@@ -1168,8 +1168,10 @@ class Fire(PhysObj):
 		self.delay = delay
 		self.timer = 0
 		self.wormCollider = True
+
 	def collisionRespone(self, ppos):
 		self.fallen = True
+
 	def secondaryStep(self):
 		self.stable = False
 		if randint(0,10) < 3:
@@ -1187,6 +1189,7 @@ class Fire(PhysObj):
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
 			boom(self.pos + Vector(randint(-1,1),randint(-1,1)), 3, False, False, True)
+
 	def draw(self, win: pygame.Surface):
 		radius = 1
 		if self.life > 20:
@@ -1195,28 +1198,6 @@ class Fire(PhysObj):
 			radius += 1
 		self.yellow = int(sin(0.3 * GameVariables().time_overall + self.phase) * ((255-106)/4) + 255 - ((255-106)/2))
 		pygame.draw.circle(win, (self.red, self.yellow, 69), (int(self.pos.x - GameVariables().cam_pos[0]), int(self.pos.y - GameVariables().cam_pos[1])), radius)
-
-class TNT(PhysObj):#5
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.radius = 2
-		self.color = (230,57,70)
-		self.bounceBeforeDeath = -1
-		self.damp = 0.2
-		self.timer = 0
-	def secondaryStep(self):
-		self.timer += 1
-		self.stable = False
-		if self.timer == fps*4:
-			self.dead = True
-	def deathResponse(self):
-		boom(self.pos, 40)
-	def draw(self, win: pygame.Surface):
-		pygame.draw.rect(win, self.color, (int(self.pos.x -2) - int(GameVariables().cam_pos[0]),int(self.pos.y -4) - int(GameVariables().cam_pos[1]) , 3,8))
-		pygame.draw.line(win, (90,90,90), point2world(self.pos + Vector(-1,-4)), point2world(self.pos + Vector(-1, -5*(fps*4 - self.timer)/(fps*4) - 4)), 1)
-		if randint(0,10) == 1:
-			Blast(self.pos + Vector(-1, -5*(fps*4 - self.timer)/(fps*4) - 4), randint(3,6), 150)
 
 def fireShotgun(start, direction, power=15):#6
 	GunShell(start + Vector(0, -4))
@@ -1293,6 +1274,7 @@ class PetrolCan(PhysObj):
 		self.extraCollider = True
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		self.surf.blit(sprites.sprite_atlas, (0,0), (64, 96, 16, 16))
+
 	def deathResponse(self):
 		boom(self.pos, 20)
 		pygame.draw.rect(Game._game.map_manager.objects_col_map, SKY, (int(self.pos.x -3),int(self.pos.y -5), 7,10))
@@ -1301,15 +1283,18 @@ class PetrolCan(PhysObj):
 			s.vel = vectorFromAngle(2*pi*i/40, uniform(1.3,2))
 		if self in PetrolCan._cans:
 			PetrolCan._cans.remove(self)
+
 	def secondaryStep(self):
 		if self.health <= 0:
 			self.dead = True
+
 	def damage(self, value, damageType=0):
 		dmg = value * GameVariables().damage_mult
 		if self.health > 0:
 			self.health -= int(dmg)
 			if self.health < 0:
 				self.health = 0
+
 	def draw(self, win: pygame.Surface):
 		win.blit(self.surf , point2world(self.pos - tup2vec(self.surf.get_size())/2))
 		pygame.draw.rect(Game._game.map_manager.objects_col_map, GRD, (int(self.pos.x -6),int(self.pos.y -8), 12,16))
@@ -1327,6 +1312,7 @@ class Mine(PhysObj):
 		self.timer = delay
 		self.exploseTime = randint(5, 100)
 		self.windAffected = 0
+
 	def secondaryStep(self):
 		if not self.alive:
 			self.timer -= 1
@@ -1348,8 +1334,10 @@ class Mine(PhysObj):
 				
 		if self.activated:
 			EffectManager().add_light(vectorCopy(self.pos), 50, (100,0,0,100))
+
 	def deathResponse(self):
 		boom(self.pos, 30)
+
 	def draw(self, win: pygame.Surface):
 		if Game._game.game_config.option_digging:
 			if self.activated:
@@ -1387,10 +1375,12 @@ class Baseball:
 						worm.damage(randint(15,25))
 						worm.vel += self.direction * 8
 						Game._game.camTrack = worm
+
 	def step(self):
 		self.timer += 1 * GameVariables().dt
 		if self.timer >= 15:
 			Game._game.nonPhysToRemove.append(self)
+
 	def draw(self, win: pygame.Surface):
 		weaponSurf = pygame.transform.rotate(pygame.transform.flip(Game._game.weaponHold, False, Game._game.objectUnderControl.facing == LEFT), -degrees(Game._game.objectUnderControl.shootAngle) + 180)
 		win.blit(weaponSurf, point2world(Game._game.objectUnderControl.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
@@ -1414,7 +1404,7 @@ class GasGrenade(Grenade):
 		boom(self.pos, 20)
 		for i in range(40):
 			vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1,1.5)
-			SmokeParticles._sp.addSmoke(self.pos, vel, color=(102, 255, 127), sick=1)
+			GasParticles._sp.addSmoke(self.pos, vel, color=(102, 255, 127))
 	def secondaryStep(self):
 		gameDistable()
 		self.angle -= self.vel.x*4
@@ -1424,7 +1414,7 @@ class GasGrenade(Grenade):
 				self.state = "release"
 		if self.state == "release":
 			if self.timer % 3 == 0:
-				SmokeParticles._sp.addSmoke(self.pos, vectorUnitRandom(), color=(102, 255, 127), sick=1)
+				GasParticles._sp.addSmoke(self.pos, vectorUnitRandom(), color=(102, 255, 127))
 			if self.timer >= Game._game.fuseTime + 5 * fps:
 				self.dead = True
 
@@ -7032,6 +7022,7 @@ def gameMain(game_config: GameConfig=None):
 	TeamManager()
 
 	SmokeParticles()
+	GasParticles()           
 	
 	damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
 	commentator = Commentator()
@@ -7240,6 +7231,7 @@ def gameMain(game_config: GameConfig=None):
 		for t in Toast._toasts:
 			t.step()
 		SmokeParticles._sp.step()
+		GasParticles._sp.step()
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
 			
@@ -7287,6 +7279,7 @@ def gameMain(game_config: GameConfig=None):
 		
 		if ArenaManager._arena: ArenaManager._arena.draw(win)
 		SmokeParticles._sp.draw(win)
+		GasParticles._sp.draw(win)
 
 		# if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
 		# draw shooting indicator
