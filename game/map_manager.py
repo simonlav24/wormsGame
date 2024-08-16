@@ -122,6 +122,20 @@ class MapManager(metaclass=SingletonMeta):
 
         return map_at == GRD
 
+    def is_ground_around(self, place, radius = 5):
+        for i in range(8):
+            checkPos = place + Vector(radius * cos((i/4) * pi), radius * sin((i/4) * pi))
+            if checkPos.x < 0 or checkPos.x > self.game_map.get_width() or checkPos.y < 0 or checkPos.y > self.game_map.get_height():
+                return False
+            try:
+                at = (int(checkPos.x), int(checkPos.y))
+                if self.game_map.get_at(at) == GRD or self.worm_col_map.get_at(at) != (0,0,0) or self.objects_col_map.get_at(at) != (0,0,0):
+                    return True
+            except IndexError:
+                print("is_ground_around index error")
+                
+        return False
+
     def recolor_ground(self) -> None:
         ''' recolor the ground map with pattern and grass '''
 

@@ -103,11 +103,9 @@ class Game:
 		self.state = RESET
 		self.nextState = RESET
 		self.loadingSurf = fonts.pixel10.render("Simon's Worms Loading", False, WHITE)
-		self.gameStable = False
 		self.playerControl = False
 		self.playerMoveable = True
 		self.playerShootAble = False
-		self.gameStableCounter = 0
 
 		self.endGameDict = None
 
@@ -394,7 +392,7 @@ class Game:
 		anchored = False
 		for i in range(25):
 			cpos = position.y + i
-			if Game._game.map_manager.is_ground_at(Vector(position.x, cpos)):
+			if MapManager().is_ground_at(Vector(position.x, cpos)):
 				anchored = True
 				break
 		if anchored:
@@ -461,14 +459,14 @@ class Game:
 		return self.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2]
 
 def drawLand():
-	if Game._game.map_manager.game_map.get_width() == 0:
+	if MapManager().game_map.get_width() == 0:
 		return
 	if MapManager().draw_ground_secondary:
-		win.blit(Game._game.map_manager.ground_secondary, point2world((0,0)))
-	win.blit(Game._game.map_manager.ground_map, point2world((0,0)))
+		win.blit(MapManager().ground_secondary, point2world((0,0)))
+	win.blit(MapManager().ground_map, point2world((0,0)))
 	
-	Game._game.map_manager.worm_col_map.fill(SKY)
-	Game._game.map_manager.objects_col_map.fill(SKY)
+	MapManager().worm_col_map.fill(SKY)
+	MapManager().objects_col_map.fill(SKY)
 
 # todo: determine where this belongs
 def giveGoodPlace(div = 0, girderPlace = True):
@@ -476,19 +474,19 @@ def giveGoodPlace(div = 0, girderPlace = True):
 	counter = 0
 	
 	if Game._game.game_config.option_forts and not div == -1:
-		half = Game._game.map_manager.game_map.get_width() / globals.team_manager.totalTeams
+		half = MapManager().game_map.get_width() / globals.team_manager.totalTeams
 		Slice = div % globals.team_manager.totalTeams
 		
 		left = half * Slice
 		right = left + half
 		if left <= 0: left += 6
-		if right >= Game._game.map_manager.game_map.get_width(): right -= 6
+		if right >= MapManager().game_map.get_width(): right -= 6
 	else:
-		left, right = 6, Game._game.map_manager.game_map.get_width() - 6
+		left, right = 6, MapManager().game_map.get_width() - 6
 	
 	if Game._game.game_config.option_digging:
 		while not goodPlace:
-			place = Vector(randint(int(left), int(right)), randint(6, Game._game.map_manager.game_map.get_height() - 50))
+			place = Vector(randint(int(left), int(right)), randint(6, MapManager().game_map.get_height() - 50))
 			goodPlace = True
 			for worm in PhysObj._worms:
 				if distus(worm.pos, place) < 5625:
@@ -502,10 +500,10 @@ def giveGoodPlace(div = 0, girderPlace = True):
 		# give rand place
 		counter += 1
 		goodPlace = True
-		place = Vector(randint(int(left), int(right)), randint(6, Game._game.map_manager.game_map.get_height() - 6))
+		place = Vector(randint(int(left), int(right)), randint(6, MapManager().game_map.get_height() - 6))
 		
-		# if in Game._game.map_manager.ground_map 
-		if isGroundAround(place):
+		# if in MapManager().ground_map 
+		if MapManager().is_ground_around(place):
 			goodPlace = False
 			continue
 		
@@ -524,11 +522,11 @@ def giveGoodPlace(div = 0, girderPlace = True):
 		
 		# put place down
 		y = place.y
-		for i in range(Game._game.map_manager.game_map.get_height()):
-			if y + i >= Game._game.map_manager.game_map.get_height():
+		for i in range(MapManager().game_map.get_height()):
+			if y + i >= MapManager().game_map.get_height():
 				goodPlace = False
 				break
-			if Game._game.map_manager.game_map.get_at((place.x, y + i)) == GRD or Game._game.map_manager.worm_col_map.get_at((place.x, y + i)) != (0,0,0) or Game._game.map_manager.objects_col_map.get_at((place.x, y + i)) != (0,0,0):
+			if MapManager().game_map.get_at((place.x, y + i)) == GRD or MapManager().worm_col_map.get_at((place.x, y + i)) != (0,0,0) or MapManager().objects_col_map.get_at((place.x, y + i)) != (0,0,0):
 				y = y + i - 7
 				break
 		if  not goodPlace:
@@ -560,9 +558,9 @@ def giveGoodPlace(div = 0, girderPlace = True):
 			continue
 		
 		# if all conditions are met, make hole and place
-		if isGroundAround(place):
-			pygame.draw.circle(Game._game.map_manager.game_map, SKY, place.vec2tup(), 5)
-			pygame.draw.circle(Game._game.map_manager.ground_map, SKY, place.vec2tup(), 5)
+		if MapManager().is_ground_around(place):
+			pygame.draw.circle(MapManager().game_map, SKY, place.vec2tup(), 5)
+			pygame.draw.circle(MapManager().ground_map, SKY, place.vec2tup(), 5)
 	return place
 
 def place_object(cls: Any, args, girder_place: bool=False) -> Any:
@@ -577,22 +575,6 @@ def place_object(cls: Any, args, girder_place: bool=False) -> Any:
 	else:
 		return None
 	return instance
-	
-def move(obj):
-	dir = obj.facing
-	if MapManager().check_free_pos(obj.radius, obj.pos + Vector(dir, 0)):
-		obj.pos += Vector(dir, 0) * GameVariables().dt
-		return True
-	else:
-		for i in range(1,5):
-			if MapManager().check_free_pos(obj.radius, obj.pos + Vector(dir, -i)):
-				obj.pos += Vector(dir, -i) * GameVariables().dt
-				return True
-		for i in range(1,5):
-			if MapManager().check_free_pos(obj.radius, obj.pos + Vector(dir, i)):
-				obj.pos += Vector(dir, i) * GameVariables().dt
-				return True
-	return False
 
 def moveFallProof(obj):
 	dir = obj.facing
@@ -614,7 +596,7 @@ def checkFreePosFallProof(obj, pos):
 	r = 0
 	while r < 2 * pi:
 		testPos = Vector((obj.radius) * cos(r) + pos.x, (obj.radius) * sin(r) + pos.y)
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 			if GameVariables().config.option_closed_map:
 				return False
 			else:
@@ -624,7 +606,7 @@ def checkFreePosFallProof(obj, pos):
 			r += pi /8
 			continue
 			
-		if not Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == (0,0,0):
+		if not MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == (0,0,0):
 			return False
 		
 		r += pi /8
@@ -632,7 +614,7 @@ def checkFreePosFallProof(obj, pos):
 	groundUnder = False
 	for i in range(int(obj.radius), 50):
 		# extra.append((pos.x, pos.y + i, (255,255,255), 5))
-		if Game._game.map_manager.game_map.get_at((int(pos.x), int(pos.y + i))) == GRD:
+		if MapManager().game_map.get_at((int(pos.x), int(pos.y + i))) == GRD:
 			groundUnder = True
 			break
 	return groundUnder
@@ -664,7 +646,7 @@ def getNormal(pos, vel, radius, wormCollision: bool, extraCollision: bool) -> Ve
 	r = angle - pi
 	while r < angle + pi:
 		testPos = Vector((radius) * cos(r) + pos.x, (radius) * sin(r) + pos.y)
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 			if GameVariables().config.option_closed_map:
 				response += pos - testPos
 				r += pi /8
@@ -676,11 +658,11 @@ def getNormal(pos, vel, radius, wormCollision: bool, extraCollision: bool) -> Ve
 			r += pi /8
 			continue
 		
-		if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+		if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			response += pos - testPos
-		if wormCollision and Game._game.map_manager.worm_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+		if wormCollision and MapManager().worm_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			response += pos - testPos
-		if extraCollision and Game._game.map_manager.objects_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+		if extraCollision and MapManager().objects_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			response += pos - testPos
 		
 		r += pi /8
@@ -834,7 +816,7 @@ class Worm (PhysObj):
 	
 	def draw(self, win: pygame.Surface):
 		if not self is Game._game.player and self.alive:
-			pygame.draw.circle(Game._game.map_manager.worm_col_map, GRD, self.pos.vec2tupint(), int(self.radius)+1)
+			pygame.draw.circle(MapManager().worm_col_map, GRD, self.pos.vec2tupint(), int(self.radius)+1)
 
 		self.worm_tool.draw(win)
 
@@ -1016,13 +998,13 @@ class Worm (PhysObj):
 		if self.health <= 0 and self.alive:
 			self.dieded()
 		
-		# check if on Game._game.map_manager.game_map:
-		if self.pos.y > Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
+		# check if on MapManager().game_map:
+		if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level:
 			splash(self.pos, self.vel)
 			angle = self.vel.getAngle()
 			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
 				if self.vel.getMag() > 7:
-					self.pos.y = Game._game.map_manager.game_map.get_height() - GameVariables().water_level - 1
+					self.pos.y = MapManager().game_map.get_height() - GameVariables().water_level - 1
 					self.vel.y *= -1
 					self.vel.x *= 0.7
 			else:
@@ -1031,7 +1013,7 @@ class Worm (PhysObj):
 			self.gravity = DOWN
 		if Game._game.actionMove:
 			if Game._game.player == self and self.health > 0 and not self.worm_tool.in_use():
-				move(self)
+				self.move(self.facing)
 
 		if not self.stable:
 			velocity = self.vel.getMag()
@@ -1226,8 +1208,8 @@ class GasGrenade(Grenade):
 			vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1,1.5)
 			GasParticles._sp.addSmoke(self.pos, vel, color=(102, 255, 127))
 	def secondaryStep(self):
-		gameDistable()
-		self.angle -= self.vel.x*4
+		GameVariables().game_distable()
+		self.angle -= self.vel.x * 4
 		self.timer += 1
 		if self.state == "throw":
 			if self.timer >= GameVariables().fuse_time:
@@ -1311,14 +1293,14 @@ class WeaponPack(Deployable):
 def deployPack(pack):
 	x = 0
 	ymin = 20
-	goodPlace = False #1 has Game._game.map_manager.ground_map under. #2 not in Game._game.map_manager.ground_map. #3 not above worm 
+	goodPlace = False #1 has MapManager().ground_map under. #2 not in MapManager().ground_map. #3 not above worm 
 	while not goodPlace:
-		x = randint(10, Game._game.map_manager.game_map.get_width() - 10)
+		x = randint(10, MapManager().game_map.get_width() - 10)
 		y = randint(10, ymin)
 		
 		goodPlace = True
 		# test1
-		if isGroundAround(Vector(x,y), 10):
+		if MapManager().is_ground_around(Vector(x,y), 10):
 			goodPlace = False
 			ymin += 10
 			if ymin > 500:
@@ -1326,12 +1308,12 @@ def deployPack(pack):
 			continue
 		
 		# test2
-		for i in range(Game._game.map_manager.game_map.get_height()):
-			if y + i >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
-				# no Game._game.map_manager.ground_map bellow
+		for i in range(MapManager().game_map.get_height()):
+			if y + i >= MapManager().game_map.get_height() - GameVariables().water_level:
+				# no MapManager().ground_map bellow
 				goodPlace = False
 				continue
-			if Game._game.map_manager.game_map.get_at((x, y + i)) == GRD:
+			if MapManager().game_map.get_at((x, y + i)) == GRD:
 				goodPlace = True
 				break
 		# test3 (hopefully always possible)
@@ -1392,7 +1374,7 @@ def fireGammaGun(pos: Vector, direction: Vector, power: int=15):
 		testPos = pos + direction * t + normal * 1.5 * sin(t * 0.6) * (t + 1)/70
 		Game._game.addExtra(testPos, (0,255,255), 10)
 		
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
+		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
 			continue
 		# if hits worm:
 		for worm in PhysObj._worms:
@@ -1457,15 +1439,15 @@ class Plant:
 			self.green = 255
 		if self.green < 0:
 			self.green = 0
-		pygame.draw.circle(Game._game.map_manager.game_map, GRD, (int(self.pos[0]), int(self.pos[1])), int(self.radius))
-		pygame.draw.circle(Game._game.map_manager.ground_map, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), int(self.radius))
+		pygame.draw.circle(MapManager().game_map, GRD, (int(self.pos[0]), int(self.pos[1])), int(self.radius))
+		pygame.draw.circle(MapManager().ground_map, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), int(self.radius))
 		if randint(0, 100) <= 10:
-			leaf(self.pos, self.angle + 90, (55,self.green,40))
+			generate_leaf(self.pos, self.angle + 90, (55,self.green,40))
 		if self.radius == 0:
 			GameVariables().unregister_non_physical(self)
 			if self.mode == PlantBomb.venus:
-				pygame.draw.circle(Game._game.map_manager.game_map, GRD, (int(self.pos[0]), int(self.pos[1])), 3)
-				pygame.draw.circle(Game._game.map_manager.ground_map, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), 3)
+				pygame.draw.circle(MapManager().game_map, GRD, (int(self.pos[0]), int(self.pos[1])), 3)
+				pygame.draw.circle(MapManager().ground_map, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), 3)
 				Venus(self.pos, self.angle)
 			if self.mode == PlantBomb.mine:
 				Mine(self.pos, fps * 2)
@@ -1628,7 +1610,7 @@ class Bee:
 		PhysObj._toRemove.append(self)
 	def step(self):
 		self.lifespan -= 1
-		gameDistable()
+		GameVariables().game_distable()
 		if self.lifespan == 0:
 			self.removeFromGame()
 			return
@@ -1637,11 +1619,11 @@ class Bee:
 		else:
 			self.angle += uniform(-0.6,0.6)
 		ppos = self.pos + vectorFromAngle(self.angle)
-		if ppos.x >= Game._game.map_manager.game_map.get_width() or ppos.y >= Game._game.map_manager.game_map.get_height() or ppos.x < 0 or ppos.y < 0:
+		if ppos.x >= MapManager().game_map.get_width() or ppos.y >= MapManager().game_map.get_height() or ppos.x < 0 or ppos.y < 0:
 			ppos = self.pos + vectorFromAngle(self.angle) * -1
 			self.angle += pi
 		try:
-			if Game._game.map_manager.game_map.get_at((ppos.vec2tupint())) == GRD:
+			if MapManager().game_map.get_at((ppos.vec2tupint())) == GRD:
 				ppos = self.pos + vectorFromAngle(self.angle) * -1
 				self.angle += pi
 				if self.target:
@@ -1853,7 +1835,7 @@ class Vortex():
 		self.inhale = True
 		self.boomAffected = False
 	def step(self):
-		gameDistable()
+		GameVariables().game_distable()
 		if self.inhale:
 			self.rot += 0.001
 			if self.rot > 0.1:
@@ -2049,14 +2031,14 @@ class LongBow:
 						target.explode()
 						self.destroy()
 						return
-				# check Game._game.map_manager.game_map collision
+				# check MapManager().game_map collision
 				if MapManager().is_on_map(testPos.vec2tupint()):
-					if Game._game.map_manager.is_ground_at(testPos.vec2tupint()):
+					if MapManager().is_ground_at(testPos.vec2tupint()):
 						self.stuck = vectorCopy(testPos)
 				if self.pos.y < 0:
 					self.destroy()
 					return
-				if self.pos.y > Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
+				if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level:
 					splash(self.pos, self.vel)
 					self.destroy()
 					return
@@ -2078,11 +2060,11 @@ class LongBow:
 		self.pos = self.stuck
 			
 		points = [(self.pos - self.direction * 10 + i).vec2tupint() for i in self.triangle]
-		pygame.draw.polygon(Game._game.map_manager.ground_map, (230,235,240), points)
-		pygame.draw.polygon(Game._game.map_manager.game_map, GRD, points)
+		pygame.draw.polygon(MapManager().ground_map, (230,235,240), points)
+		pygame.draw.polygon(MapManager().game_map, GRD, points)
 		
-		pygame.draw.line(Game._game.map_manager.game_map, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
-		pygame.draw.line(Game._game.map_manager.ground_map, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+		pygame.draw.line(MapManager().game_map, GRD, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
+		pygame.draw.line(MapManager().ground_map, self.color, self.pos.vec2tupint(), (self.pos - self.direction*8).vec2tupint(), 3)
 		
 		self.destroy()
 	def draw(self, win: pygame.Surface):
@@ -2131,48 +2113,7 @@ def fireEarthSpike(pos: Vector, direction: Vector, power: int=15):
 	if pos is not None:
 		EarthSpike(pos)
 
-class Sheep(PhysObj):
-	trigger = False
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(0,-3)
-		self.radius = 6
-		self.color = (250,240,240)
-		self.damp = 0.2
-		self.timer = 0
-		self.facing = RIGHT
-		self.windAffected = 0
-	
-	def secondaryStep(self):
-		self.timer += 1
-		self.stable = False
-		moved = move(self)
-		if self.timer % 3 == 0:
-			moved = move(self)
-		if not moved:
-			if isGroundAround(self.pos, self.radius+1):
-				self.facing *= -1
-		if self.timer % (fps/2) == 0 and isGroundAround(self.pos, self.radius+1):
-			self.vel.y -= 4.5
-		if Sheep.trigger and self.timer > 5:
-			self.dead = True
-		else:
-			Sheep.trigger = False
-		if self.timer >= 300:
-			self.dead = True
-	
-	def deathResponse(self):
-		Sheep.trigger = False
-		boom(self.pos, 35)
-	
-	def draw(self, win: pygame.Surface):
-		rad = self.radius + 1
-		wig = 0.4 * sin(0.5 * self.timer)
-		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(pi/4 + wig), rad * sin(pi/4 + wig))), 2)
-		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(3*pi/4 - wig), rad * sin(3*pi/4 - wig))), 2)
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
-		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(self.facing*self.radius,0)), 4)
+
 
 class Armageddon:
 	def __init__(self):
@@ -2187,7 +2128,7 @@ class Armageddon:
 			return
 		if GameVariables().time_overall % 10 == 0:
 			for i in range(randint(1,2)):
-				x = randint(-100, Game._game.map_manager.game_map.get_width() + 100)
+				x = randint(-100, MapManager().game_map.get_width() + 100)
 				m = Missile((x, -10), Vector(randint(-10,10), 5).normalize(), 1)
 				m.windAffected = 0
 				m.boomRadius = 40
@@ -2210,10 +2151,10 @@ class Bull(PhysObj):
 	def secondaryStep(self):
 		self.stable = False
 		self.timer += 1
-		moved = move(self)
-		moved = move(self)
+		moved = self.move(self.facing)
+		moved = self.move(self.facing)
 		if not moved:
-			if isGroundAround(self.pos, self.radius+1):
+			if MapManager().is_ground_around(self.pos, self.radius+1):
 				self.hits -= 1
 				boom(self.pos, 35)
 				self.vel += Vector(-self.facing*3,-1)
@@ -2312,11 +2253,11 @@ def firePortal(pos: Vector, direction: Vector, power: int=15):
 				if p in PhysObj._reg:
 					PhysObj._reg.remove(p)
 
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
+		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
 			continue
 
 		# if hits map:
-		if Game._game.map_manager.game_map.get_at(testPos.vec2tupint()) == GRD:
+		if MapManager().game_map.get_at(testPos.vec2tupint()) == GRD:
 			
 			response = Vector(0,0)
 			
@@ -2325,9 +2266,9 @@ def firePortal(pos: Vector, direction: Vector, power: int=15):
 				
 				check = testPos + Vector(8 * cos(ti), 8 * sin(ti))
 				
-				if check.x >= Game._game.map_manager.game_map.get_width() or check.y >= Game._game.map_manager.game_map.get_height() or check.x < 0 or check.y < 0:
+				if check.x >= MapManager().game_map.get_width() or check.y >= MapManager().game_map.get_height() or check.x < 0 or check.y < 0:
 					continue
-				if Game._game.map_manager.game_map.get_at(check.vec2tupint()) == GRD:
+				if MapManager().game_map.get_at(check.vec2tupint()) == GRD:
 					# extra.append((check.x, check.y, (255,255,255), 100))
 					response +=  Vector(8 * cos(ti), 8 * sin(ti))
 			
@@ -2370,7 +2311,7 @@ class Portal:
 		
 		self.posBro = Vector()
 	def step(self):
-		if not Game._game.map_manager.game_map.get_at(self.holdPos.vec2tupint()) == GRD:
+		if not MapManager().game_map.get_at(self.holdPos.vec2tupint()) == GRD:
 			GameVariables().unregister_non_physical(self)
 			Portal._reg.remove(self)
 			
@@ -2474,8 +2415,8 @@ class Venus:
 					
 				self.scale = 1
 				self.mode = Venus.hold
-				Game._game.map_manager.game_map.set_at(self.pos.vec2tupint(), GRD)
-			gameDistable()
+				MapManager().game_map.set_at(self.pos.vec2tupint(), GRD)
+			GameVariables().game_distable()
 			return
 		
 		self.angle = self.direction.getAngle()
@@ -2528,14 +2469,14 @@ class Venus:
 						worm.removeFromGame()
 					break
 		elif self.mode == Venus.catch:
-			gameDistable()
+			GameVariables().game_distable()
 			self.snap += 0.5
 			if self.snap >= 0:
 				self.snap = 0
 				self.mode = Venus.hold
 				self.timer = 0
 		elif self.mode == Venus.hold:
-			gameDistable()
+			GameVariables().game_distable()
 			if self.timer == 1 * fps:
 				self.mode = Venus.release
 				if self.explossive:
@@ -2543,7 +2484,7 @@ class Venus:
 					for i in range(randint(6,14)):
 						SmokeParticles._sp.addSmoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
 		elif self.mode == Venus.release:
-			gameDistable()
+			GameVariables().game_distable()
 			self.snap -= 0.1
 			if self.snap <= self.opening:
 				self.snap = self.opening
@@ -2551,7 +2492,7 @@ class Venus:
 		
 		# check if self is destroyed
 		if MapManager().is_on_map(self.pos.vec2tupint()):
-			if not Game._game.map_manager.game_map.get_at(self.pos.vec2tupint()) == GRD:
+			if not MapManager().game_map.get_at(self.pos.vec2tupint()) == GRD:
 				GameVariables().unregister_non_physical(self)
 				Venus._reg.remove(self)
 				
@@ -2564,7 +2505,7 @@ class Venus:
 		else:
 			GameVariables().unregister_non_physical(self)
 			Venus._reg.remove(self)
-		if self.pos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level:
+		if self.pos.y >= MapManager().game_map.get_height() - GameVariables().water_level:
 			GameVariables().unregister_non_physical(self)
 			Venus._reg.remove(self)
 	def mutate(self):
@@ -2583,204 +2524,19 @@ class Venus:
 		rotated_offset = rotateVector(self.offset, self.angle - self.snap)
 		rect = rotated_image.get_rect(center=(self.p2 + rotated_offset).vec2tupint())
 		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
-		Game._game.map_manager.objects_col_map.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
+		MapManager().objects_col_map.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 		
 		rotated_image = pygame.transform.rotate(pygame.transform.flip(image, False, True), -degrees(self.angle + self.snap))
 		rotated_offset = rotateVector(self.offset, self.angle + self.snap)
 		rect = rotated_image.get_rect(center=(self.p1 + rotated_offset).vec2tupint())
 		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
-		Game._game.map_manager.objects_col_map.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
-
-class Ball0(PhysObj):# EXPERIMENTAL
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = Vector(pos[0],pos[1])
-		
-		self.radius = 5
-		self.damp = 0.5
-	def step(self):
-		self.applyForce()
-		
-		# velocity
-		self.vel += self.acc
-		# position
-		ppos = self.pos + self.vel
-		
-		# reset forces
-		self.acc *= 0
-		self.stable = False
-		
-		angle = atan2(self.vel.y, self.vel.x)
-		response = Vector(0,0)
-		collision = False
-		
-		# colission with world:
-		r = angle - pi#- pi/2
-		while r < angle + pi:#+ pi/2:
-			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0:
-				if GameVariables().config.option_closed_map:
-					response += ppos - testPos
-					collision = True
-					r += pi /8
-					continue
-				else:
-					r += pi /8
-					continue
-			if testPos.y < 0:
-				r += pi /8
-				continue
-			
-			if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-				response += ppos - testPos
-				collision = True
-			
-			r += pi /8
-		
-		magVel = self.vel.getMag()
-		
-		if collision:
-			self.collisionRespone(ppos)
-			if self.vel.getMag() > 5 and self.fallAffected:
-				self.damage(self.vel.getMag() * 1.5 * GameVariables().fall_damage_mult)
-			self.stable = True
-			
-			response.normalize()
-			
-			fdot = self.vel.dot(response)
-			if not self.bounceBeforeDeath == 1:
-				self.vel = ((response * -2 * fdot) + self.vel) * self.damp
-				if response.x > 0:
-					self.vel.x += 0.5
-				else:
-					self.vel.x -= 0.5
-			
-			if self.bounceBeforeDeath > 0:
-				self.bounceBeforeDeath -= 1
-				self.dead = self.bounceBeforeDeath == 0
-				
-		else:
-			self.pos = ppos
-			# flew out Game._game.map_manager.game_map but not worms !
-			if self.pos.y > Game._game.map_manager.game_map.get_height() and not self in self._worms:
-				self.outOfMapResponse()
-				self.removeFromGame()
-				return
-		
-		if magVel < 0.1: # double jump problem
-			self.stable = True
-		
-		self.secondaryStep()
-		
-		if self.dead:
-			self.removeFromGame()
-			self.deathResponse()
-	def collisionRespone(self, ppos):
-		if self.vel.getMag() > 5:
-			boom(ppos, 7)
+		MapManager().objects_col_map.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 
 def doCirclesOverlap(pos1, r1, pos2, r2):
 	return fabs((pos1[0] - pos2[0])*(pos1[0] - pos2[0]) + (pos1[1] - pos2[1])*(pos1[1] - pos2[1])) <= (r1 + r2)*(r1 + r2)
 
 def isPointInCircle(pos, radius, point):
 	return fabs((pos[0] - point[0])*(pos[0] - point[0]) + (pos[1] - point[1])*(pos[1] - point[1])) <= radius * radius
-
-class Ball(PhysObj):# EXPERIMENTAL
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = Vector(pos[0],pos[1])
-		
-		self.radius = 3
-		self.damp = 0.3
-		self.collidingBalls = []
-		self.fakeballs = []
-	def step(self):
-		self.applyForce()
-		
-		# velocity
-		self.vel += self.acc
-		# position
-		self.pos += self.vel
-		
-		# reset forces
-		self.acc *= 0
-		
-		intppos = Vector(int(self.pos.x), int(self.pos.y))
-		start = intppos + Vector(-self.radius - 2, -self.radius - 2)
-		end = intppos + Vector(self.radius + 2, +self.radius + 2)
-		self.fakeballs = []
-		
-		
-		
-		for y in range(start.y, end.y):
-			for x in range(start.x, end.x):
-				pos = Vector(x, y)
-				if Game._game.map_manager.is_ground_at(pos):
-					self.fakeballs.append(pos)
-		
-		shuffle(self.fakeballs)
-		
-		for ball in self.fakeballs:
-			if self.colliding(ball):
-				self.collidingBalls.append(ball)
-			
-		masterBall = Vector()
-		for ball in self.collidingBalls:
-			masterBall += ball
-		masterBall = masterBall / len(self.collidingBalls)
-		
-		if self.colliding(masterBall):
-			self.resolveCollision(masterBall)
-		
-	def colliding(self, ball):
-		otherRadius = 0.5
-	
-		xd = self.pos.x - ball.x
-		yd = self.pos.y - ball.y
-		
-		sumRadius = self.radius + otherRadius
-		sqrRadius = sumRadius * sumRadius
-		
-		distsqr = (xd * xd) + (yd * yd)
-		if distsqr <= sqrRadius:
-			return True
-		return False
-		
-	def resolveCollision(self, ball):
-		otherRadius = 0.5
-		selfMass = 1
-		otherMass = 5
-		otherVel = Vector()
-		restitution = 0.5
-	
-		delta = self.pos - ball
-		d = delta.getMag()
-		
-		mtd = delta * (((self.radius + otherRadius) - d) / d)
-		
-		im1 = 1 / selfMass
-		im2 = 1 / otherMass
-		
-		self.pos = self.pos + (mtd * (im1 / (im1 + im2)))# + (mtd * (im2 / (im1 + im2)))
-		# ballPos = ball - (mtd * (im2 / (im1 + im2)))
-		
-		v = self.vel - otherVel
-		vn = dotProduct(self.vel, normalize(mtd))
-		
-		if vn > 0.0:
-			return
-		
-		i = (-(1.0 + restitution) * vn) / (im1 + im2)
-		impulse = normalize(mtd) * i
-		
-		self.vel = self.vel + impulse * im1
-		
-		
-	def draw(self, win: pygame.Surface):
-		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
-		for i in self.collidingBalls:
-			pygame.draw.circle(win, self.color, point2world(i), int(0.5)+1)
-		self.collidingBalls = []
 
 class PokeBall(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -2855,7 +2611,7 @@ class PokeBall(PhysObj):
 				self.dead = True
 		
 		if self.timer <= GameVariables().fuse_time + fps*2 + fps/2:
-			gameDistable()
+			GameVariables().game_distable()
 		
 		if self.vel.getMag() > 0.25:
 			self.angle -= self.vel.x*4
@@ -2897,7 +2653,7 @@ class GreenShell(PhysObj):
 			self.boomAffected = False
 			self.stable = False
 			for i in range(self.speed):
-				moved = move(self)
+				moved = self.move(self.facing)
 			
 			if not moved:
 				self.facing *= -1
@@ -2925,7 +2681,7 @@ class GreenShell(PhysObj):
 			self.speed = 1
 		if self.timer >= 300:
 			if self.timer == 300:
-				gameDistable()
+				GameVariables().game_distable()
 			self.speed = 0
 			if int(self.vel.x) >= 1:
 				if self.vel.x >= 0:
@@ -2956,7 +2712,7 @@ def fireLaser(pos: Vector, direction: Vector, power: int=15):
 		testPos = pos + direction * t
 		# extra.append((testPos.x, testPos.y, (255,0,0), 3))
 		
-		if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() or testPos.x < 0 or testPos.y < 0:
+		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
 			Game._game.layersCircles[0].append((color, pos, 5))
 			Game._game.layersCircles[0].append((color, testPos, 5))
 			Game._game.layersLines.append((color, pos, testPos, 10, 1))
@@ -2986,8 +2742,8 @@ def fireLaser(pos: Vector, direction: Vector, power: int=15):
 		if hit:
 			break
 		
-		# if hits Game._game.map_manager.game_map:
-		if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+		# if hits MapManager().game_map:
+		if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 			if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
 			Game._game.layersCircles[0].append((color, pos + direction * 5, 5))
 			Game._game.layersCircles[0].append((color, testPos, 5))
@@ -2996,8 +2752,8 @@ def fireLaser(pos: Vector, direction: Vector, power: int=15):
 			for i in square:
 				points.append((testPos + i).vec2tupint())
 			
-			pygame.draw.polygon(Game._game.map_manager.game_map, SKY, points)
-			pygame.draw.polygon(Game._game.map_manager.ground_map, SKY, points)
+			pygame.draw.polygon(MapManager().game_map, SKY, points)
+			pygame.draw.polygon(MapManager().ground_map, SKY, points)
 			break
 
 class GuidedMissile(PhysObj):
@@ -3028,7 +2784,7 @@ class GuidedMissile(PhysObj):
 		collision = False
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + self.pos.x, (self.radius) * sin(r) + self.pos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+			if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 				if GameVariables().config.option_closed_map:
 					collision = True
 					r += pi /8
@@ -3040,7 +2796,7 @@ class GuidedMissile(PhysObj):
 				r += pi /8
 				continue
 			
-			if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				collision = True
 			
 			r += pi /8
@@ -3052,7 +2808,7 @@ class GuidedMissile(PhysObj):
 					s = Fire(self.pos, 5)
 					s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,4)
 			self.removeFromGame()
-		if self.pos.y > Game._game.map_manager.game_map.get_height():
+		if self.pos.y > MapManager().game_map.get_height():
 			self.removeFromGame()
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(self.surf, -90 -degrees(self.vel.getAngle()))
@@ -3102,7 +2858,7 @@ class EndPearl(PhysObj):
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+			if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 				if GameVariables().config.option_closed_map:
 					response += ppos - testPos
 					r += pi /8
@@ -3114,7 +2870,7 @@ class EndPearl(PhysObj):
 				r += pi /8
 				continue
 			
-			if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 			
 			r += pi /8
@@ -3160,13 +2916,13 @@ class ShootingTarget:
 	def __init__(self):
 		GameVariables().register_non_physical(self)
 		ShootingTarget._reg.append(self)
-		self.pos = Vector(randint(10, Game._game.map_manager.game_map.get_width() - 10), randint(10, Game._game.map_manager.game_map.get_height() - 50))
+		self.pos = Vector(randint(10, MapManager().game_map.get_width() - 10), randint(10, MapManager().game_map.get_height() - 50))
 		self.radius = 10
-		pygame.draw.circle(Game._game.map_manager.game_map, GRD, self.pos, self.radius)
+		pygame.draw.circle(MapManager().game_map, GRD, self.pos, self.radius)
 		self.points = [self.pos + vectorFromAngle((i / 11) * 2 * pi) * (self.radius - 2) for i in range(10)]
 	def step(self):
 		for point in self.points:
-			if Game._game.map_manager.game_map.get_at(point.vec2tupint()) != GRD:
+			if MapManager().game_map.get_at(point.vec2tupint()) != GRD:
 				self.explode()
 				return
 	def explode(self):
@@ -3220,8 +2976,8 @@ class Raon(PhysObj):
 				self.dead = True
 				Raon._raons.remove(self)
 		if self.state == Raon.advancing:
-			gameDistable()
-			moved = move(self)
+			GameVariables().game_distable()
+			self.move(self.facing)
 			self.timer -= 1
 			if self.timer == 0:
 				self.state = Raon.pointing
@@ -3306,11 +3062,11 @@ class Spear(PhysObj):
 	def deathResponse(self):
 		self.pos += self.vel
 		point = self.pos - normalize(self.vel) * 30
-		pygame.draw.line(Game._game.map_manager.game_map, GRD, self.pos, point, self.radius)
-		pygame.draw.polygon(Game._game.map_manager.game_map, GRD, [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
+		pygame.draw.line(MapManager().game_map, GRD, self.pos, point, self.radius)
+		pygame.draw.polygon(MapManager().game_map, GRD, [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
 		
-		pygame.draw.line(Game._game.map_manager.ground_map, self.color, self.pos, point, self.radius)
-		pygame.draw.polygon(Game._game.map_manager.ground_map, (230,235,240), [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
+		pygame.draw.line(MapManager().ground_map, self.color, self.pos, point, self.radius)
+		pygame.draw.polygon(MapManager().ground_map, (230,235,240), [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
 		
 		if len(self.worms) > 0:
 			MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
@@ -3349,7 +3105,7 @@ class Snail:
 			revolvment = self.pos - self.anchor
 			index = Snail.around.index(revolvment)
 			candidate = self.anchor + Snail.around[(index + self.clockwise * -1) % 8]
-			if Game._game.map_manager.is_ground_at(candidate):
+			if MapManager().is_ground_at(candidate):
 				self.anchor = candidate
 			else:
 				self.pos = candidate
@@ -3392,7 +3148,7 @@ class SnailShell(PhysObj):
 		for t in range(50):
 			testPos = self.pos + normalize(self.vel) * t
 			testPos.integer()
-			if Game._game.map_manager.is_ground_at(testPos):
+			if MapManager().is_ground_at(testPos):
 				finalAnchor = testPos
 				break
 			else:
@@ -3422,7 +3178,7 @@ class Bubble:
 		self.acc.y -= GameVariables().physics.global_gravity * 0.3
 		self.acc.x += GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * 0.5
 	def step(self):
-		gameDistable()
+		GameVariables().game_distable()
 		self.applyForce()
 		self.vel += self.acc * GameVariables().dt
 		self.pos += self.vel * GameVariables().dt
@@ -3443,16 +3199,16 @@ class Bubble:
 		else:
 			self.catch.pos = self.pos
 			self.catch.vel *= 0
-		if GameVariables().config.option_closed_map and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= Game._game.map_manager.game_map.get_width() - GameVariables().water_level):
+		if GameVariables().config.option_closed_map and (self.pos.x - self.radius <= 0 or self.pos.x + self.radius >= MapManager().game_map.get_width() - GameVariables().water_level):
 			self.burst()
-		if self.pos.y < 0 and (Game._game.map_manager.is_ground_at((int(self.pos.x + self.radius), 0)) or Game._game.map_manager.is_ground_at((int(self.pos.x - self.radius), 0))):
+		if self.pos.y < 0 and (MapManager().is_ground_at((int(self.pos.x + self.radius), 0)) or MapManager().is_ground_at((int(self.pos.x - self.radius), 0))):
 			self.burst()
 		if self.pos.y < -50:
 			self.burst()
-		if self.pos.y - self.radius <= 0 and Game._game.map_manager.is_ground_at((int(self.pos.x), 0)):
+		if self.pos.y - self.radius <= 0 and MapManager().is_ground_at((int(self.pos.x), 0)):
 			self.burst()
 		if randint(0, 300) == 1:
-			if not Game._game.map_manager.is_ground_at(self.pos.integer()):
+			if not MapManager().is_ground_at(self.pos.integer()):
 				self.burst()
 	def burst(self):
 		if self.catch:
@@ -3460,8 +3216,8 @@ class Bubble:
 			if self == GameVariables().cam_track:
 				GameVariables().cam_track = self.catch
 		self.catch = None
-		pygame.draw.circle(Game._game.map_manager.game_map, SKY, self.pos, self.radius)
-		pygame.draw.circle(Game._game.map_manager.ground_map, SKY, self.pos, self.radius)
+		pygame.draw.circle(MapManager().game_map, SKY, self.pos, self.radius)
+		pygame.draw.circle(MapManager().ground_map, SKY, self.pos, self.radius)
 		GameVariables().unregister_non_physical(self)
 		for i in range(min(int(self.radius), 8)):
 			d = DropLet(self.pos + vectorUnitRandom() * self.radius, vectorUnitRandom())
@@ -3487,8 +3243,8 @@ class Acid(PhysObj):
 		self.inGround = True
 	def secondaryStep(self):
 		if self.inGround:
-			pygame.draw.circle(Game._game.map_manager.game_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
-			pygame.draw.circle(Game._game.map_manager.ground_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
+			pygame.draw.circle(MapManager().game_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
+			pygame.draw.circle(MapManager().ground_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
 			self.pos.x += choice([LEFT, RIGHT])
 		self.life -= 1
 		if self.life == 50:
@@ -3507,7 +3263,7 @@ class Acid(PhysObj):
 		if randint(0,50) < 1:
 			# Smoke(self.pos, color=(200,255,200))
 			SmokeParticles._sp.addSmoke(self.pos, color=(200,255,200))
-		gameDistable()
+		GameVariables().game_distable()
 	def draw(self, win: pygame.Surface):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius+1)
 
@@ -3555,7 +3311,7 @@ class Seeker:
 		self.timer -= 1
 		if self.timer == 0:
 			self.deathResponse()
-		gameDistable()
+		GameVariables().game_distable()
 		getForce = seek(self, self.target, self.maxSpeed, self.maxForce)
 		avoidForce = Vector()
 		distance = dist(self.pos, self.target)
@@ -3566,10 +3322,10 @@ class Seeker:
 				direction = vectorFromAngle((i / 20) * 2 * pi)
 				for j in range(visibility):
 					testPos = self.pos + direction * j
-					if Game._game.map_manager.is_ground_at(testPos):
+					if MapManager().is_ground_at(testPos):
 						self.avoid.append(testPos)
 		else:
-			if Game._game.map_manager.is_ground_at(self.pos):
+			if MapManager().is_ground_at(self.pos):
 				self.hitResponse()
 				return
 			
@@ -3588,7 +3344,7 @@ class Seeker:
 		self.vel.limit(self.maxSpeed)
 		
 		ppos = self.pos + self.vel
-		while Game._game.map_manager.is_ground_at(ppos):
+		while MapManager().is_ground_at(ppos):
 			self.vel *= -1
 			self.vel.rotate(uniform(-0.5,0.5))
 			ppos = self.pos + self.vel
@@ -3707,11 +3463,11 @@ class Chum(Grenade):
 		if not self.sticked:
 			self.sticked = True
 			self.stick = vectorCopy((self.pos + ppos)/2)
-			Game._game.map_manager.game_map.set_at(self.stick.integer(), GRD)
+			MapManager().game_map.set_at(self.stick.integer(), GRD)
 	def deathResponse(self):
 		Chum._chums.remove(self)
 		if self.stick:
-			Game._game.map_manager.game_map.set_at(self.stick.integer(), SKY)
+			MapManager().game_map.set_at(self.stick.integer(), SKY)
 	def secondaryStep(self):
 		# self.stable = False
 		if self.ticking:
@@ -3722,7 +3478,7 @@ class Chum(Grenade):
 			self.timer += 1
 		if self.stick:
 			self.pos = self.stick
-			if not Game._game.map_manager.is_ground_at(self.stick):
+			if not MapManager().is_ground_at(self.stick):
 				self.sticked = False
 				self.stick = None
 	def draw(self, win: pygame.Surface):
@@ -3774,7 +3530,7 @@ class MjolnirThrow(PhysObj):
 			if worm.health <= 0:
 				self.worms.remove(worm)
 		
-		gameDistable()
+		GameVariables().game_distable()
 	def returnToWorm(self):
 		MjolnirReturn(self.pos, self.angle)
 	def collisionRespone(self, ppos):
@@ -3809,7 +3565,7 @@ class MjolnirReturn:
 		self.pos += self.vel
 		
 		self.angle += (0 - self.angle) * 0.1
-		gameDistable()
+		GameVariables().game_distable()
 		if distus(self.pos, Game._game.player.pos) < Game._game.player.radius * Game._game.player.radius * 2:
 			GameVariables().unregister_non_physical(self)
 			Game._game.holdArtifact = True
@@ -3918,7 +3674,7 @@ class MjolnirFly(PhysObj):
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
 			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= Game._game.map_manager.game_map.get_width() or testPos.y >= Game._game.map_manager.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+			if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
 				if GameVariables().config.option_closed_map:
 					response += ppos - testPos
 					r += pi /8
@@ -3930,7 +3686,7 @@ class MjolnirFly(PhysObj):
 				r += pi /8
 				continue
 			
-			if Game._game.map_manager.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 			
 			r += pi /8
@@ -3990,7 +3746,7 @@ class MjolnirStrike:
 				GameVariables().unregister_non_physical(self)
 				Game._game.player.boomAffected = True
 		self.timer += 1
-		gameDistable()
+		GameVariables().game_distable()
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		surf = pygame.transform.flip(surf, self.facing == LEFT, False)
@@ -4054,7 +3810,7 @@ class MagicBeanGrow:
 		return value
 	def step(self):
 		self.timer += 1
-		gameDistable()
+		GameVariables().game_distable()
 		self.pos += 1.5 * self.vel
 		if pygame.key.get_pressed()[pygame.K_LEFT]:
 			self.vel.rotate(-0.1)
@@ -4066,12 +3822,12 @@ class MagicBeanGrow:
 		self.vel.rotate(0.02 * copysign(1,(sin(0.05 * self.timer))))
 		
 		growRadius = -0.02 * self.timer + 4
-		pygame.draw.circle(Game._game.map_manager.game_map, GRD, self.p1, growRadius)
-		pygame.draw.circle(Game._game.map_manager.game_map, GRD, self.p2, growRadius)
-		pygame.draw.circle(Game._game.map_manager.game_map, GRD, self.p3, growRadius)
-		pygame.draw.circle(Game._game.map_manager.ground_map, (55,self.green1,40), self.p1, growRadius)
-		pygame.draw.circle(Game._game.map_manager.ground_map, (55,self.green2,40), self.p2, growRadius)
-		pygame.draw.circle(Game._game.map_manager.ground_map, (55,self.green3,40), self.p3, growRadius)
+		pygame.draw.circle(MapManager().game_map, GRD, self.p1, growRadius)
+		pygame.draw.circle(MapManager().game_map, GRD, self.p2, growRadius)
+		pygame.draw.circle(MapManager().game_map, GRD, self.p3, growRadius)
+		pygame.draw.circle(MapManager().ground_map, (55,self.green1,40), self.p1, growRadius)
+		pygame.draw.circle(MapManager().ground_map, (55,self.green2,40), self.p2, growRadius)
+		pygame.draw.circle(MapManager().ground_map, (55,self.green3,40), self.p3, growRadius)
 
 		self.green1 = self.regreen(self.green1)
 		self.green2 = self.regreen(self.green2)
@@ -4080,7 +3836,7 @@ class MagicBeanGrow:
 		growRadius = -0.055 * self.timer + 9
 
 		if randint(0, 100) < 10:
-			leaf(self.p1, self.vel.getNormal().getAngle(), (55, self.green1, 40))
+			generate_leaf(self.p1, self.vel.getNormal().getAngle(), (55, self.green1, 40))
 
 		self.p1 = self.pos + growRadius * sin(self.timer * 0.1) * self.vel.getNormal()
 		self.p2 = self.pos + growRadius * sin(self.timer * 0.1 + 2*pi/3) * self.vel.getNormal()
@@ -4092,8 +3848,8 @@ class MagicBeanGrow:
 	def draw(self, win: pygame.Surface):
 		pass
 
-def leaf(pos, direction, color) -> None:
-	# draw procedural leaf
+def generate_leaf(pos, direction, color) -> None:
+	''' draw procedural leaf on the map '''
 	points = []
 	width = max(0.3, uniform(0,1))
 	length = 1 + uniform(0,1)
@@ -4109,8 +3865,8 @@ def leaf(pos, direction, color) -> None:
 		points = [Vector(-i.x, i.y) for i in points]
 	size = uniform(4, 7)
 	points = [pos + i.rotate(direction) * size for i in points]
-	pygame.draw.polygon(Game._game.map_manager.game_map, GRD, points)
-	pygame.draw.polygon(Game._game.map_manager.ground_map, color, points)
+	pygame.draw.polygon(MapManager().game_map, GRD, points)
+	pygame.draw.polygon(MapManager().ground_map, color, points)
 
 class RazorLeaf(PhysObj):
 	def __init__(self, pos, direction):
@@ -4168,7 +3924,7 @@ class PlantControl:
 		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
 			for plant in Venus._reg:
 				plant.direction.rotate(0.1)
-		gameDistable()
+		GameVariables().game_distable()
 	def draw(self, win: pygame.Surface):
 		pass
 
@@ -4181,7 +3937,7 @@ class MasterOfPuppets:
 			# point = Vector(worm.pos.x, 0)
 			for t in range(200):
 				posToCheck = worm.pos - Vector(0, t * 5)
-				if Game._game.map_manager.is_ground_at(posToCheck):
+				if MapManager().is_ground_at(posToCheck):
 					break
 				if posToCheck.y < 0:
 					break
@@ -4227,16 +3983,16 @@ class Frost:
 		self.visited = []
 		self.next = []
 		self.timer = fps * randint(2, 6)
-		if not Game._game.map_manager.is_ground_at(self.pos):
+		if not MapManager().is_ground_at(self.pos):
 			return
 		GameVariables().register_non_physical(self)
 	def step(self):
-		color = Game._game.map_manager.ground_map.get_at(self.pos)
+		color = MapManager().ground_map.get_at(self.pos)
 		r = color[0] + (256 - color[0]) // 2
 		g = color[1] + (256 - color[1]) // 2
 		b = color[2] + int((256 - color[2]) * 0.8)
 		newColor = (r, g, b)
-		Game._game.map_manager.ground_map.set_at(self.pos, newColor)
+		MapManager().ground_map.set_at(self.pos, newColor)
 		self.visited.append(vectorCopy(self.pos))
 		directions = [Vector(1,0), Vector(0,1), Vector(-1,0), Vector(0,-1)]
 		shuffle(directions)
@@ -4244,7 +4000,7 @@ class Frost:
 		while len(directions) > 0:
 			direction = directions.pop(0)
 			checkPos = self.pos + direction
-			if Game._game.map_manager.is_ground_at(checkPos) and not checkPos in self.visited:
+			if MapManager().is_ground_at(checkPos) and not checkPos in self.visited:
 				self.next.append(checkPos)
 		if len(self.next) == 0:
 			GameVariables().unregister_non_physical(self)
@@ -4282,13 +4038,13 @@ class Icicle(LongBow):
 		self.pos = self.stuck
 		Frost(self.stuck)
 		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
-		Game._game.map_manager.ground_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
+		MapManager().ground_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
 		for y in range(self.surf.get_height()):
 			for x in range(self.surf.get_width()):
 				if not self.surf.get_at((x,y))[3] < 255:
 					self.surf.set_at((x,y), GRD)
 		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
-		Game._game.map_manager.game_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
+		MapManager().game_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
 		
 		self.destroy()
 	def wormCollision(self, worm):
@@ -4309,17 +4065,17 @@ class Icicle(LongBow):
 def calcEarthSpikePos():
 	amount = (pi/2 - Game._game.player.shootAngle) * Game._game.player.facing / pi
 	xFromWorm = Game._game.player.pos.x + Game._game.player.facing * amount * 70
-	if Game._game.map_manager.is_ground_at(Vector(xFromWorm, Game._game.player.pos.y).integer()):
+	if MapManager().is_ground_at(Vector(xFromWorm, Game._game.player.pos.y).integer()):
 		y = Game._game.player.pos.y
-		while Game._game.map_manager.is_ground_at(Vector(xFromWorm, y).integer()):
+		while MapManager().is_ground_at(Vector(xFromWorm, y).integer()):
 			y -= 2
 			if y < 0:
 				return None
 	else:
 		y = Game._game.player.pos.y
-		while not Game._game.map_manager.is_ground_at(Vector(xFromWorm, y).integer()):
+		while not MapManager().is_ground_at(Vector(xFromWorm, y).integer()):
 			y += 2
-			if y > Game._game.map_manager.game_map.get_height():
+			if y > MapManager().game_map.get_height():
 				return None
 	return Vector(xFromWorm, y)
 
@@ -4360,13 +4116,13 @@ class EarthSpike:
 					if obj in PhysObj._worms and not obj in globals.team_manager.currentTeam.worms:
 						obj.damage(randint(25,35))
 			
-			Game._game.map_manager.ground_map.blit(self.surf, rectPos)
+			MapManager().ground_map.blit(self.surf, rectPos)
 			surf = self.surf.copy()
 			pixels = pygame.PixelArray(surf)
 			for i in self.colors:
 				pixels.replace(i, GRD)
 			del pixels
-			Game._game.map_manager.game_map.blit(surf, rectPos)
+			MapManager().game_map.blit(surf, rectPos)
 		self.timer += 1
 	def draw(self, win: pygame.Surface):
 		pass
@@ -4413,7 +4169,7 @@ class Tornado:
 		self.pos = Game._game.player.pos + Vector(Game._game.player.radius + self.width / 2, 0) * Game._game.player.facing
 		self.facing = Game._game.player.facing
 		GameVariables().register_non_physical(self)
-		amount = Game._game.map_manager.game_map.get_height() // 10
+		amount = MapManager().game_map.get_height() // 10
 		self.points = [Vector(0, 10 * i) for i in range(amount)]
 		self.swirles = []
 		self.sizes = [self.width + randint(0,20) for i in self.points]
@@ -4426,7 +4182,7 @@ class Tornado:
 		self.speed = 2
 		self.radius = 0
 	def step(self):
-		gameDistable()
+		GameVariables().game_distable()
 		if self.timer < 2 * fps:
 			for i, swirl in enumerate(self.swirles):
 				swirl[0] = min(self.timer, self.sizes[i])
@@ -4434,7 +4190,7 @@ class Tornado:
 		self.pos.x += self.speed * self.facing
 		for swirl in self.swirles:
 			swirl[2] += 0.1 * uniform(0.8, 1.2)
-		rect = (Vector(self.pos.x - self.width / 2, 0), Vector(self.width, Game._game.map_manager.game_map.get_height()))
+		rect = (Vector(self.pos.x - self.width / 2, 0), Vector(self.width, MapManager().game_map.get_height()))
 		for obj in PhysObj._reg:
 			if obj.pos.x > rect[0][0] and obj.pos.x <= rect[0][0] + rect[1][0]:
 				if obj.vel.y > -2:
@@ -4485,7 +4241,7 @@ class PickAxe:
 		for i in range(10):
 			sample = (position + Vector(8,8) + vectorUnitRandom() * uniform(0,8)).vec2tupint()
 			if MapManager().is_on_map(sample):
-				color = Game._game.map_manager.ground_map.get_at(sample)
+				color = MapManager().ground_map.get_at(sample)
 				if not color == SKY:
 					colors.append(color)
 		if len(colors) == 0:
@@ -4495,8 +4251,8 @@ class PickAxe:
 			d = Debrie(position + Vector(8,8), 8, colors, 2, False)
 			d.radius = choice([2,1])
 
-		pygame.draw.rect(Game._game.map_manager.game_map, SKY, (position, Vector(16,16)))
-		pygame.draw.rect(Game._game.map_manager.ground_map, SKY, (position, Vector(16,16)))
+		pygame.draw.rect(MapManager().game_map, SKY, (position, Vector(16,16)))
+		pygame.draw.rect(MapManager().ground_map, SKY, (position, Vector(16,16)))
 
 		self.animating = 90
 
@@ -4539,14 +4295,14 @@ class MineBuild:
 		position = worm.pos + vectorFromAngle(worm.shootAngle, 20)
 		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
 
-		pygame.draw.rect(Game._game.map_manager.game_map, GRD, (position, Vector(16,16)))
+		pygame.draw.rect(MapManager().game_map, GRD, (position, Vector(16,16)))
 		if position + Vector(0,16) in self.locations:
-			blit_weapon_sprite(Game._game.map_manager.ground_map, position, "build")
-			Game._game.map_manager.ground_map.blit(sprites.sprite_atlas, position + Vector(0,16), (80,112,16,16))
+			blit_weapon_sprite(MapManager().ground_map, position, "build")
+			MapManager().ground_map.blit(sprites.sprite_atlas, position + Vector(0,16), (80,112,16,16))
 		elif position + Vector(0,-16) in self.locations:
-			Game._game.map_manager.ground_map.blit(sprites.sprite_atlas, position, (80,112,16,16))
+			MapManager().ground_map.blit(sprites.sprite_atlas, position, (80,112,16,16))
 		else:
-			blit_weapon_sprite(Game._game.map_manager.ground_map, position, "build")
+			blit_weapon_sprite(MapManager().ground_map, position, "build")
 
 		self.locations.append(position)
 		
@@ -4708,7 +4464,7 @@ class Trampoline:
 		self.offset = 0
 		self.stable = False
 		for i in range(25):
-			if Game._game.map_manager.is_ground_at(self.pos + Vector(0, i)):
+			if MapManager().is_ground_at(self.pos + Vector(0, i)):
 				self.anchor = self.pos + Vector(0, i)
 				break
 		Trampoline._reg.append(self)
@@ -4730,7 +4486,7 @@ class Trampoline:
 				self.directionalVel = 0
 				self.offset = 0
 				self.stable = True
-		if not Game._game.map_manager.is_ground_at(self.anchor):
+		if not MapManager().is_ground_at(self.anchor):
 			GameVariables().unregister_non_physical(self)
 			Trampoline._reg.remove(self)
 			gs = GunShell(vectorCopy(self.pos))
@@ -4933,7 +4689,7 @@ def fire(weapon = None):
 		position = Game._game.player.pos + vectorFromAngle(Game._game.player.shootAngle, 20)
 		anchored = False
 		for i in range(25):
-			if Game._game.map_manager.is_ground_at(position + Vector(0, i)):
+			if MapManager().is_ground_at(position + Vector(0, i)):
 				anchored = True
 				break
 		if anchored:
@@ -5228,8 +4984,8 @@ def checkWinners():
 		Game._game.endGameDict = dic
 		Game._game.nextState = WIN
 		
-		GroundScreenShoot = pygame.Surface((Game._game.map_manager.ground_map.get_width(), Game._game.map_manager.ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
-		GroundScreenShoot.blit(Game._game.map_manager.ground_map, (0,0))
+		GroundScreenShoot = pygame.Surface((MapManager().ground_map.get_width(), MapManager().ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
+		GroundScreenShoot.blit(MapManager().ground_map, (0,0))
 		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
 	return end
 
@@ -5485,20 +5241,7 @@ def switchWorms():
 	if Game._game.gameMode == GameMode.MISSIONS:
 		MissionManager._mm.cycle()
 
-def isGroundAround(place, radius = 5):
-	for i in range(8):
-		checkPos = place + Vector(radius * cos((i/4) * pi), radius * sin((i/4) * pi))
-		# extra.append((checkPos.x, checkPos.y, (255,0,0), 10000))
-		if checkPos.x < 0 or checkPos.x > Game._game.map_manager.game_map.get_width() or checkPos.y < 0 or checkPos.y > Game._game.map_manager.game_map.get_height():
-			return False
-		try:
-			at = (int(checkPos.x), int(checkPos.y))
-			if Game._game.map_manager.game_map.get_at(at) == GRD or Game._game.map_manager.worm_col_map.get_at(at) != (0,0,0) or Game._game.map_manager.objects_col_map.get_at(at) != (0,0,0):
-				return True
-		except IndexError:
-			print("isGroundAround index error")
-			
-	return False
+
 
 def randomPlacing():
 	for i in range(Game._game.game_config.worms_per_team * len(globals.team_manager.teams)):
@@ -5507,9 +5250,9 @@ def randomPlacing():
 		else:
 			place = giveGoodPlace()
 		if Game._game.game_config.option_digging:
-			pygame.draw.circle(Game._game.map_manager.game_map, SKY, place, 35)
-			pygame.draw.circle(Game._game.map_manager.ground_map, SKY, place, 35)
-			pygame.draw.circle(Game._game.map_manager.ground_secondary, SKY, place, 30)
+			pygame.draw.circle(MapManager().game_map, SKY, place, 35)
+			pygame.draw.circle(MapManager().ground_map, SKY, place, 35)
+			pygame.draw.circle(MapManager().ground_secondary, SKY, place, 30)
 		current_team = globals.team_manager.teams[globals.team_manager.teamChoser]
 		new_worm_name = current_team.get_new_worm_name()
 		current_team.worms.append(Worm(place, new_worm_name, current_team))
@@ -5573,13 +5316,13 @@ class ArenaManager:
 	def __init__(self):
 		ArenaManager._arena = self
 		self.size = Vector(10 * 16, 10)
-		self.pos = Vector(Game._game.map_manager.game_map.get_width(), Game._game.map_manager.game_map.get_height())//2 - self.size//2
+		self.pos = Vector(MapManager().game_map.get_width(), MapManager().game_map.get_height())//2 - self.size//2
 	def step(self):
 		pass
 	def draw(self, win: pygame.Surface):
-		pygame.draw.rect(Game._game.map_manager.game_map, GRD,(self.pos, self.size))
+		pygame.draw.rect(MapManager().game_map, GRD,(self.pos, self.size))
 		for i in range(10):
-			Game._game.map_manager.ground_map.blit(sprites.sprite_atlas, self.pos + Vector(i * 16, 0), (64,80,16,16))
+			MapManager().ground_map.blit(sprites.sprite_atlas, self.pos + Vector(i * 16, 0), (64,80,16,16))
 	def wormsCheck(self):
 		for worm in PhysObj._worms:
 			checkPos = worm.pos + Vector(0, worm.radius * 2)
@@ -6117,10 +5860,6 @@ def cheatActive(code):
 				globals.team_manager.currentTeam.ammo(WeaponManager._wm.weapons[weapons.index(code)][0], 1)
 		except:
 			pass
-		
-def gameDistable(): 
-	Game._game.gameStable = False
-	Game._game.gameStableCounter = 0
 
 def pickVictim():
 	Game._game.terminatorHit = False
@@ -6198,8 +5937,8 @@ class Anim:
 
 def stateMachine():
 	if Game._game.state == RESET:
-		Game._game.gameStable = False
-		Game._game.playerControl = False
+		GameVariables().game_stable = False
+		GameVariables().game_stable_counter = False
 		
 		Game._game.create_new_game()
 		Game._game.nextState = PLAYER_CONTROL_1
@@ -6214,16 +5953,16 @@ def stateMachine():
 		Game._game.playerControl = True #can play
 		Game._game.playerShootAble = False
 		
-		Game._game.gameStableCounter = 0
+		GameVariables().game_stable_counter = 0
 		Game._game.nextState = WAIT_STABLE
 	elif Game._game.state == WAIT_STABLE:
 		Game._game.playerControl = False #can play
 		Game._game.playerShootAble = False
-		if Game._game.gameStable:
-			Game._game.gameStableCounter += 1
-			if Game._game.gameStableCounter == 10:
+		if GameVariables().game_stable:
+			GameVariables().game_stable_counter += 1
+			if GameVariables().game_stable_counter == 10:
 				# next turn
-				Game._game.gameStableCounter = 0
+				GameVariables().game_stable_counter = 0
 				TimeManager._tm.timeReset()
 				cycleWorms()
 				WeaponManager._wm.renderWeaponCount()
@@ -6231,8 +5970,8 @@ def stateMachine():
 
 		Game._game.nextState = PLAYER_CONTROL_1
 	elif Game._game.state == WIN:
-		Game._game.gameStableCounter += 1
-		if Game._game.gameStableCounter == 30*3:
+		GameVariables().game_stable_counter += 1
+		if GameVariables().game_stable_counter == 30 * 3:
 			return 1
 			# subprocess.Popen("wormsLauncher.py -popwin", shell=True)
 	return 0
@@ -6524,12 +6263,12 @@ def gameMain(game_config: GameConfig=None):
 		
 		# constraints:
 		if GameVariables().cam_pos[1] < 0: GameVariables().cam_pos[1] = 0
-		if GameVariables().cam_pos[1] >= Game._game.map_manager.game_map.get_height() - GameVariables().win_height: GameVariables().cam_pos[1] = Game._game.map_manager.game_map.get_height() - GameVariables().win_height
+		if GameVariables().cam_pos[1] >= MapManager().game_map.get_height() - GameVariables().win_height: GameVariables().cam_pos[1] = MapManager().game_map.get_height() - GameVariables().win_height
 		# if GameVariables().config.option_closed_map or Game._game.darkness:
 		# 	if GameVariables().cam_pos[0] < 0:
 		# 		GameVariables().cam_pos[0] = 0
-		# 	if GameVariables().cam_pos[0] >= Game._game.map_manager.game_map.get_width() - GameVariables().win_width:
-		# 		GameVariables().cam_pos[0] = Game._game.map_manager.game_map.get_width() - GameVariables().win_width
+		# 	if GameVariables().cam_pos[0] >= MapManager().game_map.get_width() - GameVariables().win_width:
+		# 		GameVariables().cam_pos[0] = MapManager().game_map.get_width() - GameVariables().win_width
 		
 		if Earthquake.earthquake > 0:
 			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
@@ -6540,11 +6279,12 @@ def gameMain(game_config: GameConfig=None):
 		
 		# step:
 		Game._game.step()
-		Game._game.gameStable = True
+		GameVariables().game_stable = True
+
 		for p in PhysObj._reg:
 			p.step()
 			if not p.stable:
-				gameDistable()
+				GameVariables().game_distable()
 		for p in PhysObj._toRemove:
 			try:
 				PhysObj._reg.remove(p)
@@ -6608,7 +6348,7 @@ def gameMain(game_config: GameConfig=None):
 		SmokeParticles._sp.draw(win)
 		GasParticles._sp.draw(win)
 
-		# if Game._game.darkness and Game._game.map_manager.dark_mask: win.blit(Game._game.map_manager.dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
+		# if Game._game.darkness and MapManager().dark_mask: win.blit(MapManager().dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
 		# draw shooting indicator
 		if Game._game.player and Game._game.state in [PLAYER_CONTROL_1, PLAYER_CONTROL_2] and Game._game.player.health > 0:
 			Game._game.player.drawCursor()

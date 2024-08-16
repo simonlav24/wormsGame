@@ -18,6 +18,7 @@ class PhysObj(Entity):
 	_toRemove = []
 	_worms = []
 	_mines = []
+	
 	def initialize(self):
 		PhysObj._reg.append(self)
 		self.vel = Vector(0,0)
@@ -155,6 +156,7 @@ class PhysObj(Entity):
 		if self.dead:
 			self.removeFromGame()
 			self.deathResponse()
+	
 	def applyForce(self):
 		# gravity:
 		self.acc.y += GameVariables().physics.global_gravity
@@ -162,19 +164,44 @@ class PhysObj(Entity):
 			if self.pos.x < - 3 * MapManager().game_map.get_width() or self.pos.x > 4 * MapManager().game_map.get_width():
 				return
 			self.acc.x += GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * self.windAffected
+	
+	def move(self, facing: int) -> bool:
+		''' move the object one pixel in the facing direction, return True if succeded '''
+		dir = facing
+		if MapManager().check_free_pos(self.radius, self.pos + Vector(dir, 0)):
+			self.pos += Vector(dir, 0) * GameVariables().dt
+			return True
+		else:
+			for i in range(1, 5):
+				if MapManager().check_free_pos(self.radius, self.pos + Vector(dir, -i)):
+					self.pos += Vector(dir, -i) * GameVariables().dt
+					return True
+			for i in range(1,5):
+				if MapManager().check_free_pos(self.radius, self.pos + Vector(dir, i)):
+					self.pos += Vector(dir, i) * GameVariables().dt
+					return True
+		return False
+
 	def deathResponse(self):
 		pass
+	
 	def secondaryStep(self):
 		pass
+	
 	def removeFromGame(self):
 		PhysObj._toRemove.append(self)
+	
 	def damage(self, value, damageType=0):
 		pass
+	
 	def collisionRespone(self, ppos):
 		pass
+	
 	def outOfMapResponse(self):
 		pass
+	
 	def limitVel(self):
 		pass
+	
 	def draw(self, win: pygame.Surface):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)

@@ -57,6 +57,9 @@ class GameVariables(metaclass=SingletonMeta):
 
         self._non_pysicals: List[Entity] = []
         self._non_pysicals_to_remove: List[Entity] = []
+
+        self.game_stable = False
+        self.game_stable_counter = 0
     
     def register_non_physical(self, entity: Entity) -> None:
         self._non_pysicals.append(entity)
@@ -78,6 +81,10 @@ class GameVariables(metaclass=SingletonMeta):
     def draw_non_physicals(self, win: pygame.Surface) -> None:
         for entity in self._non_pysicals:
             entity.draw(win)
+    
+    def game_distable(self):
+        self.game_stable = False
+        self.game_stable_counter = 0
 
 
 def point2world(point):
