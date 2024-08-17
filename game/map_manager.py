@@ -116,7 +116,10 @@ class MapManager(metaclass=SingletonMeta):
         try:
             map_at = self.game_map.get_at(pos)
         except TypeError:
-            map_at = self.game_map.get_at((int(pos[0]), int(pos[1])))
+            try:
+                map_at = self.game_map.get_at((int(pos[0]), int(pos[1])))
+            except IndexError:
+                return False
         except IndexError:
             return False
 

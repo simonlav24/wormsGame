@@ -291,3 +291,33 @@ class DropLet(Effect):
 		color = GameVariables().water_color[1]
 		pygame.draw.circle(win, color, point2world(self.pos), self.radius)
 
+class FireWork:
+	_reg = []
+	def __init__(self, pos, color):
+		GameVariables().register_non_physical(self)
+		self.pos = Vector(pos[0], pos[1])
+		self.blasts = []
+		
+		self.timer = 0
+		blastNum = 20
+		for i in range(blastNum):
+			self.blasts.append([vectorCopy(self.pos), vectorFromAngle(i * 2 * pi / blastNum, 7 + uniform(-1,1))])
+
+		self.color = color
+		self.state = "blow"
+	
+	def step(self):
+		if self.state == "blow":
+			for i in range(len(self.blasts)):
+				vel = self.blasts[i][1]
+				vel += Vector(0, 0.5 * GameVariables().physics.global_gravity)
+				vel *= 0.9
+				self.blasts[i][0] += vel
+				Blast(self.blasts[i][0] + vectorUnitRandom(), randint(3,6), 150, color=self.color)
+		
+		self.timer += 1
+		if self.timer > 0.9 * GameVariables().fps:
+			GameVariables().unregister_non_physical(self)
+	
+	def draw(self, win: pygame.Surface):
+		pass
