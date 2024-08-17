@@ -1,6 +1,8 @@
+''' aerial weapons '''
+
+from random import randint
 
 import pygame
-from random import randint
 
 from common import point2world, GameVariables, sprites
 from common.vector import *
@@ -33,13 +35,13 @@ class Seagull(Seeker):
 		self.target = self.chum.pos
 	
 	def draw(self, win: pygame.Surface):
-		dir = self.vel.x > 0
+		flip_x = self.vel.x > 0
 		width = 16
 		height = 13
 		frame = GameVariables().time_overall // 2 % 3
 		surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		surf.blit(sprites.sprite_atlas, (0,0), (frame * 16,80, 16, 16))
-		win.blit(pygame.transform.flip(surf, dir, False), point2world(self.pos - Vector(width//2, height//2)))
+		win.blit(pygame.transform.flip(surf, flip_x, False), point2world(self.pos - Vector(width//2, height//2)))
 		
 
 class Chum(Grenade):

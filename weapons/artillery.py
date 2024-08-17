@@ -1,7 +1,8 @@
+''' artillery weapon '''
 
+from random import randint
 
 import pygame
-from random import randint
 
 from common import blit_weapon_sprite, GameVariables, point2world, sprites
 from common.vector import *

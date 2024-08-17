@@ -343,6 +343,6 @@ class WeaponManager:
             win.blit(pygame.transform.flip(globals.game_manager.airStrikeSpr, False if globals.game_manager.airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(globals.game_manager.airStrikeSpr.get_size())/2))
         
         # if self.currentWeapon == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY] and globals.team_manager.currentTeam.ammo("earth spike") != 0:
-        #     spikeTarget = calcEarthSpikePos()
+        #     spikeTarget = calc_earth_spike_pos()
         #     if spikeTarget:
         #         draw_target(win, spikeTarget)

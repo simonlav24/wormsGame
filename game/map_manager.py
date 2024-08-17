@@ -5,7 +5,7 @@ from math import cos, pi, sin
 from random import choice, randint
 from typing import List, Tuple
 
-from common import PATH_ASSETS, feels, GameVariables, SingletonMeta
+from common import PATH_ASSETS, feels, GameVariables, SingletonMeta, point2world
 from common.vector import *
 
 SKY = (0,0,0,0)
@@ -229,6 +229,16 @@ class MapManager(metaclass=SingletonMeta):
         
         grounder.set_colorkey(SKY)
         self.ground_map.blit(grounder, pos - tup2vec(size)/2)
+
+    def draw_land(self, win: pygame.Surface):
+        if self.game_map.get_width() == 0:
+            return
+        if self.draw_ground_secondary:
+            win.blit(self.ground_secondary, point2world((0,0)))
+        win.blit(self.ground_map, point2world((0,0)))
+        
+        self.worm_col_map.fill(SKY)
+        self.objects_col_map.fill(SKY)
 
 
     
