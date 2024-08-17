@@ -5,9 +5,7 @@
         "style": 0,
         "category": 0,
         "initial_amount": -1,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 1,
@@ -15,9 +13,7 @@
         "style": 0,
         "category": 0,
         "initial_amount": 5,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 2,
@@ -25,9 +21,7 @@
         "style": 0,
         "category": 0,
         "initial_amount": 2,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 3,
@@ -36,8 +30,7 @@
         "category": 0,
         "initial_amount": 2,
         "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "draw_hint": true
     },
     {
         "index": 4,
@@ -46,8 +39,7 @@
         "category": 0,
         "initial_amount": 1,
         "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "draw_hint": true
     },
     {
         "index": 5,
@@ -55,9 +47,7 @@
         "style": 0,
         "category": 1,
         "initial_amount": 5,
-        "is_fused": true,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": true
     },
     {
         "index": 6,
@@ -65,9 +55,7 @@
         "style": 0,
         "category": 1,
         "initial_amount": 3,
-        "is_fused": true,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": true
     },
     {
         "index": 7,
@@ -75,9 +63,7 @@
         "style": 0,
         "category": 1,
         "initial_amount": 3,
-        "is_fused": true,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": true
     },
     {
         "index": 8,
@@ -85,9 +71,7 @@
         "style": 0,
         "category": 1,
         "initial_amount": 5,
-        "is_fused": true,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": true
     },
     {
         "index": 9,
@@ -95,9 +79,7 @@
         "style": 0,
         "category": 1,
         "initial_amount": 3,
-        "is_fused": true,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": true
     },
     {
         "index": 10,
@@ -105,9 +87,7 @@
         "style": 0,
         "category": 1,
         "initial_amount": 2,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 11,
@@ -115,9 +95,7 @@
         "style": 1,
         "category": 2,
         "initial_amount": 5,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 12,
@@ -125,9 +103,7 @@
         "style": 1,
         "category": 2,
         "initial_amount": 3,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 13,
@@ -135,9 +111,7 @@
         "style": 1,
         "category": 2,
         "initial_amount": 5,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 14,
@@ -145,9 +119,7 @@
         "style": 1,
         "category": 2,
         "initial_amount": 3,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 15,
@@ -155,9 +127,7 @@
         "style": 0,
         "category": 2,
         "initial_amount": 2,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 16,
@@ -165,9 +135,7 @@
         "style": 1,
         "category": 2,
         "initial_amount": 3,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 17,
@@ -185,9 +153,7 @@
         "style": 0,
         "category": 3,
         "initial_amount": 5,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 19,
@@ -195,9 +161,7 @@
         "style": 2,
         "category": 3,
         "initial_amount": 5,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 20,
@@ -205,9 +169,7 @@
         "style": 2,
         "category": 4,
         "initial_amount": 1,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 21,
@@ -215,9 +177,7 @@
         "style": 2,
         "category": 4,
         "initial_amount": 5,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 22,
@@ -225,9 +185,7 @@
         "style": 0,
         "category": 4,
         "initial_amount": 1,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 23,
@@ -235,9 +193,7 @@
         "style": 2,
         "category": 4,
         "initial_amount": 1,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 24,
@@ -245,9 +201,7 @@
         "style": 0,
         "category": 4,
         "initial_amount": 2,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 25,
@@ -255,9 +209,7 @@
         "style": 0,
         "category": 4,
         "initial_amount": 1,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 26,
@@ -265,9 +217,7 @@
         "style": 2,
         "category": 4,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 27,
@@ -275,9 +225,7 @@
         "style": 2,
         "category": 5,
         "initial_amount": 3,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 28,
@@ -286,8 +234,7 @@
         "category": 5,
         "initial_amount": -1,
         "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "draw_hint": true
     },
     {
         "index": 29,
@@ -295,9 +242,7 @@
         "style": 2,
         "category": 5,
         "initial_amount": 3,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 30,
@@ -305,9 +250,7 @@
         "style": 2,
         "category": 5,
         "initial_amount": 3,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 31,
@@ -315,9 +258,7 @@
         "style": 2,
         "category": 5,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 32,
@@ -325,9 +266,7 @@
         "style": 1,
         "category": 5,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 33,
@@ -335,9 +274,7 @@
         "style": 0,
         "category": 5,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 34,
@@ -346,8 +283,7 @@
         "category": 5,
         "initial_amount": 0,
         "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "draw_hint": true
     },
     {
         "index": 35,
@@ -357,7 +293,8 @@
         "initial_amount": 1,
         "is_fused": false,
         "round_delay": 8,
-        "artifact": 0
+        "artifact": 0,
+        "draw_hint": true
     },
     {
         "index": 36,
@@ -367,7 +304,8 @@
         "initial_amount": 1,
         "is_fused": false,
         "round_delay": 8,
-        "artifact": 0
+        "artifact": 0,
+        "draw_hint": true
     },
     {
         "index": 37,
@@ -377,7 +315,8 @@
         "initial_amount": 0,
         "is_fused": false,
         "round_delay": 1,
-        "artifact": 0
+        "artifact": 0,
+        "draw_hint": true
     },
     {
         "index": 38,
@@ -385,9 +324,7 @@
         "style": 0,
         "category": 6,
         "initial_amount": 1,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 39,
@@ -395,9 +332,7 @@
         "style": 0,
         "category": 6,
         "initial_amount": 1,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 40,
@@ -535,9 +470,7 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 54,
@@ -545,9 +478,7 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 55,
@@ -555,9 +486,7 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 56,
@@ -565,9 +494,7 @@
         "style": 3,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 57,
@@ -575,9 +502,7 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 58,
@@ -585,9 +510,7 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 59,
@@ -595,9 +518,7 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 60,
@@ -605,9 +526,7 @@
         "style": 0,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false,
-        "round_delay": 0,
-        "artifact": 0
+        "is_fused": false
     },
     {
         "index": 61,
@@ -697,7 +616,8 @@
         "initial_amount": 0,
         "is_fused": false,
         "round_delay": 0,
-        "artifact": 3
+        "artifact": 3,
+        "draw_hint": true
     },
     {
         "index": 70,

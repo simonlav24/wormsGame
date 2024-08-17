@@ -22,13 +22,11 @@ feelIndex = randint(0, len(feels) - 1)
 debug = False
 
 def initGui():
-	Gui(globals.win, fonts.pixel5, globals.scalingFactor, GameVariables().fps)
+	Gui(globals.win, fonts.pixel5, GameVariables().scale_factor, GameVariables().fps)
 
-def updateWin(win, scalingFactor):
+def updateWin(win, scale_factor):
 	Gui._instance.updateWindow(win)
-	Gui._instance.scalingFactor = scalingFactor
- 
-
+	Gui._instance.scalingFactor = scale_factor
 
 
 def spriteIndex2rect(index):

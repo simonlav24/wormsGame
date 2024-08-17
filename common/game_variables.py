@@ -5,7 +5,7 @@ import pygame
 
 from common.game_config import GameConfig
 from common import SingletonMeta, ColorType, Entity, EntityOnMap
-from common.constants import WHITE
+from common.constants import WHITE, GameState
 
 from common.vector import Vector
 
@@ -45,6 +45,8 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.cam_pos: Vector = Vector(0,0)
         self.cam_track: EntityOnMap = None
+        self.scale_factor = 3
+        self.scale_range = (1,3)
 
         self.win_width = 0
         self.win_height = 0
@@ -60,6 +62,13 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.game_stable = False
         self.game_stable_counter = 0
+
+        self.game_state = GameState.RESET
+        self.game_next_state = GameState.RESET
+
+        self.point_target: Vector = Vector(-100, -100)
+        self.girder_size: int = 50
+        self.girder_angle: int = 0
     
     def register_non_physical(self, entity: Entity) -> None:
         self._non_pysicals.append(entity)

@@ -1,4 +1,7 @@
+
+
 import pygame
+from enum import Enum
 from dataclasses import dataclass
 
 from typing import Tuple, List
@@ -8,11 +11,13 @@ ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
 
 __version__ = '1.5.0'
 
-RESET = 0
-PLAYER_CONTROL_1 = 1
-PLAYER_CONTROL_2 = 2
-WAIT_STABLE = 3
-WIN = 5
+class GameState(Enum):
+    RESET = 0
+    PLAYER_PLAY = 1
+    PLAYER_RETREAT = 2
+    OBJECTS_PLAY = 3
+    WAIT_STABLE = 4
+    WIN = 5
 
 RIGHT = 1
 LEFT = -1

@@ -31,8 +31,9 @@ class Entity(Protocol):
 
 
 class EntityOnMap(Protocol):
-    ''' a object with position  '''
+    ''' a object with position and velocity '''
     pos: Vector
+    vel: Vector
 
 # color utilities
 
@@ -49,17 +50,6 @@ def darken(color: ColorType) -> ColorType:
 	''' darkens color '''
 	return tuple(max(i - 30,0) for i in color)
 
-# drawing utilities
-
-weapon_name_to_index: Dict[str, int] = None
-
-def blit_weapon_sprite(dest: pygame.Surface, pos: Tuple[int, int], weapon_name: str):
-    weapon_index = weapon_name_to_index[weapon_name]
-    x = weapon_index % 8
-    y = 9 + weapon_index // 8
-    rect = (x * 16, y * 16, 16, 16)
-    dest.blit(sprites.sprite_atlas, pos, rect)
-
 # math utilities
 
 def clamp(value, upper, lower):
@@ -69,3 +59,19 @@ def clamp(value, upper, lower):
 		value = lower
 	return value
 
+def seek(obj: EntityOnMap, target: Vector, max_speed: float, max_force: float ,arrival=False):
+	''' calculate force to move towards object with velocity '''
+	force = tup2vec(target) - obj.pos
+	desiredSpeed = max_speed
+	if arrival:
+		slowRadius = 50
+		distance = force.getMag()
+		if (distance < slowRadius):
+			force.setMag(desiredSpeed)
+	force.setMag(desiredSpeed)
+	force -= obj.vel
+	force.limit(max_force)
+	return force
+
+def flee(obj: EntityOnMap, target: Vector, max_speed: float, max_force: float):
+	return seek(obj, target, max_speed, max_force) * -1

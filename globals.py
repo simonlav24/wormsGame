@@ -21,12 +21,11 @@ class HaloFont:
 
 def mouse_pos_in_world():
     mouse_pos = pygame.mouse.get_pos()
-    return Vector(mouse_pos[0] / scalingFactor + GameVariables().cam_pos[0],
-                   mouse_pos[1] / scalingFactor + GameVariables().cam_pos[1])
+    return Vector(mouse_pos[0] / GameVariables().scale_factor + GameVariables().cam_pos[0],
+                   mouse_pos[1] / GameVariables().scale_factor + GameVariables().cam_pos[1])
 
 def globalsInit():
-    global fpsClock, screenWidth, screenHeight, scalingFactor, win, screen
-    global scalingMax, scalingMin
+    global fpsClock, screenWidth, screenHeight, win, screen
 
     pygame.init()
 
@@ -35,12 +34,8 @@ def globalsInit():
     screenWidth = 1280
     screenHeight = 720
     
-    scalingFactor = 3
-    scalingMax = 3
-    scalingMin = 1
-    
-    GameVariables().win_width = int(screenWidth / scalingFactor)
-    GameVariables().win_height = int(screenHeight / scalingFactor)
+    GameVariables().win_width = int(screenWidth / GameVariables().scale_factor)
+    GameVariables().win_height = int(screenHeight / GameVariables().scale_factor)
 
     win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
     
@@ -51,7 +46,6 @@ def globalsInit():
     common.constants.initialize()
 
 win = None
-scalingFactor = 0
 
 game_manager = None
 time_manager = None

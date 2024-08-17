@@ -4,9 +4,7 @@ from math import pi, cos, sin, atan2, sqrt, degrees, fmod
 from typing import Any, Tuple, List
 from abc import ABC, abstractmethod
 
-import globals
-
-from common import fonts
+from common import fonts, GameVariables
 from pygame import Vector2
 
 SurfacePortion = Tuple[pygame.Surface, Tuple[int, int, int, int]] | None
@@ -137,7 +135,7 @@ class RadialButton(GuiBase):
 		self.color =  [self.color[i] + (self.back_color[i] - self.color[i]) * 0.2 for i in range(3)]
 
 		self.in_focus = False
-		mouse = Vector2(pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
+		mouse = Vector2(pygame.mouse.get_pos()[0] / GameVariables().scale_factor, pygame.mouse.get_pos()[1] / GameVariables().scale_factor)
 		# if self.key.name == 'missile':
 		# 	print(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle)
 		if is_pos_in_arc(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle, self.key.name=='missile'):
@@ -169,7 +167,7 @@ class RadialButton(GuiBase):
 	def draw_tooltip(self, win: pygame.Surface):
 		if self.tooltip is None:
 			return
-		mouse = Vector2(pygame.mouse.get_pos()[0] / globals.scalingFactor, pygame.mouse.get_pos()[1] / globals.scalingFactor)
+		mouse = Vector2(pygame.mouse.get_pos()[0] / GameVariables().scale_factor, pygame.mouse.get_pos()[1] / GameVariables().scale_factor)
 		win.blit(self.tooltip, mouse + Vector2(5, 5))
 	
 	def get_focused(self) -> 'RadialButton':

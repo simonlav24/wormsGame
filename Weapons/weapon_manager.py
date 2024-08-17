@@ -1,13 +1,16 @@
 
+import pygame
 import json
 from enum import Enum
 from pydantic import BaseModel
 from typing import List, Dict, Tuple
 
-import pygame
+import common.drawing_utilities
 import globals
+
 import common
-from common import GREY, PLAYER_CONTROL_1, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables
+from common import GREY, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world
+from common.vector import *
 
 class WeaponStyle(Enum):
     CHARGABLE = 0
@@ -60,6 +63,7 @@ class Weapon(BaseModel):
     is_fused: bool = False
     round_delay: int = 0
     artifact: ArtifactType = ArtifactType.NONE
+    draw_hint: bool = False
 
     def get_bg_color(self) -> ColorType:
         ''' returns weapons background color '''
@@ -84,7 +88,7 @@ class WeaponManager:
         # initialize dicts
         mapped = map(lambda x: x.name, self.weapons)
         self.weapon_dict: Dict[str, Weapon] = {key: value for key, value in zip(list(mapped), self.weapons)}
-        common.common.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
+        common.drawing_utilities.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
 
         # basic set for teams 
         self.basic_set: List[int] = [weapon.initial_amount for weapon in self.weapons]
@@ -139,7 +143,7 @@ class WeaponManager:
     def can_shoot(self) -> bool:
         ''' check if can shoot current weapon '''
         # if no ammo
-        if globals.team_manager.currentTeam.ammo(WeaponManager._wm.currentWeapon) == 0:
+        if globals.team_manager.currentTeam.ammo(self.currentWeapon) == 0:
             return False
         
         # if not active
@@ -221,7 +225,7 @@ class WeaponManager:
         ''' changes surf to fit current weapon '''
         color = GameVariables().initial_variables.hud_color
         # if no ammo in current team
-        ammo = globals.team_manager.currentTeam.ammo(WeaponManager._wm.currentWeapon)
+        ammo = globals.team_manager.currentTeam.ammo(self.currentWeapon)
         if ammo == 0 or not self.is_current_weapon_active() or (globals.game_manager.game_config.option_cool_down and self.currentWeapon in self.cool_down_list):
             color = GREY
         weaponStr = self.currentWeapon.name
@@ -248,7 +252,7 @@ class WeaponManager:
     def handle_event(self, event) -> bool:
         ''' handle pygame events '''
         # weapon change by keyboard
-        if globals.game_manager.state == PLAYER_CONTROL_1:
+        if GameVariables().game_state == GameState.PLAYER_PLAY:
             if not event.type == pygame.KEYDOWN:
                 return False
             weaponsSwitch = False
@@ -295,14 +299,14 @@ class WeaponManager:
 
             if weaponsSwitch:
                 if len(keyWeapons) > 0:
-                    if WeaponManager._wm.currentWeapon in keyWeapons:
-                        index = keyWeapons.index(WeaponManager._wm.currentWeapon)
+                    if self.currentWeapon in keyWeapons:
+                        index = keyWeapons.index(self.currentWeapon)
                         index = (index + 1) % len(keyWeapons)
                         weaponSwitch = keyWeapons[index]
                     else:
                         weaponSwitch = keyWeapons[0]
-                WeaponManager._wm.switchWeapon(weaponSwitch)
-                WeaponManager._wm.renderWeaponCount()
+                self.switchWeapon(weaponSwitch)
+                self.renderWeaponCount()
         return False
 
     def draw(self, win: pygame.Surface) -> None:
@@ -316,20 +320,29 @@ class WeaponManager:
                 space += self.cool_down_list_surfaces[i-1].get_width() + 10
                 win.blit(surf, (30 + space, GameVariables().win_height - 5 - surf.get_height()))
 
-    def drawWeaponIndicators(self) -> None:
+    def draw_weapon_hint(self, win: pygame.Surface) -> None:
         ''' draw specific weapon indicator '''
-        return
-        if WeaponManager._wm.currentWeapon.name in ["homing missile", "seeker"] and HomingMissile.showTarget:
-            drawTarget(HomingMissile.Target)
-        if WeaponManager._wm.currentWeapon == "girder" and globals.game_manager.state == PLAYER_CONTROL_1:
-            globals.game_manager.drawGirderHint()
-        if WeaponManager._wm.currentWeapon == "trampoline" and globals.game_manager.state == PLAYER_CONTROL_1:
+        
+        if not self.currentWeapon.draw_hint:
+            return
+
+        if self.currentWeapon.name in ["homing missile", "seeker"]:
+            draw_target(win, GameVariables().point_target)
+        
+        if not GameVariables().game_state == GameState.PLAYER_PLAY:
+            return
+
+        if self.currentWeapon.name == "girder":
+            draw_girder_hint(win)
+    
+        if self.currentWeapon == "trampoline":
             globals.game_manager.drawTrampolineHint()
-        if WeaponManager._wm.getBackColor(WeaponManager._wm.currentWeapon) == AIRSTRIKE:
-            mousePos = pygame.mouse.get_pos()
+        
+        if self.currentWeapon.category == WeaponCategory.AIRSTRIKE:
             mouse = globals.mouse_pos_in_world()
             win.blit(pygame.transform.flip(globals.game_manager.airStrikeSpr, False if globals.game_manager.airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(globals.game_manager.airStrikeSpr.get_size())/2))
-        if WeaponManager._wm.currentWeapon == "earth spike" and globals.game_manager.state in [PLAYER_CONTROL_1] and globals.team_manager.currentTeam.ammo("earth spike") != 0:
-            spikeTarget = calcEarthSpikePos()
-            if spikeTarget:
-                drawTarget(spikeTarget)
+        
+        # if self.currentWeapon == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY] and globals.team_manager.currentTeam.ammo("earth spike") != 0:
+        #     spikeTarget = calcEarthSpikePos()
+        #     if spikeTarget:
+        #         draw_target(win, spikeTarget)
