@@ -15,13 +15,13 @@ class Debrie (PhysObj):
 	_debries = []
 	
 	def __init__(self, pos, blast, colors: List[ColorType], bounces=2, firey=True):
+		super().__init__(pos)
 		Debrie._debries.append(self)
-		self.initialize()
 		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
 		self.pos = Vector(pos[0], pos[1])
 		
-		self.boomAffected = False
-		self.bounceBeforeDeath = bounces
+		self.is_boom_affected = False
+		self.bounce_before_death = bounces
 		self.color = choice(colors)
 		self.radius = 1
 		self.damp = 0.2
@@ -35,7 +35,7 @@ class Debrie (PhysObj):
 		
 		self.firey = randint(0, 5) == 0 and firey
 	
-	def applyForce(self):
+	def apply_force(self):
 		factor = 1.5
 		self.acc.y += GameVariables().physics.global_gravity * factor
 	
@@ -44,7 +44,7 @@ class Debrie (PhysObj):
 		if self.firey:
 			Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
 	
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		self.firey = False
 	
 	def draw(self, win: pygame.Surface):

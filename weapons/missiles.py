@@ -13,72 +13,64 @@ from game.visual_effects import Blast
 from game.map_manager import MapManager, GRD, SKY
 
 class Missile (PhysObj):
-	def __init__(self, pos, direction, energy):
-		self.initialize()
+	def __init__(self, pos, direction, energy, weapon_name="missile"):
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (255,255,0)
-		self.bounceBeforeDeath = 1
-		self.windAffected = 1
+		self.bounce_before_death = 1
+		self.is_wind_affected = 1
 		self.boomRadius = 28
 		self.megaBoom = False or GameVariables().mega_weapon_trigger
 		if randint(0,50) == 1:
 			self.megaBoom = True
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "missile")
-	def deathResponse(self):
+		blit_weapon_sprite(self.surf, (0,0), weapon_name)
+	
+	def death_response(self):
 		if self.megaBoom:
 			self.boomRadius *= 2
 		boom(self.pos, self.boomRadius)
+	
 	def draw(self, win: pygame.Surface):
 		angle = -degrees(self.vel.getAngle()) - 90
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+	
 	def secondaryStep(self):
 		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
 
 
 class GravityMissile(Missile):
 	def __init__(self, pos, direction, energy):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		self.radius = 2
-		self.color = (255,255,0)
-		self.bounceBeforeDeath = 1
-		self.windAffected = 1
-		self.boomRadius = 28
-		self.megaBoom = False or GameVariables().mega_weapon_trigger
-		if randint(0,50) == 1:
-			self.megaBoom = True
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "gravity missile")
+		super().__init__(pos, direction, energy, "gravity missile")
 
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, self.boomRadius, True, True)
 		
-	def applyForce(self):
+	def apply_force(self):
 		# gravity:
 		self.acc.y -= GameVariables().physics.global_gravity
 		self.acc.x += GameVariables().physics.wind * 0.1 * GameVariables().wind_mult
+	
 	def secondaryStep(self):
 		Blast(self.pos + vectorUnitRandom()*2, 5)
 		if self.pos.y < 0:
-			self.removeFromGame()
+			self.remove_from_game()
 
 
 class DrillMissile(PhysObj):
 	mode = False #True = drill
 	def __init__(self, pos, direction, energy):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.lastPos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 7
 		self.color = (102, 51, 0)
 		self.boomRadius = 30
-		self.boomAffected = False
+		self.is_boom_affected = False
 		
 		self.drillVel = None
 		self.inGround = False
@@ -87,7 +79,7 @@ class DrillMissile(PhysObj):
 		blit_weapon_sprite(self.surf, (0,0), "drill missile")
 
 	def step(self):
-		self.applyForce()
+		self.apply_force()
 		
 		# velocity
 		if self.inGround:
@@ -136,7 +128,7 @@ class DrillMissile(PhysObj):
 		
 		# flew out MapManager().game_map but not worms !
 		if self.pos.y > MapManager().game_map.get_height():
-			self.removeFromGame()
+			self.remove_from_game()
 			return
 		if self.inGround and self.pos.y <= 0:
 			self.dead = True
@@ -147,8 +139,8 @@ class DrillMissile(PhysObj):
 		self.secondaryStep()
 		
 		if self.dead:
-			self.removeFromGame()
-			self.deathResponse()
+			self.remove_from_game()
+			self.death_response()
 
 	def lineOut(self,line):
 		pygame.draw.line(MapManager().game_map, SKY, line[0], line[1], self.radius * 2)
@@ -159,27 +151,27 @@ class DrillMissile(PhysObj):
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size()) / 2))
 
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, 23)
 
 
 
 class HomingMissile(PhysObj):
 	def __init__(self, pos, direction, energy):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (0, 51, 204)
-		self.bounceBeforeDeath = 1
-		self.windAffected = 1
+		self.bounce_before_death = 1
+		self.is_wind_affected = 1
 		self.boomRadius = 30
 		self.activated = False
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "homing missile")
 
-	def applyForce(self):
+	def apply_force(self):
 		# gravity:
 		if self.activated:
 			desired = GameVariables().point_target - self.pos
@@ -197,10 +189,10 @@ class HomingMissile(PhysObj):
 		if self.timer == 20 + GameVariables().fps * 5:
 			self.activated = False
 	
-	def limitVel(self):
+	def limit_vel(self):
 		self.vel.limit(15)
 	
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		boom(ppos, self.boomRadius)
 	
 	def draw(self, win: pygame.Surface):
@@ -211,13 +203,6 @@ class HomingMissile(PhysObj):
 
 class Seeker:
 	def __init__(self, pos, direction, energy):
-		self.initialize(pos, direction, energy)
-		self.timer = 15 * GameVariables().fps
-		self.target = GameVariables().point_target
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "seeker")
-	
-	def initialize(self, pos, direction, energy):
 		GameVariables().register_non_physical(self)
 		self.pos = vectorCopy(pos)
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
@@ -227,11 +212,16 @@ class Seeker:
 		self.color = (255,100,0)
 		self.avoid = []
 		self.radius = 6
+
+		self.timer = 15 * GameVariables().fps
+		self.target = GameVariables().point_target
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blit_weapon_sprite(self.surf, (0,0), "seeker")
 	
 	def step(self):
 		self.timer -= 1
 		if self.timer == 0:
-			self.deathResponse()
+			self.death_response()
 		GameVariables().game_distable()
 		getForce = seek(self, self.target, self.maxSpeed, self.maxForce)
 		avoidForce = Vector()
@@ -259,7 +249,7 @@ class Seeker:
 			avoidForce += flee(self, i, self.maxSpeed, self.maxForce)
 		
 		force = avoidForce + getForce
-		self.applyForce(force)
+		self.apply_force(force)
 		
 		self.vel += self.acc
 		self.vel.limit(self.maxSpeed)
@@ -274,16 +264,16 @@ class Seeker:
 		self.secondaryStep()
 	
 	def hitResponse(self):
-		self.deathResponse()
+		self.death_response()
 	
 	def secondaryStep(self):
 		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
 	
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, 30)
 		GameVariables().unregister_non_physical(self)
 	
-	def applyForce(self, force):
+	def apply_force(self, force):
 		force.limit(self.maxForce)
 		self.acc = vectorCopy(force)
 	

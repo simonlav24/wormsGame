@@ -18,37 +18,37 @@ class PhysObj(Entity):
 	_toRemove = []
 	_worms = []
 	_mines = []
-	
-	def initialize(self):
+
+	def __init__(self, pos=(0,0), *args, **kwargs) -> None:
+		''' initialize '''
 		PhysObj._reg.append(self)
-		self.vel = Vector(0,0)
 		self.acc = Vector(0,0)
+		self.vel = Vector(0,0)
+		self.pos = Vector(pos[0], pos[1])
 		
+		self.radius = 4
 		self.stable = False
 		self.damp = 0.4
 		
-		self.bounceBeforeDeath = -1
+		self.bounce_before_death = -1
 		self.dead = False
-		self.color = (255,0,0)
-		self.windAffected = GameVariables().initial_variables.all_wind_affected
-		self.boomAffected = True
-		self.fallAffected = True
+		self.color = (255, 0, 0)
+		self.is_wind_affected = GameVariables().initial_variables.all_wind_affected
+		self.is_boom_affected = True
+		self.is_fall_affected = True
+
 		self.health = None
-		self.extraCollider = False
-		self.wormCollider = False
+
+		# colliders, true means colliding with
+		self.is_extra_collider = False
+		self.is_worm_collider = False
 	
-	def __init__(self, pos):
-		self.initialize()
-		self.pos = Vector(pos[0],pos[1])
-		
-		self.radius = 4
-	
-	def step(self):
-		self.applyForce()
+	def step(self) -> None:
+		self.apply_force()
 		
 		# velocity
 		self.vel += self.acc * GameVariables().dt
-		self.limitVel()
+		self.limit_vel()
 		# position
 		ppos = self.pos + self.vel * GameVariables().dt
 		
@@ -90,10 +90,10 @@ class PhysObj(Entity):
 				r += pi /8; continue
 
 			else:
-				if not self.wormCollider and MapManager().worm_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
+				if not self.is_worm_collider and MapManager().worm_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
 					response += ppos - testPos
 					collision = True
-				elif not self.extraCollider and MapManager().objects_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
+				elif not self.is_extra_collider and MapManager().objects_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
 					response += ppos - testPos
 					collision = True
 			
@@ -103,8 +103,8 @@ class PhysObj(Entity):
 		
 		if collision:
 			
-			self.collisionRespone(ppos)
-			if magVel > CRITICAL_FALL_VELOCITY and self.fallAffected:
+			self.on_collision(ppos)
+			if magVel > CRITICAL_FALL_VELOCITY and self.is_fall_affected:
 				self.damage(magVel * 1.5 * GameVariables().fall_damage_mult, 1)
 				# blood
 				if self in PhysObj._worms:
@@ -114,7 +114,7 @@ class PhysObj(Entity):
 			response.normalize()
 			#addExtra(self.pos + 5 * response, (0,0,0), 1)
 			fdot = self.vel.dot(response)
-			if not self.bounceBeforeDeath == 1:
+			if not self.bounce_before_death == 1:
 				
 				# damp formula 1 - logarithmic
 				# dampening = max(self.damp, self.damp * log(magVel) if magVel > 0.001 else 1)
@@ -127,9 +127,9 @@ class PhysObj(Entity):
 				self.vel = newVel
 				# max speed recorded ~ 25
 			
-			if self.bounceBeforeDeath > 0:
-				self.bounceBeforeDeath -= 1
-				self.dead = self.bounceBeforeDeath == 0
+			if self.bounce_before_death > 0:
+				self.bounce_before_death -= 1
+				self.dead = self.bounce_before_death == 0
 				
 		else:
 			self.pos = ppos
@@ -144,8 +144,8 @@ class PhysObj(Entity):
 					self.vel.y *= -1
 					self.vel.x *= 0.8
 			else:
-				self.outOfMapResponse()
-				self.removeFromGame()
+				self.on_out_of_map()
+				self.remove_from_game()
 				return
 		
 		if magVel < 0.1: # creates a double jump problem
@@ -154,16 +154,16 @@ class PhysObj(Entity):
 		self.secondaryStep()
 		
 		if self.dead:
-			self.removeFromGame()
-			self.deathResponse()
+			self.remove_from_game()
+			self.death_response()
 	
-	def applyForce(self):
+	def apply_force(self) -> None:
 		# gravity:
 		self.acc.y += GameVariables().physics.global_gravity
-		if self.windAffected > 0:
+		if self.is_wind_affected > 0:
 			if self.pos.x < - 3 * MapManager().game_map.get_width() or self.pos.x > 4 * MapManager().game_map.get_width():
 				return
-			self.acc.x += GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * self.windAffected
+			self.acc.x += GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * self.is_wind_affected
 	
 	def move(self, facing: int) -> bool:
 		''' move the object one pixel in the facing direction, return True if succeded '''
@@ -182,26 +182,26 @@ class PhysObj(Entity):
 					return True
 		return False
 
-	def deathResponse(self):
+	def death_response(self):
 		pass
 	
 	def secondaryStep(self):
 		pass
 	
-	def removeFromGame(self):
+	def remove_from_game(self):
 		PhysObj._toRemove.append(self)
 	
 	def damage(self, value, damageType=0):
 		pass
 	
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		pass
 	
-	def outOfMapResponse(self):
+	def on_out_of_map(self):
 		pass
 	
-	def limitVel(self):
+	def limit_vel(self):
 		pass
 	
-	def draw(self, win: pygame.Surface):
+	def draw(self, win: pygame.Surface) -> None:
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)

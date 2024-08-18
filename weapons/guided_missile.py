@@ -14,7 +14,7 @@ from game.map_manager import MapManager, GRD
 
 class GuidedMissile(PhysObj):
 	def __init__(self, pos):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = pos
 		self.speed = 5.5
 		self.vel = Vector(0, -self.speed)
@@ -22,7 +22,7 @@ class GuidedMissile(PhysObj):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "guided missile")
 		self.radius = 3
-	def applyForce(self):
+	def apply_force(self):
 		pass
 	def turn(self, direc):
 		self.vel.rotate(direc * 0.1)
@@ -63,9 +63,9 @@ class GuidedMissile(PhysObj):
 				for i in range(80):
 					s = Fire(self.pos, 5)
 					s.vel = Vector(cos(2 * pi * i / 40), sin(2 * pi * i / 40)) * uniform(1.3, 4)
-			self.removeFromGame()
+			self.remove_from_game()
 		if self.pos.y > MapManager().game_map.get_height():
-			self.removeFromGame()
+			self.remove_from_game()
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(self.surf, -90 -degrees(self.vel.getAngle()))
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))

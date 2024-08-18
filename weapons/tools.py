@@ -15,7 +15,7 @@ from entities.gun_shell import GunShell
 class Flare(PhysObj):
 	_flares = []
 	def __init__(self, pos, direction, energy):
-		self.initialize()
+		super().__init__(pos)
 		Flare._flares.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
@@ -33,7 +33,7 @@ class Flare(PhysObj):
 		if randint(0,10) == 1:
 			Blast(self.pos, randint(self.radius,7), 150)
 		if self.lightRadius < 0:
-			self.removeFromGame()
+			self.remove_from_game()
 			Flare._flares.remove(self)
 			return
 		EffectManager().add_light(vectorCopy(self.pos), self.lightRadius, (100,0,0,100))

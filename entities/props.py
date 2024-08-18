@@ -10,7 +10,7 @@ from game.world_effects import boom
 
 
 class ExplodingProp(PhysObj):
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, 20)
 		pygame.draw.rect(MapManager().objects_col_map, SKY, (int(self.pos.x -3),int(self.pos.y -5), 7,10))
 		for i in range(40):
@@ -30,14 +30,14 @@ class ExplodingProp(PhysObj):
 class PetrolCan(ExplodingProp):
 	_cans = [] 
 	def __init__(self, pos = (0,0)):
+		super().__init__(pos)
 		PetrolCan._cans.append(self)
-		self.initialize()
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 6
 		self.color = (191, 44, 44)
 		self.damp = 0.1
 		self.health = 5
-		self.extraCollider = True
+		self.is_extra_collider = True
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		self.surf.blit(sprites.sprite_atlas, (0,0), (64, 96, 16, 16))
 

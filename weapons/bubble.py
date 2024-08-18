@@ -23,13 +23,13 @@ class Bubble:
 		self.catch = None
 		self.ignore: PhysObj = None
 	
-	def applyForce(self):
+	def apply_force(self):
 		self.acc.y -= GameVariables().physics.global_gravity * 0.3
 		self.acc.x += GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * 0.5
 	
 	def step(self):
 		GameVariables().game_distable()
-		self.applyForce()
+		self.apply_force()
 		self.vel += self.acc * GameVariables().dt
 		self.pos += self.vel * GameVariables().dt
 		self.vel.x *= 0.99

@@ -85,7 +85,7 @@ class Rope(WormUtility):
             if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
                 self.rope = [[testPos], dist(self.worm.pos, testPos)]
                 self.worm.damp = 0.6
-                self.worm.fallAffected = False
+                self.worm.is_fall_affected = False
                 self.worm.roped = True
                 hit = True
                 break
@@ -95,7 +95,7 @@ class Rope(WormUtility):
     def release(self):
         self.is_done = True
         self.worm.damp = 0.2
-        self.worm.fallAffected = True
+        self.worm.is_fall_affected = True
 
     def apply_force(self):
         if self.is_done:

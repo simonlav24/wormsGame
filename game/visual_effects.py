@@ -73,11 +73,11 @@ class Blast(Effect):
 	
 	def __init__(self, pos, radius, smoke = 30, moving=0, star=False, color=None):
 		super().__init__()
-		self.timeCounter = 0
+		self.time_counter = 0
 		self.pos = pos + vectorUnitRandom() * moving
 		self.radius = radius
 		self.rad = 0
-		self.timeCounter = 0
+		self.time_counter = 0
 		self.smoke = smoke
 		self.rand = vectorUnitRandom() * randint(1, int(self.radius / 2))
 		self.star = star
@@ -92,18 +92,18 @@ class Blast(Effect):
 	def step(self) -> None:
 		if randint(0,self.smoke) == 0 and self.rad > 1:
 			SmokeParticles._sp.addSmoke(self.pos, Vector())
-		self.timeCounter += 0.5 * GameVariables().dt
-		self.rad = 1.359 * self.timeCounter * exp(- 0.5 * self.timeCounter) * self.radius
+		self.time_counter += 0.5 * GameVariables().dt
+		self.rad = 1.359 * self.time_counter * exp(- 0.5 * self.time_counter) * self.radius
 		self.pos.x += (4.0 * GameVariables().physics.wind / self.rad) * GameVariables().dt
 		self.pos.y -= (2.0 / self.rad) * GameVariables().dt
 
-		color = self.color[int(clamp(self.timeCounter, 5, 0))]
+		color = self.color[int(clamp(self.time_counter, 5, 0))]
 		EffectManager().lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
-		if self.timeCounter >= 10:
+		if self.time_counter >= 10:
 			EffectManager().unregister(self)
 			
 	def draw(self, win: pygame.Surface) -> None:
-		if self.star and self.timeCounter < 1.0:
+		if self.star and self.time_counter < 1.0:
 			points = []
 			num = randint(10, 25) // 2
 			for i in range(num):
@@ -114,10 +114,10 @@ class Blast(Effect):
 				points.append(point)
 			pygame.draw.polygon(win, choice(self.color[0:2]), points)
 		
-		clamp(self.timeCounter - 1, 5, 0)
-		EffectManager().add_circle_effect(0, self.color[int(clamp(self.timeCounter, 5, 0))], self.pos, self.rad)
-		EffectManager().add_circle_effect(1, self.color[int(clamp(self.timeCounter - 1, 5, 0))], self.pos + self.rand, self.rad * 0.6)
-		EffectManager().add_circle_effect(2, self.color[int(clamp(self.timeCounter - 2, 5, 0))], self.pos + self.rand, self.rad * 0.3)
+		clamp(self.time_counter - 1, 5, 0)
+		EffectManager().add_circle_effect(0, self.color[int(clamp(self.time_counter, 5, 0))], self.pos, self.rad)
+		EffectManager().add_circle_effect(1, self.color[int(clamp(self.time_counter - 1, 5, 0))], self.pos + self.rand, self.rad * 0.6)
+		EffectManager().add_circle_effect(2, self.color[int(clamp(self.time_counter - 2, 5, 0))], self.pos + self.rand, self.rad * 0.3)
 
 class FireBlast(Effect):
 	''' fire effect, fire color circles changing colors '''
@@ -149,12 +149,12 @@ class Explossion(Effect):
 		self.pos = pos
 		self.radius = radius
 		self.times = int(radius * 0.35)
-		self.timeCounter = 0
+		self.time_counter = 0
 		
 	def step(self) -> None:
 		Blast(self.pos + vectorUnitRandom() * uniform(0,self.radius/2), uniform(10, self.radius*0.7))
-		self.timeCounter += 1
-		if self.timeCounter == self.times:
+		self.time_counter += 1
+		if self.time_counter == self.times:
 			EffectManager().unregister(self)
 
 class FloatingText(Effect): #pos, text, color
@@ -163,14 +163,14 @@ class FloatingText(Effect): #pos, text, color
 		super().__init__()
 		self.pos = Vector(pos[0], pos[1])
 		self.surf = fonts.pixel5.render(str(text), False, color)
-		self.timeCounter = 0
+		self.time_counter = 0
 		self.phase = uniform(0,2 * pi)
 		
 	def step(self) -> None:
-		self.timeCounter += 1
+		self.time_counter += 1
 		self.pos.y -= 0.5
 		self.pos.x += 0.25 * sin(0.1 * GameVariables().time_overall + self.phase)
-		if self.timeCounter == 50:
+		if self.time_counter == 50:
 			EffectManager().unregister(self)
 			
 	def draw(self, win: pygame.Surface) -> None:
@@ -190,10 +190,10 @@ class GasParticles:
 			color = (20, 20, 20)
 		radius = randint(8,10)
 		pos = tup2vec(pos)
-		timeCounter = 0
+		time_counter = 0
 		if not vel:
 			vel = Vector()
-		particle = [pos, vel, color, radius, timeCounter]
+		particle = [pos, vel, color, radius, time_counter]
 
 		GasParticles._particles.append(particle)
 			
@@ -232,10 +232,10 @@ class SmokeParticles(Effect):
 			color = (20, 20, 20)
 		radius = randint(8,10)
 		pos = tup2vec(pos)
-		timeCounter = 0
+		time_counter = 0
 		if not vel:
 			vel = Vector()
-		particle = [pos, vel, color, radius, timeCounter]
+		particle = [pos, vel, color, radius, time_counter]
 
 		SmokeParticles._particles.append(particle)
 			

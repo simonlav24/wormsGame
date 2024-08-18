@@ -15,17 +15,17 @@ from weapons.missiles import Seeker
 class Seagull(Seeker):
 	_reg = []
 	def __init__(self, pos, direction, energy):
-		self.initialize(pos, direction, energy)
+		super().__init__(pos, direction, energy)
 		Seagull._reg.append(self)
 		self.timer = 15 * GameVariables().fps
 		self.target = Vector()
 		self.chum = None
 	
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, 30)
-		self.removeFromGame()
+		self.remove_from_game()
 	
-	def removeFromGame(self):
+	def remove_from_game(self):
 		if self in Seagull._reg:
 			Seagull._reg.remove(self)
 		GameVariables().unregister_non_physical(self)
@@ -47,25 +47,21 @@ class Seagull(Seeker):
 class Chum(Grenade):
 	_chums = []
 	def __init__(self, pos, direction, energy, radius=0):
+		super().__init__(pos, direction, energy)
 		Chum._chums.append(self)
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = radius
 		if radius == 0:
 			self.radius = randint(1,3)
 		self.color = (255, 102, 102)
-		self.bounceBeforeDeath = -1
 		self.damp = 0.5
 		self.sticked = False
 		self.stick = None
-		self.timer = 0
 		self.alarm = randint(0,3) * GameVariables().fps
 		self.ticking = False
 		self.summoned = False
-		self.boomAffected = False
+		self.is_boom_affected = False
 	
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		if not self.summoned:
 				self.ticking = True
 				self.summoned = True
@@ -74,7 +70,7 @@ class Chum(Grenade):
 			self.stick = vectorCopy((self.pos + ppos)/2)
 			MapManager().game_map.set_at(self.stick.integer(), GRD)
 	
-	def deathResponse(self):
+	def death_response(self):
 		Chum._chums.remove(self)
 		if self.stick:
 			MapManager().game_map.set_at(self.stick.integer(), SKY)

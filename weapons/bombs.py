@@ -12,11 +12,11 @@ from game.map_manager import MapManager
 
 class TNT(PhysObj):
 	def __init__(self, pos):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 2
 		self.color = (230,57,70)
-		self.bounceBeforeDeath = -1
+		self.bounce_before_death = -1
 		self.damp = 0.2
 		self.timer = 0
 
@@ -26,7 +26,7 @@ class TNT(PhysObj):
 		if self.timer == GameVariables().fps * 4:
 			self.dead = True
 
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, 40)
 		
 	def draw(self, win: pygame.Surface):
@@ -39,7 +39,7 @@ class TNT(PhysObj):
 class Sheep(PhysObj):
 	trigger = False
 	def __init__(self, pos):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(0,-3)
 		self.radius = 6
@@ -47,7 +47,7 @@ class Sheep(PhysObj):
 		self.damp = 0.2
 		self.timer = 0
 		self.facing = RIGHT
-		self.windAffected = 0
+		self.is_wind_affected = 0
 	
 	def secondaryStep(self):
 		self.timer += 1
@@ -67,7 +67,7 @@ class Sheep(PhysObj):
 		if self.timer >= 300:
 			self.dead = True
 	
-	def deathResponse(self):
+	def death_response(self):
 		Sheep.trigger = False
 		boom(self.pos, 35)
 	

@@ -10,7 +10,7 @@ from game.world_effects import boom
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
-		self.initialize()
+		super().__init__(pos)
 		Debrie._debries.append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.damp = 0
@@ -18,14 +18,14 @@ class Fire(PhysObj):
 		self.yellow = 106
 		self.phase = uniform(0,2)
 		self.radius = 2
-		self.windAffected = 1
+		self.is_wind_affected = 1
 		self.life = randint(50,70)
 		self.fallen = False
 		self.delay = delay
 		self.timer = 0
-		self.wormCollider = True
+		self.is_worm_collider = True
 
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		self.fallen = True
 
 	def secondaryStep(self):
@@ -41,7 +41,7 @@ class Fire(PhysObj):
 
 		EffectManager().add_light(vectorCopy(self.pos), 20, (0,0,0,0))
 		if self.life == 0:
-			self.removeFromGame()
+			self.remove_from_game()
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
 			boom(self.pos + Vector(randint(-1,1),randint(-1,1)), 3, False, False, True)

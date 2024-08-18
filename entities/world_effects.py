@@ -46,7 +46,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 	listToCheck = PhysObj._reg if not fire else PhysObj._worms
 	
 	for p in listToCheck:
-		if not p.boomAffected:
+		if not p.is_boom_affected:
 			continue
 		
 		totalRadius = radius * SHOCK_RADIUS
@@ -78,7 +78,7 @@ class Earthquake(Entity):
 		self.timer = timer
 		GameVariables().register_non_physical(self)
 		self.stable = False
-		self.boomAffected = False
+		self.is_boom_affected = False
 		Earthquake.earthquake = strength
 		self.decorative = decorative
 

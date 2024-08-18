@@ -10,7 +10,7 @@ from entities.physical_entity import PhysObj
 
 class GunShell(PhysObj):
 	def __init__(self, pos, vel=None, index=0, direction: Vector=Vector()):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = pos
 		facing = copysign(1, direction[0])
 		if facing == 0:
@@ -19,7 +19,7 @@ class GunShell(PhysObj):
 		if vel:
 			self.vel = vel
 		self.radius = 2
-		self.bounceBeforeDeath = 4
+		self.bounce_before_death = 4
 		self.index = index
 		self.damp = 0.2
 		if index == 0:
@@ -27,7 +27,7 @@ class GunShell(PhysObj):
 			self.surf.blit(sprites.sprite_atlas, (0,0), (16,112,16,16))
 		self.angle = uniform(0, 2 * pi)
 
-	def applyForce(self):
+	def apply_force(self):
 		self.acc.y += GameVariables().physics.global_gravity * 2.5
 
 	def secondaryStep(self):

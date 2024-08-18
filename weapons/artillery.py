@@ -14,7 +14,7 @@ from weapons.missiles import Missile
 
 class Artillery(PhysObj):
 	def __init__(self, pos, direction, energy):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
@@ -22,7 +22,7 @@ class Artillery(PhysObj):
 		self.damp = 0.5
 		self.timer = 0
 		self.bombing = False
-		self.boomAffected = False
+		self.is_boom_affected = False
 		self.booms = randint(3,5)
 		self.boomCount = 20 if randint(0,50) == 0 or GameVariables().mega_weapon_trigger else self.booms
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
@@ -51,8 +51,8 @@ class Artillery(PhysObj):
 			self.timer += 1
 			if self.timer % 10 == 0:
 				m = Missile((self.pos[0] + randint(-20,20), 0),(0,0),0 )
-				m.windAffected = 0
-				m.boomAffected = False
+				m.is_wind_affected = 0
+				m.is_boom_affected = False
 				m.megaBoom = False
 				m.surf.fill((0,0,0,0))
 				m.surf.blit(sprites.sprite_atlas, (0,0), (0,96,16,16))

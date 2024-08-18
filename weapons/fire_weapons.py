@@ -15,12 +15,12 @@ from entities.fire import Fire
 
 class PetrolBomb(PhysObj):
 	def __init__(self, pos, direction, energy):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (158,66,43)
-		self.bounceBeforeDeath = 1 
+		self.bounce_before_death = 1 
 		self.damp = 0.5
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "petrol bomb")
@@ -30,7 +30,7 @@ class PetrolBomb(PhysObj):
 		self.angle -= self.vel.x * 4
 		Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
 	
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, 15)
 		if randint(0,50) == 1 or GameVariables().mega_weapon_trigger:
 			for i in range(80):
@@ -49,7 +49,7 @@ class PetrolBomb(PhysObj):
 
 class ChilliPepper(PhysObj):
 	def __init__(self, pos, direction, energy):
-		self.initialize()
+		super().__init__(pos)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
@@ -57,8 +57,8 @@ class ChilliPepper(PhysObj):
 		blit_weapon_sprite(self.surf, (0,0), "chilli pepper")
 		self.damp = 0.5
 		self.angle = 0
-		self.boomAffected = False
-		self.bounceBeforeDeath = 6
+		self.is_boom_affected = False
+		self.bounce_before_death = 6
 	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
@@ -69,7 +69,7 @@ class ChilliPepper(PhysObj):
 		self.angle -= self.vel.x*4
 		self.stable = False
 	
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		boom(ppos, 25)
 		for i in range(40):
 			s = Fire(self.pos, 5)

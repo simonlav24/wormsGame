@@ -1,10 +1,8 @@
 
 import pygame
-from random import choice, uniform
+from random import uniform
 from typing import List, Dict, Any
 from enum import Enum
-
-import globals
 
 from common import ColorType, fonts, GameVariables
 from common.game_event import GameEvents, EventComment
@@ -101,7 +99,7 @@ class Commentator:
 		return surf
 
 class Toast:
-	_toasts = []
+	_toasts: List['Toast'] = []
 	toastCount = 0
 	bottom = 0
 	middle = 1
@@ -141,10 +139,10 @@ class Toast:
 				Toast.toastCount -= 1
 			self.pos = uniform(0,2) * vectorUnitRandom()
 			
-	def draw(self):
+	def draw(self, win: pygame.Surface):
 		if self.mode == Toast.bottom:
-			pygame.gfxdraw.box(globals.game_manager.win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
-		globals.game_manager.win.blit(self.surf, self.anchor + self.pos)
+			pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
+			win.blit(self.surf, self.anchor + self.pos)
 		
 	def updateWinPos(self, pos):
 		self.anchor[0] = pos[0]

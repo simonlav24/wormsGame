@@ -1,6 +1,7 @@
 
 from pydantic import BaseModel
 from typing import List, Dict
+
 import pygame
 
 from common.game_config import GameConfig
@@ -65,7 +66,10 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.game_state = GameState.RESET
         self.game_next_state = GameState.RESET
+        self.player_in_control = False
+        self.player_can_move = True
 
+        self.weapon_hold: pygame.Surface = pygame.Surface((16,16), pygame.SRCALPHA)
         self.point_target: Vector = Vector(-100, -100)
         self.girder_size: int = 50
         self.girder_angle: int = 0

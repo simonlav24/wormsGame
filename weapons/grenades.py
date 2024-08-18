@@ -14,20 +14,18 @@ from game.world_effects import boom
 
 
 class Grenade (PhysObj):
-	def __init__(self, pos, direction, energy):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
+	def __init__(self, pos, direction, energy, weapon_name: str="grenade"):
+		super().__init__(pos)
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		GunShell(self.pos, index=1, direction=direction)
 		self.radius = 2
 		self.color = (0,100,0)
-		self.damp = 0.4
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "grenade")
+		blit_weapon_sprite(self.surf, (0,0), weapon_name)
 		self.angle = 0
 
-	def deathResponse(self):
+	def death_response(self):
 		rad = 30
 		if randint(0,50) == 1 or GameVariables().mega_weapon_trigger:
 			rad *= 2
@@ -48,22 +46,14 @@ class Grenade (PhysObj):
 
 class StickyBomb (Grenade):
 	def __init__(self, pos, direction, energy):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		GunShell(self.pos, index=1, direction=direction)
+		super().__init__(pos, direction, energy, "sticky bomb")
 		self.radius = 2
 		self.color = (117,47,7)
-		self.bounceBeforeDeath = -1
 		self.damp = 0.5
-		self.timer = 0
 		self.sticked = False
 		self.stick = None
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "sticky bomb")
-		self.angle = 0
 	
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		if not self.sticked:
 			self.sticked = True
 			self.stick = vectorCopy((self.pos + ppos)/2)
@@ -81,19 +71,12 @@ class StickyBomb (Grenade):
 
 class HolyGrenade(Grenade):
 	def __init__(self, pos, direction, energy):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		GunShell(self.pos, index=1, direction=direction)
+		super().__init__(pos, direction, energy, "holy grenade")
 		self.radius = 3
 		self.color = (230, 230, 0)
 		self.damp = 0.5
-		self.timer = 0
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "holy grenade")
-		self.angle = 0
 		
-	def deathResponse(self):
+	def death_response(self):
 		boom(self.pos, 45)
 		
 	def secondaryStep(self):
@@ -115,24 +98,17 @@ class HolyGrenade(Grenade):
 
 class Banana(Grenade):
 	def __init__(self, pos, direction, energy, used = False):
-		self.initialize()
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		super().__init__(pos, direction, energy, "banana")
 		self.radius = 2
 		self.color = (255, 204, 0)
 		self.damp = 0.5
-		self.timer = 0
-		self.angle = 0
 		self.used = used
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "banana")
-		self.angle = 0
 
-	def collisionRespone(self, ppos):
+	def on_collision(self, ppos):
 		if self.used:
 			self.dead = True
 
-	def deathResponse(self):
+	def death_response(self):
 		if self.used:
 			boom(self.pos, 40)
 			return
@@ -141,7 +117,7 @@ class Banana(Grenade):
 			angle = (i * pi) / 6 + pi / 6
 			direction = (cos(angle)*uniform(0.2,0.6), -sin(angle))
 			m = Banana(self.pos, direction, uniform(0.3,0.8), True)
-			m.boomAffected = False
+			m.is_boom_affected = False
 			if i == 2:
 				GameVariables().cam_track = m
 
