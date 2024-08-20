@@ -106,9 +106,6 @@ class PhysObj(Entity):
 			self.on_collision(ppos)
 			if magVel > CRITICAL_FALL_VELOCITY and self.is_fall_affected:
 				self.damage(magVel * 1.5 * GameVariables().fall_damage_mult, 1)
-				# blood
-				if self in PhysObj._worms:
-					MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
 			self.stable = True
 			
 			response.normalize()
@@ -151,11 +148,11 @@ class PhysObj(Entity):
 		if magVel < 0.1: # creates a double jump problem
 			self.stable = True
 		
-		self.secondaryStep()
-		
 		if self.dead:
 			self.remove_from_game()
 			self.death_response()
+		
+		self.secondaryStep()
 	
 	def apply_force(self) -> None:
 		# gravity:

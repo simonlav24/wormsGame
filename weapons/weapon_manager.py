@@ -6,14 +6,12 @@ from typing import List, Dict, Tuple
 
 import pygame
 
+import common
+from common import GREY, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world
+from common.vector import *
 import common.drawing_utilities
 from game.team_manager import TeamManager
-
-import globals
-
-import common
-from common import GREY, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta
-from common.vector import *
+from entities.worm import Worm
 
 class WeaponStyle(Enum):
     CHARGABLE = 0
@@ -92,6 +90,9 @@ class WeaponManager(metaclass=SingletonMeta):
 
         # basic set for teams 
         self.basic_set: List[int] = [weapon.initial_amount for weapon in self.weapons]
+        
+        for team in TeamManager().teams:
+            team.weapon_set = self.basic_set.copy()
 
         self.current_weapon: Weapon = self.weapons[0]
         self.surf = fonts.pixel5.render(self.current_weapon.name, False, GameVariables().initial_variables.hud_color)
@@ -155,21 +156,21 @@ class WeaponManager(metaclass=SingletonMeta):
             return False
 
         # if in use list
-        if globals.game_manager.game_config.option_cool_down and self.current_weapon in self.cool_down_list:
+        if GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list:
             return False
         
-        if (not GameVariables().player_in_control) or (not globals.game_manager.playerShootAble):
+        if (not GameVariables().player_in_control) or (not GameVariables().player_can_shoot):
             return False
         
         return True
 
-    def switchWeapon(self, weapon: Weapon):
+    def switch_weapon(self, weapon: Weapon):
         """ switch weapon and draw weapon sprite """
 
         if not self.can_switch_weapon():
             return
         self.current_weapon = weapon
-        self.renderWeaponCount()
+        self.render_weapon_count()
 
         GameVariables().weapon_hold.fill((0,0,0,0))
         if self.can_shoot():
@@ -227,8 +228,7 @@ class WeaponManager(metaclass=SingletonMeta):
         
         return True
 
-    
-    def renderWeaponCount(self):
+    def render_weapon_count(self):
         ''' changes surf to fit current weapon '''
         color = GameVariables().initial_variables.hud_color
         # if no ammo in current team
@@ -250,11 +250,6 @@ class WeaponManager(metaclass=SingletonMeta):
             weaponStr += "  delay: " + str(GameVariables().fuse_time // GameVariables().fps)
             
         self.surf = fonts.pixel5_halo.render(weaponStr, False, color)
-
-    def updateDelay(self):
-        for w in self.weapons:
-            if not w[5] == 0:
-                w[5] -= 1
 
     def handle_event(self, event) -> bool:
         ''' handle pygame events '''
@@ -312,8 +307,8 @@ class WeaponManager(metaclass=SingletonMeta):
                         weaponSwitch = keyWeapons[index]
                     else:
                         weaponSwitch = keyWeapons[0]
-                self.switchWeapon(weaponSwitch)
-                self.renderWeaponCount()
+                self.switch_weapon(weaponSwitch)
+                self.render_weapon_count()
         return False
 
     def draw(self, win: pygame.Surface) -> None:
@@ -342,12 +337,15 @@ class WeaponManager(metaclass=SingletonMeta):
             draw_girder_hint(win)
     
         if self.current_weapon == "trampoline":
-            globals.game_manager.drawTrampolineHint()
+            # todo: draw trampoline hint
+            pass
         
         if self.current_weapon.category == WeaponCategory.AIRSTRIKE:
-            mouse = globals.mouse_pos_in_world()
-            win.blit(pygame.transform.flip(globals.game_manager.airStrikeSpr, False if globals.game_manager.airStrikeDir == RIGHT else True, False), point2world(mouse - tup2vec(globals.game_manager.airStrikeSpr.get_size())/2))
+            mouse = mouse_pos_in_world()
+            flip = False if GameVariables().airstrike_direction == RIGHT else True
+            win.blit(pygame.transform.flip(sprites.air_strike_indicator, flip, False), point2world(mouse - tup2vec(sprites.air_strike_indicator.get_size())/2))
         
+        # todo: draw earth spike hitn
         # if self.current_weapon == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY] and TeamManager().current_team.ammo("earth spike") != 0:
         #     spikeTarget = calc_earth_spike_pos()
         #     if spikeTarget:

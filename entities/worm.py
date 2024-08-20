@@ -6,7 +6,7 @@ from random import randint
 
 import pygame
 
-from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, clamp
+from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, clamp, CRITICAL_FALL_VELOCITY
 from common.game_event import EventComment
 from common.vector import *
 
@@ -34,7 +34,7 @@ class Worm (PhysObj):
         self.damp = 0.2
 
         self.facing = RIGHT if self.pos.x < MapManager().game_map.get_width() / 2 else LEFT
-        self.shoot_angle = 0 if self.pos.x < MapManager().game_map.get_width() / 2 else pi
+        self._shoot_angle = pi / 2
         self.shoot_acc = 0
         self.shoot_vel = 0
 
@@ -72,8 +72,8 @@ class Worm (PhysObj):
             self.acc.y -= GameVariables().physics.global_gravity
     
     def drawCursor(self, win: pygame.Surface):
-        shootVec = self.pos + Vector((cos(self.shoot_angle) * 20) ,sin(self.shoot_angle) * 20)
-        pygame.draw.circle(win, (255,255,255), (int(shootVec.x) - int(GameVariables().cam_pos[0]), int(shootVec.y) - int(GameVariables().cam_pos[1])), 2)
+        shoot_vec = self.pos + self.get_shooting_direction() * 20
+        pygame.draw.circle(win, (255,255,255), (int(shoot_vec.x) - int(GameVariables().cam_pos[0]), int(shoot_vec.y) - int(GameVariables().cam_pos[1])), 2)
     
     def sicken(self, sickness = 1):
         self.sick = sickness
@@ -138,7 +138,7 @@ class Worm (PhysObj):
         
         # draw health
         if self.alive and GameVariables().initial_variables.draw_health_bar:
-            self.draw_health()
+            self.draw_health(win)
         
         # draw sleep
         if self.sleep and self.alive:
@@ -147,7 +147,8 @@ class Worm (PhysObj):
 
         # draw holding weapon
         if self is Worm.player and GameVariables().game_state == GameState.PLAYER_PLAY:
-            weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, self.facing == LEFT), -degrees(self.shoot_angle))
+            adjust_degrees = 180 if self.facing == LEFT else 0
+            weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, self.facing == LEFT), -degrees(self._shoot_angle - pi/2) * self.facing + adjust_degrees)
             win.blit(weaponSurf, point2world(self.pos - tup2vec(weaponSurf.get_size())/2 + Vector(0, 5)))
 
     def __str__(self):
@@ -196,8 +197,18 @@ class Worm (PhysObj):
             pygame.draw.rect(win, (0,220,0),(point2world(self.pos + Vector(-10, healthHeight)), (int(value),3)))
         else:
             win.blit(self.healthStr , point2world(self.pos + Vector(-self.healthStr.get_width()/2, healthHeight)))
-    
-    def secondaryStep(self):
+
+    def turn(self, direction: int) -> None:
+        if not GameVariables().player_can_move:
+            return
+        self.facing = direction
+        GameVariables().cam_track = self
+
+    def get_shooting_direction(self) -> Vector:
+        return Vector(cos(self._shoot_angle - pi / 2) * self.facing, sin(self._shoot_angle - pi / 2))
+
+    def step(self) -> None:
+        super().step()
         if self.stable and self.alive:
             self.stableCount += 1
             if self.stableCount >= 30:
@@ -208,20 +219,6 @@ class Worm (PhysObj):
             if not self is Worm.player:
                 self.angle -= self.vel.x * 4
                 self.angle = self.angle % 360
-        
-        if Worm.player == self and GameVariables().player_in_control and self.alive:
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_UP]:
-                self.shoot_acc = -0.04
-            elif keys[pygame.K_DOWN]:
-                self.shoot_acc = 0.04
-            else:
-                self.shoot_acc = 0
-                self.shoot_vel = 0
-        else:
-            self.damp = 0.2
-            self.shoot_acc = 0
-            self.shoot_vel = 0
 
         self.worm_tool.step()
         
@@ -232,12 +229,8 @@ class Worm (PhysObj):
         
         # shooting angle
         self.shoot_vel = clamp(self.shoot_vel + self.shoot_acc, 0.1, -0.1)
-        self.shoot_angle += self.shoot_vel * self.facing
-        if self.facing == RIGHT:
-            self.shoot_angle = clamp(self.shoot_angle, pi/2, -pi/2)
-        elif self.facing == LEFT:
-            self.shoot_angle = clamp(self.shoot_angle, pi + pi/2, pi/2)
-                
+        self._shoot_angle = clamp(self._shoot_angle + self.shoot_vel * self.facing, pi, 0)
+
         # check if killed:
         if self.health <= 0 and self.alive:
             self.dieded()
@@ -259,17 +252,37 @@ class Worm (PhysObj):
         
         # check key bindings
         move_action = False
-        if GameVariables().player_can_move and self is Worm.player and self.health > 0 and not self.worm_tool.in_use():
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_RIGHT]:
-                self.facing = RIGHT
-                move_action = True
-            if keys[pygame.K_LEFT]:
-                self.facing = LEFT
-                move_action = True
+        if (self is Worm.player and
+            GameVariables().player_can_move and
+            GameVariables().player_in_control and
+            self.alive):
 
-            if move_action:
-                self.move(self.facing)
+            # move and turn
+            if not self.worm_tool.in_use():
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_RIGHT]:
+                    self.facing = RIGHT
+                    move_action = True
+                if keys[pygame.K_LEFT]:
+                    self.facing = LEFT
+                    move_action = True
+
+                if move_action:
+                    self.move(self.facing)
+
+            # shooting angle
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_UP]:
+                self.shoot_acc = -0.04 * self.facing
+            elif keys[pygame.K_DOWN]:
+                self.shoot_acc = +0.04 * self.facing
+            else:
+                self.shoot_acc = 0
+                self.shoot_vel = 0
+        else:
+            self.damp = 0.2
+            self.shoot_acc = 0
+            self.shoot_vel = 0
 
         # collision with worms
         if not self.stable:
@@ -280,3 +293,7 @@ class Worm (PhysObj):
                         continue
                     if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
                         worm.vel = vectorCopy(self.vel)
+
+    def on_collision(self, ppos):
+        if self.vel.getMag() > CRITICAL_FALL_VELOCITY and not self.worm_tool.in_use():
+            MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)

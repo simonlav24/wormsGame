@@ -1,10 +1,11 @@
 
 
-import pygame
 from enum import Enum
 from dataclasses import dataclass
+from typing import Tuple
 
-from typing import Tuple, List
+import pygame
+
 # --- no game related imports ---
 
 ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
@@ -95,6 +96,7 @@ class Sprites:
     blood: pygame.Surface = None
     hole: pygame.Surface = None
     sprite_atlas: pygame.Surface = None
+    air_strike_indicator: pygame.Surface = None
 
 sprites = Sprites()
 
@@ -133,5 +135,7 @@ def initialize() -> None:
     fonts.pixel5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
     fonts.pixel10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
     fonts.pixel5_halo = HaloFont(fonts.pixel5)
+
+    sprites.air_strike_indicator = fonts.pixel10.render(">>>", False, BLACK)
 
 

@@ -4,7 +4,7 @@ import pygame
 from math import pi, degrees, cos, sin, atan2
 from random import uniform, randint
 
-from common import blit_weapon_sprite, GameVariables, point2world
+from common import blit_weapon_sprite, GameVariables, point2world, GameState
 from common.vector import *
 
 from entities import PhysObj, Fire
@@ -22,10 +22,14 @@ class GuidedMissile(PhysObj):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "guided missile")
 		self.radius = 3
+		GameVariables().player_can_move = False
+	
 	def apply_force(self):
 		pass
+	
 	def turn(self, direc):
 		self.vel.rotate(direc * 0.1)
+	
 	def step(self):
 		GameVariables().cam_track = self
 		self.pos += self.vel
@@ -66,6 +70,7 @@ class GuidedMissile(PhysObj):
 			self.remove_from_game()
 		if self.pos.y > MapManager().game_map.get_height():
 			self.remove_from_game()
+	
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(self.surf, -90 -degrees(self.vel.getAngle()))
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))

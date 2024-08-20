@@ -54,7 +54,6 @@ class Team:
     
     def ammo(self, weapon_index: int, amount: int=None, absolute: bool=False) -> None:
         # adding amount of weapon to team
-        print(weapon_index)
         if amount and not absolute:
             self.weapon_set[weapon_index] += amount
         elif amount and absolute:

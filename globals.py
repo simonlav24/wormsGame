@@ -19,11 +19,6 @@ class HaloFont:
         surf.blit(textSurf, (1,1))
         return surf
 
-def mouse_pos_in_world():
-    mouse_pos = pygame.mouse.get_pos()
-    return Vector(mouse_pos[0] / GameVariables().scale_factor + GameVariables().cam_pos[0],
-                   mouse_pos[1] / GameVariables().scale_factor + GameVariables().cam_pos[1])
-
 def globalsInit():
     global fpsClock, screenWidth, screenHeight, win, screen
 
