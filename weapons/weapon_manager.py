@@ -218,7 +218,7 @@ class WeaponManager(metaclass=SingletonMeta):
     def is_current_weapon_active(self) -> bool:
         ''' check if current weapon active in this round '''
         # check for round delay
-        # if self.current_weapon.round_delay < globals.game_manager.roundCounter:
+        # if self.current_weapon.round_delay < GameVariables().game_turn_count:
         #     return False
         # todo this
         

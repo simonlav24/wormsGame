@@ -63,6 +63,7 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.game_stable = False
         self.game_stable_counter = 0
+        self.game_turn_count = 0
 
         self.game_state = GameState.RESET
         self.game_next_state = GameState.RESET

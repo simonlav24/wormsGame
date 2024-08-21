@@ -1,7 +1,7 @@
 
 import os
 import pygame
-from math import cos, pi, sin
+from math import cos, pi, sin, atan2
 from random import choice, randint
 from typing import List, Tuple
 
@@ -240,5 +240,33 @@ class MapManager(metaclass=SingletonMeta):
         self.worm_col_map.fill(SKY)
         self.objects_col_map.fill(SKY)
 
+    def get_normal(self, pos, vel: Vector, radius: int, wormCollision: bool, extraCollision: bool) -> Vector:
+        ''' returns collision with world response '''
+        response = Vector(0,0)
+        angle = atan2(vel.y, vel.x)
+        r = angle - pi
+        while r < angle + pi:
+            testPos = Vector((radius) * cos(r) + pos.x, (radius) * sin(r) + pos.y)
+            if testPos.x >= self.game_map.get_width() or testPos.y >= self.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+                if GameVariables().config.option_closed_map:
+                    response += pos - testPos
+                    r += pi /8
+                    continue
+                else:
+                    r += pi /8
+                    continue
+            if testPos.y < 0:
+                r += pi /8
+                continue
+            
+            if self.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+                response += pos - testPos
+            if wormCollision and self.worm_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+                response += pos - testPos
+            if extraCollision and self.objects_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+                response += pos - testPos
+            
+            r += pi /8
+        return response
 
     

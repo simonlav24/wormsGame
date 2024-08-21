@@ -183,7 +183,7 @@ class Worm (PhysObj):
         if Worm.player == self:
             GameVariables().game_next_state = GameState.PLAYER_RETREAT
             GameVariables().game_state = GameVariables().game_next_state
-            TimeManager.time_remaining_die()
+            TimeManager().time_remaining_die()
                 
         # todo: notify killed
 
