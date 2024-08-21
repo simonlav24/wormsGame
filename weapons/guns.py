@@ -47,3 +47,4 @@ def fireEarthSpike(pos: Vector, direction: Vector, power: int=15):
 	pos = calc_earth_spike_pos()
 	if pos is not None:
 		EarthSpike(pos)
+

@@ -1,11 +1,13 @@
 
-import pygame
 from random import randint
 from math import sin, cos, pi
 
-from entities import PhysObj
-from common.vector import Vector
+import pygame
+
+from common.vector import Vector, dist
 from common import GameVariables, point2world, RIGHT, LEFT
+
+from entities import PhysObj
 from game.world_effects import boom
 from game.visual_effects import Blast
 from game.map_manager import MapManager
@@ -79,5 +81,54 @@ class Sheep(PhysObj):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(self.facing*self.radius,0)), 4)
 
+
+class Bull(PhysObj):
+	def __init__(self, pos):
+		super().__init__(pos)
+		self.ignore = []
+		self.pos = Vector(pos[0], pos[1])
+		self.vel = Vector(0,-3)
+		self.radius = 6
+		self.color = (165, 39, 40)
+		self.damp = 0.2
+		self.hits = 5
+		self.timer = 0
+		self.facing = RIGHT
+		self.is_boom_affected = False
+	
+	def step(self):
+		super().step()
+		self.stable = False
+		self.timer += 1
+		moved = self.move(self.facing)
+		moved = self.move(self.facing)
+		if not moved:
+			if MapManager().is_ground_around(self.pos, self.radius+1):
+				self.hits -= 1
+				boom(self.pos, 35)
+				self.vel += Vector(-self.facing * 3, -1)
+		for worm in PhysObj._worms:
+			if worm in self.ignore:
+				continue
+			if dist(worm.pos, self.pos) < self.radius:
+				self.ignore.append(worm)
+				self.hits -= 1
+				boom(self.pos, 35)
+				self.vel += Vector(-self.facing * 3, -1)
+		if self.timer % 10 == 0:
+			self.ignore = []
+		if self.hits == 0:
+			self.dead = True
+		if self.timer >= 300:
+			boom(self.pos, 35)
+			self.dead = True
+	
+	def draw(self, win: pygame.Surface):
+		rad = self.radius + 1
+		wig = 0.4*sin(0.5*self.timer)
+		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(pi/4 + wig), rad * sin(pi/4 + wig))), 2)
+		pygame.draw.circle(win, (10,10,10), point2world(self.pos + Vector(rad * cos(3*pi/4 - wig), rad * sin(3*pi/4 - wig))), 2)
+		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(self.facing*(self.radius +1),-1)), 4)
 
 
