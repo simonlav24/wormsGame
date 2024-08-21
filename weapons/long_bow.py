@@ -1,14 +1,16 @@
 
-from random import randint
+from random import randint, uniform
+from math import degrees, pi, cos, sin
 
 import pygame
 
 from common.vector import *
-from common import GameVariables, point2world, sprites
+from common import GameVariables, point2world, sprites, blit_weapon_sprite
 
 from game.map_manager import MapManager, GRD
-from game.visual_effects import splash
-from entities import PhysObj
+from game.visual_effects import splash, Frost, DropLet, Blast
+from game.world_effects import boom
+from entities import PhysObj, Fire, Worm
 from entities.props import PetrolCan
 from entities.shooting_target import ShootingTarget
 
@@ -53,7 +55,7 @@ class LongBow:
                     if worm == self.ignore:
                         continue
                     if dist(testPos, worm.pos) < worm.radius + 1:
-                        self.wormCollision(worm)
+                        self.worm_collision(worm)
                         return
                 # check target collision:
                 for target in ShootingTarget._reg:
@@ -77,7 +79,7 @@ class LongBow:
             self.stamp()
         self.secondaryStep()
     
-    def wormCollision(self, worm):
+    def worm_collision(self, worm):
         worm.vel += self.direction*4
         worm.vel.y -= 2
         worm.damage(randint(10, 20) if self.sleep else randint(15,25))
@@ -110,3 +112,99 @@ class LongBow:
         
         points = [point2world(self.pos + i) for i in self.triangle]
         pygame.draw.polygon(win, (230,235,240), points)
+
+
+class Icicle(LongBow):
+	def __init__(self, pos, direction):
+		GameVariables().register_non_physical(self)
+		self.pos = vectorCopy(pos)
+		self.direction = direction
+		self.vel = direction.normalize() * 20
+		self.stuck = None
+		self.color = (112, 74, 255)
+		self.ignore = None
+		self.radius = 1
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blit_weapon_sprite(self.surf, (0,0), "icicle")
+		self.timer = 0
+	
+	def secondaryStep(self):
+		if randint(0,5) == 0:
+			Frost(self.pos + vectorUnitRandom() * 3)
+	
+	def destroy(self):
+		GameVariables().unregister_non_physical(self)
+		for _ in range(8):
+			DropLet(self.pos, Vector())
+	
+	def stamp(self):
+		self.pos = self.stuck
+		Frost(self.stuck)
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		MapManager().ground_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
+		for y in range(self.surf.get_height()):
+			for x in range(self.surf.get_width()):
+				if not self.surf.get_at((x,y))[3] < 255:
+					self.surf.set_at((x,y), GRD)
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		MapManager().game_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
+		
+		self.destroy()
+	
+	def worm_collision(self, worm: Worm):
+		for i in range(8):
+			pos = worm.pos + vectorFromAngle(2 * pi * i / 8, worm.radius + 1)
+			Frost(pos)
+		worm.vel += self.direction*4
+		worm.vel.y -= 2
+		worm.damage(randint(20,30))
+		GameVariables().cam_track = worm
+		for i in range(8):
+			DropLet(self.pos, Vector())
+		self.destroy()
+	
+	def draw(self, win: pygame.Surface):
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())//2))
+
+
+class FireBall(LongBow):
+	def __init__(self, pos, direction):
+		GameVariables().register_non_physical(self)
+		self.radius = 1
+		self.pos = vectorCopy(pos)
+		self.direction = direction
+		self.vel = direction.normalize() * 20
+		self.stuck = None
+		self.color = (112, 74, 255)
+		self.ignore = None
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blit_weapon_sprite(self.surf, (0,0), "fire ball")
+		self.timer = 0
+	
+	def secondaryStep(self):
+		if randint(0,2) == 0:
+			Fire(self.pos)
+		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
+	
+	def destroy(self):
+		if self.stuck:
+			boomPos = self.stuck
+		else:
+			boomPos = self.pos
+		boom(boomPos, 15)
+		for i in range(40):
+			s = Fire(boomPos, 5)
+			s.vel = Vector(cos(2 * pi * i / 40), sin(2 * pi * i / 40)) * uniform(1.3, 2)
+		GameVariables().unregister_non_physical(self)
+	
+	def stamp(self):
+		self.destroy()
+	
+	def worm_collision(self, worm):
+		self.stuck = worm.pos + vectorUnitRandom() * 2
+		self.destroy()
+	
+	def draw(self, win: pygame.Surface):
+		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
+		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())//2))

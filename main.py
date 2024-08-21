@@ -53,6 +53,8 @@ from weapons.guns import *
 from weapons.long_bow import LongBow
 from weapons.mine import *
 from weapons.plants import *
+from weapons.bee_hive import BeeHive
+from weapons.vortex import VortexGrenade
 
 import globals
 
@@ -554,27 +556,6 @@ def place_object(cls: Any, args, girder_place: bool=False) -> Any:
 		return None
 	return instance
 
-def get_closest_pos_available(pos: Vector, radius: int):
-	''' return the closest position to pos that is not in ground '''
-	r = 0
-	found = None
-	orgPos = vectorCopy(pos)
-	t = 0
-	while not found:
-		checkPos = orgPos + t * vectorFromAngle(r)
-		# addExtra(checkPos, (255,255,255), 100)
-		if MapManager().check_free_pos(radius, checkPos, True):
-			found = checkPos
-			break
-		# t += 1
-		r += pi/8
-		if r > 2*pi - 0.01 and r < 2*pi + 0.01:
-			r = 0
-			t += 1
-			if t > 100:
-				return None
-	return checkPos
-
 
 ################################################################################ Objects
 
@@ -738,7 +719,7 @@ def fireGammaGun(pos: Vector, direction: Vector, power: int=15):
 
 class SentryGun(PhysObj):
 	_sentries = []
-	def __init__(self, pos, teamColor):
+	def __init__(self, pos, team_color: ColorType):
 		self._sentries.append(self)
 		super().__init__(pos)
 		self.pos = Vector(pos[0],pos[1])
@@ -747,7 +728,7 @@ class SentryGun(PhysObj):
 		self.is_boom_affected = True
 		self.radius = 9
 		self.health = 50
-		self.teamColor = teamColor
+		self.teamColor = team_color
 		self.target = None
 		self.damp = 0.1
 		self.shots = 10
@@ -760,8 +741,10 @@ class SentryGun(PhysObj):
 		self.surf.blit(sprites.sprite_atlas, (0,0), (80, 32, 17, 26))
 		self.electrified = False
 		pygame.draw.circle(self.surf, self.teamColor, tup2vec(self.surf.get_size())//2, 2)
+	
 	def fire(self):
 		self.firing = True
+	
 	def engage(self):
 		close = []
 		for worm in PhysObj._worms:
@@ -775,6 +758,7 @@ class SentryGun(PhysObj):
 			self.target = close[0][0]
 		else:
 			self.target = None
+	
 	def secondaryStep(self):
 		if self.firing:
 			if not self.target:
@@ -819,9 +803,9 @@ class SentryGun(PhysObj):
 			boom(self.pos, 20)
 			
 	def draw(self, win: pygame.Surface):
-		size = Vector(4*2,10*2)
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 		pygame.draw.line(win, self.teamColor, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
+	
 	def damage(self, value, damageType=0):
 		dmg = value
 		if self.health > 0:
@@ -829,117 +813,9 @@ class SentryGun(PhysObj):
 			if self.health < 0:
 				self.health = 0
 
-class Bee:
-	def __init__(self, pos, angle):
-		PhysObj._reg.append(self)
-		self.pos = Vector(pos[0], pos[1])
-		self.stable = False
-		self.is_boom_affected = False
-		self.radius = 1
-		self.color = (230, 230, 0)
-		self.angle = angle
-		self.target = None
-		self.lifespan = 330
-		self.unreachable = []
-		self.vel = Vector()
-		self.surf = None
-	def remove_from_game(self):
-		PhysObj._toRemove.append(self)
-	def step(self):
-		self.lifespan -= 1
-		GameVariables().game_distable()
-		if self.lifespan == 0:
-			self.remove_from_game()
-			return
-		if self.target:
-			self.angle = (self.target.pos - self.pos).getAngle()
-		else:
-			self.angle += uniform(-0.6,0.6)
-		ppos = self.pos + vectorFromAngle(self.angle)
-		if ppos.x >= MapManager().game_map.get_width() or ppos.y >= MapManager().game_map.get_height() or ppos.x < 0 or ppos.y < 0:
-			ppos = self.pos + vectorFromAngle(self.angle) * -1
-			self.angle += pi
-		try:
-			if MapManager().game_map.get_at((ppos.vec2tupint())) == GRD:
-				ppos = self.pos + vectorFromAngle(self.angle) * -1
-				self.angle += pi
-				if self.target:
-					self.unreachable.append(self.target)
-					self.target = None
-		except IndexError:
-			print("bee index error")
-		self.pos = ppos
-		
-		if self.lifespan % 40 == 0:
-			self.unreachable = []
-		
-		if self.lifespan < 300:
-			closestDist = 100
-			for worm in PhysObj._worms:
-				if worm in self.unreachable:
-					continue
-				distance = dist(self.pos, worm.pos)
-				if distance < 50 and distance < closestDist:
-					self.target = worm
-					closestDist = distance
-			if self.target:
-				if dist(self.pos, self.target.pos) > 50 or self.target.health <= 0:
-					self.target = None
-					return
-				if dist(self.pos, self.target.pos) < self.target.radius:
-					# sting
-					self.target.vel.y -= 2
-					if self.target.vel.y < -2:
-						self.target.vel.y = 2
-					if self.pos.x > self.target.pos.x:
-						self.target.vel.x -= 1
-					else:
-						self.target.vel.x += 1
-					self.remove_from_game()
-					self.target.damage(uniform(1,8))
-	def draw(self, win: pygame.Surface):
-		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())))
-
-class BeeHive(PhysObj):
-	def __init__(self, pos, direction, energy):
-		super().__init__(pos)
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		self.radius = 3
-		self.color = (255, 204, 0)
-		self.damp = 0.4
-		self.unload = False
-		self.beeCount = 50
-		
-		self.beeSurf = pygame.Surface((4,4), pygame.SRCALPHA)
-		self.beeSurf.fill((255,255,0), ((1,2), (1,3)))
-		self.beeSurf.fill((0,0,0), ((2,2), (2,3)))
-		self.beeSurf.fill((255,255,0), ((3,2), (3,3)))
-		self.beeSurf.fill((143,234,217,100), ((1,0), (2,2)))
-		
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "bee hive")
-		self.angle = 0
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
-		if self.beeCount <= 0:
-			self.dead = True
-	def death_response(self):
-		# boom(self.pos, 15)
-		pass
-	def on_collision(self, ppos):
-		out = randint(1,3)
-		for _ in range(out):
-			b = Bee(self.pos, uniform(0,2*pi))
-			b.surf = self.beeSurf
-			self.beeCount -= 1
-	def draw(self, win: pygame.Surface):
-		angle = 45 * round(self.angle / 45)
-		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 
-
+# raon, and more
 class ElectricGrenade(PhysObj):
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos)
@@ -1019,8 +895,8 @@ class ElectricGrenade(PhysObj):
 					shell.facing = LEFT if self.pos.x > shell.pos.x else RIGHT
 				shell.speed = 3
 				shell.timer = 0
+	
 	def draw(self, win: pygame.Surface):
-		# pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -1034,74 +910,9 @@ class ElectricGrenade(PhysObj):
 			if sentry.electrified:
 				draw_lightning(win, self.pos, sentry.pos)
 
-class Vortex():
-	vortexRadius = 180
-	def __init__(self, pos):
-		GameVariables().register_non_physical(self)
-		self.pos = Vector(pos[0], pos[1])
-		self.rot = 0
-		self.inhale = True
-		self.is_boom_affected = False
-	
-	def step(self):
-		GameVariables().game_distable()
-		if self.inhale:
-			self.rot += 0.001
-			if self.rot > 0.1:
-				self.rot = 0.1
-				self.inhale = False
-		else:
-			self.rot -= 0.001
-		
-		if self.inhale:
-			for worm in PhysObj._reg:
-				if distus(self.pos, worm.pos) < Vortex.vortexRadius * Vortex.vortexRadius:
-					worm.acc += (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
-					if randint(0,20) == 1:
-						worm.vel.y -= 2
-				if worm in PhysObj._worms and dist(self.pos, worm.pos) < Vortex.vortexRadius/2:
-					if randint(0,20) == 1:
-						worm.damage(randint(1,8))
-		else:
-			for worm in PhysObj._reg:
-				if distus(self.pos, worm.pos) < Vortex.vortexRadius * Vortex.vortexRadius:
-					worm.acc -= (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
-			
-		if not self.inhale and self.rot < 0:
-			GameVariables().unregister_non_physical(self)
-	def draw(self, win: pygame.Surface):
-		width = 50
-		arr = []
-		halfwidth = width//2
-		for x in range(int(self.pos.x) - halfwidth, int(self.pos.x) + halfwidth):
-			for y in range(int(self.pos.y) - halfwidth, int(self.pos.y) + halfwidth):
-				if distus(Vector(x,y), self.pos) > halfwidth * halfwidth:
-					continue
-				rot = (dist(Vector(x,y), self.pos) - halfwidth) * self.rot
-				direction = Vector(x,y) - self.pos
-				direction.rotate(rot)
-				getAt = point2world(self.pos + direction)
-				if getAt[0] < 0 or getAt[0] >= GameVariables().win_width or getAt[1] < 0 or getAt[1] >= GameVariables().win_height:
-					arr.append((0,0,0))
-				else:
-					pixelColor = win.get_at(getAt)
-					arr.append(pixelColor)
-		for x in range(int(self.pos.x) - halfwidth, int(self.pos.x) + halfwidth):
-			for y in range(int(self.pos.y) - halfwidth, int(self.pos.y) + halfwidth):
-				if distus(Vector(x,y), self.pos) > halfwidth * halfwidth:
-					continue
-				
-				win.set_at(point2world((x,y)), arr.pop(0))
 
-class VortexGrenade(Grenade):
-	def __init__(self, pos, direction, energy):
-		super().__init__(pos, direction, energy, "vortex grenade")
-		self.radius = 3
-		self.color = (25, 102, 102)
-		self.damp = 0.5
 
-	def death_response(self):
-		Vortex(self.pos)
+
 
 class TimeAgent:
 	def __init__(self):
@@ -1189,31 +1000,17 @@ class TimeTravel:
 
 
 
-def fireLongBow(pos: Vector, direction: Vector, power: int=15):
-	w = LongBow(pos + direction * 5, direction, LongBow._sleep)
-	w.ignore = Worm.player
-	return w
 
-def fireSpear(pos: Vector, direction: Vector, power: int=15):
-	w = Spear(pos, direction, power * 0.95)
-	return w
 
-def fireBubbleGun(pos: Vector, direction: Vector, power: int=15):
-	w = Bubble(get_closest_pos_available(pos, 3.5), direction, uniform(0.5, 0.9))
-	w.ignore = Worm.player
 
-def fireRazorLeaf(pos: Vector, direction: Vector, power: int=15):
-	RazorLeaf(pos + direction * 10, direction)
 
-def fireIcicle(pos: Vector, direction: Vector, power: int=15):
-	w = Icicle(pos + direction * 5, direction)
-	w.ignore = Worm.player
-	return w
 
-def fireFireBall(pos: Vector, direction: Vector, power: int=15):
-	w = FireBall(pos + direction * 5, direction)
-	w.ignore = Worm.player
-	return w
+
+
+
+
+
+
 
 def fireFireWork(pos: Vector, direction: Vector, power: int=15):
 	if FireWorkRockets._fw is None:
@@ -1222,10 +1019,6 @@ def fireFireWork(pos: Vector, direction: Vector, power: int=15):
 
 	FireWorkRockets._fw.fire()
 
-def fireEarthSpike(pos: Vector, direction: Vector, power: int=15):
-	pos = calc_earth_spike_pos()
-	if pos is not None:
-		EarthSpike(pos)
 
 
 
@@ -1845,59 +1638,7 @@ class Raon(PhysObj):
 			pygame.draw.circle(win, (255,255,255), point2world(self.pos), 2)
 			win.set_at(point2world(self.pos), (0,0,0))
 
-class Spear(PhysObj):
-	def __init__(self, pos, direction, energy):
-		super().__init__(pos)
-		PhysObj._reg.remove(self)
-		PhysObj._reg.insert(0, self)
-		self.pos = Vector(pos[0], pos[1])
-		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		self.radius = 2
-		self.damp = 0.4
-		self.stable = False
-		self.bounce_before_death = 1
-		self.color = (204, 102, 0)
-		self.triangle = [Vector(0,2), Vector(7,0), Vector(0,-2)]
-		self.is_worm_collider = True
-		self.worms = []
-		self.ignore = [Worm.player]
-	def secondaryStep(self):
-		for worm in PhysObj._worms:
-			if worm in self.ignore:
-				continue
-			if distus(self.pos, worm.pos) < (worm.radius + 3) * (worm.radius + 3):
-				self.worms.append(worm)
-				worm.damage(20 + self.vel.getMag()*1.5)
-				self.ignore.append(worm)
-		for i, worm in enumerate(self.worms):
-			worm.pos = vectorCopy(self.pos) - 5 * normalize(self.vel) * i
-			worm.vel *= 0
-		for target in ShootingTarget._reg:
-			if dist(self.pos + normalize(self.vel) * 8, target.pos) < target.radius + 1:
-				self.is_boom_affected = False
-				target.explode()
-				return
-	def death_response(self):
-		self.pos += self.vel
-		point = self.pos - normalize(self.vel) * 30
-		pygame.draw.line(MapManager().game_map, GRD, self.pos, point, self.radius)
-		pygame.draw.polygon(MapManager().game_map, GRD, [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
-		
-		pygame.draw.line(MapManager().ground_map, self.color, self.pos, point, self.radius)
-		pygame.draw.polygon(MapManager().ground_map, (230,235,240), [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
-		
-		if len(self.worms) > 0:
-			MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
-		if len(self.worms) > 1:
-			name = Worm.player.name_str
-			color = Worm.player.team.color
-			GameEvents().post(EventComment([{'text': name, 'color': color}, {'text': ' the impaler!'}]))
 
-	def draw(self, win: pygame.Surface):
-		point = self.pos - normalize(self.vel) * 30
-		pygame.draw.line(win, self.color, point2world(self.pos), point2world(point), self.radius)
-		pygame.draw.polygon(win, (230,235,240), [point2world(self.pos + rotateVector(i, self.vel.getAngle())) for i in self.triangle])
-		
 class Snail:
 	around = [Vector(1,0), Vector(1,-1), Vector(0,-1), Vector(-1,-1), Vector(-1,0), Vector(-1,1), Vector(0,1), Vector(1,1)]
 	def __init__(self, pos, anchor, clockwise=RIGHT):
@@ -2399,45 +2140,7 @@ class MagicLeaf(Artifact):
 
 
 
-class RazorLeaf(PhysObj):
-	def __init__(self, pos, direction):
-		super().__init__(pos)
-		self.radius = 2
-		self.color = (55, randint(100, 200), 40)
-		self.pos = pos
-		self.direction = direction
-		self.vel += vectorUnitRandom() * 1
-		self.timer = 0
-		
-		points = []
-		width = max(0.3, uniform(0,1))
-		length = 1 + uniform(0,1)
-		for i in range(10):
-			x = (i/10) * length
-			y = 0.5 * width * sin(2 * (1/length) * pi * x)
-			points.append(Vector(x, y))
-		for i in range(10):
-			x = (1 - (i/10)) * length
-			y = - width * sqrt(1 - ((2/length) * (x - length/2))**2)
-			points.append(Vector(x, y))
-		if randint(0,1) == 0:
-			points = [Vector(-i.x, i.y) for i in points]
-		size = uniform(4, 7)
-		angle = uniform(0, 2*pi)
-		self.points = [i.rotate(angle) * size for i in points]
-	def limit_vel(self):
-		self.vel.limit(15)
-	def secondaryStep(self):
-		self.timer += 1
-		if self.timer >= fps * 6:
-			self.remove_from_game()
-	def apply_force(self):
-		self.acc = vectorCopy(self.direction) * 0.8
-	def on_collision(self, ppos):
-		boom(ppos, 7)
-		self.remove_from_game()
-	def draw(self, win: pygame.Surface):
-		pygame.draw.polygon(win, self.color, [point2world(self.pos + i) for i in self.points])
+
 
 class PlantControl:
 	def __init__(self):
@@ -2508,192 +2211,15 @@ class PointSpring:
 			return
 		pygame.draw.line(win, (255, 220, 0), point2world(self.obj.pos), point2world(self.point))
 
-class Frost:
-	def __init__(self, pos):
-		self.pos = pos.integer()
-		self.visited = []
-		self.next = []
-		self.timer = fps * randint(2, 6)
-		if not MapManager().is_ground_at(self.pos):
-			return
-		GameVariables().register_non_physical(self)
-	def step(self):
-		color = MapManager().ground_map.get_at(self.pos)
-		r = color[0] + (256 - color[0]) // 2
-		g = color[1] + (256 - color[1]) // 2
-		b = color[2] + int((256 - color[2]) * 0.8)
-		newColor = (r, g, b)
-		MapManager().ground_map.set_at(self.pos, newColor)
-		self.visited.append(vectorCopy(self.pos))
-		directions = [Vector(1,0), Vector(0,1), Vector(-1,0), Vector(0,-1)]
-		shuffle(directions)
-		
-		while len(directions) > 0:
-			direction = directions.pop(0)
-			checkPos = self.pos + direction
-			if MapManager().is_ground_at(checkPos) and not checkPos in self.visited:
-				self.next.append(checkPos)
-		if len(self.next) == 0:
-			GameVariables().unregister_non_physical(self)
-			return
-		self.pos = choice(self.next)
-		self.next.remove(self.pos)
-		
-		self.timer -= 1
-		if self.timer <= 0:
-			GameVariables().unregister_non_physical(self)
-	def draw(self, win: pygame.Surface):
-		pass
 
-class Icicle(LongBow):
-	def __init__(self, pos, direction):
-		GameVariables().register_non_physical(self)
-		self.pos = vectorCopy(pos)
-		self.direction = direction
-		self.vel = direction.normalize() * 20
-		self.stuck = None
-		self.color = (112, 74, 255)
-		self.ignore = None
-		self.radius = 1
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "icicle")
-		self.timer = 0
-	def secondaryStep(self):
-		if randint(0,5) == 0:
-			Frost(self.pos + vectorUnitRandom() * 3)
-	def destroy(self):
-		GameVariables().unregister_non_physical(self)
-		for _ in range(8):
-			DropLet(self.pos, vectorUnitRandom())
-	def stamp(self):
-		self.pos = self.stuck
-		Frost(self.stuck)
-		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
-		MapManager().ground_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
-		for y in range(self.surf.get_height()):
-			for x in range(self.surf.get_width()):
-				if not self.surf.get_at((x,y))[3] < 255:
-					self.surf.set_at((x,y), GRD)
-		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
-		MapManager().game_map.blit(surf, self.pos - tup2vec(surf.get_size())//2)
-		
-		self.destroy()
-	def wormCollision(self, worm):
-		for i in range(8):
-			pos = worm.pos + vectorFromAngle(2 * pi * i / 8, worm.radius + 1)
-			Frost(pos)
-		worm.vel += self.direction*4
-		worm.vel.y -= 2
-		worm.damage(randint(20,30))
-		GameVariables().cam_track = worm
-		for i in range(8):
-			DropLet(self.pos, vectorUnitRandom())
-		self.destroy()
-	def draw(self, win: pygame.Surface):
-		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
-		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())//2))
 
-def calc_earth_spike_pos():
-	return Vector()
-	# amount = (pi/2 - Worm.player.shoot_angle) * Worm.player.facing / pi
-	# xFromWorm = Worm.player.pos.x + Worm.player.facing * amount * 70
-	# if MapManager().is_ground_at(Vector(xFromWorm, Worm.player.pos.y).integer()):
-	# 	y = Worm.player.pos.y
-	# 	while MapManager().is_ground_at(Vector(xFromWorm, y).integer()):
-	# 		y -= 2
-	# 		if y < 0:
-	# 			return None
-	# else:
-	# 	y = Worm.player.pos.y
-	# 	while not MapManager().is_ground_at(Vector(xFromWorm, y).integer()):
-	# 		y += 2
-	# 		if y > MapManager().game_map.get_height():
-	# 			return None
-	# return Vector(xFromWorm, y)
 
-class EarthSpike:
-	def __init__(self, pos):
-		self.squareSize = Vector(16,32)
-		self.pos = pos
-		GameVariables().register_non_physical(self)
-		self.timer = 0
-		self.surf = pygame.Surface((32, 32), pygame.SRCALPHA)
-		self.surf.blit(sprites.sprite_atlas, (0,0), ((32, 96), (32, 32)))
-		if randint(0, 1) == 0:
-			self.surf = pygame.transform.flip(self.surf, True, False)
-		self.colors = [(139, 140, 123), (91, 92, 75), (208, 195, 175), (48, 35, 34)]
-	def step(self):
-		if self.timer < 5:
-			for i in range(randint(5,10)):
-				d = Debrie(self.pos + Vector(randint(-8,8), -2), 10, self.colors, 1, False)
-				d.vel = vectorUnitRandom()
-				d.vel.y = uniform(-10, -8)
-				d.radius = choice([2,1])
-		if self.timer == 5:
-			surf = pygame.transform.scale(self.surf, (32, 16))
-			rectPos = self.pos + Vector(-surf.get_width() // 2, 3 - surf.get_height())
-			win.blit(surf, point2world(rectPos))
-			MapManager().stain(self.pos - Vector(0, 3), sprites.hole, (32,32), True)
-			
-		if self.timer == 6:
-			rectPos = self.pos + Vector(-self.surf.get_width() // 2, 3 - self.surf.get_height())
-			for obj in PhysObj._reg:
-				if obj in Debrie._debries:
-					continue
-				if obj.pos.x > rectPos.x + 8 and obj.pos.x <= rectPos.x + self.surf.get_width() - 8 \
-						and obj.pos.y > rectPos.y and obj.pos.y <= rectPos.y + self.surf.get_height():
-					obj.pos += Vector(0, -self.surf.get_height())
-					obj.vel.x = obj.pos.x - self.pos.x
-					obj.vel.y -= randint(7,9)
-					if obj in PhysObj._worms and not obj in TeamManager().current_team.worms:
-						obj.damage(randint(25,35))
-			
-			MapManager().ground_map.blit(self.surf, rectPos)
-			surf = self.surf.copy()
-			pixels = pygame.PixelArray(surf)
-			for i in self.colors:
-				pixels.replace(i, GRD)
-			del pixels
-			MapManager().game_map.blit(surf, rectPos)
-		self.timer += 1
-	def draw(self, win: pygame.Surface):
-		pass
 
-class FireBall(LongBow):
-	def __init__(self, pos, direction):
-		GameVariables().register_non_physical(self)
-		self.radius = 1
-		self.pos = vectorCopy(pos)
-		self.direction = direction
-		self.vel = direction.normalize() * 20
-		self.stuck = None
-		self.color = (112, 74, 255)
-		self.ignore = None
-		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "fire ball")
-		self.timer = 0
-	def secondaryStep(self):
-		if randint(0,2) == 0:
-			Fire(self.pos)
-		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
-	def destroy(self):
-		if self.stuck:
-			boomPos = self.stuck
-		else:
-			boomPos = self.pos
-		boom(boomPos, 15)
-		for i in range(40):
-			s = Fire(boomPos, 5)
-			s.vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2)
-		GameVariables().unregister_non_physical(self)
-	def stamp(self):
-		self.destroy()
-	def wormCollision(self, worm):
-		self.stuck = worm.pos + vectorUnitRandom() * 2
-		self.destroy()
-	def draw(self, win: pygame.Surface):
-		surf = pygame.transform.rotate(self.surf, -degrees(self.vel.getAngle()))
-		win.blit(surf, point2world(self.pos - tup2vec(surf.get_size())//2))
+
+
+
+
+
 
 class Tornado:
 	def __init__(self):
@@ -3177,7 +2703,7 @@ def fire(weapon = None):
 	
 	# position to available position
 	if w and avail:
-		availpos = get_closest_pos_available(w.pos, w.radius)
+		availpos = MapManager().get_closest_pos_available(w.pos, w.radius)
 		if availpos:
 			w.pos = availpos
 	

@@ -97,6 +97,7 @@ class Sprites:
     hole: pygame.Surface = None
     sprite_atlas: pygame.Surface = None
     air_strike_indicator: pygame.Surface = None
+    bee: pygame.Surface = None
 
 sprites = Sprites()
 
@@ -137,5 +138,11 @@ def initialize() -> None:
     fonts.pixel5_halo = HaloFont(fonts.pixel5)
 
     sprites.air_strike_indicator = fonts.pixel10.render(">>>", False, BLACK)
+
+    sprites.bee = pygame.Surface((4,4), pygame.SRCALPHA)
+    sprites.bee.fill((255,255,0), ((1,2), (1,3)))
+    sprites.bee.fill((0,0,0), ((2,2), (2,3)))
+    sprites.bee.fill((255,255,0), ((3,2), (3,3)))
+    sprites.bee.fill((143,234,217,100), ((1,0), (2,2)))
 
 

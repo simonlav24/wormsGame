@@ -268,5 +268,25 @@ class MapManager(metaclass=SingletonMeta):
             
             r += pi /8
         return response
+    
+    def get_closest_pos_available(self, pos: Vector, radius: int):
+        ''' return the closest position to pos that is not in ground '''
+        r = 0
+        found = None
+        org_pos = vectorCopy(pos)
+        t = 0
+        while not found:
+            check_pos = org_pos + t * vectorFromAngle(r)
+            if self.check_free_pos(radius, check_pos, True):
+                found = check_pos
+                break
+
+            r += pi/8
+            if r > 2*pi - 0.01 and r < 2*pi + 0.01:
+                r = 0
+                t += 1
+                if t > 100:
+                    return None
+        return check_pos
 
     

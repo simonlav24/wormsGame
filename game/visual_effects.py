@@ -1,7 +1,7 @@
 
 import pygame
 from typing import Any, List, Tuple
-from random import randint, uniform, choice
+from random import randint, uniform, choice, shuffle
 from math import exp, pi, sin, cos
 
 import globals
@@ -317,6 +317,45 @@ class FireWork:
 		
 		self.timer += 1
 		if self.timer > 0.9 * GameVariables().fps:
+			GameVariables().unregister_non_physical(self)
+	
+	def draw(self, win: pygame.Surface):
+		pass
+
+class Frost:
+	def __init__(self, pos):
+		self.pos = pos.integer()
+		self.visited = []
+		self.next = []
+		self.timer = GameVariables().fps * randint(2, 6)
+		if not MapManager().is_ground_at(self.pos):
+			return
+		GameVariables().register_non_physical(self)
+	
+	def step(self):
+		color = MapManager().ground_map.get_at(self.pos)
+		r = color[0] + (256 - color[0]) // 2
+		g = color[1] + (256 - color[1]) // 2
+		b = color[2] + int((256 - color[2]) * 0.8)
+		newColor = (r, g, b)
+		MapManager().ground_map.set_at(self.pos, newColor)
+		self.visited.append(vectorCopy(self.pos))
+		directions = [Vector(1,0), Vector(0,1), Vector(-1,0), Vector(0,-1)]
+		shuffle(directions)
+		
+		while len(directions) > 0:
+			direction = directions.pop(0)
+			checkPos = self.pos + direction
+			if MapManager().is_ground_at(checkPos) and not checkPos in self.visited:
+				self.next.append(checkPos)
+		if len(self.next) == 0:
+			GameVariables().unregister_non_physical(self)
+			return
+		self.pos = choice(self.next)
+		self.next.remove(self.pos)
+		
+		self.timer -= 1
+		if self.timer <= 0:
 			GameVariables().unregister_non_physical(self)
 	
 	def draw(self, win: pygame.Surface):

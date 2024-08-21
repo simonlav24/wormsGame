@@ -12,6 +12,7 @@ from common.vector import *
 import common.drawing_utilities
 from game.team_manager import TeamManager
 from entities.worm import Worm
+from weapons.earth_spike import calc_earth_spike_pos
 
 class WeaponStyle(Enum):
     CHARGABLE = 0
@@ -346,7 +347,7 @@ class WeaponManager(metaclass=SingletonMeta):
             win.blit(pygame.transform.flip(sprites.air_strike_indicator, flip, False), point2world(mouse - tup2vec(sprites.air_strike_indicator.get_size())/2))
         
         # todo: draw earth spike hitn
-        # if self.current_weapon == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY] and TeamManager().current_team.ammo("earth spike") != 0:
-        #     spikeTarget = calc_earth_spike_pos()
-        #     if spikeTarget:
-        #         draw_target(win, spikeTarget)
+        if self.current_weapon.name == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY] and TeamManager().current_team.ammo(self["earth spike"]) != 0:
+            spikeTarget = calc_earth_spike_pos()
+            if spikeTarget:
+                draw_target(win, spikeTarget)

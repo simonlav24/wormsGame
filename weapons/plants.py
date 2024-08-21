@@ -12,6 +12,7 @@ from common.vector import *
 
 from game.map_manager import MapManager, GRD
 from game.visual_effects import SmokeParticles
+from game.world_effects import boom
 from entities import PhysObj, Debrie, Worm
 from weapons.mine import Mine
 from entities.gun_shell import GunShell
@@ -374,3 +375,50 @@ class PlantSeed(PhysObj):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+
+
+class RazorLeaf(PhysObj):
+	def __init__(self, pos, direction):
+		super().__init__(pos)
+		self.radius = 2
+		self.color = (55, randint(100, 200), 40)
+		self.pos = pos
+		self.direction = direction
+		self.vel += vectorUnitRandom() * 1
+		self.timer = 0
+		
+		points = []
+		width = max(0.3, uniform(0,1))
+		length = 1 + uniform(0,1)
+		for i in range(10):
+			x = (i / 10) * length
+			y = 0.5 * width * sin(2 * (1 / length) * pi * x)
+			points.append(Vector(x, y))
+		for i in range(10):
+			x = (1 - (i / 10)) * length
+			y = - width * sqrt(1 - ((2 / length) * (x - length / 2)) ** 2)
+			points.append(Vector(x, y))
+		if randint(0,1) == 0:
+			points = [Vector(-i.x, i.y) for i in points]
+		size = uniform(4, 7)
+		angle = uniform(0, 2 * pi)
+		self.points = [i.rotate(angle) * size for i in points]
+	
+	def limit_vel(self):
+		self.vel.limit(15)
+	
+	def step(self):
+		super().step()
+		self.timer += 1
+		if self.timer >= GameVariables().fps * 6:
+			self.remove_from_game()
+	
+	def apply_force(self):
+		self.acc = vectorCopy(self.direction) * 0.8
+	
+	def on_collision(self, ppos):
+		boom(ppos, 7)
+		self.remove_from_game()
+	
+	def draw(self, win: pygame.Surface):
+		pygame.draw.polygon(win, self.color, [point2world(self.pos + i) for i in self.points])
