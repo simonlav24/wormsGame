@@ -257,8 +257,6 @@ class Game:
 
 	def clearLists(self):
 		# clear lists
-		PhysObj._mines.clear()
-		Debrie._debries.clear()
 		SentryGun._sentries.clear()
 		Portal._reg.clear()
 		Venus._reg.clear()
@@ -416,7 +414,7 @@ class Game:
 
 
 
-# todo: determine where this belongs
+# todo: determine where this belongs, refactor mines better: add bad places as argument with mines places
 def giveGoodPlace(div = 0, girderPlace = True):
 	goodPlace = False
 	counter = 0
@@ -490,7 +488,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 			continue
 		
 		# check for nearby mines in radius 40
-		for mine in PhysObj._mines:
+		for mine in [mine for mine in GameVariables().get_physicals() if isinstance(mine, Mine)]:
 			if distus(mine.pos, place) < 1600:
 				goodPlace = False
 				break
@@ -1912,7 +1910,7 @@ def cycle_worms():
 				GameEvents().post(EventComment([{'text': 'final targets round'}]))
 	
 	# update stuff
-	Debrie._debries = []
+	GameVariables().get_debries().clear()
 	Bubble.cought = []
 	
 	# change wind:

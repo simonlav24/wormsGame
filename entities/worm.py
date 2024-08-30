@@ -22,7 +22,7 @@ class DeathCause(Enum):
     DAMAGE = 1
 
 class Worm (PhysObj):
-    player: 'Worm' = None
+    player: 'Worm' = None #todo: make it a wormEntity in gameVariables
     healthMode = 0
     roped = False
     def __init__(self, pos, name, team=None):

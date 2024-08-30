@@ -12,11 +12,10 @@ from game.visual_effects import Blast
 
 class Debrie (PhysObj):
 	''' debrie resulting from explossions '''
-	_debries = []
 	
 	def __init__(self, pos, blast, colors: List[ColorType], bounces=2, firey=True):
 		super().__init__(pos)
-		Debrie._debries.append(self)
+		GameVariables().get_debries().append(self)
 		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast
 		self.pos = Vector(pos[0], pos[1])
 		

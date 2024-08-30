@@ -6,7 +6,7 @@ import pygame
 from common import GameVariables, sprites, RIGHT, LEFT, point2world
 from common.vector import *
 
-from entities import PhysObj, Worm
+from entities import PhysObj
 
 
 class GreenShell(PhysObj):

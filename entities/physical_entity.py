@@ -10,12 +10,9 @@ from common.vector import Vector
 from game.map_manager import MapManager, GRD
 from game.visual_effects import splash
 
-# todo: to remove all _regs
 
 class PhysObj(Entity):
 	''' a physical object '''
-	_toRemove = []
-	_mines = []
 
 	def __init__(self, pos=(0,0), **kwargs) -> None:
 		''' initialize '''
@@ -183,7 +180,7 @@ class PhysObj(Entity):
 	def secondaryStep(self):
 		pass
 	
-	def remove_from_game(self):
+	def remove_from_game(self) -> None:
 		GameVariables().unregister_physical(self)
 	
 	def damage(self, value, damageType=0):

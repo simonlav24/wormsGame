@@ -10,7 +10,7 @@ from common import sprites, GameVariables
 from game.map_manager import MapManager, GRD, SKY
 from game.visual_effects import splash, Blast
 from game.world_effects import boom
-from entities import Fire, PhysObj, Worm
+from entities import Fire, Worm
 from entities.gun_shell import GunShell
 from weapons.bubble import Bubble
 from weapons.long_bow import LongBow, Icicle, FireBall

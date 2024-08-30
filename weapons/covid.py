@@ -6,7 +6,6 @@ from common import GameVariables, point2world, sprites
 from common.vector import *
 
 from game.team_manager import TeamManager
-from entities import PhysObj
 from weapons.missiles import Seeker
 
 

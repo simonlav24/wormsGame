@@ -5,12 +5,12 @@ from math import degrees, pi, cos, sin
 import pygame
 
 from common.vector import *
-from common import GameVariables, point2world, sprites, blit_weapon_sprite
+from common import GameVariables, point2world, sprites, blit_weapon_sprite, EntityWorm
 
 from game.map_manager import MapManager, GRD
 from game.visual_effects import splash, Frost, DropLet, Blast
 from game.world_effects import boom
-from entities import PhysObj, Fire, Worm
+from entities import Fire
 from entities.props import PetrolCan
 from entities.shooting_target import ShootingTarget
 
@@ -151,7 +151,7 @@ class Icicle(LongBow):
 		
 		self.destroy()
 	
-	def worm_collision(self, worm: Worm):
+	def worm_collision(self, worm: EntityWorm):
 		for i in range(8):
 			pos = worm.pos + vectorFromAngle(2 * pi * i / 8, worm.radius + 1)
 			Frost(pos)

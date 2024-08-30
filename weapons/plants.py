@@ -139,7 +139,7 @@ class Venus:
 
 			# iterate physicals
 			for entity in GameVariables().get_physicals():
-				if entity in Debrie._debries:
+				if entity in GameVariables().get_debries():
 					continue
 
 				if distus(entity.pos, pos) <= 625:

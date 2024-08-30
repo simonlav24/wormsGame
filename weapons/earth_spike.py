@@ -10,7 +10,7 @@ from common import GameVariables, sprites
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
-from entities import PhysObj, Debrie, Worm
+from entities import Debrie, Worm
 from game.team_manager import TeamManager
 
 
@@ -60,7 +60,7 @@ class EarthSpike:
 		if self.timer == 6:
 			rectPos = self.pos + Vector(-self.surf.get_width() // 2, 3 - self.surf.get_height())
 			for obj in GameVariables().get_physicals():
-				if obj in Debrie._debries:
+				if obj in GameVariables().get_debries():
 					continue
 				if obj.pos.x > rectPos.x + 8 and obj.pos.x <= rectPos.x + self.surf.get_width() - 8 \
 						and obj.pos.y > rectPos.y and obj.pos.y <= rectPos.y + self.surf.get_height():

@@ -11,7 +11,7 @@ from game.world_effects import boom
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
 		super().__init__(pos)
-		Debrie._debries.append(self)
+		GameVariables().get_debries().append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.damp = 0
 		self.red = 255

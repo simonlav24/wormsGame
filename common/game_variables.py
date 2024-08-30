@@ -37,7 +37,6 @@ class DataBase:
 
         # functional lists
         self.worms: List[EntityWorm] = []
-        self.mines: List[EntityPhysical] = []
         self.debries: List[EntityPhysical] = []
 
 
@@ -148,6 +147,9 @@ class GameVariables(metaclass=SingletonMeta):
 
     def get_worms(self) -> List[EntityWorm]:
         return self.database.worms
+
+    def get_debries(self) -> List[EntityPhysical]:
+        return self.database.debries
 
     def game_distable(self):
         self.game_stable = False

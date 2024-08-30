@@ -7,7 +7,6 @@ from common import GameVariables, point2world, EntityPhysical
 from common.vector import *
 
 from game.map_manager import MapManager, SKY
-from entities import Debrie
 from game.visual_effects import DropLet
 
 class Bubble:
@@ -40,7 +39,7 @@ class Bubble:
 			
 		if not self.catch:
 			for obj in GameVariables().get_physicals():
-				if obj == self.ignore or obj in Bubble.cought or obj in Debrie._debries:
+				if obj == self.ignore or obj in Bubble.cought or obj in GameVariables().get_debries():
 					continue
 				if dist(obj.pos, self.pos) < obj.radius + self.radius:
 					self.catch = obj

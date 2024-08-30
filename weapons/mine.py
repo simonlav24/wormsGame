@@ -15,7 +15,6 @@ from entities.physical_entity import PhysObj
 class Mine(PhysObj):
 	def __init__(self, pos=(0,0), delay=0):
 		super().__init__(pos)
-		self._mines.append(self)
 		self.radius = 2
 		self.color = (52,66,71)
 		self.damp = 0.35
