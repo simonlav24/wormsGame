@@ -47,7 +47,7 @@ class Acid(PhysObj):
 		if self.damageCooldown != 0:
 			self.damageCooldown -= 1
 		else:
-			for worm in PhysObj._worms:
+			for worm in GameVariables().get_worms():
 				if square_collision(self.pos, worm.pos, self.radius, worm.radius):
 					worm.damage(randint(0,1))
 					self.damageCooldown = 30

@@ -13,7 +13,7 @@ from entities import PhysObj, Worm
 
 class Bee:
 	def __init__(self, pos, angle):
-		PhysObj._reg.append(self)
+		GameVariables().register_physical(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.stable = False
 		self.is_boom_affected = False
@@ -27,7 +27,7 @@ class Bee:
 		self.surf = None
 	
 	def remove_from_game(self):
-		PhysObj._toRemove.append(self)
+		GameVariables().unregister_physical(self)
 	
 	def step(self):
 		self.lifespan -= 1
@@ -59,7 +59,7 @@ class Bee:
 		
 		if self.lifespan < 300:
 			closestDist = 100
-			for worm in PhysObj._worms:
+			for worm in GameVariables().get_worms():
 				if worm in self.unreachable:
 					continue
 				distance = dist(self.pos, worm.pos)
@@ -97,7 +97,7 @@ class BeeHive(PhysObj):
 		self.beeCount = 50
 		
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "bee hive")
+		blit_weapon_sprite(self.surf, (0, 0), "bee hive")
 		self.angle = 0
 	
 	def step(self):
@@ -109,7 +109,7 @@ class BeeHive(PhysObj):
 	def on_collision(self, ppos):
 		out = randint(1,3)
 		for _ in range(out):
-			b = Bee(self.pos, uniform(0,2*pi))
+			b = Bee(self.pos, uniform(0, 2 * pi))
 			b.surf = sprites.bee
 			self.beeCount -= 1
 	

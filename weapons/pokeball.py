@@ -43,8 +43,8 @@ class PokeBall(PhysObj):
 		if self.hold:
 			self.hold.pos = self.pos + Vector(0,- (self.radius + self.hold.radius))
 			self.hold.vel = Vector(0,-1)
-			PhysObj._reg.append(self.hold)
-			PhysObj._worms.append(self.hold)
+			GameVariables().register_physical(self.hold)
+			GameVariables().get_worms().append(self.hold)
 			self.hold.team.worms.append(self.hold)
 		else:
 			boom(self.pos, 20)
@@ -54,7 +54,7 @@ class PokeBall(PhysObj):
 		if self.timer >= GameVariables().fuse_time and self.timer <= GameVariables().fuse_time + GameVariables().fps * 2 and not self.hold:
 			self.stable = False
 			closer = [None, 7000]
-			for worm in PhysObj._worms:
+			for worm in GameVariables().get_worms():
 				distance = dist(self.pos, worm.pos)
 				if distance < closer[1]:
 					closer = [worm, distance]
@@ -63,8 +63,9 @@ class PokeBall(PhysObj):
 				
 		if self.timer == GameVariables().fuse_time + GameVariables().fps * 2:
 			if self.hold:
-				PhysObj._reg.remove(self.hold)
-				PhysObj._worms.remove(self.hold)
+				GameVariables().unregister_physical(self.hold)
+				GameVariables().get_worms().remove(self.hold)
+
 				self.hold.team.worms.remove(self.hold)
                 # todo: flag holder (?)
 				self.name = fonts.pixel5.render(self.hold.name_str, False, self.hold.team.color)

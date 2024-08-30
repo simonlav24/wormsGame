@@ -59,7 +59,7 @@ class EarthSpike:
 			
 		if self.timer == 6:
 			rectPos = self.pos + Vector(-self.surf.get_width() // 2, 3 - self.surf.get_height())
-			for obj in PhysObj._reg:
+			for obj in GameVariables().get_physicals():
 				if obj in Debrie._debries:
 					continue
 				if obj.pos.x > rectPos.x + 8 and obj.pos.x <= rectPos.x + self.surf.get_width() - 8 \
@@ -67,7 +67,7 @@ class EarthSpike:
 					obj.pos += Vector(0, -self.surf.get_height())
 					obj.vel.x = obj.pos.x - self.pos.x
 					obj.vel.y -= randint(7,9)
-					if obj in PhysObj._worms and not obj in TeamManager().current_team.worms:
+					if obj in GameVariables().get_worms() and not obj in TeamManager().current_team.worms:
 						obj.damage(randint(25,35))
 			
 			MapManager().ground_map.blit(self.surf, rectPos)

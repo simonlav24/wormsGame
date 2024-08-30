@@ -107,7 +107,7 @@ class Bull(PhysObj):
 				self.hits -= 1
 				boom(self.pos, 35)
 				self.vel += Vector(-self.facing * 3, -1)
-		for worm in PhysObj._worms:
+		for worm in GameVariables().get_worms():
 			if worm in self.ignore:
 				continue
 			if dist(worm.pos, self.pos) < self.radius:

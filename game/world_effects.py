@@ -42,7 +42,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 	if not fire:
 		pygame.draw.circle(MapManager().ground_secondary, SKY, pos.vec2tupint(), int(radius * 0.7))
 	
-	listToCheck = PhysObj._reg if not fire else PhysObj._worms
+	listToCheck = GameVariables().get_physicals() if not fire else GameVariables().get_worms()
 	
 	for p in listToCheck:
 		if not p.is_boom_affected:
@@ -60,7 +60,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 				if p.health > 0:
 					dmg = - (1 / SHOCK_RADIUS)*(distance - radius * SHOCK_RADIUS) * 1.2
 					p.damage(dmg)
-			if p in PhysObj._worms:
+			if p in GameVariables().get_worms():
 				if gravity:
 					p.gravity = p.gravity * -1
 				if not fire:
@@ -84,7 +84,7 @@ class Earthquake(Entity):
 	def step(self):
 		if not self.decorative:
 			# shake objects
-			for obj in PhysObj._reg:
+			for obj in GameVariables().get_physicals():
 				if obj == self:
 					continue
 				if randint(0,5) == 1:

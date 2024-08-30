@@ -1,6 +1,7 @@
 ''' aerial weapons '''
 
-from random import randint
+from random import randint, uniform
+from math import cos, sin, pi
 
 import pygame
 
@@ -9,8 +10,52 @@ from common.vector import *
 
 from game.world_effects import boom
 from game.map_manager import MapManager, GRD, SKY
+from entities import Fire
 from weapons.grenades import Grenade
-from weapons.missiles import Seeker
+from weapons.missiles import Seeker, Missile
+from weapons.mine import Mine
+
+
+
+def fireAirstrike(pos):
+	x = pos[0]
+	y = 5
+	for i in range(5):
+		f = Missile((x - 40 + 20*i, y - i), (GameVariables().airstrike_direction ,0), 0.1)
+		f.megaBoom = False
+		f.is_boom_affected = False
+		f.radius = 1
+		f.boomRadius = 19
+		if i == 2:
+			GameVariables().cam_track = f
+
+def fireMineStrike(pos):
+	megaBoom = False
+	if randint(0,50) == 1 or GameVariables().mega_weapon_trigger:
+		megaBoom = True
+	x = pos[0]
+	y = 5
+	if megaBoom:
+		for i in range(20):
+			m = Mine((x - 40 + 4*i, y - i))
+			m.vel.x = GameVariables().airstrike_direction
+			if i == 10:
+				GameVariables().cam_track = m
+	else:
+		for i in range(5):
+			m = Mine((x - 40 + 20*i, y - i))
+			m.vel.x = GameVariables().airstrike_direction
+			if i == 2:
+				GameVariables().cam_track = m
+
+def fireNapalmStrike(pos):
+	x = pos[0]
+	y = 5
+	for i in range(70):
+		f = Fire((x - 35 + i, y ))
+		f.vel = Vector(cos(uniform(pi, 2 * pi)), sin(uniform(pi, 2 * pi))) * 0.5
+		if i == 2:
+			GameVariables().cam_track = f
 
 class Seagull(Seeker):
 	_reg = []

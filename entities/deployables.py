@@ -110,8 +110,8 @@ def deploy_pack(pack):
 				goodPlace = True
 				break
 		# test3 (hopefully always possible)
-		for worm in PhysObj._worms:
-			if x > worm.pos.x-15 and x < worm.pos.x+15:
+		for worm in GameVariables().get_worms():
+			if x > worm.pos.x - 15 and x < worm.pos.x + 15:
 				goodPlace = False
 				continue
 	

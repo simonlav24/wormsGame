@@ -31,16 +31,16 @@ class Vortex():
             self.rot -= 0.001
         
         if self.inhale:
-            for worm in PhysObj._reg:
+            for worm in GameVariables().get_physicals():
                 if distus(self.pos, worm.pos) < Vortex.vortexRadius * Vortex.vortexRadius:
                     worm.acc += (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
                     if randint(0,20) == 1:
                         worm.vel.y -= 2
-                if worm in PhysObj._worms and dist(self.pos, worm.pos) < Vortex.vortexRadius/2:
+                if worm in GameVariables().get_worms() and dist(self.pos, worm.pos) < Vortex.vortexRadius/2:
                     if randint(0,20) == 1:
                         worm.damage(randint(1,8))
         else:
-            for worm in PhysObj._reg:
+            for worm in GameVariables().get_physicals():
                 if distus(self.pos, worm.pos) < Vortex.vortexRadius * Vortex.vortexRadius:
                     worm.acc -= (self.pos - worm.pos) * 1/dist(self.pos, worm.pos)
             

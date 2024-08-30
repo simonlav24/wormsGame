@@ -1,7 +1,7 @@
 
 import pygame
 
-from common import GameVariables, EntityOnMap
+from common import GameVariables, EntityPhysical
 from common.vector import vectorCopy
 
 from entities import Worm
@@ -15,7 +15,7 @@ class ShootGun:
 		self.end_turn = kwargs.get('end_turn', True)
 		self.burst = kwargs.get('burst', False)
 
-		self.shooted_object: EntityOnMap | None = None
+		self.shooted_object: EntityPhysical | None = None
 
 	def step(self) -> None:
 		if self.burst:
@@ -35,7 +35,7 @@ class ShootGun:
 		self.shooted_object = self.shoot_action(*args)
 		self.ammo -= 1
 	
-	def get_object(self) -> EntityOnMap:
+	def get_object(self) -> EntityPhysical:
 		result = self.shooted_object
 		self.shooted_object = None
 		return result

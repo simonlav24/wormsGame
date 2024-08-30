@@ -3,7 +3,7 @@
 
 import pygame
 
-from common import point2world, sprites
+from common import point2world, sprites, GameVariables
 from common.game_event import EventComment, GameEvents
 from common.vector import *
 
@@ -15,8 +15,7 @@ from entities.shooting_target import ShootingTarget
 class Spear(PhysObj):
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos)
-		PhysObj._reg.remove(self)
-		PhysObj._reg.insert(0, self)
+		GameVariables().move_to_back_physical(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
@@ -31,7 +30,7 @@ class Spear(PhysObj):
 	
 	def step(self):
 		super().step()
-		for worm in PhysObj._worms:
+		for worm in GameVariables().get_worms():
 			if worm in self.ignore:
 				continue
 			if distus(self.pos, worm.pos) < (worm.radius + 3) * (worm.radius + 3):

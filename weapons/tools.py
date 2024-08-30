@@ -3,11 +3,11 @@
 import pygame
 from random import randint, uniform
 
-from common import blit_weapon_sprite, point2world, GameVariables, sprites, GameState, JUMP_VELOCITY
+from common import blit_weapon_sprite, point2world, GameVariables, sprites, GameState, JUMP_VELOCITY, LEFT
 from common.vector import *
 
 from game.map_manager import MapManager
-from entities import PhysObj
+from entities import PhysObj, Worm
 from game.visual_effects import Blast, EffectManager
 from entities.gun_shell import GunShell
 
@@ -83,7 +83,7 @@ class Trampoline:
 			Trampoline._reg.remove(self)
 			gs = GunShell(vectorCopy(self.pos))
 			gs.surf = Trampoline._sprite
-		for obj in PhysObj._reg:
+		for obj in GameVariables().get_physicals():
 			# trampoline
 			if obj.vel.y > 0 and self.collide(obj.pos):
 				self.spring(obj.vel.y)
@@ -108,3 +108,36 @@ class Trampoline:
 			win.blit(sprites.sprite_atlas, point2world((self.pos.x - 5, i)), (107, 124, 10, 4))
 			i -= 4
 		win.blit(Trampoline._sprite, point2world(self.pos + Vector(0, self.offset) - self.size / 2))
+
+
+class Baseball:
+	def __init__(self):	
+		self.direction = Worm.player.get_shooting_direction()
+		GameVariables().register_non_physical(self)
+		self.timer = 0
+		hitted = []
+		for t in range(5, 25):
+			testPositions = []
+			testPos = Worm.player.pos + self.direction * t
+			testPositions.append(testPos)
+			testPositions.append(testPos + normalize(self.direction).getNormal() * 3)
+			testPositions.append(testPos - normalize(self.direction).getNormal() * 3)
+			
+			for worm in GameVariables().get_worms():
+				for point in testPositions:
+					if worm in hitted:
+						continue
+					if distus(point, worm.pos) < worm.radius * worm.radius:
+						hitted.append(worm)
+						worm.damage(randint(15,25))
+						worm.vel += self.direction * 8
+						GameVariables().cam_track = worm
+
+	def step(self):
+		self.timer += 1 * GameVariables().dt
+		if self.timer >= 15:
+			GameVariables().unregister_non_physical(self)
+
+	def draw(self, win: pygame.Surface):
+		weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, Worm.player.facing == LEFT), 12 + 180)
+		win.blit(weaponSurf, point2world(Worm.player.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))

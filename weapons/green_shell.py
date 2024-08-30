@@ -45,14 +45,14 @@ class GreenShell(PhysObj):
 			if not moved:
 				self.facing *= -1
 				
-			for worm in PhysObj._reg:
+			for worm in GameVariables().get_physicals():
 				if worm == self or worm in self.ignore:
 					continue
 				if distus(worm.pos, self.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
 					self.ignore.append(worm)
 					worm.vel = Vector(self.facing * randint(1,2),-randint(2,4))*0.8
-					if worm in PhysObj._worms:
-						worm.damage(randint(10,25))
+					if worm in GameVariables().get_worms():
+						worm.damage(randint(10, 25))
 		else:
 			self.is_worm_collider = False
 			self.damp = 0.5

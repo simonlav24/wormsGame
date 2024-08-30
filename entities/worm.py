@@ -7,7 +7,7 @@ from random import randint
 import pygame
 
 from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, clamp, CRITICAL_FALL_VELOCITY
-from common.game_event import EventComment
+from common.game_event import EventComment, EventWormDamage, GameEvents
 from common.vector import *
 
 from game.team_manager import Team
@@ -27,7 +27,7 @@ class Worm (PhysObj):
     roped = False
     def __init__(self, pos, name, team=None):
         super().__init__(pos)
-        self._worms.append(self)
+        GameVariables().get_worms().append(self)
 
         self.color = (255, 206, 167)
         self.radius = 3.5
@@ -107,7 +107,8 @@ class Worm (PhysObj):
             if Worm.healthMode == 1:
                 self.healthStr = fonts.pixel5.render(str(self.health), False, self.team.color)
             
-            # todo: notify damage
+            event = EventWormDamage(self, dmg)
+            GameEvents().post(event)
     
     def draw(self, win: pygame.Surface):
         # draw collision
@@ -172,8 +173,8 @@ class Worm (PhysObj):
             EventComment.post_choice_event(comments_damage, self.name_str, self.team.color)
                 
         # remove from regs:
-        if self in PhysObj._worms:
-            PhysObj._worms.remove(self)
+        if self in GameVariables().get_worms():
+            GameVariables().get_worms().remove(self)
         if self in self.team.worms:
             self.team.worms.remove(self)
         if cause != DeathCause.DAMAGE:
@@ -288,7 +289,7 @@ class Worm (PhysObj):
         if not self.stable:
             velocity = self.vel.getMag()
             if velocity > 5:
-                for worm in PhysObj._worms:
+                for worm in GameVariables().get_worms():
                     if worm == self or not worm.stable:
                         continue
                     if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):

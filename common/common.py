@@ -5,7 +5,7 @@ import pygame
 from math import sin, pi
 
 from common.vector import *
-from common.constants import ColorType, sprites
+from common.constants import ColorType
 
 # paths
 PATH_ASSETS = r'./assets'
@@ -30,10 +30,28 @@ class Entity(Protocol):
         pass
 
 
-class EntityOnMap(Protocol):
-    ''' a object with position and velocity '''
-    pos: Vector
-    vel: Vector
+class EntityPhysical(Entity):
+	''' a physical entity '''
+	pos: Vector
+	vel: Vector
+	acc: Vector
+	stable: bool
+	radius: float
+	health: int
+
+	def remove_from_game(self):
+		...
+
+class EntityWorm(EntityPhysical):
+	''' a object with position and velocity '''
+	name_str: str
+
+	def dieded(self):
+		...
+	
+	def damage(self, value, damageType=0):
+		...
+	
 
 # color utilities
 
@@ -59,7 +77,7 @@ def clamp(value, upper, lower):
 		value = lower
 	return value
 
-def seek(obj: EntityOnMap, target: Vector, max_speed: float, max_force: float ,arrival=False):
+def seek(obj: EntityPhysical, target: Vector, max_speed: float, max_force: float ,arrival=False):
 	''' calculate force to move towards object with velocity '''
 	force = tup2vec(target) - obj.pos
 	desiredSpeed = max_speed
@@ -73,5 +91,5 @@ def seek(obj: EntityOnMap, target: Vector, max_speed: float, max_force: float ,a
 	force.limit(max_force)
 	return force
 
-def flee(obj: EntityOnMap, target: Vector, max_speed: float, max_force: float):
+def flee(obj: EntityPhysical, target: Vector, max_speed: float, max_force: float):
 	return seek(obj, target, max_speed, max_force) * -1

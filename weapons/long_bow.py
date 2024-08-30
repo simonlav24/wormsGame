@@ -51,7 +51,7 @@ class LongBow:
                         self.destroy()
                         return
                 # check worm collision
-                for worm in PhysObj._worms:
+                for worm in GameVariables().get_worms():
                     if worm == self.ignore:
                         continue
                     if dist(testPos, worm.pos) < worm.radius + 1:

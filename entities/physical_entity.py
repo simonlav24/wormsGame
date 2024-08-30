@@ -14,14 +14,12 @@ from game.visual_effects import splash
 
 class PhysObj(Entity):
 	''' a physical object '''
-	_reg: List['PhysObj'] = []
 	_toRemove = []
-	_worms = []
 	_mines = []
 
-	def __init__(self, pos=(0,0), *args, **kwargs) -> None:
+	def __init__(self, pos=(0,0), **kwargs) -> None:
 		''' initialize '''
-		PhysObj._reg.append(self)
+		GameVariables().register_physical(self)
 		self.acc = Vector(0,0)
 		self.vel = Vector(0,0)
 		self.pos = Vector(pos[0], pos[1])
@@ -109,7 +107,7 @@ class PhysObj(Entity):
 			self.stable = True
 			
 			response.normalize()
-			#addExtra(self.pos + 5 * response, (0,0,0), 1)
+
 			fdot = self.vel.dot(response)
 			if not self.bounce_before_death == 1:
 				
@@ -132,7 +130,7 @@ class PhysObj(Entity):
 			self.pos = ppos
 			
 		# flew out Game._game.map_manager.game_map but not worms !
-		if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level and not self in self._worms:
+		if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level and not self in GameVariables().get_worms():
 			splash(self.pos, self.vel)
 			angle = self.vel.getAngle()
 			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
@@ -186,7 +184,7 @@ class PhysObj(Entity):
 		pass
 	
 	def remove_from_game(self):
-		PhysObj._toRemove.append(self)
+		GameVariables().unregister_physical(self)
 	
 	def damage(self, value, damageType=0):
 		pass

@@ -56,16 +56,10 @@ class Commentator:
 	
 	def step(self) -> None:
 		# handle events
-		my_events: List[EventComment] = []
-		events_list = GameEvents().get_events()
-		for event in events_list:
-			if isinstance(event, EventComment):
-				my_events.append(event)
-		
-		[events_list.remove(event) for event in my_events]
-
+		my_events = [event for event in GameEvents().get_events() if isinstance(event, EventComment)]
 		for event in my_events:
 			surf = self.render_comment(event.text_dict)
+			event.is_done = True
 			self.surf_que.append(surf)
 
 		if self.state == CommentatorState.IDLE:

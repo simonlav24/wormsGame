@@ -47,7 +47,7 @@ class Snail:
 		self.life += 1
 		for _ in range(3):
 				self.climb()
-		for worm in PhysObj._worms:
+		for worm in GameVariables().get_worms():
 			if distus(self.pos, worm.pos) < (3 + worm.radius) * (3 + worm.radius):
 				GameVariables().unregister_non_physical(self)
 				boom(self.pos, 30)

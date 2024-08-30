@@ -6,7 +6,7 @@ from math import pi, sin, sqrt, degrees, copysign
 
 import pygame
 
-from common import GameVariables, point2world, sprites, GameState, PLANT_MASTER, blit_weapon_sprite, RIGHT, LEFT
+from common import GameVariables, point2world, sprites, GameState, PLANT_MASTER, blit_weapon_sprite, RIGHT, LEFT, EntityWorm
 from common.game_event import GameEvents, EventComment
 from common.vector import *
 
@@ -95,7 +95,7 @@ class Venus:
 			# check if can eat a worm from here on first round:
 			if GameVariables().game_turn_count == 0 and GameVariables().game_state in [GameState.PLAYER_PLAY] and self.scale == 0:
 				pos = self.pos + self.direction * 25
-				for worm in PhysObj._worms:
+				for worm in GameVariables().get_worms():
 					if distus(worm.pos, pos) <= 625:
 						GameVariables().unregister_non_physical(self)
 						Venus._reg.remove(self)
@@ -129,7 +129,7 @@ class Venus:
 			if self.mutant:
 				maxDist = 640000
 				closest = None
-				for worm in PhysObj._worms:
+				for worm in GameVariables().get_worms():
 					distance = distus(worm.pos, self.pos)
 					if distance < maxDist and distance < 6400:
 						maxDist = distance
@@ -137,17 +137,21 @@ class Venus:
 				if closest:
 					self.desired = (closest.pos - self.pos).getAngle()
 
-			for worm in PhysObj._reg:
-				if worm in Debrie._debries:
+			# iterate physicals
+			for entity in GameVariables().get_physicals():
+				if entity in Debrie._debries:
 					continue
-				if worm in PhysObj._worms and PLANT_MASTER in worm.team.artifacts:
-					continue
-				if distus(worm.pos, pos) <= 625:
+
+				if distus(entity.pos, pos) <= 625:
 					self.mode = Venus.catch
-					if worm in PhysObj._worms:
+					if entity in GameVariables().get_worms():
+						worm: EntityWorm = entity
+
+						if PLANT_MASTER in worm.team.artifacts:
+							continue
 						worm.dieded(DeathCause.FLEW_OUT)
 						name = worm.name_str
-						color = worm.team.color
+						color = worm.team.color # todo
 						comments = [
 							[{'text': 'yummy'}],
 							[{'text': name, 'color': color}, {'text': ' was delicious'}],
@@ -157,8 +161,9 @@ class Venus:
 						GameEvents().post(EventComment(choice(comments)))
 					else:
 						self.explossive = True
-						worm.remove_from_game()
+						entity.remove_from_game()
 					break
+
 		elif self.mode == Venus.catch:
 			GameVariables().game_distable()
 			self.snap += 0.5
@@ -193,17 +198,22 @@ class Venus:
 				gs = GunShell(vectorCopy(self.pos))
 				gs.angle = self.angle + self.snap
 				gs.surf = self.surf
+				return
 		else:
 			GameVariables().unregister_non_physical(self)
 			Venus._reg.remove(self)
+			return
 		if self.pos.y >= MapManager().game_map.get_height() - GameVariables().water_level:
 			GameVariables().unregister_non_physical(self)
 			Venus._reg.remove(self)
+			return
+	
 	def mutate(self):
 		if self.mutant:
 			return
 		self.mutant = True
 		self.surf.fill((0, 125, 255, 100), special_flags=pygame.BLEND_MULT)
+	
 	def draw(self, win: pygame.Surface):
 		if self.scale < 1:
 			if self.scale == 0:
@@ -224,7 +234,7 @@ class Venus:
 		MapManager().objects_col_map.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 
 
-class Plant:
+class GrowingPlant:
 	''' growing plant that sprouts from the ground '''
 	def __init__(self, pos, radius = 5, angle = -1, mode: PlantMode=PlantMode.NONE):
 		GameVariables().register_non_physical(self)
@@ -243,7 +253,7 @@ class Plant:
 	def step(self):
 		self.pos += vectorFromAngle(self.angle + uniform(-1,1))
 		if randint(1,100) <= 2 and not self.mode == PlantMode.VENUS:
-			Plant(self.pos, self.radius, self.angle + choice([pi/3, -pi/3]), self.mode)
+			GrowingPlant(self.pos, self.radius, self.angle + choice([pi/3, -pi/3]), self.mode)
 		self.time_counter += 1
 		if self.time_counter % 10 == 0:
 			self.radius -= 1
@@ -361,15 +371,15 @@ class PlantSeed(PhysObj):
 		
 		if self.mode == PlantMode.NONE:
 			for _ in range(randint(4,5)):
-				Plant(ppos)
+				GrowingPlant(ppos)
 		elif self.mode == PlantMode.VENUS:
-			Plant(ppos, 5, response.getAngle(), PlantMode.VENUS)
+			GrowingPlant(ppos, 5, response.getAngle(), PlantMode.VENUS)
 		elif self.mode == PlantMode.BEAN:
 			w = MagicBeanGrow(ppos, normalize(response))
 			GameVariables().cam_track = w
 		elif self.mode == PlantMode.MINE:
 			for _ in range(randint(2,3)):
-				Plant(ppos, 5, -1, PlantMode.MINE)
+				GrowingPlant(ppos, 5, -1, PlantMode.MINE)
 		
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)

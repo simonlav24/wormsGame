@@ -3,19 +3,26 @@ from typing import List, Dict, Any
 from random import choice
 
 from common.vector import Vector
-from common import SingletonMeta
+from common import SingletonMeta, Entity
 from common.constants import ColorType
+
 
 class ToManyUnhandeledEventsException(Exception):
     ''' too many unhandeled events exception '''
 
 class Event:
     ''' game event '''
+    def __init__(self) -> None:
+        self.is_done = False
+    
+    def done(self) -> None:
+        self.is_done = True
 
 
 class EventComment(Event):
     ''' event for commenting '''
     def __init__(self, text_dict: List[Dict[str, Any]]) -> None:
+        super().__init__()
         self.text_dict = text_dict
     
     @staticmethod
@@ -29,15 +36,24 @@ class EventComment(Event):
         GameEvents().post(EventComment(text_dict))
 
 
+class EventWormDamage(Event):
+    def __init__(self, worm: Entity, damage: int) -> None:
+        super().__init__()
+        self.worm = worm
+        self.damage = damage
+
+
 class GameEvents(metaclass=SingletonMeta):
     ''' event manager class '''
     def __init__(self) -> None:
-        self.events: List[Event] = []
+        self._events: List[Event] = []
 
     def get_events(self) -> List[Event]:
-        return self.events
+        ''' return undone events '''
+        self._events = [event for event in self._events if not event.is_done]
+        return self._events
 
     def post(self, event: Event):
-        self.events.append(event)
-        if len(self.events) > 100:
+        self._events.append(event)
+        if len(self._events) > 100:
             raise ToManyUnhandeledEventsException('above 100 events')

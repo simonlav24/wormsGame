@@ -1,5 +1,5 @@
 
-from math import degrees
+from math import degrees, sin, cos, pi
 
 import pygame
 
@@ -67,7 +67,7 @@ class Portal:
 			self.posBro = self.brother.pos - Bro
 			
 		if self.brother:
-			for worm in PhysObj._reg:
+			for worm in GameVariables().get_physicals():
 				if worm in Portal._reg:
 					continue
 				if distus(worm.pos, self.pos) <= RADIUS_OF_CONTACT * RADIUS_OF_CONTACT:
@@ -88,5 +88,50 @@ class Portal:
 	
 	def draw(self, win: pygame.Surface):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
+
+
+
+
+def firePortal(pos: Vector, direction: Vector, power: int=15):
+	steps = 500
+	for t in range(5,steps):
+		testPos = pos + direction * t
+		GameVariables().add_extra(testPos, (255,255,255), 3)
+		
+		# missed
+		if t == steps - 1:
+			if len(Portal._reg) % 2 == 1:
+				p = Portal._reg.pop(-1)
+				if p in GameVariables().get_physicals():
+					GameVariables().get_physicals().remove(p)
+
+		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
+			continue
+
+		# if hits map:
+		if MapManager().game_map.get_at(testPos.vec2tupint()) == GRD:
+			
+			response = Vector(0,0)
+			
+			for i in range(12):
+				ti = (i/12) * 2 * pi
+				
+				check = testPos + Vector(8 * cos(ti), 8 * sin(ti))
+				
+				if check.x >= MapManager().game_map.get_width() or check.y >= MapManager().game_map.get_height() or check.x < 0 or check.y < 0:
+					continue
+				if MapManager().game_map.get_at(check.vec2tupint()) == GRD:
+					# extra.append((check.x, check.y, (255,255,255), 100))
+					response +=  Vector(8 * cos(ti), 8 * sin(ti))
+			
+			direction = response.normalize()
+			
+			p = Portal(testPos, direction)
+			if len(Portal._reg) % 2 == 0:
+				brother = Portal._reg[-2]
+				p.brother = brother
+				brother.brother = p
+			break
+
 
 

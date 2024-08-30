@@ -34,7 +34,7 @@ class Mine(PhysObj):
 				self.damp = 0.55
 			return
 		if not self.activated:
-			for worm in PhysObj._worms:
+			for worm in GameVariables().get_worms():
 				if worm.health <= 0:
 					continue
 				if distus(self.pos, worm.pos) < 625:

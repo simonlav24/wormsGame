@@ -1,11 +1,12 @@
 
+from enum import Enum
 from pydantic import BaseModel
 from typing import List, Dict, Tuple
 
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityOnMap
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -22,8 +23,22 @@ class InitialVariables(BaseModel):
     draw_health_bar: bool = True
     all_wind_affected: bool = False
     allow_air_strikes: bool = True
-
     hud_color: ColorType = WHITE
+
+
+class DataBase:
+    def __init__(self) -> None:
+        # updating lists
+        self.non_physicals: List[Entity] = []
+        self.non_physicals_remove: List[Entity] = []
+
+        self.physicals: List[EntityPhysical] = []
+        self.physicals_remove: List[EntityPhysical] = []
+
+        # functional lists
+        self.worms: List[EntityWorm] = []
+        self.mines: List[EntityPhysical] = []
+        self.debries: List[EntityPhysical] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -45,7 +60,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.dt = 1.0
 
         self.cam_pos: Vector = Vector(0,0)
-        self.cam_track: EntityOnMap = None
+        self.cam_track: EntityPhysical = None
         self.scale_factor = 3
         self.scale_range = (1,3)
 
@@ -58,8 +73,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.mega_weapon_trigger = False
         self.fuse_time = 2 * self.fps
 
-        self._non_pysicals: List[Entity] = []
-        self._non_pysicals_to_remove: List[Entity] = []
+        self.database = DataBase()
 
         self.game_stable = False
         self.game_stable_counter = 0
@@ -77,31 +91,98 @@ class GameVariables(metaclass=SingletonMeta):
         self.girder_size: int = 50
         self.girder_angle: int = 0
         self.airstrike_direction = RIGHT
+
+        # refactor later
+        self.extra = []
+        # those are for laser only
+        self.layers_circles = []
+        self.layers_lines = []
+
     
     def register_non_physical(self, entity: Entity) -> None:
-        self._non_pysicals.append(entity)
+        self.database.non_physicals.append(entity)
 
     def unregister_non_physical(self, entity: Entity) -> None:
-        self._non_pysicals_to_remove.append(entity)
+        self.database.non_physicals_remove.append(entity)
+
+    def register_physical(self, entity: EntityPhysical) -> None:
+        self.database.physicals.append(entity)
+
+    def unregister_physical(self, entity: EntityPhysical) -> None:
+        self.database.physicals_remove.append(entity)
+
+    def move_to_back_physical(self, entity: EntityPhysical) -> None:
+        self.database.physicals.remove(entity)
+        self.database.physicals.insert(0, entity)
+
+    def step_physicals(self) -> None:
+        try:
+            for entity in self.database.physicals_remove:
+                self.database.physicals.remove(entity)
+        except Exception as e:
+            print(e)
+        self.database.physicals_remove.clear()
+
+        for entity in self.database.physicals:
+            entity.step()
+            if not entity.stable:
+                self.game_distable()
 
     def step_non_physicals(self) -> None:
         try:
-            for entity in self._non_pysicals_to_remove:
-                self._non_pysicals.remove(entity)
+            for entity in self.database.non_physicals_remove:
+                self.database.non_physicals.remove(entity)
         except Exception as e:
             print(e)
-        self._non_pysicals_to_remove.clear()
+        self.database.non_physicals_remove.clear()
 
-        for entity in self._non_pysicals:
+        for entity in self.database.non_physicals:
             entity.step()
     
     def draw_non_physicals(self, win: pygame.Surface) -> None:
-        for entity in self._non_pysicals:
+        for entity in self.database.non_physicals:
             entity.draw(win)
     
+    def get_physicals(self) -> List[EntityPhysical]:
+        return self.database.physicals
+
+    def get_worms(self) -> List[EntityWorm]:
+        return self.database.worms
+
     def game_distable(self):
         self.game_stable = False
         self.game_stable_counter = 0
+
+    # refactor later
+    def add_extra(self, pos, color = (255,255,255), delay = 5, absolute = False):
+        self.extra.append((pos[0], pos[1], color, delay, absolute))
+
+    def draw_extra(self, win):
+        extraNext = []
+        for i in self.extra:
+            if not i[4]:
+                win.fill(i[2], (point2world((i[0], i[1])),(1,1)))
+            else:
+                win.fill(i[2], ((i[0], i[1]),(1,1)))
+            if i[3] > 0:
+                extraNext.append((i[0], i[1], i[2], i[3]-1, i[4]))
+        self.extra = extraNext
+    
+    def draw_layers(self, win):
+        layersLinesNext = []
+
+        for i in self.layers_lines:
+            pygame.draw.line(win, i[0], point2world(i[1]), point2world(i[2]), i[3])
+            if i[4]:
+                layersLinesNext.append((i[0], i[1], i[2], i[3], i[4]-1))
+        self.layers_lines = layersLinesNext
+
+        for j in self.layers_circles:
+            for i in j:
+                pygame.draw.circle(win, i[0], point2world(i[1]), int(i[2]))
+        self.layers_circles = [[],[],[]]
+
+    
 
 
 def point2world(point) -> Tuple[int, int]:

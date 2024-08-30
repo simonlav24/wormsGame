@@ -65,9 +65,9 @@ class Raon(PhysObj):
 		return False
 	
 	def search(self):
-		if len(PhysObj._worms) <= 0: return
-		closest = [PhysObj._worms[0], dist(self.pos, PhysObj._worms[0].pos)]
-		for worm in PhysObj._worms:
+		if len(GameVariables().get_worms()) <= 0: return
+		closest = [GameVariables().get_worms()[0], dist(self.pos, GameVariables().get_worms()[0].pos)]
+		for worm in GameVariables().get_worms():
 			distance = dist(worm.pos, self.pos)
 			if distance < closest[1]:
 				closest = [worm, distance]

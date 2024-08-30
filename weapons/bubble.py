@@ -3,11 +3,11 @@
 import pygame
 from random import randint, uniform
 
-from common import GameVariables, point2world
+from common import GameVariables, point2world, EntityPhysical
 from common.vector import *
 
 from game.map_manager import MapManager, SKY
-from entities import PhysObj, Debrie
+from entities import Debrie
 from game.visual_effects import DropLet
 
 class Bubble:
@@ -21,7 +21,7 @@ class Bubble:
 		self.grow = randint(7, 13)
 		self.color = (220,220,220)
 		self.catch = None
-		self.ignore: PhysObj = None
+		self.ignore: EntityPhysical = None
 	
 	def apply_force(self):
 		self.acc.y -= GameVariables().physics.global_gravity * 0.3
@@ -39,7 +39,7 @@ class Bubble:
 			self.radius += 1 * GameVariables().dt
 			
 		if not self.catch:
-			for obj in PhysObj._reg:
+			for obj in GameVariables().get_physicals():
 				if obj == self.ignore or obj in Bubble.cought or obj in Debrie._debries:
 					continue
 				if dist(obj.pos, self.pos) < obj.radius + self.radius:
