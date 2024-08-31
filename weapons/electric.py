@@ -111,7 +111,7 @@ class ElectricGrenade(PhysObj):
 
 
 class ElectroBoom(PhysObj):
-	def __init__(self, pos, direction, energy):
+	def __init__(self, pos, direction, energy, immune_team_name: str):
 		super().__init__(pos)
 		GameVariables().move_to_back_physical(self)
 		self.pos = Vector(pos[0], pos[1])
@@ -128,6 +128,7 @@ class ElectroBoom(PhysObj):
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "electro boom")
 		self.angle = 0
+		self.immune_team_name = immune_team_name
 	
 	def secondaryStep(self):
 		self.angle -= self.vel.x*4
@@ -146,7 +147,7 @@ class ElectroBoom(PhysObj):
 	
 	def calculate(self):
 		for worm in GameVariables().get_worms():
-			if worm in Worm.player.team.worms:
+			if worm.get_team_data().team_name == self.immune_team_name:
 				continue
 			if dist(self.pos, worm.pos) < 150:
 				self.worms.append(worm)

@@ -5,12 +5,11 @@ import pygame
 from common import GameVariables, point2world, sprites
 from common.vector import *
 
-from game.team_manager import TeamManager
 from weapons.missiles import Seeker
 
 
 class Covid19(Seeker):
-	def __init__(self, pos):
+	def __init__(self, pos: Vector, immune_team_name: str):
 		super().__init__(pos, Vector(), 5)
 		self.timer = 12 * GameVariables().fps
 		self.target = Vector()
@@ -18,12 +17,15 @@ class Covid19(Seeker):
 		self.chum = None
 		self.unreachable = []
 		self.bitten = []
+		self.immune_team_name = immune_team_name
 	
 	def secondaryStep(self):
 		# find target
 		closest = 800
 		for worm in GameVariables().get_worms():
-			if worm in TeamManager().current_team.worms or worm in self.bitten or worm in self.unreachable:
+			if worm.get_team_data().team_name == self.immune_team_name:
+				continue
+			if worm in self.bitten or worm in self.unreachable:
 				continue
 			distance = dist(worm.pos, self.pos)
 			if distance < closest:

@@ -35,6 +35,7 @@ from entities.worm import Worm
 from entities.shooting_target import ShootingTarget
 from entities.deployables import *
 
+from weapons.sick_gas import GasParticles
 from weapons.weapon_manager import *
 from weapons.missiles import *
 from weapons.grenades import *
@@ -1285,15 +1286,16 @@ def fire(weapon = None):
 		energy = TimeTravel._tt.timeTravelList["energy"]
 		weaponDir = TimeTravel._tt.timeTravelList["weaponDir"]
 	
+	# guns dictionary, weapons count, activation function, kwargs
 	gun_weapons_map = {
-		'shotgun':       {'count': 3,  'func': fireShotgun, 'power': 15},
+		'shotgun':       {'count': 3,  'func': fireShotgun},
 		'flame thrower': {'count': 70, 'func': fireFlameThrower, 'burst': True},
 		'minigun':       {'count': 20, 'func': fireMiniGun, 'burst': True},
 		'gamma gun':     {'count': 2,  'func': fireGammaGun},
 		'long bow':      {'count': 3,  'func': fireLongBow},
 		'portal gun':    {'count': 2,  'func': firePortal, 'end_turn': False},
 		'laser gun':     {'count': 70, 'func': fireLaser, 'burst': True},
-		'spear':         {'count': 2,  'func': fireSpear, 'power': energy},
+		'spear':         {'count': 2,  'func': fireSpear},
 		'bubble gun':    {'count': 10, 'func': fireBubbleGun, 'burst': True},
 		'razor leaf':    {'count': 50, 'func': fireRazorLeaf, 'burst': True},
 		'icicle':        {'count': 4,  'func': fireIcicle},
@@ -1310,7 +1312,7 @@ def fire(weapon = None):
 		if WeaponManager().current_gun is None:
 			WeaponManager().current_gun = ShootGun(**gun_weapons_map[weapon.name])
 		
-		WeaponManager().current_gun.shoot()
+		WeaponManager().current_gun.shoot(energy)
 		w = WeaponManager().current_gun.get_object()
 		decrease = False
 		GameVariables().game_next_state = GameState.PLAYER_PLAY
@@ -1374,7 +1376,7 @@ def fire(weapon = None):
 	elif weapon.name == "chilli pepper":
 		w = ChilliPepper(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "covid 19":
-		w = Covid19(weaponOrigin)
+		w = Covid19(weaponOrigin, Worm.player.get_team_data().team_name)
 		for worm in Worm.player.team.worms:
 			w.bitten.append(worm)
 	elif weapon.name == "artillery assist":
@@ -1394,7 +1396,7 @@ def fire(weapon = None):
 		w.facing = Worm.player.facing
 		w.ignore.append(Worm.player)
 	elif weapon.name == "electro boom":
-		w = ElectroBoom(weaponOrigin, weaponDir, energy)
+		w = ElectroBoom(weaponOrigin, weaponDir, energy, Worm.player.get_team_data().team_name)
 	elif weapon.name == "parachute":
 		if Worm.player.vel.y > 1:
 			tool_set = Worm.player.worm_tool.set(Parachute(Worm.player))

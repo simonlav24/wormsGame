@@ -71,6 +71,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 			d.radius = choice([2,1])
 
 
+
 class Earthquake(Entity):
 	earthquake = 0
 	def __init__(self, timer = 7 * GameVariables().fps, decorative = False, strength = 1):

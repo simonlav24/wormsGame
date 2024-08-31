@@ -11,7 +11,6 @@ class ShootGun:
 		GameVariables().register_non_physical(self)
 		self.ammo = kwargs.get('count')
 		self.shoot_action = kwargs.get('func')
-		self.power = kwargs.get('power', 0)
 		self.end_turn = kwargs.get('end_turn', True)
 		self.burst = kwargs.get('burst', False)
 
@@ -24,15 +23,17 @@ class ShootGun:
 	def draw(self, win: pygame.Surface) -> None:
 		pass
 
-	def shoot(self) -> None:
+	def shoot(self, energy: float) -> None:
 		if self.ammo == 0:
 			return
-		args = (
-			vectorCopy(Worm.player.pos),
-			Worm.player.get_shooting_direction(),
-			self.power 
-		)
-		self.shooted_object = self.shoot_action(*args)
+		
+		kwargs = {
+			'pos': vectorCopy(Worm.player.pos),
+			'direction': Worm.player.get_shooting_direction(),
+			'shooter': Worm.player,
+			'energy': energy,
+		}
+		self.shooted_object = self.shoot_action(**kwargs)
 		self.ammo -= 1
 	
 	def get_object(self) -> EntityPhysical:

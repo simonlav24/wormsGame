@@ -1,8 +1,8 @@
 
 from abc import ABC, abstractmethod
-from typing import Tuple, Dict, Protocol
+from typing import Protocol, List
+from pydantic import BaseModel
 import pygame
-from math import sin, pi
 
 from common.vector import *
 from common.constants import ColorType
@@ -18,6 +18,14 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
+
+class TeamData(BaseModel):
+    ''' team data '''
+    team_name: str
+    color: ColorType
+    names: List[str]
+    hats: str
 
 
 class Entity(Protocol):
@@ -38,9 +46,12 @@ class EntityPhysical(Entity):
 	stable: bool
 	radius: float
 	health: int
+	damp: float
+	is_fall_affected: bool
 
 	def remove_from_game(self):
 		...
+
 
 class EntityWorm(EntityPhysical):
 	''' a object with position and velocity '''
@@ -52,6 +63,10 @@ class EntityWorm(EntityPhysical):
 	def damage(self, value, damageType=0):
 		...
 	
+	def get_team_data(self) -> TeamData:
+		...
+
+
 
 # color utilities
 

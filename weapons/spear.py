@@ -1,19 +1,19 @@
 
-
+from typing import List
 
 import pygame
 
-from common import point2world, sprites, GameVariables
+from common import point2world, sprites, GameVariables, EntityWorm
 from common.game_event import EventComment, GameEvents
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
-from entities import PhysObj, Worm
+from entities import PhysObj
 from entities.shooting_target import ShootingTarget
 
 
 class Spear(PhysObj):
-	def __init__(self, pos, direction, energy):
+	def __init__(self, pos, direction, energy, worm_ignore: EntityWorm):
 		super().__init__(pos)
 		GameVariables().move_to_back_physical(self)
 		self.pos = Vector(pos[0], pos[1])
@@ -25,8 +25,8 @@ class Spear(PhysObj):
 		self.color = (204, 102, 0)
 		self.triangle = [Vector(0,2), Vector(7,0), Vector(0,-2)]
 		self.is_worm_collider = True
-		self.worms = []
-		self.ignore = [Worm.player]
+		self.worms: List[EntityWorm] = []
+		self.ignore = [worm_ignore]
 	
 	def step(self):
 		super().step()
@@ -58,8 +58,8 @@ class Spear(PhysObj):
 		if len(self.worms) > 0:
 			MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
 		if len(self.worms) > 1:
-			name = Worm.player.name_str
-			color = Worm.player.team.color
+			name = self.ignore[0].name_str
+			color = self.ignore[0].get_team_data().color
 			GameEvents().post(EventComment([{'text': name, 'color': color}, {'text': ' the impaler!'}]))
 
 	def draw(self, win: pygame.Surface):

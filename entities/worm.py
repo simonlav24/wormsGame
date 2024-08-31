@@ -6,16 +6,17 @@ from random import randint
 
 import pygame
 
-from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, clamp, CRITICAL_FALL_VELOCITY
+from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, clamp, CRITICAL_FALL_VELOCITY, TeamData
 from common.game_event import EventComment, EventWormDamage, GameEvents
 from common.vector import *
 
 from game.team_manager import Team
 from game.time_manager import TimeManager
-from game.visual_effects import FloatingText, splash, GasParticles
+from game.visual_effects import FloatingText, splash
 from entities.physical_entity import PhysObj
 from game.map_manager import MapManager, GRD
 from entities.worm_tools import WormTool
+from weapons.sick_gas import GasParticles
 
 class DeathCause(Enum):
     FLEW_OUT = 0
@@ -62,6 +63,9 @@ class Worm (PhysObj):
         self.stableCount = 0
         self.worm_tool = WormTool()
     
+    def get_team_data(self) -> TeamData:
+        return self.team.data
+
     def apply_force(self):
         # gravity:
         if self.gravity == DOWN:

@@ -1,33 +1,20 @@
 
-from typing import List, Protocol
+from typing import List
 import json
 from random import choice, shuffle
-from pydantic import BaseModel
 
 import pygame
 
-from common import desaturate, ColorType, GameVariables, sprites, SingletonMeta
+from common import desaturate, GameVariables, sprites, SingletonMeta, TeamData, EntityWorm
 from game.hud import HealthBar
-
-
-class WormInterface(Protocol):
-    health: int
-
-
-class TeamData(BaseModel):
-    ''' saved team data '''
-    team_name: str
-    color: ColorType
-    names: List[str]
-    hats: str
 
 
 class Team:
     def __init__(self, data: TeamData) -> None:
-        self.name_list = data.names
+        self.data = data
         self.color = data.color
         self.weapon_set: List[int] = []
-        self.worms: List[WormInterface] = []
+        self.worms: List[EntityWorm] = []
         self.name = data.team_name
         self.damage = 0
         self.kill_count = 0
@@ -49,8 +36,8 @@ class Team:
         return len(self.worms)
 
     def get_new_worm_name(self) -> str:
-        if len(self.name_list) > 0:
-            return self.name_list.pop(0)
+        if len(self.data.names) > 0:
+            return self.data.names.pop(0)
     
     def ammo(self, weapon_index: int, amount: int=None, absolute: bool=False) -> None:
         # adding amount of weapon to team

@@ -16,15 +16,15 @@ from entities.shooting_target import ShootingTarget
 
 class LongBow:
     _sleep = False
-    def __init__(self, pos, direction, sleep=False):
+    def __init__(self, pos: Vector, direction: Vector, worm_ignore: EntityWorm=None):
         GameVariables().register_non_physical(self)
         self.pos = vectorCopy(pos)
         self.direction = direction
         self.vel = direction.normalize() * 20
         self.stuck = None
         self.color = (112, 74, 37)
-        self.ignore = None
-        self.sleep = sleep
+        self.ignore = worm_ignore
+        self.sleep = False
         self.radius = 1
         self.triangle = [Vector(0,3), Vector(6,0), Vector(0,-3)]
         for vec in self.triangle:
@@ -79,7 +79,7 @@ class LongBow:
             self.stamp()
         self.secondaryStep()
     
-    def worm_collision(self, worm):
+    def worm_collision(self, worm: EntityWorm):
         worm.vel += self.direction*4
         worm.vel.y -= 2
         worm.damage(randint(10, 20) if self.sleep else randint(15,25))

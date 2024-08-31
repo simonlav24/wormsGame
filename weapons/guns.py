@@ -1,6 +1,7 @@
 
 from random import uniform, randint
 from math import cos, sin, atan2
+from typing import Tuple
 
 import pygame
 
@@ -23,45 +24,61 @@ from entities.props import PetrolCan
 from weapons.plants import Venus
 
 
-def fireLongBow(pos: Vector, direction: Vector, power: int=15):
+def fire_gun_generic(**kwargs) -> Tuple[Vector, Vector, int]:
+	''' return pos, direction '''
+	return (
+		kwargs.get('pos'),
+		kwargs.get('direction')
+	)
+
+
+def fireLongBow(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	w = LongBow(pos + direction * 5, direction, LongBow._sleep)
-	w.ignore = Worm.player
+	w.ignore = kwargs.get('shooter')
 	return w
 
-def fireFlameThrower(pos: Vector, direction: Vector, power: int=0):
+def fireFlameThrower(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	offset = uniform(1, 2)
 	f = Fire(pos + direction * 5)
 	f.vel = direction * offset * 2.4
 
-def fireBubbleGun(pos: Vector, direction: Vector, power: int=15):
+def fireBubbleGun(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	w = Bubble(MapManager().get_closest_pos_available(pos, 3.5), direction, uniform(0.5, 0.9))
-	w.ignore = Worm.player
+	w.ignore = kwargs.get('shooter')
 
-def fireIcicle(pos: Vector, direction: Vector, power: int=15):
+def fireIcicle(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	w = Icicle(pos + direction * 5, direction)
-	w.ignore = Worm.player
+	w.ignore = kwargs.get('shooter')
 	return w
 
-def fireFireBall(pos: Vector, direction: Vector, power: int=15):
+def fireFireBall(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	w = FireBall(pos + direction * 5, direction)
-	w.ignore = Worm.player
+	w.ignore = kwargs.get('shooter')
 	return w
 
-def fireRazorLeaf(pos: Vector, direction: Vector, power: int=15):
+def fireRazorLeaf(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	RazorLeaf(pos + direction * 10, direction)
 
-def fireSpear(pos: Vector, direction: Vector, power: int=15):
-	w = Spear(pos, direction, power * 0.95)
+def fireSpear(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
+	w = Spear(pos, direction, kwargs.get('energy') * 0.95, kwargs.get('shooter'))
 	return w
 
-def fireEarthSpike(pos: Vector, direction: Vector, power: int=15):
+def fireEarthSpike(**kwargs):
 	pos = calc_earth_spike_pos()
 	if pos is not None:
 		EarthSpike(pos)
 
-def fireShotgun(pos: Vector, direction: Vector, power: int=15):
+def fireShotgun(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	GunShell(pos + Vector(0, -4), direction=direction)
-	for t in range(5,500):
+	for t in range(5, 500):
 		testPos = pos + direction * t
 		GameVariables().add_extra(testPos, (255, 204, 102), 3)
 		
@@ -75,17 +92,19 @@ def fireShotgun(pos: Vector, direction: Vector, power: int=15):
 		if MapManager().game_map.get_at(at) == GRD or MapManager().worm_col_map.get_at(at) != (0,0,0) or MapManager().objects_col_map.get_at(at) != (0,0,0):
 			if MapManager().worm_col_map.get_at(at) != (0,0,0):
 				MapManager().stain(testPos, sprites.blood, sprites.blood.get_size(), False)
-			boom(testPos, power)
+			boom(testPos, 15)
 			break
 
-def fireMiniGun(pos: Vector, direction: Vector, power: int=0):#0
+def fireMiniGun(**kwargs):#0
+	pos, direction = fire_gun_generic(**kwargs)
 	angle = atan2(direction[1], direction[0])
 	angle += uniform(-0.2, 0.2)
 	direction[0], direction[1] = cos(angle), sin(angle)
 	fireShotgun(pos, direction, randint(7,9))
 
 
-def fireGammaGun(pos: Vector, direction: Vector, power: int=15):
+def fireGammaGun(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	hitted = []
 	normal = Vector(-direction.y, direction.x).normalize()
 	for t in range(5,500):
@@ -112,7 +131,8 @@ def fireGammaGun(pos: Vector, direction: Vector, power: int=15):
 				target.explode()
 
 
-def fireLaser(pos: Vector, direction: Vector, power: int=15):
+def fireLaser(**kwargs):
+	pos, direction = fire_gun_generic(**kwargs)
 	hit = False
 	color = (254, 153, 35)
 	square = [Vector(1,5), Vector(1,-5), Vector(-10,-5), Vector(-10,5)]
@@ -140,8 +160,8 @@ def fireLaser(pos: Vector, direction: Vector, power: int=15):
 				GameVariables().layers_lines.append((color, pos + direction * 5, testPos, 10, 1))
 				
 				boom(worm.pos + Vector(randint(-1,1),randint(-1,1)), 2, False, False, True)
-				# worm.damage(randint(1,5))
-				# worm.vel += direction*2 + vectorUnitRandom()
+				worm.damage(randint(1,5))
+				worm.vel += direction * 2 + vectorUnitRandom()
 				hit = True
 				break
 		# if hits can:

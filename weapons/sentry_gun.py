@@ -15,7 +15,7 @@ from weapons.guns import fireMiniGun
 
 class SentryGun(PhysObj):
 	_sentries = []
-	def __init__(self, pos, team_color: ColorType):
+	def __init__(self, pos: Vector, team_color: ColorType, team_name: str):
 		self._sentries.append(self)
 		super().__init__(pos)
 		self.pos = Vector(pos[0],pos[1])
@@ -24,7 +24,8 @@ class SentryGun(PhysObj):
 		self.is_boom_affected = True
 		self.radius = 9
 		self.health = 50
-		self.teamColor = team_color
+		self.team_color = team_color
+		self.team_name = team_name
 		self.target = None
 		self.damp = 0.1
 		self.shots = 10
@@ -36,7 +37,7 @@ class SentryGun(PhysObj):
 		self.surf = pygame.Surface((17, 26), pygame.SRCALPHA)
 		self.surf.blit(sprites.sprite_atlas, (0,0), (80, 32, 17, 26))
 		self.electrified = False
-		pygame.draw.circle(self.surf, self.teamColor, tup2vec(self.surf.get_size())//2, 2)
+		pygame.draw.circle(self.surf, self.team_color, tup2vec(self.surf.get_size())//2, 2)
 	
 	def fire(self):
 		self.firing = True
@@ -44,7 +45,7 @@ class SentryGun(PhysObj):
 	def engage(self):
 		close = []
 		for worm in GameVariables().get_worms():
-			if worm.team.color == self.teamColor:
+			if worm.get_team_data().team_name == self.team_name:
 				continue
 			distance = distus(worm.pos, self.pos)
 			if distance < 10000:
@@ -100,7 +101,7 @@ class SentryGun(PhysObj):
 			
 	def draw(self, win: pygame.Surface):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
-		pygame.draw.line(win, self.teamColor, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
+		pygame.draw.line(win, self.team_color, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
 	
 	def damage(self, value, damageType=0):
 		dmg = value
