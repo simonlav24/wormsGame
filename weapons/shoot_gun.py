@@ -28,9 +28,9 @@ class ShootGun:
 			return
 		
 		kwargs = {
-			'pos': vectorCopy(Worm.player.pos),
-			'direction': Worm.player.get_shooting_direction(),
-			'shooter': Worm.player,
+			'pos': vectorCopy(GameVariables().player.pos),
+			'direction': GameVariables().player.get_shooting_direction(),
+			'shooter': GameVariables().player,
 			'energy': energy,
 		}
 		self.shooted_object = self.shoot_action(**kwargs)

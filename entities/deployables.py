@@ -3,15 +3,13 @@ from random import randint, choice
 
 import pygame
 
-from common import GameVariables, sprites, point2world
+from common import GameVariables, sprites, point2world, EntityWorm
 from common.vector import *
 
 from game.visual_effects import FloatingText
 from game.map_manager import MapManager, GRD
 from weapons.weapon_manager import WeaponManager
 from entities.props import ExplodingProp
-from entities import PhysObj
-from entities import Worm
 
 
 class Deployable(ExplodingProp):
@@ -30,16 +28,16 @@ class Deployable(ExplodingProp):
 
 	def step(self):
 		super().step()
-		if distus(Worm.player.pos, self.pos) < (self.radius + Worm.player.radius + 5) * (self.radius + Worm.player.radius + 5)\
-			and not Worm.player.health <= 0:
-			self.effect(Worm.player)
+		if distus(GameVariables().player.pos, self.pos) < (self.radius + GameVariables().player.radius + 5) * (self.radius + GameVariables().player.radius + 5)\
+			and not GameVariables().player.health <= 0:
+			self.effect(GameVariables().player)
 			self.remove_from_game()
 			return
 		if self.health <= 0:
 			self.death_response()
 			self.remove_from_game()
 
-	def effect(self, worm: Worm):
+	def effect(self, worm: EntityWorm):
 		...
 
 class HealthPack(Deployable):
@@ -47,7 +45,7 @@ class HealthPack(Deployable):
 		super().__init__(pos)
 		self.surf.blit(sprites.sprite_atlas, (0,0), (112, 96, 16, 16))
 
-	def effect(self, worm: Worm):
+	def effect(self, worm: EntityWorm):
 		worm.heal(50)
 		FloatingText(self.pos, "+50", (0,230,0))
 
@@ -57,7 +55,7 @@ class UtilityPack(Deployable):
 		self.box = choice(["moon gravity", "double damage", "aim aid", "teleport", "switch worms", "time travel", "jet pack", "tool set", "travel kit"])
 		self.surf.blit(sprites.sprite_atlas, (0,0), (96, 96, 16, 16))
 
-	def effect(self, worm: Worm):
+	def effect(self, worm: EntityWorm):
 		FloatingText(self.pos, self.box, (0,200,200))
 		if self.box == "tool set":
 			worm.team.ammo(WeaponManager()["portal gun"], 1)
@@ -79,7 +77,7 @@ class WeaponPack(Deployable):
 		self.box = WeaponManager()[choice(weaponsInBox)]
 		self.surf.blit(sprites.sprite_atlas, (0,0), (80, 96, 16, 16))
 
-	def effect(self, worm: Worm):
+	def effect(self, worm: EntityWorm):
 		FloatingText(self.pos, self.box.name, (0,200,200))
 		worm.team.ammo(self.box, 1)
 

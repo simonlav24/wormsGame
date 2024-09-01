@@ -10,8 +10,8 @@ import common
 from common import GREY, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world
 from common.vector import *
 import common.drawing_utilities
+
 from game.team_manager import TeamManager
-from entities.worm import Worm
 from weapons.earth_spike import calc_earth_spike_pos
 
 class WeaponStyle(Enum):

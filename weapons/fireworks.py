@@ -8,8 +8,6 @@ from common.vector import *
 
 from game.world_effects import boom
 from game.visual_effects import Blast, FireWork
-from entities import PhysObj, Worm
-
 
 
 class FireWorkRockets:
@@ -32,7 +30,7 @@ class FireWorkRockets:
 				Blast(obj.pos + Vector(0, obj.radius * 1.5) + vectorUnitRandom() * 2, randint(5, 8), 80)
 		elif self.state == "exploding":
 			for obj in self.objects:
-				FireWork(obj.pos, Worm.player.team.color)
+				FireWork(obj.pos, GameVariables().player.get_team_data().color)
 				boom(obj.pos, 22)
 			self.done()
 	
@@ -45,13 +43,13 @@ class FireWorkRockets:
 		if self.state == "tag":
 			candidates = []
 			for obj in GameVariables().get_physicals():
-				if obj == Worm.player or obj in self.objects:
+				if obj == GameVariables().player or obj in self.objects:
 					continue
-				if distus(obj.pos, Worm.player.pos) < 15*15:
+				if distus(obj.pos, GameVariables().player.pos) < 15*15:
 					candidates.append(obj)
 			# take the closest
 			if len(candidates) > 0:
-				candidates.sort(key = lambda x: distus(x.pos, Worm.player.pos))
+				candidates.sort(key = lambda x: distus(x.pos, GameVariables().player.pos))
 				self.objects.append(candidates[0])
 			self.picked += 1
 			if self.picked >= 3:
@@ -68,16 +66,16 @@ class FireWorkRockets:
 	def draw(self, win: pygame.Surface):
 		if self.state in ["tag"]:
 			for obj in GameVariables().get_physicals():
-				if obj == Worm.player or obj in self.objects:
+				if obj == GameVariables().player or obj in self.objects:
 					continue
-				if distus(obj.pos, Worm.player.pos) < 15*15:
+				if distus(obj.pos, GameVariables().player.pos) < 15*15:
 					draw_target(win, obj.pos)
 		
 		for obj in self.objects:
 			blit_weapon_sprite(win, point2world(obj.pos - Vector(8,8)), "fireworks")
 
 
-def fireFireWork(pos: Vector, direction: Vector, power: int=15):
+def fireFireWork(**kwargs):
 	if FireWorkRockets._fw is None:
 		FireWorkRockets()
 		return

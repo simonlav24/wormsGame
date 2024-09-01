@@ -7,7 +7,7 @@ from common import GameVariables, point2world, blit_weapon_sprite
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
-from entities import PhysObj, Worm
+from entities import PhysObj
 
 
 class EndPearl(PhysObj):
@@ -44,8 +44,8 @@ class EndPearl(PhysObj):
 		self.remove_from_game()
 		
 		response.normalize()
-		pos = self.pos + response * (Worm.player.radius + 2)
-		Worm.player.pos = pos
+		pos = self.pos + response * (GameVariables().player.radius + 2)
+		GameVariables().player.pos = pos
 	
 	def draw(self, win: pygame.Surface):
 		blit_weapon_sprite(win, point2world(self.pos - Vector(8,8)), "ender pearl")

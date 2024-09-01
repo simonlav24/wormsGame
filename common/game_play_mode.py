@@ -5,12 +5,11 @@ from random import choice
 
 import pygame
 
-from common import GameVariables, draw_target, draw_dir_indicator
+from common import GameVariables, draw_target, draw_dir_indicator, EntityWorm
 from common.game_event import GameEvents, EventWormDamage, EventComment
 from common import SingletonMeta
 
 from game.team_manager import TeamManager
-from entities import PhysObj, Worm
 
 class GamePlayMode:
     ''' handles game mode '''
@@ -32,7 +31,7 @@ class GamePlayMode:
     def hud_draw(self, win: pygame.Surface):
         pass
 
-    def on_worm_damage(self, worm: Worm, damage: int):
+    def on_worm_damage(self, worm: EntityWorm, damage: int):
         pass
 
     def on_worm_death(self):
@@ -78,7 +77,7 @@ class GamePlay(metaclass=SingletonMeta):
         for mode in self.modes:
             mode.hud_draw(win)
 
-    def on_worm_damage(self, worm: Worm, damage: int):
+    def on_worm_damage(self, worm: EntityWorm, damage: int):
         for mode in self.modes:
             mode.on_worm_damage(worm)
 
@@ -94,7 +93,8 @@ class GamePlay(metaclass=SingletonMeta):
 class TerminatorGamePlay(GamePlayMode):
     def __init__(self):
         self.hit_this_turn = False
-        self.current_target: Worm = None
+        self.current_target: EntityWorm = None
+        self.worm_to_target: Dict[EntityWorm, EntityWorm] = {}
 
     def pick_target(self):
         self.hit_this_turn = False

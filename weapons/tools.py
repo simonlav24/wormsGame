@@ -112,13 +112,13 @@ class Trampoline:
 
 class Baseball:
 	def __init__(self):	
-		self.direction = Worm.player.get_shooting_direction()
+		self.direction = GameVariables().player.get_shooting_direction()
 		GameVariables().register_non_physical(self)
 		self.timer = 0
 		hitted = []
 		for t in range(5, 25):
 			testPositions = []
-			testPos = Worm.player.pos + self.direction * t
+			testPos = GameVariables().player.pos + self.direction * t
 			testPositions.append(testPos)
 			testPositions.append(testPos + normalize(self.direction).getNormal() * 3)
 			testPositions.append(testPos - normalize(self.direction).getNormal() * 3)
@@ -139,5 +139,5 @@ class Baseball:
 			GameVariables().unregister_non_physical(self)
 
 	def draw(self, win: pygame.Surface):
-		weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, Worm.player.facing == LEFT), 12 + 180)
-		win.blit(weaponSurf, point2world(Worm.player.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
+		weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, GameVariables().player.facing == LEFT), 12 + 180)
+		win.blit(weaponSurf, point2world(GameVariables().player.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))

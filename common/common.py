@@ -56,6 +56,9 @@ class EntityPhysical(Entity):
 class EntityWorm(EntityPhysical):
 	''' a object with position and velocity '''
 	name_str: str
+	is_boom_affected: bool
+	facing: int
+	alive: bool
 
 	def dieded(self):
 		...
@@ -65,7 +68,15 @@ class EntityWorm(EntityPhysical):
 	
 	def get_team_data(self) -> TeamData:
 		...
+	
+	def get_shooting_direction(self) -> Vector:
+		...
+	
+	def drawCursor(self, win: pygame.Surface) -> None:
+		...
 
+	def get_shooting_angle(self) -> float:
+		...
 
 
 # color utilities

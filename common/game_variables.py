@@ -91,12 +91,21 @@ class GameVariables(metaclass=SingletonMeta):
         self.girder_angle: int = 0
         self.airstrike_direction = RIGHT
 
+        self._player: EntityWorm = None
+
         # refactor later
         self.extra = []
         # those are for laser only
         self.layers_circles = []
         self.layers_lines = []
 
+    @property
+    def player(self):
+        return self._player
+    
+    @player.setter
+    def player(self, value):
+        self._player = value
     
     def register_non_physical(self, entity: Entity) -> None:
         self.database.non_physicals.append(entity)

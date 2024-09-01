@@ -10,21 +10,21 @@ from common import GameVariables, sprites
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
-from entities import Debrie, Worm
+from entities import Debrie
 from game.team_manager import TeamManager
 
 
 def calc_earth_spike_pos():
-	dot = 1.0 - Worm.player._shoot_angle / pi
-	x_from_worm = Worm.player.pos.x + dot * 70 * Worm.player.facing
-	if MapManager().is_ground_at(Vector(x_from_worm, Worm.player.pos.y).integer()):
-		y = Worm.player.pos.y
+	dot = 1.0 - GameVariables().player.get_shooting_angle() / pi
+	x_from_worm = GameVariables().player.pos.x + dot * 70 * GameVariables().player.facing
+	if MapManager().is_ground_at(Vector(x_from_worm, GameVariables().player.pos.y).integer()):
+		y = GameVariables().player.pos.y
 		while MapManager().is_ground_at(Vector(x_from_worm, y).integer()):
 			y -= 2
 			if y < 0:
 				return None
 	else:
-		y = Worm.player.pos.y
+		y = GameVariables().player.pos.y
 		while not MapManager().is_ground_at(Vector(x_from_worm, y).integer()):
 			y += 2
 			if y > MapManager().game_map.get_height():

@@ -119,14 +119,6 @@ class Game:
 		self.radial_weapon_menu: RadialMenu = None
 
 	@property
-	def player(self):
-		return Worm.player
-	
-	@player.setter
-	def player(self, value: Worm):
-		Worm.player = value
-
-	@property
 	def win(self) -> pygame.Surface:
 		return globals.win
 
@@ -185,7 +177,7 @@ class Game:
 		if Game._game.game_config.random_mode != RandomMode.NONE:
 			w = choice(TeamManager().current_team.worms)
 		
-		Worm.player = w
+		GameVariables().player = w
 		GameVariables().cam_track = w
 
 		# reset time
@@ -370,9 +362,9 @@ class Game:
 			self.game_config.feel_index = randint(0, len(feels) - 1)
 
 		game_mode_map = {
-			GameMode.TERMINATOR: TerminatorGamePlay
+			GameMode.TERMINATOR: TerminatorGamePlay()
 		}
-		self.game_play.add_mode(game_mode_map.get(self.game_config.game_mode, None))
+		self.game_play.add_mode(game_mode_map.get(self.game_config.game_mode))
 
 		if self.game_config.option_darkness:
 			self.game_play.modes.append(DarknessGamePlay())
@@ -583,7 +575,7 @@ class TimeAgent:
 			
 		self.time_counter += 1
 	def draw(self, win: pygame.Surface):
-		pygame.draw.circle(win, Worm.player.color, point2world(self.pos), 3+1)
+		pygame.draw.circle(win, GameVariables().player.color, point2world(self.pos), 3+1)
 		facing = self.facings.pop(0)
 		win.blit(pygame.transform.flip(self.surf, facing == 1, False), point2world(tup2vec(self.pos) - tup2vec(self.surf.get_size()) / 2))
 		win.blit(self.nameSurf , ((int(self.pos[0]) - int(GameVariables().cam_pos[0]) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(GameVariables().cam_pos[1]) - 21)))
@@ -611,26 +603,26 @@ class TimeTravel:
 	def timeTravelInitiate(self):
 		Game._game.timeTravel = True
 		self.timeTravelList = {}
-		self.timeTravelList["surf"] = Worm.player.surf
-		self.timeTravelList["name"] = Worm.player.name
-		self.timeTravelList["health"] = Worm.player.health
-		self.timeTravelList["initial pos"] = vectorCopy(Worm.player.pos)
+		self.timeTravelList["surf"] = GameVariables().player.surf
+		self.timeTravelList["name"] = GameVariables().player.name
+		self.timeTravelList["health"] = GameVariables().player.health
+		self.timeTravelList["initial pos"] = vectorCopy(GameVariables().player.pos)
 		self.timeTravelList["time_counter in turn"] = TimeManager().time_counter
 	def timeTravelRecord(self):
-		self.timeTravelPositions.append(Worm.player.pos.vec2tup())
-		self.timeTravelFacings.append(Worm.player.facing)
+		self.timeTravelPositions.append(GameVariables().player.pos.vec2tup())
+		self.timeTravelFacings.append(GameVariables().player.facing)
 	def timeTravelPlay(self):
 		TimeManager().time_counter = self.timeTravelList["time_counter in turn"]
 		Game._game.timeTravel = False
 		self.timeTravelList["weapon"] = WeaponManager().current_weapon
-		self.timeTravelList["weaponOrigin"] = vectorCopy(Worm.player.pos)
+		self.timeTravelList["weaponOrigin"] = vectorCopy(GameVariables().player.pos)
 		self.timeTravelList["energy"] = Game._game.energyLevel
-		self.timeTravelList["weaponDir"] = Worm.player.get_shooting_direction()
-		Worm.player.health = self.timeTravelList["health"]
+		self.timeTravelList["weaponDir"] = GameVariables().player.get_shooting_direction()
+		GameVariables().player.health = self.timeTravelList["health"]
 		if Worm.healthMode == 1:
-			Worm.player.healthStr = fonts.pixel5.render(str(Worm.player.health), False, Worm.player.team.color)
-		Worm.player.pos = self.timeTravelList["initial pos"]
-		Worm.player.vel *= 0
+			GameVariables().player.healthStr = fonts.pixel5.render(str(GameVariables().player.health), False, GameVariables().player.team.color)
+		GameVariables().player.pos = self.timeTravelList["initial pos"]
+		GameVariables().player.vel *= 0
 		TimeAgent()
 	def timeTravelReset(self):
 		self.timeTravelFire = False
@@ -669,13 +661,13 @@ class Flag(PhysObj):
 		self.color = (220,0,0)
 		self.damp = 0.1
 	def secondaryStep(self):
-		if Worm.player:
-			if not Worm.player in GameVariables().get_worms():
+		if GameVariables().player is not None:
+			if not GameVariables().player in GameVariables().get_worms():
 				return
-			if dist(Worm.player.pos, self.pos) < self.radius + Worm.player.radius:
+			if dist(GameVariables().player.pos, self.pos) < self.radius + GameVariables().player.radius:
 				# worm has flag
-				Worm.player.flagHolder = True
-				Worm.player.team.flagHolder = True
+				GameVariables().player.flagHolder = True
+				GameVariables().player.team.flagHolder = True
 				self.remove_from_game()
 				Flag.flags.remove(self)
 				return
@@ -768,7 +760,7 @@ class MjolnirReturn:
 		GameVariables().cam_track = self
 		self.speedLimit = 8
 	def step(self):
-		self.acc = seek(self, Worm.player.pos, self.speedLimit, 1)
+		self.acc = seek(self, GameVariables().player.pos, self.speedLimit, 1)
 		
 		self.vel += self.acc
 		self.vel.limit(self.speedLimit)
@@ -776,7 +768,7 @@ class MjolnirReturn:
 		
 		self.angle += (0 - self.angle) * 0.1
 		GameVariables().game_distable()
-		if distus(self.pos, Worm.player.pos) < Worm.player.radius * Worm.player.radius * 2:
+		if distus(self.pos, GameVariables().player.pos) < GameVariables().player.radius * GameVariables().player.radius * 2:
 			GameVariables().unregister_non_physical(self)
 			Game._game.holdArtifact = True
 	def draw(self, win: pygame.Surface):
@@ -804,8 +796,8 @@ class Artifact(PhysObj):
 		pass
 	def secondaryStep(self):
 		# pick up
-		if dist(Worm.player.pos, self.pos) < self.radius + Worm.player.radius + 5 and not Worm.player.health <= 0\
-			and not len(Worm.player.team.artifacts) > 0: 
+		if dist(GameVariables().player.pos, self.pos) < self.radius + GameVariables().player.radius + 5 and not GameVariables().player.health <= 0\
+			and not len(GameVariables().player.team.artifacts) > 0: 
 			self.remove_from_game()
 			Game._game.worldArtifacts.remove(self.artifact)
 			self.commentPicked()
@@ -836,7 +828,7 @@ class Mjolnir(Artifact):
 		GameEvents().post(EventComment([{'text': "a gift from the gods"}]))
 	
 	def commentPicked(self):
-		GameEvents().post(EventComment([{'text': Worm.player.name_str, 'color': TeamManager().current_team.color}, {'text': " is worthy to wield mjolnir!"}]))
+		GameEvents().post(EventComment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': " is worthy to wield mjolnir!"}]))
 	
 	def trenaryStep(self):
 		if self.vel.getMag() > 1:
@@ -873,8 +865,8 @@ class MjolnirFly(PhysObj):
 		if self.rotating:
 			self.angle = -degrees(self.vel.getAngle()) - 90
 			
-		Worm.player.pos = vectorCopy(self.pos)
-		Worm.player.vel = Vector()
+		GameVariables().player.pos = vectorCopy(self.pos)
+		GameVariables().player.vel = Vector()
 	def on_collision(self, ppos):
 		# colission with world:
 		response = Vector(0,0)
@@ -901,8 +893,8 @@ class MjolnirFly(PhysObj):
 		
 		self.remove_from_game()
 		response.normalize()
-		pos = self.pos + response * (Worm.player.radius + 2)
-		Worm.player.pos = pos
+		pos = self.pos + response * (GameVariables().player.radius + 2)
+		GameVariables().player.pos = pos
 		
 	def remove_from_game(self):
 		GameVariables().unregister_physical(self)
@@ -914,19 +906,19 @@ class MjolnirFly(PhysObj):
 
 class MjolnirStrike:
 	def __init__(self):
-		self.pos = Worm.player.pos
+		self.pos = GameVariables().player.pos
 		GameVariables().register_non_physical(self)
 		Game._game.holdArtifact = False
 		self.stage = 0
 		self.timer = 0
 		self.angle = 0
 		self.worms = []
-		self.facing = Worm.player.facing
-		Worm.player.is_boom_affected = False
+		self.facing = GameVariables().player.facing
+		GameVariables().player.is_boom_affected = False
 		self.radius = 0
 	def step(self):
-		self.pos = Worm.player.pos
-		self.facing = Worm.player.facing
+		self.pos = GameVariables().player.pos
+		self.facing = GameVariables().player.facing
 		if self.stage == 0:
 			self.angle += 1
 			if self.timer >= fps * 4:
@@ -952,7 +944,7 @@ class MjolnirStrike:
 			if self.timer >= fps * 0.25:
 				boom(self.pos, 40)
 				GameVariables().unregister_non_physical(self)
-				Worm.player.is_boom_affected = True
+				GameVariables().player.is_boom_affected = True
 		self.timer += 1
 		GameVariables().game_distable()
 	def draw(self, win: pygame.Surface):
@@ -978,7 +970,7 @@ class MagicLeaf(Artifact):
 		GameEvents().post(EventComment([{'text': "a leaf of heavens tree"}]))
 	
 	def commentPicked(self):
-		GameEvents().post(EventComment([{'text': Worm.player.name_str, 'color': TeamManager().current_team.color}, {'text': "  became master of plants"}]))
+		GameEvents().post(EventComment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': "  became master of plants"}]))
 	
 	def trenaryStep(self):
 		self.angle += self.vel.x*4
@@ -1069,10 +1061,10 @@ class PointSpring:
 		pygame.draw.line(win, (255, 220, 0), point2world(self.obj.pos), point2world(self.point))
 
 class Tornado:
-	def __init__(self):
+	def __init__(self, pos: Vector, facing: int):
 		self.width = 30
-		self.pos = Worm.player.pos + Vector(Worm.player.radius + self.width / 2, 0) * Worm.player.facing
-		self.facing = Worm.player.facing
+		self.facing = facing
+		self.pos = pos + Vector(4 + self.width / 2, 0) * facing
 		GameVariables().register_non_physical(self)
 		amount = MapManager().game_map.get_height() // 10
 		self.points = [Vector(0, 10 * i) for i in range(amount)]
@@ -1086,6 +1078,7 @@ class Tornado:
 		self.timer = 0
 		self.speed = 2
 		self.radius = 0
+	
 	def step(self):
 		GameVariables().game_distable()
 		if self.timer < 2 * fps:
@@ -1106,6 +1099,7 @@ class Tornado:
 			if len(self.swirles) == 0:
 				GameVariables().unregister_non_physical(self)
 		self.timer += 1
+	
 	def draw(self, win: pygame.Surface):
 		for i, swirl in enumerate(self.swirles):
 			five = [point2world(Vector(swirl[0] * cos(swirl[2] + t/5) + self.pos.x, 10 * i + swirl[1] * sin(swirl[2] + t/5))) for t in range(5)]
@@ -1138,7 +1132,7 @@ class PickAxe:
 		blit_weapon_sprite(self.surf, (0,0), "pick axe")
 		self.animating = 0
 	def mine(self):
-		worm = Worm.player
+		worm = GameVariables().player
 		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
 		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
 
@@ -1172,11 +1166,11 @@ class PickAxe:
 		if self.animating > 0:
 			self.animating -= 5
 			self.animating = max(self.animating, 0)
-		if not Worm.player.alive:
+		if not GameVariables().player.alive:
 			GameVariables().unregister_non_physical(self)
 			PickAxe._pa = None
 	def draw(self, win: pygame.Surface):
-		worm = Worm.player
+		worm = GameVariables().player
 		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
 		# closest grid of 16
 		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
@@ -1195,7 +1189,7 @@ class MineBuild:
 		self.count = 6
 		self.locations = []
 	def build(self):
-		worm = Worm.player
+		worm = GameVariables().player
 		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
 		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
 
@@ -1219,11 +1213,11 @@ class MineBuild:
 			GameVariables().unregister_non_physical(self)
 			MineBuild._mb = None
 			
-		if not Worm.player.alive:
+		if not GameVariables().player.alive:
 			GameVariables().unregister_non_physical(self)
 			MineBuild._mb = None
 	def draw(self, win: pygame.Surface):
-		worm = Worm.player
+		worm = GameVariables().player
 		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
 		# closest grid of 16
 		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
@@ -1275,9 +1269,9 @@ def fire(weapon = None):
 	if not weapon:
 		weapon = WeaponManager().current_weapon
 	decrease = True
-	if Worm.player:
-		weaponOrigin = vectorCopy(Worm.player.pos)
-		weaponDir = Worm.player.get_shooting_direction()
+	if GameVariables().player is not None:
+		weaponOrigin = vectorCopy(GameVariables().player.pos)
+		weaponDir = GameVariables().player.get_shooting_direction()
 		energy = Game._game.energyLevel
 		
 	if TimeTravel._tt.timeTravelFire:
@@ -1336,13 +1330,13 @@ def fire(weapon = None):
 		w = PetrolBomb(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "TNT":
 		w = TNT(weaponOrigin)
-		w.vel.x = Worm.player.facing * 0.5
+		w.vel.x = GameVariables().player.facing * 0.5
 		w.vel.y = -0.8
 	elif weapon.name == "sticky bomb":
 		w = StickyBomb(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "mine":
 		w = Mine(weaponOrigin, fps * 2.5)
-		w.vel.x = Worm.player.facing * 0.5
+		w.vel.x = GameVariables().player.facing * 0.5
 	elif weapon.name == "baseball":
 		Baseball()
 	elif weapon.name == "gas grenade":
@@ -1361,7 +1355,7 @@ def fire(weapon = None):
 		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantMode.VENUS)
 	elif weapon.name == "sentry turret":
 		w = SentryGun(weaponOrigin, TeamManager().current_team.color)
-		w.pos.y -= Worm.player.radius + w.radius
+		w.pos.y -= GameVariables().player.radius + w.radius
 	elif weapon.name == "bee hive":
 		w = BeeHive(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "drill missile":
@@ -1376,30 +1370,30 @@ def fire(weapon = None):
 	elif weapon.name == "chilli pepper":
 		w = ChilliPepper(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "covid 19":
-		w = Covid19(weaponOrigin, Worm.player.get_team_data().team_name)
-		for worm in Worm.player.team.worms:
+		w = Covid19(weaponOrigin, GameVariables().player.get_team_data().team_name)
+		for worm in GameVariables().player.team.worms:
 			w.bitten.append(worm)
 	elif weapon.name == "artillery assist":
 		w = Artillery(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "sheep":
 		w = Sheep(weaponOrigin + Vector(0,-5))
-		w.facing = Worm.player.facing
+		w.facing = GameVariables().player.facing
 	elif weapon.name == "rope":
 		angle = weaponDir.getAngle()
 		decrease = False
 		if angle <= 0:
-			Worm.player.worm_tool.set(Rope(Worm.player, weaponOrigin, weaponDir))
+			GameVariables().player.worm_tool.set(Rope(GameVariables().player, weaponOrigin, weaponDir))
 
 		GameVariables().game_next_state = GameState.PLAYER_PLAY
 	elif weapon.name == "raging bull":
 		w = Bull(weaponOrigin + Vector(0,-5))
-		w.facing = Worm.player.facing
-		w.ignore.append(Worm.player)
+		w.facing = GameVariables().player.facing
+		w.ignore.append(GameVariables().player)
 	elif weapon.name == "electro boom":
-		w = ElectroBoom(weaponOrigin, weaponDir, energy, Worm.player.get_team_data().team_name)
+		w = ElectroBoom(weaponOrigin, weaponDir, energy, GameVariables().player.get_team_data().team_name)
 	elif weapon.name == "parachute":
-		if Worm.player.vel.y > 1:
-			tool_set = Worm.player.worm_tool.set(Parachute(Worm.player))
+		if GameVariables().player.vel.y > 1:
+			tool_set = GameVariables().player.worm_tool.set(Parachute(GameVariables().player))
 			if not tool_set:
 				decrease = False
 		else:
@@ -1410,8 +1404,8 @@ def fire(weapon = None):
 		w = PokeBall(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "green shell":
 		w = GreenShell(weaponOrigin + Vector(0,-5))
-		w.facing = Worm.player.facing
-		w.ignore.append(Worm.player)
+		w.facing = GameVariables().player.facing
+		w.ignore.append(GameVariables().player)
 	elif weapon.name == "guided missile":
 		w = GuidedMissile(weaponOrigin + Vector(0,-5))
 		GameVariables().game_next_state = GameState.WAIT_STABLE
@@ -1428,7 +1422,7 @@ def fire(weapon = None):
 			w = Raon(weaponOrigin, weaponDir, energy * 1.08)
 			w = Raon(weaponOrigin, weaponDir, energy * 0.92)
 	elif weapon.name == "snail":
-		w = SnailShell(weaponOrigin, weaponDir, energy, Worm.player.facing)
+		w = SnailShell(weaponOrigin, weaponDir, energy, GameVariables().player.facing)
 	elif weapon.name == "acid bottle":
 		w = AcidBottle(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "seeker":
@@ -1440,7 +1434,7 @@ def fire(weapon = None):
 		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
 		w = Chum(weaponOrigin, weaponDir, energy)
 	elif weapon.name == "trampoline":
-		position = Worm.player.pos + Worm.player.get_shooting_direction() * 20
+		position = GameVariables().player.pos + GameVariables().player.get_shooting_direction() * 20
 		anchored = False
 		for i in range(25):
 			if MapManager().is_ground_at(position + Vector(0, i)):
@@ -1469,7 +1463,7 @@ def fire(weapon = None):
 	elif weapon.name == "mine plant":
 		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantSeed.mine)
 	elif weapon.name == "air tornado":
-		w = Tornado()
+		w = Tornado(GameVariables().player.pos, GameVariables().player.facing)
 	elif weapon.name == "pick axe":
 		if PickAxe._pa:
 			decrease = PickAxe._pa.mine()
@@ -1527,7 +1521,7 @@ def fireClickable():
 	if current_weapon.name == "girder":
 		Game._game.girder(mousePosition)
 	elif current_weapon.name == "teleport":
-		Worm.player.pos = mousePosition
+		GameVariables().player.pos = mousePosition
 		addToUsed = False
 	elif current_weapon.name == "airstrike":
 		fireAirstrike(mousePosition)
@@ -1580,7 +1574,7 @@ def fireUtility(weapon = None):
 		GameEvents().post(EventComment([{'text': "great scott"}]))
 
 	elif weapon.name == "jet pack":
-		tool_set = Worm.player.worm_tool.set(JetPack(Worm.player))
+		tool_set = GameVariables().player.worm_tool.set(JetPack(GameVariables().player))
 		if not tool_set:
 			decrease = False
 	
@@ -1761,18 +1755,18 @@ def cycle_worms():
 	Game._game.aimAid = False
 	if Game._game.timeTravel: TimeTravel._tt.timeTravelReset()
 
-	Worm.player.worm_tool.release()
+	GameVariables().player.worm_tool.release()
 
 	Game._game.switchingWorms = False
 	if Worm.roped:
-		Worm.player.team.ammo(WeaponManager()["rope"], -1)
+		GameVariables().player.team.ammo(WeaponManager()["rope"], -1)
 		Worm.roped = False
 	
 	# update damage:
-	wormName = Worm.player.name_str
-	wormColor = Worm.player.team.color
+	wormName = GameVariables().player.name_str
+	wormColor = GameVariables().player.team.color
 	if Game._game.damageThisTurn > Game._game.mostDamage[0]:
-		Game._game.mostDamage = (Game._game.damageThisTurn, Worm.player.name_str)	
+		Game._game.mostDamage = (Game._game.damageThisTurn, GameVariables().player.name_str)	
 	if Game._game.damageThisTurn > int(Game._game.game_config.worm_initial_health * 2.5):
 		if Game._game.damageThisTurn == 300:
 			GameEvents().post(EventComment([{'text': "THIS IS "}, {'text': wormName, 'color': wormColor}]))
@@ -1965,8 +1959,8 @@ def cycle_worms():
 		if Game._game.game_config.random_mode == RandomMode.IN_TEAM: # random in the current team
 			w = choice(TeamManager().current_team.worms)
 	
-		Worm.player = w
-		GameVariables().cam_track = Worm.player
+		GameVariables().player = w
+		GameVariables().cam_track = GameVariables().player
 		GameVariables().player_can_move = True
 
 		WeaponManager().switch_weapon(WeaponManager().current_weapon)
@@ -1974,11 +1968,11 @@ def cycle_worms():
 			MissionManager._mm.cycle()
 
 def switch_worms():
-	currentWorm = TeamManager().current_team.worms.index(Worm.player)
+	currentWorm = TeamManager().current_team.worms.index(GameVariables().player)
 	totalWorms = len(TeamManager().current_team.worms)
 	currentWorm = (currentWorm + 1) % totalWorms
-	Worm.player = TeamManager().current_team.worms[currentWorm]
-	GameVariables().cam_track = Worm.player
+	GameVariables().player = TeamManager().current_team.worms[currentWorm]
+	GameVariables().cam_track = GameVariables().player
 	if Game._game.gameMode == GameMode.MISSIONS:
 		MissionManager._mm.cycle()
 
@@ -2196,7 +2190,7 @@ class MissionManager:
 		return newMission
 
 	def getAliveWormsFromOtherTeams(self):
-		notFromTeam = Worm.player.team
+		notFromTeam = GameVariables().player.team
 		worms = []
 		for worm in GameVariables().get_worms():
 			if worm.team == notFromTeam:
@@ -2210,12 +2204,12 @@ class MissionManager:
 		return giveGoodPlace(-1, True)
 
 	def chooseTarget(self):
-		notFromTeam = Worm.player.team
+		notFromTeam = GameVariables().player.team
 		worms = self.getAliveWormsFromOtherTeams()
 		return choice(worms)
 
 	def chooseTeamTarget(self):
-		notFromTeam = Worm.player.team
+		notFromTeam = GameVariables().player.team
 		teams = []
 		for team in TeamManager().teams:
 			if team == notFromTeam:
@@ -2228,20 +2222,20 @@ class MissionManager:
 		return choice(teams)
 
 	def removeMission(self, mission):
-		if mission in self.wormMissionDict[Worm.player]:
-			self.wormMissionDict[Worm.player].remove(mission)
+		if mission in self.wormMissionDict[GameVariables().player]:
+			self.wormMissionDict[GameVariables().player].remove(mission)
 
 		if Game._game.isPlayingState():
-			self.assignMissions(Worm.player, mission)
+			self.assignMissions(GameVariables().player, mission)
 
 	def notifyKill(self, worm):
-		if worm == Worm.player:
+		if worm == GameVariables().player:
 			return
 		self.killedThisTurn.append(worm)
 		self.checkMissions(["kill a worm", "kill _", "double kill", "triple kill", "above 50 damage"])
 
 	def notifyHit(self, worm):
-		if worm in self.hitThisTurn or worm == Worm.player:
+		if worm in self.hitThisTurn or worm == GameVariables().player:
 			self.checkMissions(["above 50 damage"])
 			return
 		self.hitThisTurn.append(worm)
@@ -2249,18 +2243,18 @@ class MissionManager:
 		# check highest
 		worms = []
 		for w in GameVariables().get_worms():
-			if w.alive and w.team != Worm.player.team:
+			if w.alive and w.team != GameVariables().player.team:
 				worms.append(w)
 		
 		highestWorm = min(worms, key=lambda w: w.pos.y)
 		if worm == highestWorm:
 			self.checkMissions(["hit highest worm"])
 		# check distance
-		if distus(worm.pos, Worm.player.pos) > 300 * 300:
+		if distus(worm.pos, GameVariables().player.pos) > 300 * 300:
 			self.checkMissions(["hit distant worm"])
 
 	def checkMissions(self, missionTypes):
-		for mission in self.wormMissionDict[Worm.player]:
+		for mission in self.wormMissionDict[GameVariables().player]:
 			if mission.missionType in missionTypes:
 				mission.check()
 
@@ -2272,30 +2266,30 @@ class MissionManager:
 
 	def cycle(self):
 		# start of turn, assign missions to current worm
-		self.assignMissions(Worm.player)
+		self.assignMissions(GameVariables().player)
 		self.updateDisplay()
 		self.killedThisTurn = []
 		self.hitThisTurn = []
 		self.sickThisTurn = []
 		self.marker = None
 
-		if "reach marker" in self.wormMissionDict[Worm.player]:
+		if "reach marker" in self.wormMissionDict[GameVariables().player]:
 			self.createMarker()
 
 	def updateDisplay(self):
-		for mission in self.wormMissionDict[Worm.player]:
+		for mission in self.wormMissionDict[GameVariables().player]:
 			mission.updateDisplay()
 
 	def step(self):
-		if Worm.player == None:
+		if GameVariables().player == None:
 			return
-		for mission in self.wormMissionDict[Worm.player]:
+		for mission in self.wormMissionDict[GameVariables().player]:
 			mission.step()
 
 	def draw(self, win: pygame.Surface):
-		if Worm.player == None:
+		if GameVariables().player == None:
 			return
-		currentWorm = Worm.player
+		currentWorm = GameVariables().player
 		# draw missions gui in lower right of screen
 		yOffset = 0
 		for mission in self.wormMissionDict[currentWorm]:
@@ -2342,15 +2336,15 @@ class Mission:
 		if "_" in string:
 			string = string.replace("_", stringReplacement)
 		comment = [
-			{'text': 'mission '}, {'text': string, 'color': Worm.player.team.color}, {'text': ' passed'}
+			{'text': 'mission '}, {'text': string, 'color': GameVariables().player.team.color}, {'text': ' passed'}
 		]
 
 		GameEvents().post(EventComment(comment))
-		Worm.player.team.points += self.reward
+		GameVariables().player.team.points += self.reward
 		Game._game.addToScoreList(self.reward)
 
 		self.completed = True
-		MissionManager._log += f"{Worm.player.name_str} completed mission {self.missionType} {str(self.reward)}\n"
+		MissionManager._log += f"{GameVariables().player.name_str} completed mission {self.missionType} {str(self.reward)}\n"
 		
 	def check(self):
 		# check complete
@@ -2393,7 +2387,7 @@ class Mission:
 
 	def step(self):
 		if self.marker:
-			if distus(self.marker, Worm.player.pos) < 20 * 20:
+			if distus(self.marker, GameVariables().player.pos) < 20 * 20:
 				self.check()
 		if self.completed:
 			self.timer = max(0, self.timer - 1)
@@ -2405,7 +2399,7 @@ class Mission:
 	def draw(self, win: pygame.Surface):
 		# draw indicators
 		# draw distance indicator
-		currentWorm = Worm.player
+		currentWorm = GameVariables().player
 		if self.missionType == "hit distant worm":
 			radius = 300
 			da = 2 * pi / 40
@@ -2487,7 +2481,7 @@ def cheat_activate(code: str):
 	elif code == "wind":
 		GameVariables().physics.wind = uniform(-1, 1)
 	elif code == "goodbyecruelworld":
-		boom(Worm.player.pos, 100)
+		boom(GameVariables().player.pos, 100)
 	elif code == "armageddon":
 		Armageddon()
 	elif code == "reset":
@@ -2621,10 +2615,10 @@ def stateMachine():
 
 ################################################################################ Key bindings
 def onKeyPressRight():
-	Worm.player.turn(RIGHT)
+	GameVariables().player.turn(RIGHT)
 
 def onKeyPressLeft():
-	Worm.player.turn(LEFT)
+	GameVariables().player.turn(LEFT)
 
 def onKeyPressSpace():
 	if not WeaponManager().can_shoot():
@@ -2675,16 +2669,16 @@ def onKeyPressTab():
 	if WeaponManager().current_weapon.name == "drill missile":
 		DrillMissile.mode = not DrillMissile.mode
 		if DrillMissile.mode:
-			FloatingText(Worm.player.pos + Vector(0,-5), "drill mode", (20,20,20))
+			FloatingText(GameVariables().player.pos + Vector(0,-5), "drill mode", (20,20,20))
 		else:
-			FloatingText(Worm.player.pos + Vector(0,-5), "rocket mode", (20,20,20))
+			FloatingText(GameVariables().player.pos + Vector(0,-5), "rocket mode", (20,20,20))
 		WeaponManager().render_weapon_count()
 	elif WeaponManager().current_weapon.name == "long bow":
 		LongBow._sleep = not LongBow._sleep
 		if LongBow._sleep:
-			FloatingText(Worm.player.pos + Vector(0,-5), "sleeping", (20,20,20))
+			FloatingText(GameVariables().player.pos + Vector(0,-5), "sleeping", (20,20,20))
 		else:
-			FloatingText(Worm.player.pos + Vector(0,-5), "regular", (20,20,20))
+			FloatingText(GameVariables().player.pos + Vector(0,-5), "regular", (20,20,20))
 	elif WeaponManager().current_weapon.name == "girder":
 		GameVariables().girder_angle += 45
 		if GameVariables().girder_angle == 180:
@@ -2697,7 +2691,7 @@ def onKeyPressTab():
 		if GameVariables().fuse_time > fps*4:
 			GameVariables().fuse_time = fps
 		string = "delay " + str(GameVariables().fuse_time//fps) + " sec"
-		FloatingText(Worm.player.pos + Vector(0,-5), string, (20,20,20))
+		FloatingText(GameVariables().player.pos + Vector(0,-5), string, (20,20,20))
 		WeaponManager().render_weapon_count()
 	elif WeaponManager().current_weapon.category == WeaponCategory.AIRSTRIKE:
 		GameVariables().airstrike_direction *= -1
@@ -2706,9 +2700,9 @@ def onKeyPressTab():
 
 def onKeyPressEnter():
 	# jump
-	if Worm.player.stable and Worm.player.health > 0:
-		Worm.player.vel += Worm.player.get_shooting_direction() * JUMP_VELOCITY
-		Worm.player.stable = False
+	if GameVariables().player.stable and GameVariables().player.health > 0:
+		GameVariables().player.vel += GameVariables().player.get_shooting_direction() * JUMP_VELOCITY
+		GameVariables().player.stable = False
 
 ################################################################################ Main
 
@@ -2778,7 +2772,7 @@ def gameMain(game_config: GameConfig=None):
 			# key press
 			if event.type == pygame.KEYDOWN:
 				# controll worm, jump and facing
-					if Worm.player and GameVariables().player_in_control:
+					if GameVariables().player is not None and GameVariables().player_in_control:
 						if event.key == pygame.K_RETURN:
 							onKeyPressEnter()
 						if event.key == pygame.K_RIGHT:
@@ -2811,7 +2805,7 @@ def gameMain(game_config: GameConfig=None):
 					if event.key in [pygame.K_RCTRL, pygame.K_LCTRL]:
 						GameVariables().scale_factor = GameVariables().scale_range[1]
 						if GameVariables().cam_track is None:
-							GameVariables().cam_track = Worm.player
+							GameVariables().cam_track = GameVariables().player
 
 					Game._game.cheatCode += event.unicode
 					if event.key == pygame.K_EQUALS:
@@ -2824,7 +2818,7 @@ def gameMain(game_config: GameConfig=None):
 		
 		#key hold:
 		keys = pygame.key.get_pressed()
-		if Worm.player and GameVariables().player_in_control and GameVariables().player_can_move:
+		if GameVariables().player is not None and GameVariables().player_in_control and GameVariables().player_can_move:
 			# fire hold
 			if keys[pygame.K_SPACE] and GameVariables().player_can_shoot and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and Game._game.energising:
 				onKeyHoldSpace()
@@ -2970,16 +2964,16 @@ def gameMain(game_config: GameConfig=None):
 
 		# if Game._game.darkness and MapManager().dark_mask: win.blit(MapManager().dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
 		# draw shooting indicator
-		if Worm.player and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and Worm.player.health > 0:
-			Worm.player.drawCursor(win)
+		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:
+			GameVariables().player.drawCursor(win)
 			if Game._game.aimAid and WeaponManager().current_weapon.style == WeaponStyle.GUN:
-				p1 = vectorCopy(Worm.player.pos)
-				p2 = p1 + Worm.player.get_shooting_direction() * 500
+				p1 = vectorCopy(GameVariables().player.pos)
+				p2 = p1 + GameVariables().player.get_shooting_direction() * 500
 				pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
 			i = 0
 			while i < 20 * Game._game.energyLevel:
-				cPos = vectorCopy(Worm.player.pos)
-				pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + Worm.player.get_shooting_direction() * i))
+				cPos = vectorCopy(GameVariables().player.pos)
+				pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + GameVariables().player.get_shooting_direction() * i))
 				i += 1
 		
 		GameVariables().draw_extra(win)
@@ -3002,7 +2996,7 @@ def gameMain(game_config: GameConfig=None):
 		GamePlay().draw(win)
 
 
-		if Game._game.gameMode == GameMode.TARGETS and Worm.player:
+		if Game._game.gameMode == GameMode.TARGETS and GameVariables().player is not None:
 			for target in ShootingTarget._reg:
 				draw_dir_indicator(win, target.pos)
 		if Game._game.gameMode == GameMode.MISSIONS:

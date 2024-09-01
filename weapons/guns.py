@@ -11,7 +11,7 @@ from common import sprites, GameVariables
 from game.map_manager import MapManager, GRD, SKY
 from game.visual_effects import splash, Blast
 from game.world_effects import boom
-from entities import Fire, Worm
+from entities import Fire
 from entities.gun_shell import GunShell
 from weapons.bubble import Bubble
 from weapons.long_bow import LongBow, Icicle, FireBall
@@ -130,7 +130,7 @@ def fireGammaGun(**kwargs):
 			if distus(testPos, target.pos) < target.radius * target.radius:
 				target.explode()
 
-
+# todo: optimize
 def fireLaser(**kwargs):
 	pos, direction = fire_gun_generic(**kwargs)
 	hit = False
@@ -151,7 +151,7 @@ def fireLaser(**kwargs):
 			
 		# if hits worm:
 		for worm in GameVariables().get_worms():
-			if worm == Worm.player:
+			if worm == kwargs.get('shooter'):
 				continue
 			if distus(testPos, worm.pos) < (worm.radius + 2) * (worm.radius + 2):
 				if randint(0,1) == 1: Blast(testPos + vectorUnitRandom(), randint(5,9), 20)
@@ -160,8 +160,8 @@ def fireLaser(**kwargs):
 				GameVariables().layers_lines.append((color, pos + direction * 5, testPos, 10, 1))
 				
 				boom(worm.pos + Vector(randint(-1,1),randint(-1,1)), 2, False, False, True)
-				worm.damage(randint(1,5))
-				worm.vel += direction * 2 + vectorUnitRandom()
+				# worm.damage(randint(1,5))
+				# worm.vel += direction * 2 + vectorUnitRandom()
 				hit = True
 				break
 		# if hits can:

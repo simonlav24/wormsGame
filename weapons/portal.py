@@ -7,8 +7,6 @@ from common.vector import *
 from common import GameVariables, point2world, GameState
 
 from game.map_manager import MapManager, GRD
-from game.world_effects import boom
-from entities import PhysObj, Worm
 
 RADIUS_OF_CONTACT = 8
 RADIUS_OF_RELEASE = 10
@@ -59,8 +57,8 @@ class Portal:
 			return
 		
 		if self.brother:
-			Bro = (self.pos - Worm.player.pos)
-			angle = self.direction.getAngle() - (self.pos - Worm.player.pos).getAngle()
+			Bro = (self.pos - GameVariables().player.pos)
+			angle = self.direction.getAngle() - (self.pos - GameVariables().player.pos).getAngle()
 			broAngle = self.brother.dirNeg.getAngle()
 			finalAngle = broAngle + angle
 			Bro.setAngle(finalAngle)

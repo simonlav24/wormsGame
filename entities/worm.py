@@ -23,7 +23,6 @@ class DeathCause(Enum):
     DAMAGE = 1
 
 class Worm (PhysObj):
-    player: 'Worm' = None #todo: make it a wormEntity in gameVariables
     healthMode = 0
     roped = False
     def __init__(self, pos, name, team=None):
@@ -40,7 +39,7 @@ class Worm (PhysObj):
         self.shoot_vel = 0
 
         self.health = GameVariables().config.worm_initial_health
-        self.alive = True
+        self.alive: bool = True
         self.team: Team = team
 
         self.sick = 0
@@ -116,7 +115,7 @@ class Worm (PhysObj):
     
     def draw(self, win: pygame.Surface):
         # draw collision
-        if not self is Worm.player and self.alive:
+        if not self is GameVariables().player and self.alive:
             pygame.draw.circle(MapManager().worm_col_map, GRD, self.pos.vec2tupint(), int(self.radius)+1)
 
         # draw tool
@@ -151,7 +150,7 @@ class Worm (PhysObj):
                 FloatingText(self.pos, "z", (0,0,0))
 
         # draw holding weapon
-        if self is Worm.player and GameVariables().game_state == GameState.PLAYER_PLAY:
+        if self is GameVariables().player and GameVariables().game_state == GameState.PLAYER_PLAY:
             adjust_degrees = 180 if self.facing == LEFT else 0
             weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, self.facing == LEFT), -degrees(self._shoot_angle - pi/2) * self.facing + adjust_degrees)
             win.blit(weaponSurf, point2world(self.pos - tup2vec(weaponSurf.get_size())/2 + Vector(0, 5)))
@@ -185,7 +184,7 @@ class Worm (PhysObj):
             self.remove_from_game()
         
         # if under control 
-        if Worm.player == self:
+        if GameVariables().player == self:
             GameVariables().game_next_state = GameState.PLAYER_RETREAT
             GameVariables().game_state = GameVariables().game_next_state
             TimeManager().time_remaining_die()
@@ -212,6 +211,9 @@ class Worm (PhysObj):
     def get_shooting_direction(self) -> Vector:
         return Vector(cos(self._shoot_angle - pi / 2) * self.facing, sin(self._shoot_angle - pi / 2))
 
+    def get_shooting_angle(self) -> float:
+        return self._shoot_angle
+
     def step(self) -> None:
         super().step()
         if self.stable and self.alive:
@@ -221,7 +223,7 @@ class Worm (PhysObj):
                 self.angle *= 0.8
         else:
             self.stableCount = 0
-            if not self is Worm.player:
+            if not self is GameVariables().player:
                 self.angle -= self.vel.x * 4
                 self.angle = self.angle % 360
 
@@ -257,7 +259,7 @@ class Worm (PhysObj):
         
         # check key bindings
         move_action = False
-        if (self is Worm.player and
+        if (self is GameVariables().player and
             GameVariables().player_can_move and
             GameVariables().player_in_control and
             self.alive):

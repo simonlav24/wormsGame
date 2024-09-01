@@ -154,7 +154,7 @@ class ElectroBoom(PhysObj):
 		for selfWorm in self.worms:
 			net = []
 			for worm in GameVariables().get_worms():
-				if worm == selfWorm or worm in self.used or worm in self.worms or worm in Worm.player.team.worms:
+				if worm == selfWorm or worm in self.used or worm in self.worms or worm in GameVariables().player.team.worms:
 					continue
 				if dist(selfWorm.pos, worm.pos) < 150 and not worm in self.worms:
 					net.append(worm)
