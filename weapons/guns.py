@@ -20,7 +20,6 @@ from weapons.spear import Spear
 from weapons.earth_spike import EarthSpike, calc_earth_spike_pos
 
 from entities.shooting_target import ShootingTarget
-from entities.props import PetrolCan
 from weapons.plants import Venus
 
 
@@ -92,7 +91,7 @@ def fireShotgun(**kwargs):
 		if MapManager().game_map.get_at(at) == GRD or MapManager().worm_col_map.get_at(at) != (0,0,0) or MapManager().objects_col_map.get_at(at) != (0,0,0):
 			if MapManager().worm_col_map.get_at(at) != (0,0,0):
 				MapManager().stain(testPos, sprites.blood, sprites.blood.get_size(), False)
-			boom(testPos, 15)
+			boom(testPos, kwargs.get('power', 15))
 			break
 
 def fireMiniGun(**kwargs):#0
@@ -100,7 +99,7 @@ def fireMiniGun(**kwargs):#0
 	angle = atan2(direction[1], direction[0])
 	angle += uniform(-0.2, 0.2)
 	direction[0], direction[1] = cos(angle), sin(angle)
-	fireShotgun(pos, direction, randint(7,9))
+	fireShotgun(pos=pos, direction=direction, power=randint(7,9))
 
 
 def fireGammaGun(**kwargs):
@@ -165,7 +164,7 @@ def fireLaser(**kwargs):
 				hit = True
 				break
 		# if hits can:
-		for can in PetrolCan._cans:
+		for can in GameVariables().get_exploding_props():
 			if distus(testPos, can.pos) < (can.radius + 1) * (can.radius + 1):
 				can.damage(10)
 				# hit = True

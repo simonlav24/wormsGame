@@ -52,6 +52,8 @@ class EntityPhysical(Entity):
 	def remove_from_game(self):
 		...
 
+	def damage(self, value, damageType=0):
+		...
 
 class EntityWorm(EntityPhysical):
 	''' a object with position and velocity '''
@@ -61,9 +63,6 @@ class EntityWorm(EntityPhysical):
 	alive: bool
 
 	def dieded(self):
-		...
-	
-	def damage(self, value, damageType=0):
 		...
 	
 	def get_team_data(self) -> TeamData:
@@ -78,6 +77,13 @@ class EntityWorm(EntityPhysical):
 	def get_shooting_angle(self) -> float:
 		...
 
+
+class AutonomousEntity(EntityPhysical):
+	def engage(self) -> bool:
+		...
+
+	def done(self) -> None:
+		...
 
 # color utilities
 

@@ -59,19 +59,19 @@ class ElectricGrenade(PhysObj):
 			for worm in GameVariables().get_worms():
 				if distus(self.pos, worm.pos) < 10000:
 					self.worms.append(worm)
-			for raon in Raon._raons:
-				if distus(self.pos, raon.pos) < 10000:
-					self.raons.append(raon)
+			# for raon in Raon._raons:
+			# 	if distus(self.pos, raon.pos) < 10000:
+			# 		self.raons.append(raon)
 			for shell in GreenShell._shells:
 				if distus(self.pos, shell.pos) < 10000:
 					self.shells.append(shell)
-			for sentry in SentryGun._sentries:
-				if distus(self.pos, sentry.pos) < 10000:
-					sentry.electrified = True
-					if sentry not in self.sentries:
-						self.sentries.append(sentry)
-				else:
-					sentry.electrified = False
+			# for sentry in SentryGun._sentries:
+			# 	if distus(self.pos, sentry.pos) < 10000:
+			# 		sentry.electrified = True
+			# 		if sentry not in self.sentries:
+			# 			self.sentries.append(sentry)
+			# 	else:
+			# 		sentry.electrified = False
 			if len(self.worms) == 0 and len(self.raons) == 0:
 				self.emptyCounter += 1
 				if self.emptyCounter == GameVariables().fps:

@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -38,6 +38,8 @@ class DataBase:
         # functional lists
         self.worms: List[EntityWorm] = []
         self.debries: List[EntityPhysical] = []
+        self.exploding_props: List[EntityPhysical] = []
+        self.autonomous_objects: List[AutonomousEntity] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -76,7 +78,7 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.game_stable = False
         self.game_stable_counter = 0
-        self.game_turn_count = 0
+        self.game_turn_count = 1
 
         self.game_state = GameState.RESET
         self.game_next_state = GameState.RESET
@@ -160,9 +162,25 @@ class GameVariables(metaclass=SingletonMeta):
     def get_debries(self) -> List[EntityPhysical]:
         return self.database.debries
 
-    def game_distable(self):
+    def get_exploding_props(self) -> List[EntityPhysical]:
+        return self.database.exploding_props
+
+    def game_distable(self) -> None:
         self.game_stable = False
         self.game_stable_counter = 0
+
+    def register_autonomous(self, object: AutonomousEntity) -> None:
+        self.database.autonomous_objects.append(object)
+
+    def unregister_autonomous(self, object: AutonomousEntity) -> None:
+        self.database.autonomous_objects.remove(object)
+
+    def engage_autonomous(self) -> bool:
+        ''' engages autonomous objects, if any engages return true '''
+        any_engaged = False
+        for object in self.database.autonomous_objects:
+            any_engaged |= object.engage()
+        return any_engaged
 
     # refactor later
     def add_extra(self, pos, color = (255,255,255), delay = 5, absolute = False):

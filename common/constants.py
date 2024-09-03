@@ -16,9 +16,10 @@ class GameState(Enum):
     RESET = 0
     PLAYER_PLAY = 1
     PLAYER_RETREAT = 2
-    OBJECTS_PLAY = 3
-    WAIT_STABLE = 4
-    WIN = 5
+    AUTONOMOUS_PLAY = 3
+    DEPLOYEMENT = 4
+    WAIT_STABLE = 5
+    WIN = 6
 
 RIGHT = 1
 LEFT = -1
@@ -51,6 +52,7 @@ LIGHT_RADIUS = 70
 CRITICAL_FALL_VELOCITY = 5
 JUMP_VELOCITY = 3
 WATER_AMP = 2
+
 
 # color feel 0:up 1:down 2:mountfar 3:mountclose
 feels = [

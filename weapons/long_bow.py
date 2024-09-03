@@ -11,7 +11,6 @@ from game.map_manager import MapManager, GRD
 from game.visual_effects import splash, Frost, DropLet, Blast
 from game.world_effects import boom
 from entities import Fire
-from entities.props import PetrolCan
 from entities.shooting_target import ShootingTarget
 
 class LongBow:
@@ -45,7 +44,7 @@ class LongBow:
                 value = t/iterations
                 testPos = (self.pos * value) + (ppos * (1-value))
                 # check cans collision:
-                for can in PetrolCan._cans:
+                for can in GameVariables().get_exploding_props():
                     if dist(testPos, can.pos) < can.radius + 1:
                         can.damage(10)
                         self.destroy()

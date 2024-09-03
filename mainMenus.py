@@ -125,7 +125,7 @@ class MainMenu:
 		# toggles
 		toggles = [
 			('cool down', 'option_cool_down', False),
-			('artifacts', 'option_artifacts', True),
+			('artifacts', 'option_artifacts', False),
 			('closed map', 'option_closed_map', False),
 			('forts', 'option_forts', False),
 			('digging', 'option_digging', False),

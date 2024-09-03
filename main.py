@@ -250,14 +250,12 @@ class Game:
 
 	def clearLists(self):
 		# clear lists
-		SentryGun._sentries.clear()
 		Portal._reg.clear()
 		Venus._reg.clear()
 		GreenShell._shells.clear()
 		Flare._flares.clear()
 		Flag.flags.clear()
 		ShootingTarget._reg.clear()
-		Raon._raons.clear()
 		Seagull._reg.clear()
 		Chum._chums.clear()
 
@@ -306,9 +304,6 @@ class Game:
 	def initiateGameVariables(self):
 		self.waterRise = False # whether water rises at the end of each turn
 		self.waterRising = False # water rises in current state
-		self.raoning = False  # raons advancing in current state
-		self.deploying = False # deploying pack in current state
-		self.sentring = False # sentry guns active in current state
 		self.deployingArtifact = False  # deploying artifacts in current state
 
 		self.cheatCode = "" # cheat code
@@ -489,7 +484,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 			continue
 		
 		# check for nearby petrol cans in radius 30
-		for can in PetrolCan._cans:
+		for can in GameVariables().get_exploding_props():
 			if distus(can.pos, place) < 1600:
 				goodPlace = False
 				break
@@ -1354,7 +1349,7 @@ def fire(weapon = None):
 	elif weapon.name == "venus fly trap":
 		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantMode.VENUS)
 	elif weapon.name == "sentry turret":
-		w = SentryGun(weaponOrigin, TeamManager().current_team.color)
+		w = SentryGun(weaponOrigin, GameVariables().player.get_team_data().color, GameVariables().player.get_team_data().team_name)
 		w.pos.y -= GameVariables().player.radius + w.radius
 	elif weapon.name == "bee hive":
 		w = BeeHive(weaponOrigin, weaponDir, energy)
@@ -1730,6 +1725,19 @@ def check_winners() -> bool:
 		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
 	return end
 
+def deploy_crate() -> None:
+	if GameVariables().game_turn_count % TeamManager().num_of_teams == 0:
+		comments = [
+			[{'text': 'a jewel from the heavens!'}],
+			[{'text': 'its raining crates, halelujah!'}],
+			[{'text': ' '}],
+		]
+		GameEvents().post(EventComment(choice(comments)))
+
+		for _ in range(Game._game.game_config.deployed_packs):
+			w = deploy_pack(choice([HealthPack,UtilityPack, WeaponPack]))
+			GameVariables().cam_track = w
+
 def cycle_worms():
 	''' switch to next worm and set up 
 		reset special effect
@@ -1793,62 +1801,13 @@ def cycle_worms():
 		return
 	GameVariables().game_turn_count += 1
 
-	# shoot sentries:
-	isThereTargets = False
-	if len(SentryGun._sentries) > 0 and not Game._game.sentring:
-		for sentry in SentryGun._sentries:
-			sentry.engage()
-			if sentry.target:
-				isThereTargets = True
-		if isThereTargets:
-			# shoot
-			for sentry in SentryGun._sentries:
-				if sentry.target:
-					sentry.fire()
-					GameVariables().cam_track = sentry
-			Game._game.sentring = True
-			GameVariables().game_turn_count -= 1
-			GameVariables().game_next_state = GameState.WAIT_STABLE
-			return
 
-	# controlling raons:
-	isTherePointing = False
-	if len(Raon._raons) > 0 and not Game._game.raoning:
-		for raon in Raon._raons:
-			if raon.state == Raon.pointing:
-				isTherePointing = True
-				break
-		if isTherePointing:
-			for raon in Raon._raons:
-				moved = raon.advance()
-				if moved:
-					GameVariables().cam_track = raon
-			Game._game.raoning = True
-			GameVariables().game_turn_count -= 1
-			GameVariables().game_next_state = GameState.WAIT_STABLE
-			return
-		
-	# deploy pack:
-	if GameVariables().game_turn_count % TeamManager().num_of_teams == 0 and not Game._game.deploying:
-		Game._game.deploying = True
-		GameVariables().game_turn_count -= 1
-		GameVariables().game_next_state = GameState.WAIT_STABLE
-		comments = [
-			[{'text': 'a jewel from the heavens!'}],
-			[{'text': 'its raining crates, halelujah!'}],
-			[{'text': ' '}],
-		]
-		GameEvents().post(EventComment(choice(comments)))
-
-		for i in range(Game._game.game_config.deployed_packs):
-			w = deploy_pack(choice([HealthPack,UtilityPack, WeaponPack]))
-			GameVariables().cam_track = w
 		# if Game._game.darkness:
 		# 	for team in TeamManager().teams:
 		# 		team.ammo("flare", 1)
 		# 		if team.ammo("flare") > 3:
 		# 			team.ammo("flare", -1)
-		return
+
 	
 	# rise water:
 	if Game._game.waterRise and not Game._game.waterRising:
@@ -1882,9 +1841,6 @@ def cycle_worms():
 				return
 	
 	Game._game.waterRising = False
-	Game._game.raoning = False
-	Game._game.deploying = False
-	Game._game.sentring = False
 	Game._game.deployingArtifact = False
 	
 	if GameVariables().game_turn_count % TeamManager().num_of_teams == 0:
@@ -1936,7 +1892,7 @@ def cycle_worms():
 	GamePlay().on_cycle()
 
 	Game._game.damageThisTurn = 0
-	if GameVariables().game_next_state == GameState.PLAYER_PLAY:
+	if True:
 	
 		# sort worms by health for drawing purpuses
 		GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
@@ -2586,14 +2542,41 @@ def stateMachine():
 		GameVariables().player_can_shoot = True
 		
 		GameVariables().game_next_state = GameState.PLAYER_RETREAT
+	
 	elif GameVariables().game_state == GameState.PLAYER_RETREAT:
 		GameVariables().player_in_control = True #can play
 		GameVariables().player_can_shoot = False
 		
 		GameVariables().game_stable_counter = 0
 		GameVariables().game_next_state = GameState.WAIT_STABLE
-	elif GameVariables().game_state == GameState.WAIT_STABLE:
+	
+	elif GameVariables().game_state in [GameState.WAIT_STABLE, GameState.AUTONOMOUS_PLAY, GameState.DEPLOYEMENT]:
 		GameVariables().player_in_control = False #can play
+		GameVariables().player_can_shoot = False
+		if GameVariables().game_stable:
+			GameVariables().game_stable_counter += 1
+			if GameVariables().game_stable_counter == 10:
+				# next turn
+				GameVariables().game_stable_counter = 0
+				TimeManager().time_reset()
+				if GameVariables().game_state == GameState.WAIT_STABLE:
+					GameVariables().engage_autonomous()
+					GameVariables().game_next_state = GameState.AUTONOMOUS_PLAY
+				
+				elif GameVariables().game_state == GameState.AUTONOMOUS_PLAY:
+					deploy_crate()
+					GameVariables().game_next_state = GameState.DEPLOYEMENT
+
+				elif GameVariables().game_state == GameState.DEPLOYEMENT:
+					cycle_worms()
+					WeaponManager().render_weapon_count()
+					GameVariables().game_next_state = GameState.PLAYER_PLAY
+				
+				GameVariables().game_state = GameVariables().game_next_state
+	
+	elif GameVariables().game_state == GameState.AUTONOMOUS_PLAY:
+		GameVariables().game_next_state = GameState.PLAYER_PLAY
+		GameVariables().player_in_control = False
 		GameVariables().player_can_shoot = False
 		if GameVariables().game_stable:
 			GameVariables().game_stable_counter += 1
@@ -2604,13 +2587,13 @@ def stateMachine():
 				cycle_worms()
 				WeaponManager().render_weapon_count()
 				GameVariables().game_state = GameVariables().game_next_state
-
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
+	
 	elif GameVariables().game_state == GameState.WIN:
 		GameVariables().game_stable_counter += 1
 		if GameVariables().game_stable_counter == 30 * 3:
 			return 1
 			# subprocess.Popen("wormsLauncher.py -popwin", shell=True)
+	
 	return 0
 
 ################################################################################ Key bindings

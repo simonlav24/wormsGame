@@ -16,8 +16,8 @@ class ExplodingProp(PhysObj):
 		for i in range(40):
 			s = Fire(self.pos, 5)
 			s.vel = vectorFromAngle(2 * pi * i / 40, uniform(1.3,2))
-		if self in PetrolCan._cans:
-			PetrolCan._cans.remove(self)
+		if self in GameVariables().get_exploding_props():
+			GameVariables().get_exploding_props().remove(self)
 	
 	def damage(self, value, damageType=0):
 		dmg = value * GameVariables().damage_mult
@@ -28,10 +28,9 @@ class ExplodingProp(PhysObj):
 
 
 class PetrolCan(ExplodingProp):
-	_cans = [] 
 	def __init__(self, pos = (0,0)):
 		super().__init__(pos)
-		PetrolCan._cans.append(self)
+		GameVariables().get_exploding_props().append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 6
 		self.color = (191, 44, 44)
