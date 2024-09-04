@@ -55,6 +55,7 @@ class GamePlay(metaclass=SingletonMeta):
             mode.on_game_init()
 
     def on_cycle(self):
+        ''' on cycle update, precondition: new turn worm is determined '''
         for mode in self.modes:
             mode.on_cycle()
 
@@ -90,42 +91,6 @@ class GamePlay(metaclass=SingletonMeta):
             mode.win_bonus()
 
 
-class TerminatorGamePlay(GamePlayMode):
-    def __init__(self):
-        self.hit_this_turn = False
-        self.current_target: EntityWorm = None
-        self.worm_to_target: Dict[EntityWorm, EntityWorm] = {}
-
-    def pick_target(self):
-        self.hit_this_turn = False
-        worms = []
-        for w in GameVariables().get_worms():
-            if w in TeamManager().current_team.worms:
-                continue
-            worms.append(w)
-        if len(worms) == 0:
-            self.current_target = None
-            return
-        
-        self.current_target = choice(worms)
-        wormComment = {'text': self.current_target.name_str, 'color': self.current_target.team.color}
-        comments = [
-            [wormComment, {'text': ' is marked for death'}],
-            [{'text': 'kill '}, wormComment],
-            [wormComment, {'text': ' is the weakest link'}],
-            [{'text': 'your target: '}, wormComment],
-        ]
-        GameEvents().post(EventComment(choice(comments)))
-
-    def draw(self, win: pygame.Surface):
-        draw_target(win, self.current_target.pos)
-        draw_dir_indicator(win, self.current_target.pos)
-
-    def on_game_init(self):
-        self.pick_target()
-
-    def on_cycle(self):
-        pass
 
 class DarknessGamePlay(GamePlayMode):
     pass

@@ -12,10 +12,10 @@ from common import *
 from common.vector import *
 from common.game_config import *
 from common.game_event import EventComment
-from common.game_play_mode import GamePlay, TerminatorGamePlay, DarknessGamePlay
 
 from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
+from game.game_play_mode import GamePlay, TerminatorGamePlay, DarknessGamePlay
 from game.time_manager import TimeManager
 from game.map_manager import *
 from game.background import BackGround
@@ -1889,39 +1889,40 @@ def cycle_worms():
 		index = (index + 1) % TeamManager().num_of_teams
 		TeamManager().current_team = TeamManager().teams[index]
 	
-	GamePlay().on_cycle()
+	
 
 	Game._game.damageThisTurn = 0
-	if True:
 	
-		# sort worms by health for drawing purpuses
-		GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
+	# sort worms by health for drawing purpuses
+	GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
+	
+	# actual worm switch:
+	switched = False
+	while not switched:
+		w = TeamManager().current_team.worms.pop(0)
+		TeamManager().current_team.worms.append(w)
+		if w.sleep:
+			w.sleep = False
+			continue
+		switched = True
 		
-		# actual worm switch:
-		switched = False
-		while not switched:
-			w = TeamManager().current_team.worms.pop(0)
-			TeamManager().current_team.worms.append(w)
-			if w.sleep:
-				w.sleep = False
-				continue
-			switched = True
-			
-		if Game._game.game_config.random_mode == RandomMode.COMPLETE: # complete random
+	if Game._game.game_config.random_mode == RandomMode.COMPLETE: # complete random
+		TeamManager().current_team = choice(TeamManager().teams)
+		while not len(TeamManager().current_team.worms) > 0:
 			TeamManager().current_team = choice(TeamManager().teams)
-			while not len(TeamManager().current_team.worms) > 0:
-				TeamManager().current_team = choice(TeamManager().teams)
-			w = choice(TeamManager().current_team.worms)
-		if Game._game.game_config.random_mode == RandomMode.IN_TEAM: # random in the current team
-			w = choice(TeamManager().current_team.worms)
-	
-		GameVariables().player = w
-		GameVariables().cam_track = GameVariables().player
-		GameVariables().player_can_move = True
+		w = choice(TeamManager().current_team.worms)
+	if Game._game.game_config.random_mode == RandomMode.IN_TEAM: # random in the current team
+		w = choice(TeamManager().current_team.worms)
 
-		WeaponManager().switch_weapon(WeaponManager().current_weapon)
-		if Game._game.gameMode == GameMode.MISSIONS:
-			MissionManager._mm.cycle()
+	GameVariables().player = w
+	GameVariables().cam_track = GameVariables().player
+	GameVariables().player_can_move = True
+
+	GamePlay().on_cycle()
+
+	WeaponManager().switch_weapon(WeaponManager().current_weapon)
+	if Game._game.gameMode == GameMode.MISSIONS:
+		MissionManager._mm.cycle()
 
 def switch_worms():
 	currentWorm = TeamManager().current_team.worms.index(GameVariables().player)
