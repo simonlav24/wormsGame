@@ -5,43 +5,9 @@ from random import choice
 
 import pygame
 
-from common import GameVariables, draw_target, draw_dir_indicator, EntityWorm
-from common.game_event import GameEvents, EventWormDamage, EventComment
-from common import SingletonMeta
+from common import EntityWorm, GamePlayMode
 
-from game.team_manager import TeamManager
-
-class GamePlayMode:
-    ''' handles game mode '''
-    def __init__(self):
-        pass
-
-    def on_game_init(self):
-        pass
-
-    def on_cycle(self):
-        pass
-
-    def step(self):
-        pass
-
-    def draw(self, win: pygame.Surface):
-        pass
-
-    def hud_draw(self, win: pygame.Surface):
-        pass
-
-    def on_worm_damage(self, worm: EntityWorm, damage: int):
-        pass
-
-    def on_worm_death(self):
-        pass
-
-    def win_bonus(self):
-        pass
-
-
-class GamePlay(metaclass=SingletonMeta):
+class GamePlayCompound(GamePlayMode):
     def __init__(self):
         self.modes: List[GamePlayMode] = []
 
@@ -61,14 +27,7 @@ class GamePlay(metaclass=SingletonMeta):
 
     def step(self):
         for mode in self.modes:
-            mode.step()
-
-        # handle events
-        for event in GameEvents().get_events():
-            if(isinstance(event, EventWormDamage)):
-                for mode in self.modes:
-                    mode.on_worm_damage(event.worm, event.damage)
-                event.done()
+            mode.step()        
 
     def draw(self, win: pygame.Surface):
         for mode in self.modes:
@@ -80,17 +39,13 @@ class GamePlay(metaclass=SingletonMeta):
 
     def on_worm_damage(self, worm: EntityWorm, damage: int):
         for mode in self.modes:
-            mode.on_worm_damage(worm)
+            mode.on_worm_damage(worm, damage)
 
-    def on_worm_death(self):
+    def on_worm_death(self, worm: EntityWorm):
         for mode in self.modes:
-            mode.on_worm_death()
+            mode.on_worm_death(worm)
 
     def win_bonus(self):
         for mode in self.modes:
             mode.win_bonus()
 
-
-
-class DarknessGamePlay(GamePlayMode):
-    pass

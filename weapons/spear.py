@@ -4,7 +4,6 @@ from typing import List
 import pygame
 
 from common import point2world, sprites, GameVariables, EntityWorm
-from common.game_event import EventComment, GameEvents
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
@@ -60,7 +59,7 @@ class Spear(PhysObj):
 		if len(self.worms) > 1:
 			name = self.ignore[0].name_str
 			color = self.ignore[0].get_team_data().color
-			GameEvents().post(EventComment([{'text': name, 'color': color}, {'text': ' the impaler!'}]))
+			GameVariables().commentator.comment([{'text': name, 'color': color}, {'text': ' the impaler!'}])
 
 	def draw(self, win: pygame.Surface):
 		point = self.pos - normalize(self.vel) * 30

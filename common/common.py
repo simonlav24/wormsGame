@@ -85,6 +85,45 @@ class AutonomousEntity(EntityPhysical):
 	def done(self) -> None:
 		...
 
+
+class GamePlayMode:
+	''' handles game mode '''
+	def __init__(self):
+		...
+
+	def add_mode(self, mode: 'GamePlayMode'):
+		...
+
+	def on_game_init(self):
+		...
+
+	def on_cycle(self):
+		...
+
+	def step(self):
+		...
+
+	def draw(self, win: pygame.Surface):
+		...
+
+	def hud_draw(self, win: pygame.Surface):
+		...
+
+	def on_worm_damage(self, worm: EntityWorm, damage: int):
+		...
+
+	def on_worm_death(self, worm: EntityWorm):
+		...
+
+	def win_bonus(self):
+		...
+
+
+class IComment(Entity):
+	def comment(self, text_dict):
+		...
+
+
 # color utilities
 
 def grayen(color: ColorType) -> ColorType:

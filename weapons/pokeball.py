@@ -6,7 +6,6 @@ import pygame
 
 from common.vector import Vector, dist, tup2vec
 from common import GameVariables, point2world, blit_weapon_sprite, clamp, fonts, draw_lightning
-from common.game_event import GameEvents, EventComment
 
 from entities import PhysObj, Worm
 from game.world_effects import boom
@@ -76,7 +75,7 @@ class PokeBall(PhysObj):
 					[{'text': "gotta catch 'em al"}],
 					[{'text': name, 'color': color}, {'text': ' will help beat the next gym leader'}],
 				]
-				GameEvents().post(EventComment(choice(comments)))
+				GameVariables().commentator.comment(choice(comments))
 
 			else:
 				self.dead = True

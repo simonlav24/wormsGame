@@ -4,7 +4,6 @@ from random import uniform, randint, choice
 from math import cos, sin, pi
 
 from common import blit_weapon_sprite, ColorType, GameVariables, point2world
-from common.game_event import GameEvents, EventComment
 from common.vector import *
 
 from entities.physical_entity import PhysObj
@@ -93,7 +92,7 @@ class HolyGrenade(Grenade):
 				[{'text': "three shall be the number thou shalt count"}],
 				[{'text': "thou shall snuff that"}],
 			]
-			GameEvents().post(EventComment(choice(comments)))
+			GameVariables().commentator.comment(choice(comments))
 
 
 class Banana(Grenade):

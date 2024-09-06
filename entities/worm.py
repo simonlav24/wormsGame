@@ -7,7 +7,6 @@ from random import randint
 import pygame
 
 from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, clamp, CRITICAL_FALL_VELOCITY, TeamData
-from common.game_event import EventComment, EventWormDamage, GameEvents
 from common.vector import *
 
 from game.team_manager import Team
@@ -110,8 +109,7 @@ class Worm (PhysObj):
             if Worm.healthMode == 1:
                 self.healthStr = fonts.pixel5.render(str(self.health), False, self.team.color)
             
-            event = EventWormDamage(self, dmg)
-            GameEvents().post(event)
+            GameVariables().game_mode.on_worm_damage(self, dmg)
     
     def draw(self, win: pygame.Surface):
         # draw collision
@@ -172,8 +170,8 @@ class Worm (PhysObj):
         self.health = 0
                 
         # comment:
-        if cause == DeathCause.DAMAGE:
-            EventComment.post_choice_event(comments_damage, self.name_str, self.team.color)
+        # if cause == DeathCause.DAMAGE:
+        #     GameVariables().commentator.comment(comments_damage, self.name_str, self.team.color)
                 
         # remove from regs:
         if self in GameVariables().get_worms():
@@ -190,6 +188,7 @@ class Worm (PhysObj):
             TimeManager().time_remaining_die()
                 
         # todo: notify killed
+        GameVariables().game_mode.on_worm_death(self)
 
     def draw_health(self, win: pygame.Surface):
         healthHeight = -15

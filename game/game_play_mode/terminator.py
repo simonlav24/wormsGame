@@ -5,7 +5,6 @@ from random import choice
 import pygame
 
 from common import GameVariables, EntityWorm, draw_target, draw_dir_indicator
-from common.game_event import GameEvents, EventWormDamage, EventComment
 from game.game_play_mode.game_play_mode import GamePlayMode
 
 
@@ -39,7 +38,7 @@ class TerminatorGamePlay(GamePlayMode):
             [wormComment, {'text': ' is the weakest link'}],
             [{'text': 'your target: '}, wormComment],
         ]
-        GameEvents().post(EventComment(choice(comments)))
+        GameVariables().commentator.comment(choice(comments))
 
     def draw(self, win: pygame.Surface):
         if self.current_target is None:

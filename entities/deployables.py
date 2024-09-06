@@ -78,7 +78,7 @@ class WeaponPack(Deployable):
 		self.surf.blit(sprites.sprite_atlas, (0,0), (80, 96, 16, 16))
 
 	def effect(self, worm: EntityWorm):
-		FloatingText(self.pos, self.box.name, (0,200,200))
+		FloatingText(self.pos, self.box, (0,200,200))
 		worm.team.ammo(self.box, 1)
 
 def deploy_pack(pack):

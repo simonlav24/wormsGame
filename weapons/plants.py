@@ -7,7 +7,6 @@ from math import pi, sin, sqrt, degrees, copysign
 import pygame
 
 from common import GameVariables, point2world, sprites, GameState, PLANT_MASTER, blit_weapon_sprite, RIGHT, LEFT, EntityWorm
-from common.game_event import GameEvents, EventComment
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
@@ -158,7 +157,7 @@ class Venus:
 							[{'text': name, 'color': color}, {'text': ' is good protein'}],
 							[{'text': name, 'color': color}, {'text': ' is some serious gourmet s**t'}],
 						]
-						GameEvents().post(EventComment(choice(comments)))
+						GameVariables().commentator.comment(choice(comments))
 					else:
 						self.explossive = True
 						entity.remove_from_game()

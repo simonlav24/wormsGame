@@ -11,11 +11,10 @@ import pygame.gfxdraw
 from common import *
 from common.vector import *
 from common.game_config import *
-from common.game_event import EventComment
 
 from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
-from game.game_play_mode import GamePlay, TerminatorGamePlay, DarknessGamePlay
+from game.game_play_mode import GamePlayCompound, TerminatorGamePlay
 from game.time_manager import TimeManager
 from game.map_manager import *
 from game.background import BackGround
@@ -90,9 +89,9 @@ class Game:
 		Game._game = self
 		globals.game_manager = self
 
-		self.game_play = GamePlay()
 		self.evaluate_config(game_config)
 		GameVariables().config = game_config
+		
 		
 		self.map_manager = MapManager()
 		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
@@ -101,6 +100,7 @@ class Game:
 		
 		self.initiateGameVariables()
 		self.game_vars = GameVariables()
+		GameVariables().commentator = Commentator()
 
 		self.damageThisTurn = 0
 		self.mostDamage = (0, None)
@@ -231,7 +231,7 @@ class Game:
 		# 	for team in TeamManager().teams:
 		# 		team.ammo(WeaponManager().weapon_dict['flare'], 3)
 
-		GamePlay().on_game_init()
+		GameVariables().game_mode.on_game_init()
 
 		if Game._game.gameMode == GameMode.CAPTURE_THE_FLAG:
 			place_object(Flag, None)
@@ -356,13 +356,16 @@ class Game:
 		if self.game_config.feel_index == -1:
 			self.game_config.feel_index = randint(0, len(feels) - 1)
 
+		GameVariables().game_mode = GamePlayCompound()
+
 		game_mode_map = {
 			GameMode.TERMINATOR: TerminatorGamePlay()
 		}
-		self.game_play.add_mode(game_mode_map.get(self.game_config.game_mode))
 
-		if self.game_config.option_darkness:
-			self.game_play.modes.append(DarknessGamePlay())
+		GameVariables().game_mode.add_mode(game_mode_map.get(self.game_config.game_mode))
+
+		# if self.game_config.option_darkness:
+		# 	GameVariables().game_mode.modes.append(DarknessGamePlay())
 
 	def handle_event(self, event) -> bool:
 		''' handle pygame event, return true if event handled '''
@@ -781,14 +784,19 @@ class Artifact(PhysObj):
 		GameVariables().cam_track = self
 		self.artifact = self.getArtifact()
 		self.setSurf()
+	
 	def getArtifact(self):
 		pass
+	
 	def setSurf(self):
 		pass
+	
 	def commentCreation(self):
 		pass
+	
 	def commentPicked(self):
 		pass
+	
 	def secondaryStep(self):
 		# pick up
 		if dist(GameVariables().player.pos, self.pos) < self.radius + GameVariables().player.radius + 5 and not GameVariables().player.health <= 0\
@@ -801,11 +809,14 @@ class Artifact(PhysObj):
 			WeaponManager().addArtifactMoves(self.artifact)
 			return
 		self.trenaryStep()
+	
 	def remove_from_game(self):
 		super().remove_from_game()
 		Game._game.worldArtifacts.append(self.artifact)
+	
 	def trenaryStep(self):
 		pass
+	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
@@ -820,10 +831,10 @@ class Mjolnir(Artifact):
 		self.surf.blit(sprites.sprite_atlas, (0,0), (0,112,16,16))
 	
 	def commentCreation(self):
-		GameEvents().post(EventComment([{'text': "a gift from the gods"}]))
+		GameVariables().commentator.comment([{'text': "a gift from the gods"}])
 	
 	def commentPicked(self):
-		GameEvents().post(EventComment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': " is worthy to wield mjolnir!"}]))
+		GameVariables().commentator.comment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': " is worthy to wield mjolnir!"}])
 	
 	def trenaryStep(self):
 		if self.vel.getMag() > 1:
@@ -962,10 +973,10 @@ class MagicLeaf(Artifact):
 		self.turbulance = vectorUnitRandom()
 	
 	def commentCreation(self):
-		GameEvents().post(EventComment([{'text': "a leaf of heavens tree"}]))
+		GameVariables().commentator.comment([{'text': "a leaf of heavens tree"}])
 	
 	def commentPicked(self):
-		GameEvents().post(EventComment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': "  became master of plants"}]))
+		GameVariables().commentator.comment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': "  became master of plants"}])
 	
 	def trenaryStep(self):
 		self.angle += self.vel.x*4
@@ -1109,10 +1120,10 @@ class Avatar(Artifact):
 		self.surf.blit(sprites.sprite_atlas, (0,0), (0,112,16,16))
 	
 	def commentCreation(self):
-		GameEvents().post(EventComment([{'text': "who is the next avatar?"}]))
+		GameVariables().commentator.comment([{'text': "who is the next avatar?"}])
 	
 	def commentPicked(self):
-		GameEvents().post(EventComment([{'text': 'everything changed when the '}, {'text': TeamManager().current_team.name, 'color': TeamManager().current_team.color}, {'text': ' attacked'}]))
+		GameVariables().commentator.comment([{'text': 'everything changed when the '}, {'text': TeamManager().current_team.name, 'color': TeamManager().current_team.color}, {'text': ' attacked'}])
 	
 	def trenaryStep(self):
 		self.angle -= self.vel.x*4
@@ -1227,10 +1238,11 @@ class PickAxeArtifact(Artifact):
 		blit_weapon_sprite(self.surf, (0,0), "pick axe")
 	
 	def commentCreation(self):
-		GameEvents().post(EventComment([{'text': "a game changer"}]))
+		GameVariables().commentator.comment([{'text': "a game changer"}])
 
 	def commentPicked(self):
-		GameEvents().post(EventComment([{'text': 'its mining time'}]))
+		...
+		GameVariables().commentator.comment([{'text': 'its mining time'}])
 	
 	def trenaryStep(self):
 		self.angle -= self.vel.x*4
@@ -1541,17 +1553,17 @@ def fireUtility(weapon = None):
 	decrease = True
 	if weapon.name == "moon gravity":
 		GameVariables().physics.global_gravity = 0.1
-		GameEvents().post(EventComment([{'text': "small step for wormanity"}]))
+		GameVariables().commentator.comment([{'text': "small step for wormanity"}])
 
 	elif weapon.name == "double damage":
 		GameVariables().damage_mult *= 2
 		GameVariables().boom_radius_mult *= 1.5
 		comments = ["that's will hurt", "that'll leave a mark"]
-		GameEvents().post(EventComment([{'text': choice(comments)}]))
+		GameVariables().commentator.comment([{'text': choice(comments)}])
 
 	elif weapon.name == "aim aid":
 		Game._game.aimAid = True
-		GameEvents().post(EventComment([{'text': "snipe em'"}]))
+		GameVariables().commentator.comment([{'text': "snipe em'"}])
 
 	elif weapon.name == "teleport":
 		WeaponManager().switch_weapon(weapon)
@@ -1561,12 +1573,12 @@ def fireUtility(weapon = None):
 		if Game._game.switchingWorms:
 			decrease = False
 		Game._game.switchingWorms = True
-		GameEvents().post(EventComment([{'text': "the ol' switcheroo"}]))
+		GameVariables().commentator.comment([{'text': "the ol' switcheroo"}])
 
 	elif weapon.name == "time travel":
 		if not Game._game.timeTravel:
 			TimeTravel._tt.timeTravelInitiate()
-		GameEvents().post(EventComment([{'text': "great scott"}]))
+		GameVariables().commentator.comment([{'text': "great scott"}])
 
 	elif weapon.name == "jet pack":
 		tool_set = GameVariables().player.worm_tool.set(JetPack(GameVariables().player))
@@ -1702,14 +1714,14 @@ def check_winners() -> bool:
 			add_to_record(dic)
 			if len(winningTeam.worms) > 0:
 				GameVariables().cam_track = winningTeam.worms[0]
-			GameEvents().post(EventComment([
+			GameVariables().commentator.comment([
 				{'text': 'team '},
 				{'text': winningTeam.name, 'color': winningTeam.color},
 				{'text': ' Won!'}
-			]))
+			])
 
 		else:
-			GameEvents().post(EventComment([{'text': 'its a tie!'}]))
+			GameVariables().commentator.comment([{'text': 'its a tie!'}])
 			print("Tie!")
 		
 		# add teams to dic
@@ -1732,7 +1744,7 @@ def deploy_crate() -> None:
 			[{'text': 'its raining crates, halelujah!'}],
 			[{'text': ' '}],
 		]
-		GameEvents().post(EventComment(choice(comments)))
+		GameVariables().commentator.comment(choice(comments))
 
 		for _ in range(Game._game.game_config.deployed_packs):
 			w = deploy_pack(choice([HealthPack,UtilityPack, WeaponPack]))
@@ -1777,21 +1789,22 @@ def cycle_worms():
 		Game._game.mostDamage = (Game._game.damageThisTurn, GameVariables().player.name_str)	
 	if Game._game.damageThisTurn > int(Game._game.game_config.worm_initial_health * 2.5):
 		if Game._game.damageThisTurn == 300:
-			GameEvents().post(EventComment([{'text': "THIS IS "}, {'text': wormName, 'color': wormColor}]))
+			...
+			GameVariables().commentator.comment([{'text': "THIS IS "}, {'text': wormName, 'color': wormColor}])
 		else:
 			comment = choice([
 					[{'text': 'awesome shot '}, {'text': wormName, 'color': wormColor}, {'text': '!'}],
 					[{'text': wormName, 'color': wormColor}, {'text': ' is on fire!'}],
 					[{'text': wormName, 'color': wormColor}, {'text': ' shows no mercy'}],
 				])
-			GameEvents().post(EventComment(comment))
+			GameVariables().commentator.comment(comment)
 
 	elif Game._game.damageThisTurn > int(Game._game.game_config.worm_initial_health * 1.5):
 		comment = choice([
 					[{'text': 'good shot '}, {'text': wormName, 'color': wormColor}, {'text': '!'}],
 					[{'text': 'nicely done '}, {'text': wormName, 'color': wormColor}],
 				])
-		GameEvents().post(EventComment(comment))
+		GameVariables().commentator.comment(comment)
 	
 	TeamManager().current_team.damage += Game._game.damageThisTurn
 	if Game._game.gameMode in [GameMode.POINTS, GameMode.BATTLE]:
@@ -1859,8 +1872,8 @@ def cycle_worms():
 		if Game._game.gameMode == GameMode.TARGETS:
 			ShootingTarget.numTargets -= 1
 			if ShootingTarget.numTargets == 0:
-				GameEvents().post(EventComment([{'text': 'final targets round'}]))
-	
+				GameVariables().commentator.comment([{'text': 'final targets round'}])
+
 	# update stuff
 	GameVariables().get_debries().clear()
 	Bubble.cought = []
@@ -1918,7 +1931,7 @@ def cycle_worms():
 	GameVariables().cam_track = GameVariables().player
 	GameVariables().player_can_move = True
 
-	GamePlay().on_cycle()
+	GameVariables().game_mode.on_cycle()
 
 	WeaponManager().switch_weapon(WeaponManager().current_weapon)
 	if Game._game.gameMode == GameMode.MISSIONS:
@@ -2296,7 +2309,7 @@ class Mission:
 			{'text': 'mission '}, {'text': string, 'color': GameVariables().player.team.color}, {'text': ' passed'}
 		]
 
-		GameEvents().post(EventComment(comment))
+		GameVariables().commentator.comment(comment)
 		GameVariables().player.team.points += self.reward
 		Game._game.addToScoreList(self.reward)
 
@@ -2464,7 +2477,7 @@ def cheat_activate(code: str):
 		GameVariables().mega_weapon_trigger = True
 	elif code == "tsunami":
 		Game._game.waterRise = True
-		GameEvents().post(EventComment([{'text': "water rising!"}]))
+		GameVariables().commentator.comment([{'text': "water rising!"}])
 	elif code == "comeflywithme":
 		TeamManager().current_team.ammo(WeaponManager()["jet pack"], 6)
 		TeamManager().current_team.ammo(WeaponManager()["rope"], 6)
@@ -2480,7 +2493,7 @@ def cheat_activate(code: str):
 		MasterOfPuppets()
 	elif code == "artifact":
 		Game._game.trigerArtifact = True
-		GameEvents().post(EventComment([{'text': 'next turn artifact drop'}]))
+		GameVariables().commentator.comment([{'text': 'next turn artifact drop'}])
 	elif code == "minecraft":
 		PickAxeArtifact(mouse_pos)
 	elif code == "deathtouch":
@@ -2701,7 +2714,6 @@ def gameMain(game_config: GameConfig=None):
 	GasParticles()           
 	
 	damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
-	commentator = Commentator()
 	TimeTravel()
 
 	wind_flag = WindFlag()
@@ -2895,7 +2907,7 @@ def gameMain(game_config: GameConfig=None):
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
 		
-		GamePlay().step()
+		GameVariables().game_mode.step()
 
 		# camera for wait to stable:
 		if GameVariables().game_state == GameState.WAIT_STABLE and GameVariables().time_overall % 20 == 0:
@@ -2922,7 +2934,7 @@ def gameMain(game_config: GameConfig=None):
 		Game._game.actionMove = False
 
 		wind_flag.step()
-		commentator.step()
+		GameVariables().commentator.step()
 
 		# draw:
 		Game._game.background.draw(win)
@@ -2968,7 +2980,7 @@ def gameMain(game_config: GameConfig=None):
 		TimeManager().draw(win)
 		if WeaponManager().surf:
 			win.blit(WeaponManager().surf, (25, 5))
-		commentator.draw(win)
+		GameVariables().commentator.draw(win)
 		# draw weapon indicators
 		WeaponManager().draw_weapon_hint(win)
 		WeaponManager().draw(win)
@@ -2977,7 +2989,7 @@ def gameMain(game_config: GameConfig=None):
 		TeamManager().step()
 		TeamManager().draw(win)
 		
-		GamePlay().draw(win)
+		GameVariables().game_mode.draw(win)
 
 
 		if Game._game.gameMode == GameMode.TARGETS and GameVariables().player is not None:
@@ -3052,10 +3064,14 @@ if __name__ == "__main__":
 	still in wip:
 		water rise
 		loading screen
-		health bar update
+		health bar update TEST
+		shoot gun if died before all shooted
 	'''
 	print(wip)
 
 	while True:
-		mainMenu(Game._game.endGameDict if Game._game else None, gameParameters)
-		gameMain(gameParameters[0])
+		# mainMenu(Game._game.endGameDict if Game._game else None, gameParameters)
+		config = GameConfig()
+		config.map_path = r'assets/worms_maps/Nyc.png'
+		config.game_mode = GameMode.TERMINATOR
+		gameMain(config)

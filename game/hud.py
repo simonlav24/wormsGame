@@ -5,7 +5,6 @@ from typing import List, Dict, Any
 from enum import Enum
 
 from common import ColorType, fonts, GameVariables
-from common.game_event import GameEvents, EventComment
 from common.vector import *
 
 HEALTH_BAR_WIDTH = 40
@@ -19,6 +18,7 @@ class HealthBar:
 		self.max_health = players_in_team * initial_health_per_player
 		self.team_health_visual = [self.max_health] * amount_of_teams
 		self.team_health_actual = [self.max_health] * amount_of_teams
+		self.team_points = [0] * amount_of_teams
 		self.colors = colors
 	
 	def update(self, health_list: List[int], special_marks: List[bool]=None):
@@ -40,7 +40,7 @@ class HealthBar:
 		for i, health in enumerate(self.team_health_visual):
 			pygame.draw.rect(win, (220,220,220), (x, y + i * 3, width, height))
 			value = health / self.max_health
-			pygame.draw.rect(win, self.colors[i], (x, y + i * 3, int(value) * width, height))
+			pygame.draw.rect(win, self.colors[i], (x, y + i * 3, value * width, height))
 
 class CommentatorState(Enum):
 	IDLE = 0
@@ -54,14 +54,11 @@ class Commentator:
 		self.timer = 0
 		self.current_surf: pygame.Surface = None
 	
-	def step(self) -> None:
-		# handle events
-		my_events = [event for event in GameEvents().get_events() if isinstance(event, EventComment)]
-		for event in my_events:
-			surf = self.render_comment(event.text_dict)
-			event.is_done = True
-			self.surf_que.append(surf)
+	def comment(self, text_dict) -> None:
+		surf = self.render_comment(text_dict)
+		self.surf_que.append(surf)
 
+	def step(self) -> None:
 		if self.state == CommentatorState.IDLE:
 			if len(self.surf_que) > 0:
 				self.timer = int(2.5 * GameVariables().fps)
