@@ -87,7 +87,8 @@ class TeamManager(metaclass=SingletonMeta):
 
     def step(self) -> None:
         # todo: update with worms
-        self.health_bar_hud.update([sum([worm.health for worm in team.worms]) for team in self.teams])
+        self.health_bar_hud.update_health([sum([worm.health for worm in team.worms]) for team in self.teams])
+        self.health_bar_hud.update_score([team.points for team in self.teams])
         self.health_bar_hud.step()
     
     def draw(self, win: pygame.Surface) -> None:

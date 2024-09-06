@@ -21,10 +21,13 @@ class HealthBar:
 		self.team_points = [0] * amount_of_teams
 		self.colors = colors
 	
-	def update(self, health_list: List[int], special_marks: List[bool]=None):
+	def update_health(self, health_list: List[int]):
 		''' update '''
 		self.team_health_actual = health_list
-		# todo marks
+
+	def update_score(self, point_list: List[int]):
+		''' update '''
+		self.team_points = point_list
 	
 	def step(self):
 		recalc = lambda current, target: current + (target - current) * 0.1
@@ -37,10 +40,19 @@ class HealthBar:
 		width = HEALTH_BAR_WIDTH
 		height = HEALTH_BAR_HEIGHT
 		
+		# draw health
 		for i, health in enumerate(self.team_health_visual):
 			pygame.draw.rect(win, (220,220,220), (x, y + i * 3, width, height))
 			value = health / self.max_health
 			pygame.draw.rect(win, self.colors[i], (x, y + i * 3, value * width, height))
+
+		# draw points
+		max_points = sum(self.team_points)
+		if max_points != 0:
+			for i, points in enumerate(self.team_points):
+				value = points / max_points * width
+				pygame.draw.rect(win, (220,220,220), ((x - value - 1, y + i * 3), (value, height)))
+
 
 class CommentatorState(Enum):
 	IDLE = 0
@@ -57,6 +69,7 @@ class Commentator:
 	def comment(self, text_dict) -> None:
 		surf = self.render_comment(text_dict)
 		self.surf_que.append(surf)
+		print(f'comment {text_dict}')
 
 	def step(self) -> None:
 		if self.state == CommentatorState.IDLE:
@@ -73,7 +86,7 @@ class Commentator:
 
 	def draw(self, win: pygame.Surface) -> None:
 		if self.current_surf is not None:
-			win.blit(self.current_surf, (int(GameVariables().win_width/2 - self.current_surf.get_width() / 2), 5))
+			win.blit(self.current_surf, (int(GameVariables().win_width / 2 - self.current_surf.get_width() / 2), 5))
 	
 	def render_comment(self, text_dict: List[Dict[str, Any]]) -> pygame.Surface:
 		text_surfs: List[pygame.Surface] = []

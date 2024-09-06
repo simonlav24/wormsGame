@@ -52,8 +52,16 @@ class TerminatorGamePlay(GamePlayMode):
     def on_cycle(self):
         self.hit_this_turn = False
         self.pick_target()
-        
-        
-
-
-        
+    
+    def on_worm_damage(self, worm: EntityWorm, damage: int):
+        if self.hit_this_turn:
+            return
+        if worm is self.current_target:
+            self.hit_this_turn = True
+            GameVariables().player.give_point(1)
+    
+    def on_worm_death(self, worm: EntityWorm):
+        if worm is self.current_target:
+            self.hit_this_turn = False
+            GameVariables().player.give_point(2)
+            self.pick_target()

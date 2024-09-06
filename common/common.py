@@ -21,11 +21,11 @@ class SingletonMeta(type):
 
 
 class TeamData(BaseModel):
-    ''' team data '''
-    team_name: str
-    color: ColorType
-    names: List[str]
-    hats: str
+	''' team data '''
+	team_name: str
+	color: ColorType
+	names: List[str]
+	hats: str
 
 
 class Entity(Protocol):
@@ -75,6 +75,9 @@ class EntityWorm(EntityPhysical):
 		...
 
 	def get_shooting_angle(self) -> float:
+		...
+	
+	def give_point(self, points: int) -> None:
 		...
 
 

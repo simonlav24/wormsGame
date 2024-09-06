@@ -2,11 +2,11 @@
 
 from enum import Enum
 from math import pi, degrees, cos, sin
-from random import randint
+from random import randint, choice
 
 import pygame
 
-from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, clamp, CRITICAL_FALL_VELOCITY, TeamData
+from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData
 from common.vector import *
 
 from game.team_manager import Team
@@ -170,8 +170,16 @@ class Worm (PhysObj):
         self.health = 0
                 
         # comment:
-        # if cause == DeathCause.DAMAGE:
-        #     GameVariables().commentator.comment(comments_damage, self.name_str, self.team.color)
+        if cause == DeathCause.DAMAGE:
+            comment = choice(comments_damage)
+        elif cause == DeathCause.FLEW_OUT:
+            comment = choice(comments_flew)
+        comment_dict = [
+            {'text': comment[0]},
+            {'text': self.name_str, 'color': self.team.color},
+            {'text': comment[1]},
+        ]
+        GameVariables().commentator.comment(comment_dict)
                 
         # remove from regs:
         if self in GameVariables().get_worms():
@@ -303,3 +311,6 @@ class Worm (PhysObj):
     def on_collision(self, ppos):
         if self.vel.getMag() > CRITICAL_FALL_VELOCITY and not self.worm_tool.in_use():
             MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
+    
+    def give_point(self, points: int) -> None:
+        self.team.points += points
