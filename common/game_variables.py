@@ -130,17 +130,17 @@ class GameVariables(metaclass=SingletonMeta):
         self.database.physicals.insert(0, entity)
 
     def step_physicals(self) -> None:
+        for entity in self.database.physicals:
+            entity.step()
+            if not entity.stable:
+                self.game_distable()
+        
         try:
             for entity in self.database.physicals_remove:
                 self.database.physicals.remove(entity)
         except Exception as e:
             print(e)
         self.database.physicals_remove.clear()
-
-        for entity in self.database.physicals:
-            entity.step()
-            if not entity.stable:
-                self.game_distable()
 
     def step_non_physicals(self) -> None:
         try:

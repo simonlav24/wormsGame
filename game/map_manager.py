@@ -11,6 +11,9 @@ from common.vector import *
 SKY = (0,0,0,0)
 GRD = (255,255,255,255)
 
+SKY_COL = (0,0,0)
+GRD_COL = (255,255,255)
+
 class ErrorImageNotFound(Exception):
     pass
 

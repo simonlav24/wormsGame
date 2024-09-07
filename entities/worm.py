@@ -13,7 +13,7 @@ from game.team_manager import Team
 from game.time_manager import TimeManager
 from game.visual_effects import FloatingText, splash
 from entities.physical_entity import PhysObj
-from game.map_manager import MapManager, GRD
+from game.map_manager import MapManager, GRD_COL
 from entities.worm_tools import WormTool
 from weapons.sick_gas import GasParticles
 
@@ -113,7 +113,7 @@ class Worm (PhysObj):
     def draw(self, win: pygame.Surface):
         # draw collision
         if not self is GameVariables().player and self.alive:
-            pygame.draw.circle(MapManager().worm_col_map, GRD, self.pos.vec2tupint(), int(self.radius)+1)
+            pygame.draw.circle(MapManager().worm_col_map, GRD_COL, self.pos.vec2tupint(), int(self.radius)+1)
 
         # draw tool
         self.worm_tool.draw(win)

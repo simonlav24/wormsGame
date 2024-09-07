@@ -8,6 +8,8 @@ from entities import PhysObj, Debrie
 from game.visual_effects import FireBlast, SmokeParticles, EffectManager
 from game.world_effects import boom
 
+from game.map_manager import MapManager
+
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
 		super().__init__(pos)
@@ -25,14 +27,10 @@ class Fire(PhysObj):
 		self.timer = 0
 		self.is_worm_collider = True
 
-		self.max_vel = (Vector(), 0)
-
 	def remove_from_game(self) -> None:
 		super().remove_from_game()
-		print(self.max_vel)
 
-	def on_collision(self, ppos):
-		if self.timer < 10: print('f', self.timer)
+	def on_collision(self, ppos):		
 		self.fallen = True
 
 	def step(self):
@@ -53,9 +51,6 @@ class Fire(PhysObj):
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
 			boom(self.pos + Vector(randint(-1,1),randint(-1,1)), 3, False, False, True)
-
-		if self.vel.getMag() > self.max_vel[0].getMag():
-			self.max_vel = (vectorCopy(self.vel), self.timer)
 
 	def draw(self, win: pygame.Surface):
 		radius = 1

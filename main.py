@@ -407,7 +407,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 			if y + i >= MapManager().game_map.get_height():
 				goodPlace = False
 				break
-			if MapManager().game_map.get_at((place.x, y + i)) == GRD or MapManager().worm_col_map.get_at((place.x, y + i)) != (0,0,0) or MapManager().objects_col_map.get_at((place.x, y + i)) != (0,0,0):
+			if MapManager().game_map.get_at((place.x, y + i)) == GRD or MapManager().worm_col_map.get_at((place.x, y + i)) != SKY_COL or MapManager().objects_col_map.get_at((place.x, y + i)) != SKY_COL:
 				y = y + i - 7
 				break
 		if  not goodPlace:

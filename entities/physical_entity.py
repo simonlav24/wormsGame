@@ -7,7 +7,7 @@ from typing import List
 from common import Entity, GameVariables, point2world, CRITICAL_FALL_VELOCITY, sprites
 from common.vector import Vector
 
-from game.map_manager import MapManager, GRD
+from game.map_manager import MapManager, GRD, SKY, SKY_COL, GRD_COL
 from game.visual_effects import splash
 
 
@@ -34,7 +34,7 @@ class PhysObj(Entity):
 
 		self.health = None
 
-		# colliders, true means colliding with
+		# colliders, *false* means colliding with
 		self.is_extra_collider = False
 		self.is_worm_collider = False
 	
@@ -85,10 +85,10 @@ class PhysObj(Entity):
 				r += pi /8; continue
 
 			else:
-				if not self.is_worm_collider and MapManager().worm_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
+				if not self.is_worm_collider and MapManager().worm_col_map.get_at((int(testPos.x), int(testPos.y))) != SKY_COL:
 					response += ppos - testPos
 					collision = True
-				elif not self.is_extra_collider and MapManager().objects_col_map.get_at((int(testPos.x), int(testPos.y))) != (0,0,0):
+				elif not self.is_extra_collider and MapManager().objects_col_map.get_at((int(testPos.x), int(testPos.y))) != SKY_COL:
 					response += ppos - testPos
 					collision = True
 			

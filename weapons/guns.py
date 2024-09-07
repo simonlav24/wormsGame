@@ -8,7 +8,7 @@ import pygame
 from common.vector import Vector, distus, vectorUnitRandom
 from common import sprites, GameVariables
 
-from game.map_manager import MapManager, GRD, SKY
+from game.map_manager import MapManager, GRD, SKY, GRD_COL, SKY_COL
 from game.visual_effects import splash, Blast
 from game.world_effects import boom
 from entities import Fire
@@ -88,8 +88,8 @@ def fireShotgun(**kwargs):
 			continue
 
 		at = (int(testPos.x), int(testPos.y))
-		if MapManager().game_map.get_at(at) == GRD or MapManager().worm_col_map.get_at(at) != (0,0,0) or MapManager().objects_col_map.get_at(at) != (0,0,0):
-			if MapManager().worm_col_map.get_at(at) != (0,0,0):
+		if MapManager().game_map.get_at(at) == GRD or MapManager().worm_col_map.get_at(at) != SKY_COL or MapManager().objects_col_map.get_at(at) != SKY_COL:
+			if MapManager().worm_col_map.get_at(at) != SKY_COL:
 				MapManager().stain(testPos, sprites.blood, sprites.blood.get_size(), False)
 			boom(testPos, kwargs.get('power', 15))
 			break
