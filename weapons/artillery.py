@@ -34,7 +34,8 @@ class Artillery(PhysObj):
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		if not self.bombing:
 			self.angle -= self.vel.x*4
 			if self.stable:

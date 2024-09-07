@@ -6,7 +6,7 @@ from math import pi, sin, sqrt, degrees, copysign
 
 import pygame
 
-from common import GameVariables, point2world, sprites, GameState, PLANT_MASTER, blit_weapon_sprite, RIGHT, LEFT, EntityWorm
+from common import GameVariables, point2world, sprites, GameState, blit_weapon_sprite, RIGHT, LEFT, EntityWorm
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
@@ -146,8 +146,8 @@ class Venus:
 					if entity in GameVariables().get_worms():
 						worm: EntityWorm = entity
 
-						if PLANT_MASTER in worm.team.artifacts:
-							continue
+						# if PLANT_MASTER in worm.team.artifacts:
+						# 	continue
 						worm.dieded(DeathCause.FLEW_OUT)
 						name = worm.name_str
 						color = worm.team.color # todo

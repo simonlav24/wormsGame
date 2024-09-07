@@ -14,7 +14,7 @@ from common.game_config import *
 
 from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
-from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay
+from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay
 from game.time_manager import TimeManager
 from game.map_manager import *
 from game.background import BackGround
@@ -31,7 +31,6 @@ from game.team_manager import TeamManager
 from entities.worm_tools import *
 from entities.props import *
 from entities.worm import Worm
-from entities.shooting_target import ShootingTarget
 from entities.deployables import *
 
 from weapons.sick_gas import GasParticles
@@ -80,8 +79,6 @@ def getGlobals():
 globals.globalsInit()
 initGui()
 getGlobals()
-
-
 
 class Game:
 	_game = None
@@ -244,31 +241,7 @@ class Game:
 		else:
 			self.map_manager.create_map_image(self.game_config.map_path, custom_height, self.game_config.is_recolor)
 		
-	def dropArtifact(self, artifact, pos, comment=False):
-		deploy = False
-		if not pos:
-			# find good position for artifact
-			goodPlace = False
-			count = 0
-			deploy = False
-			while not goodPlace:
-				pos = Vector(randint(20, self.map_manager.game_map.get_width() - 20), -50)
-				if not self.map_manager.is_ground_at((pos.x, 0)):
-					goodPlace = True
-				count += 1
-				if count > 2000:
-					break
-			if not goodPlace:
-				deploy = True
-		
-		if not deploy:
-			m = artifact(pos)
-		else:
-			m = deploy_pack(artifact)
-		
-		if comment:
-			m.commentCreation()
-		GameVariables().cam_track = m
+	
 
 	def initiateGameVariables(self):
 		self.waterRise = False # whether water rises at the end of each turn
@@ -276,10 +249,6 @@ class Game:
 		self.deployingArtifact = False  # deploying artifacts in current state
 
 		self.cheatCode = "" # cheat code
-		self.holdArtifact = True # whether to hold artifact
-		self.worldArtifacts = [MJOLNIR, PLANT_MASTER, AVATAR, MINECRAFT] # world artifacts
-		self.worldArtifactsClasses = [Mjolnir, MagicLeaf, Avatar, PickAxeArtifact]
-		self.trigerArtifact = False # whether to trigger artifact drop next turn
 		self.shotCount = 0 # number of gun shots fired
 
 		self.energising = False
@@ -338,6 +307,9 @@ class Game:
 
 		GameVariables().game_mode.add_mode(game_mode_map.get(self.game_config.game_mode))
 
+		if self.game_config.option_artifacts:
+			GameVariables().game_mode.add_mode(ArtifactsGamePlay())
+
 		# if self.game_config.option_darkness:
 		# 	GameVariables().game_mode.modes.append(DarknessGamePlay())
 
@@ -376,8 +348,6 @@ class Game:
 		pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((self.lstep / self.lstepmax)*width, height)))
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 		pygame.display.update()
-
-
 
 # todo: determine where this belongs, refactor mines better: add bad places as argument with mines places
 def giveGoodPlace(div = 0, girderPlace = True):
@@ -506,7 +476,8 @@ class GasGrenade(Grenade):
 			vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1,1.5)
 			GasParticles._sp.addSmoke(self.pos, vel, color=(102, 255, 127))
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		GameVariables().game_distable()
 		self.angle -= self.vel.x * 4
 		self.timer += 1
@@ -646,7 +617,8 @@ class MjolnirThrow(PhysObj):
 		Game._game.holdArtifact = False
 		self.worms = []
 
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		if self.vel.getMag() > 1:
 			self.rotating = True
 		else:
@@ -721,83 +693,6 @@ class MjolnirReturn:
 		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
-class Artifact(PhysObj):
-	def __init__(self, pos):
-		super().__init__(pos)
-		self.pos = pos
-		self.vel = Vector(randint(-2,2), 0)
-		self.radius = 3
-		self.damp = 0.2
-		self.angle = 0
-		GameVariables().cam_track = self
-		self.artifact = self.getArtifact()
-		self.setSurf()
-	
-	def getArtifact(self):
-		pass
-	
-	def setSurf(self):
-		pass
-	
-	def commentCreation(self):
-		pass
-	
-	def commentPicked(self):
-		pass
-	
-	def secondaryStep(self):
-		# pick up
-		if dist(GameVariables().player.pos, self.pos) < self.radius + GameVariables().player.radius + 5 and not GameVariables().player.health <= 0\
-			and not len(GameVariables().player.team.artifacts) > 0: 
-			self.remove_from_game()
-			Game._game.worldArtifacts.remove(self.artifact)
-			self.commentPicked()
-			TeamManager().current_team.artifacts.append(self.artifact)
-			# add artifacts moves:
-			WeaponManager().addArtifactMoves(self.artifact)
-			return
-		self.trenaryStep()
-	
-	def remove_from_game(self):
-		super().remove_from_game()
-		Game._game.worldArtifacts.append(self.artifact)
-	
-	def trenaryStep(self):
-		pass
-	
-	def draw(self, win: pygame.Surface):
-		angle = 45 * round(self.angle / 45)
-		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-
-class Mjolnir(Artifact):
-	def getArtifact(self):
-		return MJOLNIR
-	
-	def setSurf(self):
-		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		self.surf.blit(sprites.sprite_atlas, (0,0), (0,112,16,16))
-	
-	def commentCreation(self):
-		GameVariables().commentator.comment([{'text': "a gift from the gods"}])
-	
-	def commentPicked(self):
-		GameVariables().commentator.comment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': " is worthy to wield mjolnir!"}])
-	
-	def trenaryStep(self):
-		if self.vel.getMag() > 1:
-			self.angle = -degrees(self.vel.getAngle()) - 90
-	
-	def on_collision(self, ppos):
-		vel = self.vel.getMag()
-		if vel > 4:
-			boom(self.pos, max(20, 2 * self.vel.getMag()))
-		elif vel < 1:
-			self.vel *= 0
-	
-	def draw(self, win: pygame.Surface):
-		surf = pygame.transform.rotate(Game._game.imageMjolnir, self.angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 	
 class MjolnirFly(PhysObj):
 	flying = False
@@ -811,7 +706,8 @@ class MjolnirFly(PhysObj):
 		self.angle = 0
 		Game._game.holdArtifact = False
 		MjolnirFly.flying = True
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		if self.vel.getMag() > 1:
 			self.rotating = True
 		else:
@@ -908,39 +804,6 @@ class MjolnirStrike:
 		draw_lightning(win, Vector(self.pos.x, 0), self.pos)
 		for worm in self.worms:
 			draw_lightning(win, Vector(self.pos.x, randint(0, int(self.pos.y))), worm.pos)
-
-class MagicLeaf(Artifact):
-	def getArtifact(self):
-		return PLANT_MASTER
-	
-	def setSurf(self):
-		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		self.surf.blit(sprites.sprite_atlas, (0,0), (48, 64, 16,16))
-
-		self.is_wind_affected = True
-		self.turbulance = vectorUnitRandom()
-	
-	def commentCreation(self):
-		GameVariables().commentator.comment([{'text': "a leaf of heavens tree"}])
-	
-	def commentPicked(self):
-		GameVariables().commentator.comment([{'text': GameVariables().player.name_str, 'color': TeamManager().current_team.color}, {'text': "  became master of plants"}])
-	
-	def trenaryStep(self):
-		self.angle += self.vel.x*4
-
-		# aerodynamic drag
-		self.turbulance.rotate(uniform(-1, 1))
-		velocity = self.vel.getMag()
-		force =  - 0.15 * 0.5 * velocity * velocity * normalize(self.vel)
-		force += self.turbulance * 0.1
-		self.acc += force
-	
-	def on_collision(self, ppos):
-		self.turbulance *= 0.9
-
-
-
 
 
 
@@ -1059,23 +922,6 @@ class Tornado:
 			five = [point2world(Vector(swirl[0] * cos(swirl[2] + t/5) + self.pos.x, 10 * i + swirl[1] * sin(swirl[2] + t/5))) for t in range(5)]
 			pygame.draw.lines(win, (255,255,255), False, five)
 
-class Avatar(Artifact):
-	def getArtifact(self):
-		return AVATAR
-	
-	def setSurf(self):
-		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		self.surf.blit(sprites.sprite_atlas, (0,0), (0,112,16,16))
-	
-	def commentCreation(self):
-		GameVariables().commentator.comment([{'text': "who is the next avatar?"}])
-	
-	def commentPicked(self):
-		GameVariables().commentator.comment([{'text': 'everything changed when the '}, {'text': TeamManager().current_team.name, 'color': TeamManager().current_team.color}, {'text': ' attacked'}])
-	
-	def trenaryStep(self):
-		self.angle -= self.vel.x*4
-
 class PickAxe:
 	_pa = None
 	def __init__(self):
@@ -1177,23 +1023,7 @@ class MineBuild:
 		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
 		pygame.draw.rect(win, (255,255,255), (point2world(position), Vector(16,16)), 1)
 
-class PickAxeArtifact(Artifact):
-	def getArtifact(self):
-		return MINECRAFT
-	
-	def setSurf(self):
-		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "pick axe")
-	
-	def commentCreation(self):
-		GameVariables().commentator.comment([{'text': "a game changer"}])
 
-	def commentPicked(self):
-		...
-		GameVariables().commentator.comment([{'text': 'its mining time'}])
-	
-	def trenaryStep(self):
-		self.angle -= self.vel.x*4
 
 class TimeSlow:
 	def __init__(self):
@@ -1743,30 +1573,7 @@ def cycle_worms():
 		GameVariables().game_turn_count -= 1
 		Game._game.waterRising = True
 		return
-	
-	# throw artifact:
-	if Game._game.game_config.option_artifacts:
-		for team in TeamManager().teams:
-			if PLANT_MASTER in team.artifacts:
-				team.ammo(WeaponManager()["magic bean"], 1, True)
-			elif MJOLNIR in team.artifacts:
-				team.ammo(WeaponManager()["fly"], 3, True)
-			elif MINECRAFT in team.artifacts:
-				team.ammo(WeaponManager()["pick axe"], 1, True)
-				team.ammo(WeaponManager()["build"], 1, True)
 		
-		if len(Game._game.worldArtifacts) > 0 and not Game._game.deployingArtifact:
-			chance = randint(0,10)
-			if chance == 0 or Game._game.trigerArtifact:
-				Game._game.trigerArtifact = False
-				Game._game.deployingArtifact = True
-				artifact = choice(Game._game.worldArtifacts)
-				Game._game.worldArtifacts.remove(artifact)
-				Game._game.dropArtifact(Game._game.worldArtifactsClasses[artifact], None, comment=True)
-				GameVariables().game_next_state = GameState.WAIT_STABLE
-				GameVariables().game_turn_count -= 1
-				return
-	
 	Game._game.waterRising = False
 	Game._game.deployingArtifact = False
 	
@@ -2356,7 +2163,7 @@ def cheat_activate(code: str):
 			# if worm in TeamManager().current_team.worms:
 				# continue
 			worm.gravity = worm.gravity * -1
-	elif code == "gibpetrolcan":
+	elif code == "petrolcan":
 		PetrolCan(mouse_pos)
 	elif code == "megaboom":
 		GameVariables().mega_weapon_trigger = True
@@ -2367,20 +2174,20 @@ def cheat_activate(code: str):
 		TeamManager().current_team.ammo(WeaponManager()["jet pack"], 6)
 		TeamManager().current_team.ammo(WeaponManager()["rope"], 6)
 		TeamManager().current_team.ammo(WeaponManager()["ender pearl"], 6)
-	elif code == "odinson":
-		m = Mjolnir(mouse_pos)
-		m.vel *= 0
-	elif code == "bulbasaur":
-		m = MagicLeaf(mouse_pos)
-	elif code == "avatar":
-		m = Avatar(mouse_pos)
+	# elif code == "odinson":
+	# 	# m = Mjolnir(mouse_pos)
+	# 	m.vel *= 0
+	# elif code == "bulbasaur":
+	# 	m = MagicLeaf(mouse_pos)
+	# elif code == "avatar":
+	# 	m = Avatar(mouse_pos)
 	elif code == "masterofpuppets":
 		MasterOfPuppets()
 	elif code == "artifact":
 		Game._game.trigerArtifact = True
 		GameVariables().commentator.comment([{'text': 'next turn artifact drop'}])
-	elif code == "minecraft":
-		PickAxeArtifact(mouse_pos)
+	# elif code == "minecraft":
+	# 	PickAxeArtifact(mouse_pos)
 	elif code == "deathtouch":
 		pos = Vector(mouse_pos)
 		closest = None
@@ -2812,6 +2619,7 @@ def gameMain(game_config: GameConfig=None):
 		# menu step
 		if Game._game.radial_weapon_menu:
 			Game._game.radial_weapon_menu.step()
+
 		
 		# reset actions
 		Game._game.actionMove = False
@@ -2941,8 +2749,11 @@ if __name__ == "__main__":
 	still in wip:
 		water rise
 		loading screen
-		health bar update TEST
+		move weapon menu when scrolling
+		weapon menu some weapons not reachable
 		shoot gun if died before all shooted
+		exploding petrol cans fire not spreading
+		portals
 	'''
 	print(wip)
 
@@ -2950,5 +2761,6 @@ if __name__ == "__main__":
 		# mainMenu(Game._game.endGameDict if Game._game else None, gameParameters)
 		config = GameConfig()
 		config.map_path = r'assets/worms_maps/Nyc.png'
-		config.game_mode = GameMode.ARENA
+		config.game_mode = GameMode.BATTLE
+		config.option_artifacts = True
 		gameMain(config)

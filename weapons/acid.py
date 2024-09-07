@@ -33,7 +33,8 @@ class Acid(PhysObj):
 	def on_collision(self, ppos):
 		self.inGround = True
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		if self.inGround:
 			pygame.draw.circle(MapManager().game_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
 			pygame.draw.circle(MapManager().ground_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
@@ -72,7 +73,8 @@ class AcidBottle(PetrolBomb):
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "acid bottle")
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.angle -= self.vel.x*4
 	
 	def death_response(self):

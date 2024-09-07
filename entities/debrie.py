@@ -38,7 +38,8 @@ class Debrie (PhysObj):
 		factor = 1.5
 		self.acc.y += GameVariables().physics.global_gravity * factor
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.angle -= self.vel.x * 2
 		if self.firey:
 			Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)

@@ -183,6 +183,12 @@ class RadialButton(GuiBase):
 	def fold(self) -> None:
 		self.is_open = False
 
+	def center_out(self) -> None:
+		''' set center position '''
+		self.center = (GameVariables().win_width // 2, GameVariables().win_height // 2)
+		for element in self.elements:
+			element.center_out()
+
 
 class RadialMenu(GuiBase):
 	def __init__(self, layout: List[RadialButton], center: Vector2):
@@ -207,6 +213,11 @@ class RadialMenu(GuiBase):
 
 			element.build()
 
+	def center_out(self) -> None:
+		''' set center position '''
+		self.center = (GameVariables().win_width // 2, GameVariables().win_height // 2)
+		for element in self.elements:
+			element.center_out()
 	
 	def handle_event(self, event) -> None:
 		for element in self.elements:
@@ -215,6 +226,7 @@ class RadialMenu(GuiBase):
 				self.event = returned_event
 
 	def step(self) -> None:
+		self.center_out()
 		for element in self.elements:
 			element.step()
 			if element.in_focus:

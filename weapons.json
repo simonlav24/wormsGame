@@ -533,7 +533,7 @@
         "name": "mjolnir strike",
         "style": 2,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 1
@@ -543,7 +543,7 @@
         "name": "mjolnir throw",
         "style": 0,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 1
@@ -553,7 +553,7 @@
         "name": "fly",
         "style": 0,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": 3,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 1
@@ -563,7 +563,7 @@
         "name": "control plants",
         "style": 2,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 2
@@ -573,7 +573,7 @@
         "name": "magic bean",
         "style": 0,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": 1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 2
@@ -583,7 +583,7 @@
         "name": "mine plant",
         "style": 0,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 2
@@ -593,7 +593,7 @@
         "name": "razor leaf",
         "style": 1,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 2
@@ -603,7 +603,7 @@
         "name": "icicle",
         "style": 1,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 3
@@ -613,7 +613,7 @@
         "name": "earth spike",
         "style": 2,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 3,
@@ -624,7 +624,7 @@
         "name": "fire ball",
         "style": 1,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 3
@@ -634,7 +634,7 @@
         "name": "air tornado",
         "style": 2,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": -1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 3
@@ -644,7 +644,7 @@
         "name": "pick axe",
         "style": 2,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": 1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 4
@@ -654,7 +654,7 @@
         "name": "build",
         "style": 2,
         "category": 9,
-        "initial_amount": 0,
+        "initial_amount": 1,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 4

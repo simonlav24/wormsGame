@@ -7,7 +7,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 import common
-from common import GREY, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world
+from common import GREY, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world, ArtifactType
 from common.vector import *
 import common.drawing_utilities
 
@@ -34,13 +34,6 @@ class WeaponCategory(Enum):
     UTILITIES = 8
     ARTIFACTS = 9
 
-
-class ArtifactType(Enum):
-    NONE = 0
-    MJOLNIR = 1
-    PLANT_MASTER = 2
-    AVATAR = 3
-    MINECRAFT = 4
 
 weapon_bg_color = {
     WeaponCategory.MISSILES : (255, 255, 255),
@@ -90,7 +83,7 @@ class WeaponManager(metaclass=SingletonMeta):
         common.drawing_utilities.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
 
         # basic set for teams 
-        self.basic_set: List[int] = [weapon.initial_amount for weapon in self.weapons]
+        self.basic_set: List[int] = [weapon.initial_amount if weapon.artifact == ArtifactType.NONE else 0 for weapon in self.weapons]
         
         for team in TeamManager().teams:
             team.weapon_set = self.basic_set.copy()
@@ -197,17 +190,17 @@ class WeaponManager(metaclass=SingletonMeta):
                     return
                 GameVariables().weapon_hold.blit(sprites.sprite_atlas, (0,0), (64,64,16,16))
     
-    def addArtifactMoves(self, artifact):
-        # when team pick up artifact add them to weapon_set
-        for w in self.weapons[self.weaponCount + self.utilityCount:]:
-            if w[6] == artifact:
-                if w[0] in ["magic bean", "pick axe", "build"]:
-                    TeamManager().current_team.ammo(w[0], 1, True)
-                    continue
-                if w[0] == "fly":
-                    TeamManager().current_team.ammo(w[0], 3, True)
-                    continue
-                TeamManager().current_team.ammo(w[0], -1, True)
+    # def add_artifact_moves(self, artifact):
+    #     # when team pick up artifact add them to weapon_set
+    #     for w in self.weapons[self.weaponCount + self.utilityCount:]:
+    #         if w[6] == artifact:
+    #             if w[0] in ["magic bean", "pick axe", "build"]:
+    #                 TeamManager().current_team.ammo(w[0], 1, True)
+    #                 continue
+    #             if w[0] == "fly":
+    #                 TeamManager().current_team.ammo(w[0], 3, True)
+    #                 continue
+    #             TeamManager().current_team.ammo(w[0], -1, True)
 
     def currentArtifact(self):
         if self.current_weapon.category == WeaponCategory.ARTIFACTS:

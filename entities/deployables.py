@@ -18,7 +18,6 @@ class Deployable(ExplodingProp):
 		self.pos = Vector(pos[0], pos[1])
 		self.radius = 5
 		self.damp = 0.01
-		self.health = 5
 		self.is_fall_affected = False
 		self.is_wind_affected = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)

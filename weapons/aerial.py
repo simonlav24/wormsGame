@@ -76,7 +76,8 @@ class Seagull(Seeker):
 		GameVariables().unregister_non_physical(self)
 		self.chum.dead = True
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.target = self.chum.pos
 	
 	def draw(self, win: pygame.Surface):
@@ -120,7 +121,8 @@ class Chum(Grenade):
 		if self.stick:
 			MapManager().game_map.set_at(self.stick.integer(), SKY)
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		if self.ticking:
 			if self.timer == self.alarm:
 				s = Seagull(Vector(self.pos.x + randint(-100,100), -10), Vector(randint(-100,100), 0), 1)

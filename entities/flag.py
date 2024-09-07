@@ -18,7 +18,8 @@ class Flag(PhysObj):
         self.holder: EntityWorm = None
         self.is_gone = False
     
-    def secondaryStep(self):
+    def step(self):
+        super().step()
         if GameVariables().player is not None:
             if not GameVariables().player in GameVariables().get_worms():
                 return

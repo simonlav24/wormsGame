@@ -73,7 +73,7 @@ class SnailShell(PhysObj):
 		self.surf = pygame.Surface((6,6), pygame.SRCALPHA)
 		self.surf.blit(sprites.sprite_atlas, (0,0), (64,48, 6,6))
 
-	def setSurf(self, surf):
+	def set_surf(self, surf):
 		self.surf = surf
 	
 	def on_collision(self, ppos):

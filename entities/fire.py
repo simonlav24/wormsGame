@@ -25,10 +25,18 @@ class Fire(PhysObj):
 		self.timer = 0
 		self.is_worm_collider = True
 
+		self.max_vel = (Vector(), 0)
+
+	def remove_from_game(self) -> None:
+		super().remove_from_game()
+		print(self.max_vel)
+
 	def on_collision(self, ppos):
+		if self.timer < 10: print('f', self.timer)
 		self.fallen = True
 
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.stable = False
 		if randint(0,10) < 3:
 			FireBlast(self.pos + vectorUnitRandom(), randint(self.radius,4))
@@ -45,6 +53,9 @@ class Fire(PhysObj):
 			return
 		if randint(0,1) == 1 and self.timer > self.delay:
 			boom(self.pos + Vector(randint(-1,1),randint(-1,1)), 3, False, False, True)
+
+		if self.vel.getMag() > self.max_vel[0].getMag():
+			self.max_vel = (vectorCopy(self.vel), self.timer)
 
 	def draw(self, win: pygame.Surface):
 		radius = 1

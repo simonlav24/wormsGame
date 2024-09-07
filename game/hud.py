@@ -69,7 +69,6 @@ class Commentator:
 	def comment(self, text_dict) -> None:
 		surf = self.render_comment(text_dict)
 		self.surf_que.append(surf)
-		print(f'comment {text_dict}')
 
 	def step(self) -> None:
 		if self.state == CommentatorState.IDLE:

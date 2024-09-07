@@ -551,7 +551,7 @@ class MenuElementSurf(MenuElement):
 	def initialize(self):
 		self.type = MENU_SURF
 		self.surf = None
-	def setSurf(self, surf):
+	def set_surf(self, surf):
 		self.surf = surf
 	def draw(self):
 		buttonPos = self.getSuperPos() + self.pos

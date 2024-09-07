@@ -30,7 +30,8 @@ class GunShell(PhysObj):
 	def apply_force(self):
 		self.acc.y += GameVariables().physics.global_gravity * 2.5
 
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.angle -= self.vel.x * 4
 
 	def draw(self, win: pygame.Surface):

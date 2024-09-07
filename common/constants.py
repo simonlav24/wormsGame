@@ -39,10 +39,17 @@ UTILITY_PACK = 1
 WEAPON_PACK = 2
 FLAG_DEPLOY = 3
 
-MJOLNIR = 0
-PLANT_MASTER = 1
-AVATAR = 2
-MINECRAFT = 3
+class ArtifactType(Enum):
+    NONE = 0
+    MJOLNIR = 1
+    PLANT_MASTER = 2
+    AVATAR = 3
+    MINECRAFT = 4
+
+class ArtifactResult(Enum):
+    NONE = 0
+    PICKED = 1
+    GONE = 2
 
 EDGE_BORDER = 65
 MAP_SCROLL_SPEED = 35
@@ -100,6 +107,7 @@ class Sprites:
     sprite_atlas: pygame.Surface = None
     air_strike_indicator: pygame.Surface = None
     bee: pygame.Surface = None
+    image_mjolnir: pygame.Surface = None
 
 sprites = Sprites()
 
@@ -146,5 +154,8 @@ def initialize() -> None:
     sprites.bee.fill((0,0,0), ((2,2), (2,3)))
     sprites.bee.fill((255,255,0), ((3,2), (3,3)))
     sprites.bee.fill((143,234,217,100), ((1,0), (2,2)))
+
+    sprites.image_mjolnir = pygame.Surface((24,31), pygame.SRCALPHA)
+    sprites.image_mjolnir.blit(sprites.sprite_atlas, (0,0), (100, 32, 24, 31))
 
 
