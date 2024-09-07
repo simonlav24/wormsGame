@@ -14,7 +14,7 @@ from common.game_config import *
 
 from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
-from game.game_play_mode import GamePlayCompound, TerminatorGamePlay
+from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay
 from game.time_manager import TimeManager
 from game.map_manager import *
 from game.background import BackGround
@@ -192,10 +192,6 @@ class Game:
 
 	def init_handle_game_mode(self) -> None:
 		''' on init, handle game mode parameter and variables '''
-		# targets:
-		if Game._game.gameMode == GameMode.TARGETS:
-			for i in range(ShootingTarget.numTargets):
-				ShootingTarget()
 
 		# digging match
 		if Game._game.game_config.option_digging:
@@ -209,35 +205,12 @@ class Game:
 				team.ammo(WeaponManager()["laser gun"], 3)
 			GameVariables().config.option_closed_map = True
 
-		# david and goliath
-		if Game._game.gameMode == GameMode.DAVID_AND_GOLIATH:
-			for team in TeamManager().teams:
-				length = len(team.worms)
-				for i in range(length):
-					if i == 0:
-						team.worms[i].health = Game._game.game_config.worm_initial_health + (length - 1) * (Game._game.game_config.worm_initial_health//2)
-						team.worms[i].healthStr = fonts.pixel5.render(str(team.worms[i].health), False, team.worms[i].team.color)
-					else:
-						team.worms[i].health = (Game._game.game_config.worm_initial_health//2)
-						team.worms[i].healthStr = fonts.pixel5.render(str(team.worms[i].health), False, team.worms[i].team.color)
-			Game._game.game_config.worm_initial_health = TeamManager().teams[0].worms[0].health
-		
-		# disable points in battle
-		if Game._game.gameMode in [GameMode.BATTLE]:
-			HealthBar.drawPoints = False
-
 		# if Game._game.darkness:
 		# 	WeaponManager().render_weapon_count()
 		# 	for team in TeamManager().teams:
 		# 		team.ammo(WeaponManager().weapon_dict['flare'], 3)
 
 		GameVariables().game_mode.on_game_init()
-
-		if Game._game.gameMode == GameMode.CAPTURE_THE_FLAG:
-			place_object(Flag, None)
-
-		if Game._game.gameMode == GameMode.ARENA:
-			ArenaManager()
 
 		if Game._game.gameMode == GameMode.MISSIONS:
 			MissionManager()
@@ -254,12 +227,8 @@ class Game:
 		Venus._reg.clear()
 		GreenShell._shells.clear()
 		Flare._flares.clear()
-		Flag.flags.clear()
-		ShootingTarget._reg.clear()
 		Seagull._reg.clear()
 		Chum._chums.clear()
-
-		ArenaManager._arena = None
 		MissionManager._mm = None
 	
 	def create_map(self) -> None:
@@ -359,7 +328,12 @@ class Game:
 		GameVariables().game_mode = GamePlayCompound()
 
 		game_mode_map = {
-			GameMode.TERMINATOR: TerminatorGamePlay()
+			GameMode.TERMINATOR: TerminatorGamePlay(),
+			GameMode.POINTS: PointsGamePlay(),
+			GameMode.TARGETS: TargetsGamePlay(),
+			GameMode.DAVID_AND_GOLIATH: DVGGamePlay(),
+			GameMode.CAPTURE_THE_FLAG: CTFGamePlay(),
+			GameMode.ARENA: ArenaGamePlay(),
 		}
 
 		GameVariables().game_mode.add_mode(game_mode_map.get(self.game_config.game_mode))
@@ -649,33 +623,7 @@ class Armageddon:
 	def draw(self, win: pygame.Surface):
 		pass
 
-class Flag(PhysObj):
-	flags = []
-	def __init__(self, pos=(0,0)):
-		super().__init__(pos)
-		Flag.flags.append(self)
-		self.pos = Vector(pos[0], pos[1])
-		self.radius = 3.5
-		self.color = (220,0,0)
-		self.damp = 0.1
-	def secondaryStep(self):
-		if GameVariables().player is not None:
-			if not GameVariables().player in GameVariables().get_worms():
-				return
-			if dist(GameVariables().player.pos, self.pos) < self.radius + GameVariables().player.radius:
-				# worm has flag
-				GameVariables().player.flagHolder = True
-				GameVariables().player.team.flagHolder = True
-				self.remove_from_game()
-				Flag.flags.remove(self)
-				return
-	def on_out_of_map(self):
-		Flag.flags.remove(self)
-		p = deploy_pack(Flag)
-		GameVariables().cam_track = p
-	def draw(self, win: pygame.Surface):
-		pygame.draw.line(win, (51, 51, 0), point2world(self.pos + Vector(0, self.radius)), point2world(self.pos + Vector(0, -3 * self.radius)))
-		pygame.draw.rect(win, self.color, (point2world(self.pos + Vector(1, -3 * self.radius)), (self.radius*2, self.radius*2)))
+
 
 
 
@@ -1642,46 +1590,14 @@ def check_winners() -> bool:
 	if count == TeamManager().num_of_teams:
 		# no team remains
 		end = True
-	
-	if Game._game.gameMode == GameMode.TARGETS and len(ShootingTarget._reg) == 0 and ShootingTarget.numTargets <= 0:
-		end = True
-	
+		
 	if not end:
 		return False
 	# game end:
 	dic = {}
 	winningTeam = None
-		
-	# win bonuse:
-	if Game._game.gameMode == GameMode.CAPTURE_THE_FLAG:
-		dic["mode"] = "CTF"
-		pointsGame = True
-		for team in TeamManager().teams:
-			if team.flagHolder:
-				team.points += 1 + 3 # bonus points
-				print("[ctf win, team", team.name, "got 3 bonus points]")
-				break
-		
-	elif Game._game.gameMode == GameMode.POINTS:
-		pointsGame = True
-		if lastTeam:
-			lastTeam.points += 150 # bonus points
-			dic["mode"] = "points"
-			print("[points win, team", lastTeam.name, "got 150 bonus points]")
-			
-	elif Game._game.gameMode == GameMode.TARGETS:
-		pointsGame = True
-		TeamManager().current_team.points += 3 # bonus points
-		dic["mode"] = "targets"
-		print("[targets win, team", TeamManager().current_team.name, "got 3 bonus points]")
-		
-	elif Game._game.gameMode == GameMode.ARENA:
-		pointsGame = True
-		if lastTeam:
-			pass
-		dic["mode"] = "arena"
-
-	elif Game._game.gameMode == GameMode.MISSIONS:
+							
+	if Game._game.gameMode == GameMode.MISSIONS:
 		pointsGame = True
 		if lastTeam:
 			pass
@@ -1700,8 +1616,6 @@ def check_winners() -> bool:
 		winningTeam = lastTeam
 		if winningTeam:
 			print("[last team standing is", winningTeam.name, "]")
-		if Game._game.gameMode == GameMode.DAVID_AND_GOLIATH:
-			dic["mode"] = "davidVsGoliath"
 	
 	if end:
 		if winningTeam is not None:
@@ -1807,8 +1721,8 @@ def cycle_worms():
 		GameVariables().commentator.comment(comment)
 	
 	TeamManager().current_team.damage += Game._game.damageThisTurn
-	if Game._game.gameMode in [GameMode.POINTS, GameMode.BATTLE]:
-		TeamManager().current_team.points = TeamManager().current_team.damage + 50 * TeamManager().current_team.kill_count
+	# if Game._game.gameMode in [GameMode.POINTS, GameMode.BATTLE]:
+	# 	TeamManager().current_team.points = TeamManager().current_team.damage + 50 * TeamManager().current_team.kill_count
 	Game._game.damageThisTurn = 0
 	if check_winners():
 		return
@@ -1861,19 +1775,6 @@ def cycle_worms():
 		if Game._game.game_config.rounds_for_sudden_death == 0:
 			suddenDeath()
 	
-	if Game._game.gameMode == GameMode.CAPTURE_THE_FLAG:
-		for team in TeamManager().teams:
-			if team.flagHolder:
-				team.points += 1
-				break
-
-	# update weapons delay (and targets)
-	if GameVariables().game_turn_count % TeamManager().num_of_teams == 0:
-		if Game._game.gameMode == GameMode.TARGETS:
-			ShootingTarget.numTargets -= 1
-			if ShootingTarget.numTargets == 0:
-				GameVariables().commentator.comment([{'text': 'final targets round'}])
-
 	# update stuff
 	GameVariables().get_debries().clear()
 	Bubble.cought = []
@@ -2014,23 +1915,7 @@ def toast_info():
 		i += s[0].get_height() + 3
 	Toast(surf)
 
-class ArenaManager:
-	_arena = None
-	def __init__(self):
-		ArenaManager._arena = self
-		self.size = Vector(10 * 16, 10)
-		self.pos = Vector(MapManager().game_map.get_width(), MapManager().game_map.get_height())//2 - self.size//2
-	def step(self):
-		pass
-	def draw(self, win: pygame.Surface):
-		pygame.draw.rect(MapManager().game_map, GRD,(self.pos, self.size))
-		for i in range(10):
-			MapManager().ground_map.blit(sprites.sprite_atlas, self.pos + Vector(i * 16, 0), (64,80,16,16))
-	def wormsCheck(self):
-		for worm in GameVariables().get_worms():
-			checkPos = worm.pos + Vector(0, worm.radius * 2)
-			if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and checkPos.y > self.pos.y and checkPos.y < self.pos.y + self.size.y:
-				worm.team.points += 1
+
 
 class MissionManager:
 	_mm = None
@@ -2921,8 +2806,6 @@ def gameMain(game_config: GameConfig=None):
 		TimeManager().step()
 		Game._game.background.step()
 		
-		if ArenaManager._arena:
-			ArenaManager._arena.step()
 		if MissionManager._mm:
 			MissionManager._mm.step()
 		
@@ -2953,8 +2836,6 @@ def gameMain(game_config: GameConfig=None):
 		for t in Toast._toasts:
 			t.draw(win)
 		
-		if ArenaManager._arena:
-			ArenaManager._arena.draw(win)
 		SmokeParticles._sp.draw(win)
 		GasParticles._sp.draw(win)
 
@@ -2991,10 +2872,6 @@ def gameMain(game_config: GameConfig=None):
 		
 		GameVariables().game_mode.draw(win)
 
-
-		if Game._game.gameMode == GameMode.TARGETS and GameVariables().player is not None:
-			for target in ShootingTarget._reg:
-				draw_dir_indicator(win, target.pos)
 		if Game._game.gameMode == GameMode.MISSIONS:
 			if MissionManager._mm:
 				MissionManager._mm.draw(win)
@@ -3073,5 +2950,5 @@ if __name__ == "__main__":
 		# mainMenu(Game._game.endGameDict if Game._game else None, gameParameters)
 		config = GameConfig()
 		config.map_path = r'assets/worms_maps/Nyc.png'
-		config.game_mode = GameMode.TERMINATOR
+		config.game_mode = GameMode.ARENA
 		gameMain(config)

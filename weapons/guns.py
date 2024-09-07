@@ -125,7 +125,7 @@ def fireGammaGun(**kwargs):
 		for plant in Venus._reg:
 			if distus(testPos, plant.pos + plant.direction * 25) <= 625:
 				plant.mutate()
-		for target in ShootingTarget._reg:
+		for target in GameVariables().get_targets():
 			if distus(testPos, target.pos) < target.radius * target.radius:
 				target.explode()
 

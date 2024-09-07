@@ -40,6 +40,7 @@ class DataBase:
         self.debries: List[EntityPhysical] = []
         self.exploding_props: List[EntityPhysical] = []
         self.autonomous_objects: List[AutonomousEntity] = []
+        self.targets: List[EntityPhysical] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -164,6 +165,9 @@ class GameVariables(metaclass=SingletonMeta):
 
     def get_debries(self) -> List[EntityPhysical]:
         return self.database.debries
+
+    def get_targets(self) -> List[EntityPhysical]:
+        return self.database.targets
 
     def get_exploding_props(self) -> List[EntityPhysical]:
         return self.database.exploding_props

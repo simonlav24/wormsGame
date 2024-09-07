@@ -57,7 +57,7 @@ class LongBow:
                         self.worm_collision(worm)
                         return
                 # check target collision:
-                for target in ShootingTarget._reg:
+                for target in GameVariables().get_targets():
                     if dist(testPos, target.pos) < target.radius:
                         target.explode()
                         self.destroy()

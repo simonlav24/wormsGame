@@ -39,7 +39,7 @@ class Spear(PhysObj):
 		for i, worm in enumerate(self.worms):
 			worm.pos = vectorCopy(self.pos) - 5 * normalize(self.vel) * i
 			worm.vel *= 0
-		for target in ShootingTarget._reg:
+		for target in GameVariables().get_targets():
 			if dist(self.pos + normalize(self.vel) * 8, target.pos) < target.radius + 1:
 				self.is_boom_affected = False
 				target.explode()

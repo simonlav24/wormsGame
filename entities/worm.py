@@ -50,7 +50,6 @@ class Worm (PhysObj):
         self.healthStr = fonts.pixel5.render(str(self.health), False, self.team.color)
         self.score = 0
         self.is_worm_collider = True
-        self.flagHolder = False # todo: remove
 
         # create surf
         self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
