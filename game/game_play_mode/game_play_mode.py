@@ -25,6 +25,11 @@ class GamePlayCompound(GamePlayMode):
         for mode in self.modes:
             mode.on_cycle()
 
+    def on_deploy(self):
+        ''' on drop deployable update '''
+        for mode in self.modes:
+            mode.on_deploy()
+
     def step(self):
         for mode in self.modes:
             mode.step()        

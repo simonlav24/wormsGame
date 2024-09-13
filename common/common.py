@@ -106,6 +106,9 @@ class GamePlayMode:
 	def on_cycle(self):
 		...
 
+	def on_deploy(self):
+		...
+
 	def step(self):
 		...
 

@@ -65,7 +65,6 @@ class ArtifactsGamePlay(GamePlayMode):
         }
         self.triger_artifact = False
         self.deployed_artifacts: List[DeployableArtifact] = []
-
     
     def on_game_init(self):
         super().on_game_init()
@@ -94,6 +93,7 @@ class ArtifactsGamePlay(GamePlayMode):
                     GameVariables().commentator.comment(comment)
                     # give weapons
                     self.give_artifacts_weapons(current_team, artifact.artifact_type)
+                    self.team_artifact_dict[current_team] = artifact.artifact_type
         self.deployed_artifacts = [a for a in self.deployed_artifacts if a not in artifacts_to_remove]
         artifacts_to_remove.clear()
 
@@ -112,13 +112,8 @@ class ArtifactsGamePlay(GamePlayMode):
             if weapon.artifact == artifact_type:
                 team.ammo(weapon.index, weapon.initial_amount, True)
 
-    def on_cycle(self):
-        super().on_cycle()
-
-        # refresh artifact weapon count
-        for team, artifact_type in self.team_artifact_dict.items():
-            self.give_artifacts_weapons(team, artifact_type)
-        
+    def on_deploy(self):
+        super().on_deploy()
         # drop artifact
         if len(self.world_artifacts) > 0:
             chance = randint(0, 0)
@@ -128,8 +123,10 @@ class ArtifactsGamePlay(GamePlayMode):
                 self.world_artifacts.remove(artifact_type)
                 deplyoed_artifact = drop_artifact(self.artifact_classes[artifact_type], artifact_type, None, comment=True)
                 self.deployed_artifacts.append(deplyoed_artifact)
-        
-        print(f'{GameVariables().game_turn_count=}')
-        print(f'{self.world_artifacts=}')
-        print(f'{self.deployed_artifacts=}')
-                
+
+    def on_cycle(self):
+        super().on_cycle()
+
+        # refresh artifact weapon count
+        for team, artifact_type in self.team_artifact_dict.items():
+            self.give_artifacts_weapons(team, artifact_type)
