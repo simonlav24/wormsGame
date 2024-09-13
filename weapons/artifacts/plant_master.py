@@ -37,3 +37,27 @@ class PlantMasterLeaf(DeployableArtifact):
 	
 	def on_collision(self, ppos):
 		self.turbulance *= 0.9
+
+
+
+class PlantControl:
+	def __init__(self):
+		GameVariables().register_non_physical(self)
+		self.timer = 5 * GameVariables().fps
+		GameVariables().player_can_move = False
+	
+	def step(self):
+		self.timer -= 1
+		if self.timer == 0:
+			GameVariables().unregister_non_physical(self)
+			GameVariables().player_can_move = True
+		if pygame.key.get_pressed()[pygame.K_LEFT]:
+			for plant in GameVariables().get_plants():
+				plant.rotate(-0.1)
+		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+			for plant in GameVariables().get_plants():
+				plant.rotate(0.1)
+		GameVariables().game_distable()
+	
+	def draw(self, win: pygame.Surface):
+		pass

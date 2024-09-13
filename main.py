@@ -64,6 +64,7 @@ from weapons.electric import ElectricGrenade, ElectroBoom
 from weapons.fireworks import fireFireWork
 from weapons.covid import Covid19
 from weapons.artifacts.minecraft_artifact import PickAxe, MineBuild
+from weapons.artifacts.plant_master import PlantControl
 
 import globals
 
@@ -222,7 +223,6 @@ class Game:
 	def clearLists(self):
 		# clear lists
 		Portal._reg.clear()
-		Venus._reg.clear()
 		GreenShell._shells.clear()
 		Flare._flares.clear()
 		Seagull._reg.clear()
@@ -809,25 +809,7 @@ class MjolnirStrike:
 
 
 
-class PlantControl:
-	def __init__(self):
-		GameVariables().register_non_physical(self)
-		self.timer = 5 * fps
-		GameVariables().player_can_move = False
-	def step(self):
-		self.timer -= 1
-		if self.timer == 0:
-			GameVariables().unregister_non_physical(self)
-			GameVariables().player_can_move = True
-		if pygame.key.get_pressed()[pygame.K_LEFT]:
-			for plant in Venus._reg:
-				plant.direction.rotate(-0.1)
-		elif pygame.key.get_pressed()[pygame.K_RIGHT]:
-			for plant in Venus._reg:
-				plant.direction.rotate(0.1)
-		GameVariables().game_distable()
-	def draw(self, win: pygame.Surface):
-		pass
+
 
 class MasterOfPuppets:
 	def __init__(self):
@@ -878,50 +860,7 @@ class PointSpring:
 			return
 		pygame.draw.line(win, (255, 220, 0), point2world(self.obj.pos), point2world(self.point))
 
-class Tornado:
-	def __init__(self, pos: Vector, facing: int):
-		self.width = 30
-		self.facing = facing
-		self.pos = pos + Vector(4 + self.width / 2, 0) * facing
-		GameVariables().register_non_physical(self)
-		amount = MapManager().game_map.get_height() // 10
-		self.points = [Vector(0, 10 * i) for i in range(amount)]
-		self.swirles = []
-		self.sizes = [self.width + randint(0,20) for i in self.points]
-		for _ in self.points:
-			xRadius = 0
-			yRadius = 0
-			theta = uniform(0, 2 * pi)
-			self.swirles.append([xRadius, yRadius, theta])
-		self.timer = 0
-		self.speed = 2
-		self.radius = 0
-	
-	def step(self):
-		GameVariables().game_distable()
-		if self.timer < 2 * fps:
-			for i, swirl in enumerate(self.swirles):
-				swirl[0] = min(self.timer, self.sizes[i])
-				swirl[1] = min(self.timer / 3, 10)
-		self.pos.x += self.speed * self.facing
-		for swirl in self.swirles:
-			swirl[2] += 0.1 * uniform(0.8, 1.2)
-		rect = (Vector(self.pos.x - self.width / 2, 0), Vector(self.width, MapManager().game_map.get_height()))
-		for obj in GameVariables().get_physicals():
-			if obj.pos.x > rect[0][0] and obj.pos.x <= rect[0][0] + rect[1][0]:
-				if obj.vel.y > -2:
-					obj.acc.y += -0.5
-				obj.acc.x += 0.5 * sin(self.timer/6)
-		if self.timer >= fps * 10 and len(self.swirles) > 0:
-			self.swirles.pop(-1)
-			if len(self.swirles) == 0:
-				GameVariables().unregister_non_physical(self)
-		self.timer += 1
-	
-	def draw(self, win: pygame.Surface):
-		for i, swirl in enumerate(self.swirles):
-			five = [point2world(Vector(swirl[0] * cos(swirl[2] + t/5) + self.pos.x, 10 * i + swirl[1] * sin(swirl[2] + t/5))) for t in range(5)]
-			pygame.draw.lines(win, (255,255,255), False, five)
+
 
 
 

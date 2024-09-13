@@ -127,6 +127,13 @@ class IComment(Entity):
 		...
 
 
+class EntityPlant(Entity):
+	def rotate(self, angle: float):
+		...
+
+	def mutate(self):
+		...
+
 # color utilities
 
 def grayen(color: ColorType) -> ColorType:

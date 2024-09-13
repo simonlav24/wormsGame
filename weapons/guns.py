@@ -122,7 +122,7 @@ def fireGammaGun(**kwargs):
 					worm.sicken()
 				hitted.append(worm)
 		# if hits plant:
-		for plant in Venus._reg:
+		for plant in GameVariables().get_plants():
 			if distus(testPos, plant.pos + plant.direction * 25) <= 625:
 				plant.mutate()
 		for target in GameVariables().get_targets():

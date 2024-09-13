@@ -46,7 +46,6 @@ class PlantMode(Enum):
 
 
 class Venus:
-	_reg = []
 	grow = -1
 	catch = 0
 	idle = 1
@@ -54,7 +53,7 @@ class Venus:
 	release = 3
 	def __init__(self, pos, angle = -1):
 		GameVariables().register_non_physical(self)
-		Venus._reg.append(self)
+		GameVariables().get_plants().append(self)
 		self.pos = pos
 		self.offset = Vector(25, 0)
 		
@@ -96,8 +95,7 @@ class Venus:
 				pos = self.pos + self.direction * 25
 				for worm in GameVariables().get_worms():
 					if distus(worm.pos, pos) <= 625:
-						GameVariables().unregister_non_physical(self)
-						Venus._reg.remove(self)
+						self.remove_from_game()
 						return
 			
 			self.scale += 0.1
@@ -188,8 +186,7 @@ class Venus:
 		# check if self is destroyed
 		if MapManager().is_on_map(self.pos.vec2tupint()):
 			if not MapManager().game_map.get_at(self.pos.vec2tupint()) == GRD:
-				GameVariables().unregister_non_physical(self)
-				Venus._reg.remove(self)
+				self.remove_from_game()
 				
 				gs = GunShell(vectorCopy(self.pos))
 				gs.angle = self.angle - self.snap
@@ -199,20 +196,25 @@ class Venus:
 				gs.surf = self.surf
 				return
 		else:
-			GameVariables().unregister_non_physical(self)
-			Venus._reg.remove(self)
+			self.remove_from_game()
 			return
 		if self.pos.y >= MapManager().game_map.get_height() - GameVariables().water_level:
-			GameVariables().unregister_non_physical(self)
-			Venus._reg.remove(self)
+			self.remove_from_game()
 			return
 	
+	def rotate(self, angle: float):
+		self.direction.rotate(angle)
+
 	def mutate(self):
 		if self.mutant:
 			return
 		self.mutant = True
 		self.surf.fill((0, 125, 255, 100), special_flags=pygame.BLEND_MULT)
 	
+	def remove_from_game(self):
+		GameVariables().unregister_non_physical(self)
+		GameVariables().get_plants().remove(self)
+
 	def draw(self, win: pygame.Surface):
 		if self.scale < 1:
 			if self.scale == 0:

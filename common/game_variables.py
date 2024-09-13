@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -41,6 +41,7 @@ class DataBase:
         self.exploding_props: List[EntityPhysical] = []
         self.autonomous_objects: List[AutonomousEntity] = []
         self.targets: List[EntityPhysical] = []
+        self.plants: List[EntityPlant] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -171,6 +172,9 @@ class GameVariables(metaclass=SingletonMeta):
 
     def get_exploding_props(self) -> List[EntityPhysical]:
         return self.database.exploding_props
+
+    def get_plants(self) -> List[EntityPlant]:
+        return self.database.plants
 
     def game_distable(self) -> None:
         self.game_stable = False
