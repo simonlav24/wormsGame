@@ -1,6 +1,6 @@
 
 
-from math import pi, cos, sin, atan2, degrees
+from math import pi, cos, sin
 from random import randint, uniform, choice
 import os
 from typing import Any
@@ -22,7 +22,6 @@ from game.map_manager import *
 from game.background import BackGround
 from game.visual_effects import *
 
-from entities.physical_entity import PhysObj
 from game.world_effects import *
 
 from game.hud import *
@@ -110,7 +109,7 @@ class Game:
 
 		self.killList = []
 		self.lstep = 0
-		self.lstepmax = 1
+		self.lstepmax = GameVariables().config.worms_per_team * 4
 
 		self.loadingSurf = fonts.pixel10.render("Simon's Worms Loading", False, WHITE)
 
@@ -775,26 +774,12 @@ def fire(weapon = None):
 	elif weapon.name == "control plants":
 		PlantControl()
 	elif weapon.name == "magic bean":
-		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantSeed.bean)
+		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantMode.BEAN)
 		GameVariables().game_next_state = GameState.PLAYER_PLAY
 	elif weapon.name == "mine plant":
-		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantSeed.mine)
+		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantMode.MINE)
 	elif weapon.name == "air tornado":
 		w = Tornado(GameVariables().player.pos, GameVariables().player.facing)
-	elif weapon.name == "pick axe":
-		if PickAxe._pa:
-			decrease = PickAxe._pa.mine()
-		else:
-			PickAxe()
-			decrease = False
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-	elif weapon.name == "build":
-		if MineBuild._mb:
-			decrease = MineBuild._mb.build()
-		else:
-			MineBuild()
-			decrease = False
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
 
 	if w and not TimeTravel._tt.timeTravelFire:
 		GameVariables().cam_track = w	
@@ -1150,6 +1135,8 @@ def cycle_worms():
 	# sort worms by health for drawing purpuses
 	GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
 	
+	GameVariables().on_cycle()
+
 	# actual worm switch:
 	switched = False
 	while not switched:
@@ -2114,7 +2101,8 @@ def gameMain(game_config: GameConfig=None):
 			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(GameVariables().time_overall * 1.8)
 		
 		# Fire
-		if Game._game.fireWeapon and GameVariables().player_can_shoot: fire()
+		if Game._game.fireWeapon and GameVariables().player_can_shoot:
+			fire()
 		
 		# step:
 		Game._game.step()
@@ -2282,12 +2270,12 @@ if __name__ == "__main__":
 	still in wip:
 		water rise
 		loading screen
-		move weapon menu when scrolling
 		weapon menu some weapons not reachable
 		shoot gun if died before all shooted
-		portals
 		optimize fire drawing for it is slowing
 		holding mjolnir
+		winning
+		plants on init eat worms
 	'''
 	print(wip)
 

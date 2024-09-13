@@ -6,7 +6,7 @@ from math import pi, sin, sqrt, degrees, copysign
 
 import pygame
 
-from common import GameVariables, point2world, sprites, GameState, blit_weapon_sprite, RIGHT, LEFT, EntityWorm
+from common import GameVariables, point2world, sprites, GameState, blit_weapon_sprite, RIGHT, LEFT, EntityWorm, PlantMode
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
@@ -36,14 +36,6 @@ def generate_leaf(pos, direction, color) -> None:
 	points = [pos + i.rotate(direction) * size for i in points]
 	pygame.draw.polygon(MapManager().game_map, GRD, points)
 	pygame.draw.polygon(MapManager().ground_map, color, points)
-
-
-class PlantMode(Enum):
-	NONE = 0
-	VENUS = 1
-	MINE = 2
-	BEAN = 3
-
 
 class Venus:
 	grow = -1

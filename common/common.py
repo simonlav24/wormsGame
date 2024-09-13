@@ -128,6 +128,11 @@ class GamePlayMode:
 		...
 
 
+class CycleObserver(Protocol):
+	def on_cycle(self):
+		...
+
+
 class IComment(Entity):
 	def comment(self, text_dict):
 		...

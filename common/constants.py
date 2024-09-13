@@ -58,6 +58,12 @@ class Sickness(Enum):
     SICK = 1
     VIRUS = 2
 
+class PlantMode(Enum):
+	NONE = 0
+	VENUS = 1
+	MINE = 2
+	BEAN = 3
+
 EDGE_BORDER = 65
 MAP_SCROLL_SPEED = 35
 

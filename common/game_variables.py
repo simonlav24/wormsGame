@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -42,6 +42,7 @@ class DataBase:
         self.autonomous_objects: List[AutonomousEntity] = []
         self.targets: List[EntityPhysical] = []
         self.plants: List[EntityPlant] = []
+        self.cycle_observers: List[CycleObserver] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -222,7 +223,15 @@ class GameVariables(metaclass=SingletonMeta):
                 pygame.draw.circle(win, i[0], point2world(i[1]), int(i[2]))
         self.layers_circles = [[],[],[]]
 
+    def on_cycle(self):
+        for observer in self.database.cycle_observers:
+            observer.on_cycle()
     
+    def register_cycle_observer(self, obj: CycleObserver):
+        self.database.cycle_observers.append(obj)
+    
+    def unregister_cycle_observer(self, obj: CycleObserver):
+        self.database.cycle_observers.remove(obj)
 
 
 def point2world(point) -> Tuple[int, int]:

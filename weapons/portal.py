@@ -4,7 +4,7 @@ from math import degrees, sin, cos, pi
 import pygame
 
 from common.vector import *
-from common import GameVariables, point2world, GameState
+from common import GameVariables, point2world, sprites
 
 from game.map_manager import MapManager, GRD
 
@@ -16,22 +16,22 @@ class Portal:
 	def __init__(self, pos: Vector, direction: Vector):
 		Portal._reg.append(self)
 		GameVariables().register_non_physical(self)
+		GameVariables().register_cycle_observer(self)
 		self.direction = direction
 		self.dirNeg = direction * -1
 		self.pos = pos - direction * 5
 		self.holdPos = pos
 		self.brother: Portal | None = None
-		width, height = 8,20
+		width, height = 32, 16
 		
-		s = pygame.Surface((width, height)).convert_alpha()
-		s.fill((255,255,255,0))
+		surf = pygame.Surface((width, height), pygame.SRCALPHA)
+
 		if len(Portal._reg) % 2 == 0:
-			self.color = (255, 194, 63)
+			surf.blit(sprites.sprite_atlas, (0,0), (32, 128, width, height))
 		else:
-			self.color = (105, 255, 249)
+			surf.blit(sprites.sprite_atlas, (0,0), (0, 128, width, height))
 			
-		pygame.draw.ellipse(s, self.color, ((0,0), (width, height)))
-		self.surf = pygame.transform.rotate(s, -degrees(self.direction.getAngle()))
+		self.surf = pygame.transform.rotate(surf, 90 - degrees(self.direction.getAngle()))
 		
 		self.stable = True
 		self.is_boom_affected = False
@@ -40,22 +40,13 @@ class Portal:
 		self.posBro = Vector()
 	
 	def step(self):
+		# check if self on map
 		if not MapManager().game_map.get_at(self.holdPos.vec2tupint()) == GRD:
-			GameVariables().unregister_non_physical(self)
-			Portal._reg.remove(self)
-			
+			self.remove_from_game()
 			if self.brother:
-				GameVariables().unregister_non_physical(self.brother)
-				Portal._reg.remove(self.brother)			
+				self.brother.remove_from_game()
 			return
-			
-		if GameVariables().game_state == GameState.PLAYER_PLAY and not self.brother:
-			GameVariables().unregister_non_physical(self)
-			if self in Portal._reg:
-				print(2)
-				Portal._reg.remove(self)
-			return
-		
+
 		if self.brother:
 			Bro = (self.pos - GameVariables().player.pos)
 			angle = self.direction.getAngle() - (self.pos - GameVariables().player.pos).getAngle()
@@ -65,35 +56,41 @@ class Portal:
 			self.posBro = self.brother.pos - Bro
 			
 		if self.brother:
-			for worm in GameVariables().get_physicals():
-				if worm in Portal._reg:
-					continue
-				if distus(worm.pos, self.pos) <= RADIUS_OF_CONTACT * RADIUS_OF_CONTACT:
-					Bro = (self.pos - worm.pos)
-					angle = self.direction.getAngle() - (self.pos - worm.pos).getAngle()
+			for obj in GameVariables().get_physicals():
+				if distus(obj.pos, self.pos) <= RADIUS_OF_CONTACT * RADIUS_OF_CONTACT:
+					Bro = (self.pos - obj.pos)
+					angle = self.direction.getAngle() - (self.pos - obj.pos).getAngle()
 					broAngle = self.brother.dirNeg.getAngle()
 					finalAngle = broAngle + angle
 					Bro.setAngle(finalAngle)
-					worm.pos = self.brother.pos - Bro
+					obj.pos = self.brother.pos - Bro
 					
-					posT = self.brother.pos - worm.pos
+					posT = self.brother.pos - obj.pos
 					posT.normalize()
-					worm.pos = self.brother.pos + posT * RADIUS_OF_RELEASE
+					obj.pos = self.brother.pos + posT * RADIUS_OF_RELEASE
 					
-					angle = self.direction.getAngle() - worm.vel.getAngle()
+					angle = self.direction.getAngle() - obj.vel.getAngle()
 					finalAngle = broAngle + angle
-					worm.vel.setAngle(finalAngle)
+					obj.vel.setAngle(finalAngle)
 	
+	def on_cycle(self):
+		if self.brother is None:
+			self.remove_from_game()
+
 	def draw(self, win: pygame.Surface):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 
+	def remove_from_game(self):
+		GameVariables().unregister_non_physical(self)
+		GameVariables().unregister_cycle_observer(self)
+		if self in Portal._reg:
+			Portal._reg.remove(self)
 
 
-
-def firePortal(pos: Vector, direction: Vector, power: int=15):
+def firePortal(**kwargs):
 	steps = 500
-	for t in range(5,steps):
-		testPos = pos + direction * t
+	for t in range(5 , steps):
+		testPos = kwargs.get('pos') + kwargs.get('direction') * t
 		GameVariables().add_extra(testPos, (255,255,255), 3)
 		
 		# missed
@@ -112,7 +109,7 @@ def firePortal(pos: Vector, direction: Vector, power: int=15):
 			response = Vector(0,0)
 			
 			for i in range(12):
-				ti = (i/12) * 2 * pi
+				ti = (i / 12) * 2 * pi
 				
 				check = testPos + Vector(8 * cos(ti), 8 * sin(ti))
 				

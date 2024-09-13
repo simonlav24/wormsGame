@@ -116,7 +116,7 @@ class ArtifactsGamePlay(GamePlayMode):
         super().on_deploy()
         # drop artifact
         if len(self.world_artifacts) > 0:
-            chance = randint(0, 0)
+            chance = randint(0, 10)
             if chance == 0 or self.triger_artifact:
                 self.triger_artifact = False
                 artifact_type = choice(self.world_artifacts)
