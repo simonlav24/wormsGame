@@ -63,6 +63,7 @@ from weapons.sentry_gun import SentryGun
 from weapons.electric import ElectricGrenade, ElectroBoom
 from weapons.fireworks import fireFireWork
 from weapons.covid import Covid19
+from weapons.artifacts.minecraft_artifact import PickAxe, MineBuild
 
 import globals
 
@@ -922,106 +923,9 @@ class Tornado:
 			five = [point2world(Vector(swirl[0] * cos(swirl[2] + t/5) + self.pos.x, 10 * i + swirl[1] * sin(swirl[2] + t/5))) for t in range(5)]
 			pygame.draw.lines(win, (255,255,255), False, five)
 
-class PickAxe:
-	_pa = None
-	def __init__(self):
-		PickAxe._pa = self
-		GameVariables().register_non_physical(self)
-		self.count = 6
-		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		blit_weapon_sprite(self.surf, (0,0), "pick axe")
-		self.animating = 0
-	def mine(self):
-		worm = GameVariables().player
-		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
-		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
 
-		colors = []
-		for i in range(10):
-			sample = (position + Vector(8,8) + vectorUnitRandom() * uniform(0,8)).vec2tupint()
-			if MapManager().is_on_map(sample):
-				color = MapManager().ground_map.get_at(sample)
-				if not color == SKY:
-					colors.append(color)
-		if len(colors) == 0:
-			colors = Blast._color
 
-		for i in range(16):
-			d = Debrie(position + Vector(8,8), 8, colors, 2, False)
-			d.radius = choice([2,1])
 
-		pygame.draw.rect(MapManager().game_map, SKY, (position, Vector(16,16)))
-		pygame.draw.rect(MapManager().ground_map, SKY, (position, Vector(16,16)))
-
-		self.animating = 90
-
-		self.count -= 1
-		if self.count == 0:
-			return True
-		return False
-	def step(self):
-		if self.count == 0:
-			GameVariables().unregister_non_physical(self)
-			PickAxe._pa = None
-		if self.animating > 0:
-			self.animating -= 5
-			self.animating = max(self.animating, 0)
-		if not GameVariables().player.alive:
-			GameVariables().unregister_non_physical(self)
-			PickAxe._pa = None
-	def draw(self, win: pygame.Surface):
-		worm = GameVariables().player
-		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
-		# closest grid of 16
-		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
-		pygame.draw.rect(win, (255,255,255), (point2world(position), Vector(16,16)), 1)
-
-		angle = - self.animating * worm.facing
-
-		weaponSurf = pygame.transform.rotate(pygame.transform.flip(self.surf, worm.facing == LEFT, False), angle)
-		win.blit(weaponSurf, point2world(worm.pos - tup2vec(weaponSurf.get_size())/2 + Vector(worm.facing * 9, -4)))
-
-class MineBuild:
-	_mb = None
-	def __init__(self):
-		MineBuild._mb = self
-		GameVariables().register_non_physical(self)
-		self.count = 6
-		self.locations = []
-	def build(self):
-		worm = GameVariables().player
-		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
-		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
-
-		pygame.draw.rect(MapManager().game_map, GRD, (position, Vector(16,16)))
-		if position + Vector(0,16) in self.locations:
-			blit_weapon_sprite(MapManager().ground_map, position, "build")
-			MapManager().ground_map.blit(sprites.sprite_atlas, position + Vector(0,16), (80,112,16,16))
-		elif position + Vector(0,-16) in self.locations:
-			MapManager().ground_map.blit(sprites.sprite_atlas, position, (80,112,16,16))
-		else:
-			blit_weapon_sprite(MapManager().ground_map, position, "build")
-
-		self.locations.append(position)
-		
-		self.count -= 1
-		if self.count == 0:
-			return True
-		return False
-	def step(self):
-		if self.count == 0:
-			GameVariables().unregister_non_physical(self)
-			MineBuild._mb = None
-			
-		if not GameVariables().player.alive:
-			GameVariables().unregister_non_physical(self)
-			MineBuild._mb = None
-	def draw(self, win: pygame.Surface):
-		worm = GameVariables().player
-		position = worm.pos + vectorFromAngle(worm.shoot_angle, 20)
-		# closest grid of 16
-		position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
-		pygame.draw.rect(win, (255,255,255), (point2world(position), Vector(16,16)), 1)
 
 
 
@@ -1066,6 +970,7 @@ def fire(weapon = None):
 		weaponDir = TimeTravel._tt.timeTravelList["weaponDir"]
 	
 	# guns dictionary, weapons count, activation function, kwargs
+	shoot_gun_cls = ShootGun
 	gun_weapons_map = {
 		'shotgun':       {'count': 3,  'func': fireShotgun},
 		'flame thrower': {'count': 70, 'func': fireFlameThrower, 'burst': True},
@@ -1081,6 +986,8 @@ def fire(weapon = None):
 		'fire ball':     {'count': 3,  'func': fireFireBall},
 		'fireworks':     {'count': 5,  'func': fireFireWork},
 		'earth spike':   {'count': 2,  'func': fireEarthSpike},
+		'pick axe':      {'count': 6,  'func': None, 'end_turn': False, 'cls': PickAxe},
+		'build':         {'count': 6,  'func': None, 'end_turn': False, 'cls': MineBuild},
 	}
 
 	avail = True
@@ -1088,8 +995,9 @@ def fire(weapon = None):
 
 	if weapon.name in gun_weapons_map.keys():
 		# fire gun weapon
+		shoot_gun_cls = gun_weapons_map.get(weapon.name).get('cls', shoot_gun_cls)
 		if WeaponManager().current_gun is None:
-			WeaponManager().current_gun = ShootGun(**gun_weapons_map[weapon.name])
+			WeaponManager().current_gun = shoot_gun_cls(**gun_weapons_map[weapon.name])
 		
 		WeaponManager().current_gun.shoot(energy)
 		w = WeaponManager().current_gun.get_object()

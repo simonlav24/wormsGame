@@ -67,8 +67,8 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 					GameVariables().cam_track = p
 	if debries:
 		for _ in range(int(radius)):
-			d = Debrie(pos, radius/5, colors, 2, radius > 25)
-			d.radius = choice([2,1])
+			d = Debrie(pos, radius / 5, colors, 2, radius > 25)
+			d.radius = choice([2, 1])
 
 
 

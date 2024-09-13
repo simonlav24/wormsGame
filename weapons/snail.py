@@ -1,7 +1,5 @@
 
 
-
-from random import choice
 from math import degrees
 
 import pygame
@@ -11,7 +9,7 @@ from common import GameVariables, point2world, RIGHT, LEFT, sprites
 
 from game.map_manager import MapManager
 from game.world_effects import boom
-from entities import PhysObj, Worm
+from entities import PhysObj
 
 
 class Snail:

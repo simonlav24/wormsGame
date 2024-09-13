@@ -4,8 +4,6 @@ import pygame
 from common import GameVariables, EntityPhysical
 from common.vector import vectorCopy
 
-from entities import Worm
-
 class ShootGun:
 	def __init__(self, **kwargs) -> None:
 		GameVariables().register_non_physical(self)
