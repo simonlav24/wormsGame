@@ -2,7 +2,7 @@
 
 import pygame
 
-from common import GameVariables, point2world, sprites
+from common import GameVariables, point2world, sprites, Sickness
 from common.vector import *
 
 from weapons.missiles import Seeker
@@ -47,7 +47,7 @@ class Covid19(Seeker):
 		else:
 			self.wormTarget.vel.x += 2
 		self.wormTarget.damage(10)
-		self.wormTarget.sicken(2)
+		self.wormTarget.sicken(Sickness.VIRUS)
 		self.wormTarget = None
 	
 	def draw(self, win: pygame.Surface):

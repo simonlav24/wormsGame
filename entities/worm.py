@@ -6,7 +6,7 @@ from random import randint, choice
 
 import pygame
 
-from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData
+from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData, Sickness
 from common.vector import *
 
 from game.team_manager import Team
@@ -41,7 +41,7 @@ class Worm (PhysObj):
         self.alive: bool = True
         self.team: Team = team
 
-        self.sick = 0
+        self.sick: Sickness = Sickness.NONE
         self.sleep = False
 
         self.gravity = DOWN
@@ -76,7 +76,7 @@ class Worm (PhysObj):
         shoot_vec = self.pos + self.get_shooting_direction() * 20
         pygame.draw.circle(win, (255,255,255), (int(shoot_vec.x) - int(GameVariables().cam_pos[0]), int(shoot_vec.y) - int(GameVariables().cam_pos[1])), 2)
     
-    def sicken(self, sickness = 1):
+    def sicken(self, sickness: Sickness=Sickness.SICK):
         self.sick = sickness
         self.surf.fill((0,0,0,0))
         self.surf.blit(sprites.sprite_atlas, (0,0), (16,0,16,16))
@@ -87,7 +87,7 @@ class Worm (PhysObj):
         self.health += hp
         if self.healthMode == 1:
             self.healthStr = fonts.pixel5.render(str(self.health), False, self.team.color)
-        self.sick = 0
+        self.sick = Sickness.NONE
         self.color = (255, 206, 167)
         self.surf.fill((0,0,0,0))
         self.surf.blit(sprites.sprite_atlas, (0,0), (0,0,16,16))
@@ -236,9 +236,9 @@ class Worm (PhysObj):
         self.worm_tool.step()
         
         # virus
-        if self.sick == 2 and self.health > 0 and not GameVariables().game_state == GameState.WAIT_STABLE:
-            if randint(1,200) == 1:
-                GasParticles._sp.addSmoke(self.pos, color=(102, 255, 127))
+        if self.sick == Sickness.VIRUS and self.health > 0 and not GameVariables().game_state == GameState.WAIT_STABLE:
+            if randint(1, 200) == 1:
+                GasParticles._sp.addSmoke(self.pos, color=(102, 255, 127), sickness=Sickness.VIRUS)
         
         # shooting angle
         self.shoot_vel = clamp(self.shoot_vel + self.shoot_acc, 0.1, -0.1)

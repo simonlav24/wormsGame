@@ -7,7 +7,7 @@ import pygame
 from common import blit_weapon_sprite, GameVariables, point2world, sprites
 from common.vector import *
 
-from game.visual_effects import SmokeParticles
+from game.visual_effects import EffectManager
 from entities.physical_entity import PhysObj
 from weapons.missiles import Missile
 
@@ -43,7 +43,7 @@ class Artillery(PhysObj):
 			else:
 				self.timer = 0
 			if randint(0, 5) == 0:
-				SmokeParticles._sp.addSmoke(self.pos, color=(200,0,0))
+				EffectManager.add_smoke(self.pos, color=(200,0,0))
 			self.stable = False
 			if self.timer == 50:
 				self.bombing = True

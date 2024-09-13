@@ -51,6 +51,11 @@ class ArtifactResult(Enum):
     PICKED = 1
     GONE = 2
 
+class Sickness(Enum):
+    NONE = 0
+    SICK = 1
+    VIRUS = 2
+
 EDGE_BORDER = 65
 MAP_SCROLL_SPEED = 35
 

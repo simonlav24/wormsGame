@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import pygame
 
 from common.vector import *
-from common.constants import ColorType
+from common.constants import ColorType, Sickness
 
 # paths
 PATH_ASSETS = r'./assets'
@@ -78,6 +78,9 @@ class EntityWorm(EntityPhysical):
 		...
 	
 	def give_point(self, points: int) -> None:
+		...
+	
+	def sicken(self, sickness: Sickness=Sickness.SICK):
 		...
 
 

@@ -24,6 +24,8 @@ class EffectManager(metaclass=SingletonMeta):
 		self.dark_mask = pygame.Surface(MapManager().get_map_size(), pygame.SRCALPHA)
 		self.is_dark_mode = False
 		self.lights: List[Tuple[Vector, int, ColorType]] = []
+
+		self.smoke_particles = SmokeParticles()
 	
 	def register(self, effect: Effect) -> None:
 		self.effects_in_play.append(effect)
@@ -47,15 +49,21 @@ class EffectManager(metaclass=SingletonMeta):
 		for effect in self.effects_to_remove:
 			self.effects_in_play.remove(effect)
 		self.effects_to_remove.clear()
+
+		self.smoke_particles.step()
 	
 	def draw(self, win: pygame.Surface):
 		for effect in self.effects_in_play:
 			effect.draw(win)
 
+		self.smoke_particles.draw(win)
+
 		for layer in self.circles_layers:
 			for circle in layer:
 				pygame.draw.circle(win, circle[0], point2world(circle[1]), int(circle[2]))
 			layer.clear()
+		
+		
 
 	def get_dark_mask(self, main_obj_pos: Vector) -> pygame.Surface:
 		''' render and return dark mask '''
@@ -64,6 +72,11 @@ class EffectManager(metaclass=SingletonMeta):
 		for light in self.lights:
 			pygame.draw.circle(self.dark_mask, light[3], (light[0], light[1]), light[2])
 		self.lights.clear()
+	
+	def add_smoke(self, pos: Vector, vel: Vector=None, color: ColorType=None):
+		self.smoke_particles.add_smoke(pos, vel, color)
+
+	
 
 class Blast(Effect):
 	''' firey effect, emmited by explossions, jetpack etc '''
@@ -89,7 +102,7 @@ class Blast(Effect):
 			
 	def step(self) -> None:
 		if randint(0,self.smoke) == 0 and self.rad > 1:
-			SmokeParticles._sp.addSmoke(self.pos, Vector())
+			EffectManager().add_smoke(self.pos, Vector())
 		self.time_counter += 0.5 * GameVariables().dt
 		self.rad = 1.359 * self.time_counter * exp(- 0.5 * self.time_counter) * self.radius
 		self.pos.x += (4.0 * GameVariables().physics.wind / self.rad) * GameVariables().dt
@@ -178,15 +191,12 @@ class FloatingText(Effect): #pos, text, color
 
 class SmokeParticles(Effect):
 	''' smoke manager, calculates and draws smoke'''
-	_sp = None
-	_particles = []
-	_particlesRemove = []
-	_sickParticles = []
 	
 	def __init__(self):
-		SmokeParticles._sp = self
-		
-	def addSmoke(self, pos, vel=None, color=None):
+		self.particles = []
+		self.particles_remove = []
+
+	def add_smoke(self, pos, vel=None, color=None):
 		if not color:
 			color = (20, 20, 20)
 		radius = randint(8,10)
@@ -196,24 +206,26 @@ class SmokeParticles(Effect):
 			vel = Vector()
 		particle = [pos, vel, color, radius, time_counter]
 
-		SmokeParticles._particles.append(particle)
+		self.particles.append(particle)
 			
 	def step(self) -> None:
-		for particle in SmokeParticles._particles:
+		for particle in self.particles:
 			particle[4] += 1
 			if particle[4] % 5 == 0:
 				particle[3] -= 1 * GameVariables().dt
 				if particle[3] <= 0:
-					SmokeParticles._particlesRemove.append(particle)
+					self.particles_remove.append(particle)
 			particle[1] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2,1) * GameVariables().dt, -0.1)
 			particle[0] += particle[1] * GameVariables().dt
-		for p in SmokeParticles._particlesRemove:
-			SmokeParticles._particles.remove(p)
-		SmokeParticles._particlesRemove = []
+		for p in self.particles_remove:
+			self.particles.remove(p)
+		self.particles_remove = []
 
 	def draw(self, win: pygame.Surface) -> None:
+		if len(self.particles) == 0:
+			return
 		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
-		for particle in SmokeParticles._particles + SmokeParticles._sickParticles:
+		for particle in self.particles:
 			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
 		smokeSurf.set_alpha(100)
 		win.blit(smokeSurf, (0,0))

@@ -8,7 +8,7 @@ from common import GameVariables, point2world, LEFT, RIGHT, blit_weapon_sprite
 from common.vector import *
 
 from game.map_manager import MapManager, SKY
-from game.visual_effects import SmokeParticles
+from game.visual_effects import EffectManager
 from game.world_effects import boom
 from entities import PhysObj, Worm
 from weapons.fire_weapons import PetrolBomb
@@ -54,7 +54,7 @@ class Acid(PhysObj):
 					self.damageCooldown = 30
 		self.inGround = False
 		if randint(0,50) < 1:
-			SmokeParticles._sp.addSmoke(self.pos, color=(200,255,200))
+			EffectManager().add_smoke(self.pos, color=(200,255,200))
 		GameVariables().game_distable()
 	
 	def draw(self, win: pygame.Surface):

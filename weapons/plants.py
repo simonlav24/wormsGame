@@ -10,7 +10,7 @@ from common import GameVariables, point2world, sprites, GameState, blit_weapon_s
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
-from game.visual_effects import SmokeParticles
+from game.visual_effects import EffectManager
 from game.world_effects import boom
 from entities import PhysObj, Debrie, Worm
 from weapons.mine import Mine
@@ -174,8 +174,8 @@ class Venus:
 				self.mode = Venus.release
 				if self.explossive:
 					self.explossive = False
-					for i in range(randint(6,14)):
-						SmokeParticles._sp.addSmoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
+					for _ in range(randint(6, 14)):
+						EffectManager().add_smoke(self.pos + self.direction * 25 + vectorUnitRandom() * randint(3,10))
 		elif self.mode == Venus.release:
 			GameVariables().game_distable()
 			self.snap -= 0.1

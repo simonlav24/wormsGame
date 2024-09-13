@@ -30,7 +30,8 @@ class Grenade (PhysObj):
 			rad *= 2
 		boom(self.pos, rad)
 
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.angle -= self.vel.x * 4 * GameVariables().dt
 		self.timer += 1 * GameVariables().dt
 		if self.timer >= GameVariables().fuse_time:

@@ -5,6 +5,8 @@ from random import randint, uniform, choice
 import os
 from typing import Any
 
+import time
+
 import pygame
 import pygame.gfxdraw
 
@@ -21,7 +23,6 @@ from game.background import BackGround
 from game.visual_effects import *
 
 from entities.physical_entity import PhysObj
-from entities.debrie import Debrie
 from game.world_effects import *
 
 from game.hud import *
@@ -67,6 +68,7 @@ from weapons.artifacts.minecraft_artifact import PickAxe, MineBuild
 from weapons.artifacts.plant_master import PlantControl
 
 from weapons.misc.springs import MasterOfPuppets
+from weapons.misc.armageddon import Armageddon
 
 import globals
 
@@ -465,18 +467,24 @@ def place_object(cls: Any, args, girder_place: bool=False) -> Any:
 
 
 # refactor gas first
-class GasGrenade(Grenade):
+class GasGrenade(PhysObj):
 	def __init__(self, pos, direction, energy):
-		super().__init__(pos, direction, energy, "gas grenade")
+		super().__init__(pos)
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
+		GunShell(self.pos, index=1, direction=direction)
 		self.radius = 2
-		self.color = (113,117,41)
+		self.timer = 0
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		blit_weapon_sprite(self.surf, (0,0), 'gas grenade')
+		self.angle = 0
+
 		self.damp = 0.5
 		self.state = "throw"
 
 	def death_response(self):
 		boom(self.pos, 20)
 		for i in range(40):
-			vel = Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1,1.5)
+			vel = Vector(cos(2 * pi * i / 40), sin(2 * pi * i / 40)) * uniform(1, 1.5)
 			GasParticles._sp.addSmoke(self.pos, vel, color=(102, 255, 127))
 	
 	def step(self):
@@ -490,8 +498,13 @@ class GasGrenade(Grenade):
 		if self.state == "release":
 			if self.timer % 3 == 0:
 				GasParticles._sp.addSmoke(self.pos, vectorUnitRandom(), color=(102, 255, 127))
-			if self.timer >= GameVariables().fuse_time + 5 * fps:
+			if self.timer >= GameVariables().fuse_time + 5 * GameVariables().fps:
 				self.dead = True
+	
+	def draw(self, win: pygame.Surface):
+		angle = 45 * round(self.angle / 45)
+		surf = pygame.transform.rotate(self.surf, angle)
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2)) 
 
 class TimeAgent:
 	def __init__(self):
@@ -577,25 +590,7 @@ class TimeTravel:
 	def step(self):
 		self.timeTravelRecord()
 
-class Armageddon:
-	def __init__(self):
-		GameVariables().register_non_physical(self)
-		self.stable = False
-		self.is_boom_affected = False
-		self.timer = 700
-	def step(self):
-		self.timer -= 1
-		if self.timer == 0:
-			GameVariables().unregister_non_physical(self)
-			return
-		if GameVariables().time_overall % 10 == 0:
-			for i in range(randint(1,2)):
-				x = randint(-100, MapManager().game_map.get_width() + 100)
-				m = Missile((x, -10), Vector(randint(-10,10), 5).normalize(), 1)
-				m.is_wind_affected = 0
-				m.boomRadius = 40
-	def draw(self, win: pygame.Surface):
-		pass
+
 
 
 
@@ -1399,7 +1394,7 @@ def cycle_worms():
 	
 	# sick:
 	for worm in GameVariables().get_worms():
-		if not worm.sick == 0 and worm.health > 5:
+		if worm.sick != Sickness.NONE and worm.health > 5:
 			worm.damage(min(int(5 / GameVariables().damage_mult) + 1, int((worm.health - 5) / GameVariables().damage_mult) + 1), 2)
 		
 	# select next team
@@ -2203,7 +2198,6 @@ def gameMain(game_config: GameConfig=None):
 	WeaponManager()
 	TeamManager()
 
-	SmokeParticles()
 	GasParticles()           
 	
 	damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
@@ -2214,7 +2208,7 @@ def gameMain(game_config: GameConfig=None):
 	run = True
 	pause = False
 	while run:
-				
+		start_time = time.time()
 		# events
 		for event in pygame.event.get():
 			is_handled = Game._game.handle_event(event)
@@ -2395,7 +2389,7 @@ def gameMain(game_config: GameConfig=None):
 		
 		for t in Toast._toasts:
 			t.step()
-		SmokeParticles._sp.step()
+
 		GasParticles._sp.step()
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
@@ -2445,7 +2439,6 @@ def gameMain(game_config: GameConfig=None):
 		for t in Toast._toasts:
 			t.draw(win)
 		
-		SmokeParticles._sp.draw(win)
 		GasParticles._sp.draw(win)
 
 		# if Game._game.darkness and MapManager().dark_mask: win.blit(MapManager().dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
@@ -2519,6 +2512,9 @@ def gameMain(game_config: GameConfig=None):
 		# screen manegement
 		pygame.transform.scale(win, screen.get_rect().size, screen)
 		pygame.display.update()
+
+		end_time = time.time()
+		# print(f'fps: {end_time - start_time}')
 		fpsClock.tick(fps)
 
 def splashScreen():
@@ -2553,8 +2549,8 @@ if __name__ == "__main__":
 		move weapon menu when scrolling
 		weapon menu some weapons not reachable
 		shoot gun if died before all shooted
-		exploding petrol cans fire not spreading
 		portals
+		optimize fire drawing for it is slowing
 	'''
 	print(wip)
 

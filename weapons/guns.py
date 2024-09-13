@@ -6,7 +6,7 @@ from typing import Tuple
 import pygame
 
 from common.vector import Vector, distus, vectorUnitRandom
-from common import sprites, GameVariables
+from common import sprites, GameVariables, Sickness
 
 from game.map_manager import MapManager, GRD, SKY, GRD_COL, SKY_COL
 from game.visual_effects import splash, Blast
@@ -116,8 +116,9 @@ def fireGammaGun(**kwargs):
 		for worm in GameVariables().get_worms():
 			if distus(testPos, worm.pos) < worm.radius * worm.radius and not worm in hitted:
 				worm.damage(int(10 / GameVariables().damage_mult) + 1)
+				# might cause virus
 				if randint(0,20) == 1:
-					worm.sicken(2)
+					worm.sicken(Sickness.VIRUS)
 				else:
 					worm.sicken()
 				hitted.append(worm)

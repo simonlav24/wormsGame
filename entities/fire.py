@@ -39,8 +39,7 @@ class Fire(PhysObj):
 		if randint(0,10) < 3:
 			FireBlast(self.pos + vectorUnitRandom(), randint(self.radius,4))
 		if randint(0,50) < 1:
-			SmokeParticles._sp.addSmoke(self.pos)
-			# Smoke(self.pos)
+			EffectManager().add_smoke(self.pos)
 		self.timer += 1 * GameVariables().dt
 		if self.fallen:
 			self.life -= 1

@@ -11,7 +11,7 @@ from common.vector import *
 from game.world_effects import boom
 from game.map_manager import MapManager, GRD, SKY
 from entities import Fire
-from weapons.grenades import Grenade
+from weapons.grenades import PhysObj
 from weapons.missiles import Seeker, Missile
 from weapons.mine import Mine
 
@@ -90,10 +90,11 @@ class Seagull(Seeker):
 		win.blit(pygame.transform.flip(surf, flip_x, False), point2world(self.pos - Vector(width//2, height//2)))
 		
 
-class Chum(Grenade):
+class Chum(PhysObj):
 	_chums = []
 	def __init__(self, pos, direction, energy, radius=0):
-		super().__init__(pos, direction, energy)
+		super().__init__(pos)
+		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		Chum._chums.append(self)
 		self.radius = radius
 		if radius == 0:
@@ -106,6 +107,7 @@ class Chum(Grenade):
 		self.ticking = False
 		self.summoned = False
 		self.is_boom_affected = False
+		self.timer = 0
 	
 	def on_collision(self, ppos):
 		if not self.summoned:
