@@ -9,13 +9,13 @@ import pygame
 from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData, Sickness
 from common.vector import *
 
+from game.visual_effects import EffectManager
 from game.team_manager import Team
 from game.time_manager import TimeManager
 from game.visual_effects import FloatingText, splash
 from entities.physical_entity import PhysObj
 from game.map_manager import MapManager, GRD_COL
 from entities.worm_tools import WormTool
-from weapons.sick_gas import GasParticles
 
 class DeathCause(Enum):
     FLEW_OUT = 0
@@ -238,7 +238,7 @@ class Worm (PhysObj):
         # virus
         if self.sick == Sickness.VIRUS and self.health > 0 and not GameVariables().game_state == GameState.WAIT_STABLE:
             if randint(1, 200) == 1:
-                GasParticles._sp.addSmoke(self.pos, color=(102, 255, 127), sickness=Sickness.VIRUS)
+                EffectManager().add_gas(self.pos, sickness=Sickness.VIRUS)
         
         # shooting angle
         self.shoot_vel = clamp(self.shoot_vel + self.shoot_acc, 0.1, -0.1)

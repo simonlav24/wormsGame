@@ -4,7 +4,7 @@ from typing import Any, List, Tuple
 from random import randint, uniform, choice, shuffle
 from math import exp, pi, sin, cos
 
-from common import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts, Entity, SingletonMeta, clamp, GameVariables, point2world
+from common import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts, Entity, SingletonMeta, clamp, GameVariables, point2world, Sickness, GAS_COLOR
 from common.vector import *
 
 from game.map_manager import MapManager
@@ -26,6 +26,7 @@ class EffectManager(metaclass=SingletonMeta):
 		self.lights: List[Tuple[Vector, int, ColorType]] = []
 
 		self.smoke_particles = SmokeParticles()
+		self.gas_particles = GasParticles()
 	
 	def register(self, effect: Effect) -> None:
 		self.effects_in_play.append(effect)
@@ -51,19 +52,19 @@ class EffectManager(metaclass=SingletonMeta):
 		self.effects_to_remove.clear()
 
 		self.smoke_particles.step()
+		self.gas_particles.step()
 	
 	def draw(self, win: pygame.Surface):
 		for effect in self.effects_in_play:
 			effect.draw(win)
 
 		self.smoke_particles.draw(win)
+		self.gas_particles.draw(win)
 
 		for layer in self.circles_layers:
 			for circle in layer:
 				pygame.draw.circle(win, circle[0], point2world(circle[1]), int(circle[2]))
 			layer.clear()
-		
-		
 
 	def get_dark_mask(self, main_obj_pos: Vector) -> pygame.Surface:
 		''' render and return dark mask '''
@@ -76,7 +77,8 @@ class EffectManager(metaclass=SingletonMeta):
 	def add_smoke(self, pos: Vector, vel: Vector=None, color: ColorType=None):
 		self.smoke_particles.add_smoke(pos, vel, color)
 
-	
+	def add_gas(self, pos: Vector, vel: Vector=None, sickness: Sickness=Sickness.SICK):
+		self.gas_particles.add_gas(pos, vel, sickness)
 
 class Blast(Effect):
 	''' firey effect, emmited by explossions, jetpack etc '''
@@ -187,8 +189,6 @@ class FloatingText(Effect): #pos, text, color
 	def draw(self, win: pygame.Surface) -> None:
 		win.blit(self.surf, (int(self.pos.x - GameVariables().cam_pos[0] - self.surf.get_size()[0] / 2), int(self.pos.y - GameVariables().cam_pos[1])))
 
-
-
 class SmokeParticles(Effect):
 	''' smoke manager, calculates and draws smoke'''
 	
@@ -229,6 +229,53 @@ class SmokeParticles(Effect):
 			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
 		smokeSurf.set_alpha(100)
 		win.blit(smokeSurf, (0,0))
+
+GAS_POS = 0
+GAS_VEL = 1
+GAS_RADIUS = 2
+GAS_TIME = 3
+GAS_SICK = 4
+
+class GasParticles:
+	''' smoke manager, calculates and draws smoke'''	
+	def __init__(self):
+		self.particles = []
+		self.particles_remove = []
+		
+	def add_gas(self, pos, vel=None, sickness: Sickness=Sickness.SICK):
+		radius = randint(8,10)
+		pos = tup2vec(pos)
+		time_counter = 0
+		if not vel:
+			vel = Vector()
+		particle = [pos, vel, radius, time_counter, sickness]
+
+		self.particles.append(particle)
+			
+	def step(self) -> None:
+		for particle in self.particles:
+			particle[GAS_TIME] += 1
+			if particle[GAS_TIME] % 8 == 0:
+				particle[GAS_RADIUS] -= 1
+				if particle[GAS_RADIUS] <= 0:
+					self.particles_remove.append(particle)
+			particle[GAS_VEL] += Vector(GameVariables().physics.wind * 0.1 * GameVariables().wind_mult * uniform(0.2, 1), -0.1)
+			particle[GAS_POS] += particle[GAS_VEL]
+			for worm in GameVariables().get_worms():
+				if distus(particle[GAS_POS], worm.pos) < (particle[GAS_RADIUS] + worm.radius) * (particle[GAS_RADIUS] + worm.radius):
+					worm.sicken(particle[GAS_SICK])
+		for particle in self.particles_remove:
+			self.particles.remove(particle)
+		self.particles_remove.clear()
+
+	def draw(self, win: pygame.Surface) -> None:
+		if len(self.particles) == 0:
+			return
+		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
+		for particle in self.particles:
+			pygame.draw.circle(smokeSurf, GAS_COLOR, point2world(particle[GAS_POS]), particle[GAS_RADIUS])
+		smokeSurf.set_alpha(100)
+		win.blit(smokeSurf, (0, 0))
 
 def splash(pos: Vector, vel: Vector) -> None:
 	amount = 10 + int(vel.getMag())

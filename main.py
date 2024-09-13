@@ -34,7 +34,6 @@ from entities.props import *
 from entities.worm import Worm
 from entities.deployables import *
 
-from weapons.sick_gas import GasParticles
 from weapons.weapon_manager import *
 from weapons.missiles import *
 from weapons.grenades import *
@@ -359,14 +358,16 @@ def giveGoodPlace(div = 0, girderPlace = True):
 	goodPlace = False
 	counter = 0
 	
-	if Game._game.game_config.option_forts and not div == -1:
+	if Game._game.game_config.option_forts and div != -1:
 		half = MapManager().game_map.get_width() / TeamManager().num_of_teams
 		Slice = div % TeamManager().num_of_teams
 		
 		left = half * Slice
 		right = left + half
-		if left <= 0: left += 6
-		if right >= MapManager().game_map.get_width(): right -= 6
+		if left <= 0:
+			left += 6
+		if right >= MapManager().game_map.get_width():
+			right -= 6
 	else:
 		left, right = 6, MapManager().game_map.get_width() - 6
 	
@@ -485,7 +486,7 @@ class GasGrenade(PhysObj):
 		boom(self.pos, 20)
 		for i in range(40):
 			vel = Vector(cos(2 * pi * i / 40), sin(2 * pi * i / 40)) * uniform(1, 1.5)
-			GasParticles._sp.addSmoke(self.pos, vel, color=(102, 255, 127))
+			EffectManager().add_gas(self.pos, vel)
 	
 	def step(self):
 		super().step()
@@ -497,7 +498,7 @@ class GasGrenade(PhysObj):
 				self.state = "release"
 		if self.state == "release":
 			if self.timer % 3 == 0:
-				GasParticles._sp.addSmoke(self.pos, vectorUnitRandom(), color=(102, 255, 127))
+				EffectManager().add_gas(self.pos, vectorUnitRandom())
 			if self.timer >= GameVariables().fuse_time + 5 * GameVariables().fps:
 				self.dead = True
 	
@@ -539,9 +540,7 @@ class TimeAgent:
 		win.blit(pygame.transform.flip(self.surf, facing == 1, False), point2world(tup2vec(self.pos) - tup2vec(self.surf.get_size()) / 2))
 		win.blit(self.nameSurf , ((int(self.pos[0]) - int(GameVariables().cam_pos[0]) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(GameVariables().cam_pos[1]) - 21)))
 		pygame.draw.rect(win, (220,220,220),(int(self.pos[0]) -10 -int(GameVariables().cam_pos[0]), int(self.pos[1]) -15 -int(GameVariables().cam_pos[1]), 20,3))
-		value = 20 * self.health / Game._game.game_config.worm_initial_health
-		if value < 1:
-			value = 1
+		value = max(20 * self.health / Game._game.game_config.worm_initial_health, 1)
 		pygame.draw.rect(win, (0,220,0),(int(self.pos[0]) -10 -int(GameVariables().cam_pos[0]), int(self.pos[1]) -15 -int(GameVariables().cam_pos[1]), int(value),3))
 		
 		i = 0
@@ -592,15 +591,6 @@ class TimeTravel:
 
 
 
-
-
-
-
-
-
-
-
-
 class MjolnirThrow(PhysObj):
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos)
@@ -633,7 +623,7 @@ class MjolnirThrow(PhysObj):
 			self.returnToWorm()
 		
 		# electrocute
-		self.worms = []
+		self.worms: List[EntityWorm] = []
 		for worm in GameVariables().get_worms():
 			if worm in TeamManager().current_team.worms:
 				continue
@@ -644,7 +634,7 @@ class MjolnirThrow(PhysObj):
 			if randint(1,100) < 5:
 				worm.damage(randint(1,8))
 				a = lambda x : 1 if x >= 0 else -1
-				worm.vel -= Vector(a(self.pos.x - worm.pos.x)*uniform(1.2,2.2), uniform(1.2,3.2))
+				worm.vel -= Vector(a(self.pos.x - worm.pos.x) * uniform(1.2,2.2), uniform(1.2,3.2))
 			if worm.health <= 0:
 				self.worms.remove(worm)
 		
@@ -784,7 +774,7 @@ class MjolnirStrike:
 				if randint(1,100) < 5:
 					worm.damage(randint(1,8))
 					a = lambda x : 1 if x >= 0 else -1
-					worm.vel -= Vector(a(self.pos.x - worm.pos.x)*uniform(1.2,2.2), uniform(1.2,3.2))
+					worm.vel -= Vector(a(self.pos.x - worm.pos.x) * uniform(1.2,2.2), uniform(1.2,3.2))
 				if worm.health <= 0:
 					self.worms.remove(worm)
 		elif self.stage == 1:
@@ -802,19 +792,6 @@ class MjolnirStrike:
 		draw_lightning(win, Vector(self.pos.x, 0), self.pos)
 		for worm in self.worms:
 			draw_lightning(win, Vector(self.pos.x, randint(0, int(self.pos.y))), worm.pos)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class TimeSlow:
@@ -1060,7 +1037,8 @@ def fire(weapon = None):
 			decrease = False
 		GameVariables().game_next_state = GameState.PLAYER_PLAY
 
-	if w and not TimeTravel._tt.timeTravelFire: GameVariables().cam_track = w	
+	if w and not TimeTravel._tt.timeTravelFire:
+		GameVariables().cam_track = w	
 	
 	# position to available position
 	if w and avail:
@@ -1082,10 +1060,11 @@ def fire(weapon = None):
 		return
 	
 	GameVariables().game_state = GameVariables().game_next_state
-	if GameVariables().game_state == GameState.PLAYER_RETREAT: TimeManager().time_remaining_etreat()
+	if GameVariables().game_state == GameState.PLAYER_RETREAT:
+		TimeManager().time_remaining_etreat()
 	
 	# for uselist:
-	if Game._game.game_config.option_cool_down and (GameVariables().game_state == GameState.PLAYER_RETREAT or GameVariables().game_state == GameState.WAIT_STABLE):
+	if Game._game.game_config.option_cool_down and GameVariables().game_state in [GameState.PLAYER_RETREAT, GameState.WAIT_STABLE]:
 		WeaponManager().add_to_cool_down(WeaponManager().current_weapon)
 
 def fireClickable():
@@ -1329,7 +1308,6 @@ def cycle_worms():
 		Game._game.mostDamage = (Game._game.damageThisTurn, GameVariables().player.name_str)	
 	if Game._game.damageThisTurn > int(Game._game.game_config.worm_initial_health * 2.5):
 		if Game._game.damageThisTurn == 300:
-			...
 			GameVariables().commentator.comment([{'text': "THIS IS "}, {'text': wormName, 'color': wormColor}])
 		else:
 			comment = choice([
@@ -1552,7 +1530,7 @@ class MissionManager:
 		
 		wormMissions = []
 		self.wormMissionDict[worm] = wormMissions
-		for i in range(3):
+		for _ in range(3):
 			newMission = self.assignOneMission(worm)
 			wormMissions.append(newMission)
 			MissionManager._log += f"{worm.name_str} received mission {newMission.missionType}\n"
@@ -1570,7 +1548,7 @@ class MissionManager:
 		# if missionType "hit _" or "kill _" or "hit a worm from _" and target is dead, remove mission
 		if "hit _" in currentWormMissionsTypes or "kill _" in currentWormMissionsTypes:
 			for mission in self.wormMissionDict[worm]:
-				if mission.missionType == "hit _" or mission.missionType == "kill _":
+				if mission.missionType in ["hit _", "kill _"]:
 					if mission.target not in GameVariables().get_worms() or not mission.target.alive:
 						replaceMissions.append((mission, self.wormMissionDict[worm].index(mission)))
 		if "hit a worm from _" in currentWormMissionsTypes:
@@ -2196,9 +2174,7 @@ def gameMain(game_config: GameConfig=None):
 
 	Game(game_config)
 	WeaponManager()
-	TeamManager()
-
-	GasParticles()           
+	TeamManager()     
 	
 	damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
 	TimeTravel()
@@ -2390,7 +2366,6 @@ def gameMain(game_config: GameConfig=None):
 		for t in Toast._toasts:
 			t.step()
 
-		GasParticles._sp.step()
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
 		
@@ -2439,8 +2414,6 @@ def gameMain(game_config: GameConfig=None):
 		for t in Toast._toasts:
 			t.draw(win)
 		
-		GasParticles._sp.draw(win)
-
 		# if Game._game.darkness and MapManager().dark_mask: win.blit(MapManager().dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
 		# draw shooting indicator
 		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:

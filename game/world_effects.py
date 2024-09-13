@@ -1,6 +1,6 @@
 
 import pygame
-from math import cos, pi, sin, radians, degrees
+from math import cos, pi, sin
 from random import uniform, randint, choice
 
 from common.vector import *
@@ -8,7 +8,6 @@ from common import GameVariables, Entity, sprites, SHOCK_RADIUS, point2world
 
 from game.map_manager import MapManager, SKY
 from game.visual_effects import Blast, Explossion
-from entities import PhysObj
 from entities import Debrie
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
@@ -67,7 +66,6 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 		for _ in range(int(radius)):
 			d = Debrie(pos, radius / 5, colors, 2, radius > 25)
 			d.radius = choice([2, 1])
-
 
 
 class Earthquake(Entity):
@@ -139,3 +137,5 @@ class Tornado:
 		for i, swirl in enumerate(self.swirles):
 			five = [point2world(Vector(swirl[0] * cos(swirl[2] + t/5) + self.pos.x, 10 * i + swirl[1] * sin(swirl[2] + t/5))) for t in range(5)]
 			pygame.draw.lines(win, (255,255,255), False, five)
+
+
