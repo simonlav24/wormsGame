@@ -1,5 +1,6 @@
 
-from abc import ABC, abstractmethod
+''' common interfaces, definitions and utilities '''
+
 from typing import Protocol, List
 from pydantic import BaseModel
 import pygame
@@ -144,6 +145,11 @@ class EntityPlant(Entity):
 
 	def mutate(self):
 		...
+
+
+class EntityLightSource(Entity):
+	light_radius: int
+
 
 # color utilities
 

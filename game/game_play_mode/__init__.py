@@ -9,3 +9,4 @@ from .capture_the_flag import CTFGamePlay
 from .arena import ArenaGamePlay
 
 from .artifacts_mode import ArtifactsGamePlay
+from .dark_mode import DarknessGamePlay

@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -43,6 +43,7 @@ class DataBase:
         self.targets: List[EntityPhysical] = []
         self.plants: List[EntityPlant] = []
         self.cycle_observers: List[CycleObserver] = []
+        self.light_sources: List[EntityLightSource] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -232,6 +233,9 @@ class GameVariables(metaclass=SingletonMeta):
     
     def unregister_cycle_observer(self, obj: CycleObserver):
         self.database.cycle_observers.remove(obj)
+    
+    def get_light_sources(self) -> List[EntityLightSource]:
+        return self.database.light_sources
 
 
 def point2world(point) -> Tuple[int, int]:

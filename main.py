@@ -16,7 +16,7 @@ from common.game_config import *
 
 from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
-from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay
+from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay, DarknessGamePlay
 from game.time_manager import TimeManager
 from game.map_manager import *
 from game.background import BackGround
@@ -207,11 +207,6 @@ class Game:
 				team.ammo(WeaponManager()["laser gun"], 3)
 			GameVariables().config.option_closed_map = True
 
-		# if Game._game.darkness:
-		# 	WeaponManager().render_weapon_count()
-		# 	for team in TeamManager().teams:
-		# 		team.ammo(WeaponManager().weapon_dict['flare'], 3)
-
 		GameVariables().game_mode.on_game_init()
 
 		if Game._game.gameMode == GameMode.MISSIONS:
@@ -227,7 +222,6 @@ class Game:
 		# clear lists
 		Portal._reg.clear()
 		GreenShell._shells.clear()
-		Flare._flares.clear()
 		Seagull._reg.clear()
 		Chum._chums.clear()
 		MissionManager._mm = None
@@ -313,6 +307,8 @@ class Game:
 
 		if self.game_config.option_artifacts:
 			GameVariables().game_mode.add_mode(ArtifactsGamePlay())
+		if self.game_config.option_darkness:
+			GameVariables().game_mode.add_mode(DarknessGamePlay())
 
 		# if self.game_config.option_darkness:
 		# 	GameVariables().game_mode.modes.append(DarknessGamePlay())
@@ -1076,13 +1072,6 @@ def cycle_worms():
 		return
 	GameVariables().game_turn_count += 1
 
-
-		# if Game._game.darkness:
-		# 	for team in TeamManager().teams:
-		# 		team.ammo("flare", 1)
-		# 		if team.ammo("flare") > 3:
-		# 			team.ammo("flare", -1)
-
 	
 	# rise water:
 	if Game._game.waterRise and not Game._game.waterRising:
@@ -1107,12 +1096,7 @@ def cycle_worms():
 	# change wind:
 	GameVariables().physics.wind = uniform(-1, 1)
 	
-	# flares reduction
-	# if Game._game.darkness:
-	# 	for flare in Flare._flares:
-	# 		if not flare in GameVariables().get_physicals():
-	# 			Flare._flares.remove(flare)
-	# 		flare.lightRadius -= 10
+	
 	
 	# sick:
 	for worm in GameVariables().get_worms():
@@ -2104,7 +2088,7 @@ def gameMain(game_config: GameConfig=None):
 		if Game._game.fireWeapon and GameVariables().player_can_shoot:
 			fire()
 		
-		# step:
+		# ------- step -------
 		Game._game.step()
 		GameVariables().game_stable = True
 
@@ -2148,11 +2132,12 @@ def gameMain(game_config: GameConfig=None):
 		wind_flag.step()
 		GameVariables().commentator.step()
 
-		# draw:
+		# ------- draw -------
 		Game._game.background.draw(win)
 		MapManager().draw_land(win)
 		for p in GameVariables().get_physicals(): 
 			p.draw(win)
+		
 		GameVariables().draw_non_physicals(win)
 		if GameVariables().continuous_fire:
 			GameVariables().continuous_fire = False
@@ -2165,7 +2150,7 @@ def gameMain(game_config: GameConfig=None):
 		for t in Toast._toasts:
 			t.draw(win)
 		
-		# if Game._game.darkness and MapManager().dark_mask: win.blit(MapManager().dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
+		
 		# draw shooting indicator
 		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:
 			GameVariables().player.drawCursor(win)
@@ -2182,6 +2167,9 @@ def gameMain(game_config: GameConfig=None):
 		GameVariables().draw_extra(win)
 		GameVariables().draw_layers(win)
 		
+		# draw game play mode
+		GameVariables().game_mode.draw(win)
+
 		# HUD
 		wind_flag.draw(win)
 		TimeManager().draw(win)
@@ -2196,7 +2184,7 @@ def gameMain(game_config: GameConfig=None):
 		TeamManager().step()
 		TeamManager().draw(win)
 		
-		GameVariables().game_mode.draw(win)
+		
 
 		if Game._game.gameMode == GameMode.MISSIONS:
 			if MissionManager._mm:
@@ -2285,4 +2273,5 @@ if __name__ == "__main__":
 		config.map_path = r'assets/worms_maps/Nyc.png'
 		config.game_mode = GameMode.BATTLE
 		config.option_artifacts = True
+		config.option_darkness = True
 		gameMain(config)

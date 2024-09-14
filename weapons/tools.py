@@ -4,44 +4,47 @@ import pygame
 from random import randint, uniform
 
 from common import blit_weapon_sprite, point2world, GameVariables, sprites, GameState, JUMP_VELOCITY, LEFT
-from common.vector import *
+from common.vector import Vector, vectorCopy, tup2vec, normalize, distus
 
 from game.map_manager import MapManager
-from entities import PhysObj, Worm
+from entities import PhysObj
 from game.visual_effects import Blast, EffectManager
 from entities.gun_shell import GunShell
 
 
 class Flare(PhysObj):
-	_flares = []
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos)
-		Flare._flares.append(self)
+		GameVariables().get_light_sources().append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (128, 0, 0)
 		self.damp = 0.4
-		self.lightRadius = 50
+		self.light_radius = 50
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "flare")
 		self.angle = 0
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		if self.vel.getMag() > 0.25:
-			self.angle -= self.vel.x*4
+			self.angle -= self.vel.x * 4
 		if randint(0,10) == 1:
 			Blast(self.pos, randint(self.radius,7), 150)
-		if self.lightRadius < 0:
+		if self.light_radius < 0:
 			self.remove_from_game()
-			Flare._flares.remove(self)
 			return
-		EffectManager().add_light(vectorCopy(self.pos), self.lightRadius, (100,0,0,100))
+		EffectManager().add_light(vectorCopy(self.pos), self.light_radius, (100, 0, 0, 100))
 	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size()) / 2))
+	
+	def remove_from_game(self) -> None:
+		super().remove_from_game()
+		GameVariables().get_light_sources().remove(self)
 
 
 class Trampoline:

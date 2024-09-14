@@ -71,8 +71,9 @@ class EffectManager(metaclass=SingletonMeta):
 		self.dark_mask.fill(DARK_COLOR)
 		pygame.draw.circle(self.dark_mask, (0,0,0,0), main_obj_pos.vec2tupint(), LIGHT_RADIUS)
 		for light in self.lights:
-			pygame.draw.circle(self.dark_mask, light[3], (light[0], light[1]), light[2])
+			pygame.draw.circle(self.dark_mask, light[2], (light[0][0], light[0][1]), light[1])
 		self.lights.clear()
+		return self.dark_mask
 	
 	def add_smoke(self, pos: Vector, vel: Vector=None, color: ColorType=None):
 		self.smoke_particles.add_smoke(pos, vel, color)
@@ -111,7 +112,7 @@ class Blast(Effect):
 		self.pos.y -= (2.0 / self.rad) * GameVariables().dt
 
 		color = self.color[int(clamp(self.time_counter, 5, 0))]
-		EffectManager().lights.append((self.pos[0], self.pos[1], self.rad * 3, (color[0], color[1], color[2], 100) ))
+		EffectManager().add_light(self.pos, self.rad * 3, (color[0], color[1], color[2], 100))
 		if self.time_counter >= 10:
 			EffectManager().unregister(self)
 			
