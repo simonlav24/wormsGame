@@ -5,7 +5,6 @@ from typing import List
 import pygame
 
 from common import GameVariables
-from common.vector import Vector
 
 from game.game_play_mode.game_play_mode import GamePlayMode
 from game.team_manager import TeamManager

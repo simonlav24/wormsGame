@@ -56,12 +56,13 @@ def is_pos_in_arc(pos: Vector2, center: Vector2, inner, outer, start, end, iprin
 	# if iprint:
 	# 	print(pos_in_center, atan2(pos_in_center.y, pos_in_center.x))
 	
-	mouse_angle = atan2(pos_in_center.y, pos_in_center.x)
-	if mouse_angle < 0:
-		mouse_angle += 2 * pi
+	# mouse_angle = atan2(pos_in_center.y, pos_in_center.x)
+	# if mouse_angle < 0:
+	# 	mouse_angle += 2 * pi
 
 	pos_radial = Vector2(sqrt(pos_in_center.x ** 2 + pos_in_center.y ** 2),
 					  	 atan2(pos_in_center.y, pos_in_center.x))
+
 	if pos_radial.y < 0:
 		pos_radial.y += 2 * pi
 	
@@ -70,8 +71,11 @@ def is_pos_in_arc(pos: Vector2, center: Vector2, inner, outer, start, end, iprin
 	# end = fmod(end - pi, 2 * pi) - pi
 	# print('func', start, end)
 
-	if outer > pos_radial.x > inner and end > pos_radial.y > start:
-		return True
+	angle = - 4 * pi
+	while angle <= 4 * pi:
+		if outer > pos_radial.x > inner and end > pos_radial.y + angle > start:
+			return True
+		angle += 2 * pi
 	return False
 
 class RadialButton(GuiBase):

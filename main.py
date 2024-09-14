@@ -2258,12 +2258,13 @@ if __name__ == "__main__":
 	still in wip:
 		water rise
 		loading screen
-		weapon menu some weapons not reachable
+		weapon delay
 		shoot gun if died before all shooted
 		optimize fire drawing for it is slowing
 		holding mjolnir
 		winning
 		plants on init eat worms
+		darkness outside area (either close or draw black)
 	'''
 	print(wip)
 
@@ -2273,5 +2274,4 @@ if __name__ == "__main__":
 		config.map_path = r'assets/worms_maps/Nyc.png'
 		config.game_mode = GameMode.BATTLE
 		config.option_artifacts = True
-		config.option_darkness = True
 		gameMain(config)

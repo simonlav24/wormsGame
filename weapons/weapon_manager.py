@@ -286,12 +286,7 @@ class WeaponManager(metaclass=SingletonMeta):
                 weaponsSwitch = True
             elif event.key == pygame.K_EQUALS:
                 keyWeapons = [self.weapon_dict[w] for w in ["parachute"]]
-                weaponsSwitch = True
-            
-            elif event.key == pygame.K_KP1:
-                keyWeapons = [self.weapon_dict[w] for w in ["fireworks", "fire ball", "earth spike", "pick axe", "build"]]
-                weaponsSwitch = True
-            
+                weaponsSwitch = True            
 
             if weaponsSwitch:
                 if len(keyWeapons) > 0:
