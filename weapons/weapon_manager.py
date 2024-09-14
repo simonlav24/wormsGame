@@ -135,6 +135,11 @@ class WeaponManager(metaclass=SingletonMeta):
         rect = (x * 16, y * 16, 16, 16)
         return (sprites.sprite_atlas, rect)
 
+    def is_weapon_enabled(self, weapon: Weapon) -> bool:
+        if GameVariables().game_round_count >= weapon.round_delay:
+            return True
+        return False
+
     def get_weapon(self, name: str) -> Weapon:
         ''' get weapon by name '''
         return self.weapon_dict[name]

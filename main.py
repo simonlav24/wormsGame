@@ -310,8 +310,6 @@ class Game:
 		if self.game_config.option_darkness:
 			GameVariables().game_mode.add_mode(DarknessGamePlay())
 
-		# if self.game_config.option_darkness:
-		# 	GameVariables().game_mode.modes.append(DarknessGamePlay())
 
 	def handle_event(self, event) -> bool:
 		''' handle pygame event, return true if event handled '''
@@ -355,8 +353,8 @@ def giveGoodPlace(div = 0, girderPlace = True):
 	counter = 0
 	
 	if Game._game.game_config.option_forts and div != -1:
-		half = MapManager().game_map.get_width() / TeamManager().num_of_teams
-		Slice = div % TeamManager().num_of_teams
+		half = MapManager().game_map.get_width() / GameVariables().num_of_teams
+		Slice = div % GameVariables().num_of_teams
 		
 		left = half * Slice
 		right = left + half
@@ -926,13 +924,13 @@ def check_winners() -> bool:
 	for team in TeamManager().teams:
 		if len(team.worms) == 0:
 			count += 1
-	if count == TeamManager().num_of_teams - 1:
+	if count == GameVariables().num_of_teams - 1:
 		# one team remains
 		end = True
 		for team in TeamManager().teams:
 			if not len(team.worms) == 0:
 				lastTeam = team
-	if count == TeamManager().num_of_teams:
+	if count == GameVariables().num_of_teams:
 		# no team remains
 		end = True
 		
@@ -997,7 +995,8 @@ def check_winners() -> bool:
 	return end
 
 def deploy_crate() -> None:
-	if GameVariables().game_turn_count % TeamManager().num_of_teams == 0:
+	# deploy crate if privious turn was last turn in round
+	if ((GameVariables().game_turn_count) % (GameVariables().turns_in_round)) == (GameVariables().turns_in_round - 1):
 		comments = [
 			[{'text': 'a jewel from the heavens!'}],
 			[{'text': 'its raining crates, halelujah!'}],
@@ -1065,13 +1064,15 @@ def cycle_worms():
 		GameVariables().commentator.comment(comment)
 	
 	TeamManager().current_team.damage += Game._game.damageThisTurn
-	# if Game._game.gameMode in [GameMode.POINTS, GameMode.BATTLE]:
-	# 	TeamManager().current_team.points = TeamManager().current_team.damage + 50 * TeamManager().current_team.kill_count
 	Game._game.damageThisTurn = 0
 	if check_winners():
 		return
-	GameVariables().game_turn_count += 1
 
+	new_round = False
+	GameVariables().game_turn_count += 1
+	if GameVariables().game_turn_count % GameVariables().turns_in_round == 0:
+		GameVariables().game_round_count += 1
+		new_round = True
 	
 	# rise water:
 	if Game._game.waterRise and not Game._game.waterRising:
@@ -1084,7 +1085,7 @@ def cycle_worms():
 	Game._game.waterRising = False
 	Game._game.deployingArtifact = False
 	
-	if GameVariables().game_turn_count % TeamManager().num_of_teams == 0:
+	if new_round:
 		Game._game.game_config.rounds_for_sudden_death -= 1
 		if Game._game.game_config.rounds_for_sudden_death == 0:
 			suddenDeath()
@@ -1105,11 +1106,11 @@ def cycle_worms():
 		
 	# select next team
 	index = TeamManager().teams.index(TeamManager().current_team)
-	index = (index + 1) % TeamManager().num_of_teams
+	index = (index + 1) % GameVariables().num_of_teams
 	TeamManager().current_team = TeamManager().teams[index]
 	while not len(TeamManager().current_team.worms) > 0:
 		index = TeamManager().teams.index(TeamManager().current_team)
-		index = (index + 1) % TeamManager().num_of_teams
+		index = (index + 1) % GameVariables().num_of_teams
 		TeamManager().current_team = TeamManager().teams[index]
 	
 	
@@ -1173,7 +1174,7 @@ def random_placing():
 		current_team = TeamManager().teams[TeamManager().team_choser]
 		new_worm_name = current_team.get_new_worm_name()
 		current_team.worms.append(Worm(place, new_worm_name, current_team))
-		TeamManager().team_choser = (TeamManager().team_choser + 1) % TeamManager().num_of_teams
+		TeamManager().team_choser = (TeamManager().team_choser + 1) % GameVariables().num_of_teams
 		Game._game.lstepper()
 	GameVariables().game_state = GameVariables().game_next_state
 
@@ -1193,8 +1194,16 @@ def weapon_menu_init():
 		if len(weapons_in_category) == 0:
 			continue
 		get_amount = lambda x: str(current_team.ammo(x.index)) if current_team.ammo(x.index) > 0 else ''
-		sub_layout = [RadialButton(weapon, weapon.name, get_amount(weapon), weapon_bg_color[category], WeaponManager().get_surface_portion(weapon)) for weapon in reversed(weapons_in_category)]
-		main_button = RadialButton(weapons_in_category[0], '', '', weapon_bg_color[category], WeaponManager().get_surface_portion(weapons_in_category[0]), sub_layout)
+		
+		sub_layout: List[RadialButton] = []
+		for weapon in reversed(weapons_in_category):
+			surf_portion = WeaponManager().get_surface_portion(weapon)
+			is_enabled = WeaponManager().is_weapon_enabled(weapon)
+			button = RadialButton(weapon, weapon.name, get_amount(weapon), weapon_bg_color[category], surf_portion, is_enabled=is_enabled)
+			sub_layout.append(button)
+
+		is_enabled = not all([not button.is_enabled for button in sub_layout])
+		main_button = RadialButton(weapons_in_category[0], '', '', weapon_bg_color[category], WeaponManager().get_surface_portion(weapons_in_category[0]), sub_layout, is_enabled=is_enabled)
 		layout.append(main_button)
 
 	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(GameVariables().win_width // 2, GameVariables().win_height // 2))
@@ -1218,7 +1227,7 @@ def toast_info():
 		name = fonts.pixel5.render(team.name, False, team.color)
 		points = fonts.pixel5.render(str(team.points), False, (0,0,0))
 		surfs.append((name, points))
-	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * TeamManager().num_of_teams), pygame.SRCALPHA)
+	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * GameVariables().num_of_teams), pygame.SRCALPHA)
 	i = 0
 	for s in surfs:
 		surf.blit(s[0], (0, i))
@@ -1638,9 +1647,8 @@ def cheat_activate(code: str):
 		for team in TeamManager().teams:
 			for i, _ in enumerate(team.weapon_set):
 				team.weapon_set[i] = -1
-		for _ in WeaponManager().weapons:
-			# weapon [5] = 0 # todo
-			pass
+		for weapon in WeaponManager().weapons:
+			weapon.round_delay = 0
 		Game._game.game_config.option_cool_down = False
 	elif code == "suddendeath":
 		suddenDeath()
@@ -1768,7 +1776,6 @@ def stateMachine():
 			if GameVariables().game_stable_counter == 10:
 				# next turn
 				GameVariables().game_stable_counter = 0
-				TimeManager().time_reset()
 				if GameVariables().game_state == GameState.WAIT_STABLE:
 					# wait stable ended, engage autonomous
 					GameVariables().engage_autonomous()
@@ -1783,6 +1790,7 @@ def stateMachine():
 				elif GameVariables().game_state == GameState.DEPLOYEMENT:
 					# deployed crates, cycle worms
 					cycle_worms()
+					TimeManager().time_reset()
 					WeaponManager().render_weapon_count()
 					GameVariables().game_next_state = GameState.PLAYER_PLAY
 				
@@ -1895,6 +1903,10 @@ def onKeyPressTab():
 	elif Game._game.switchingWorms:
 		switch_worms()
 
+def onKeyPressTest():
+	pos = mouse_pos_in_world()
+	splash(pos, Vector(choice([5, 10, 20]),0))
+
 def onKeyPressEnter():
 	# jump
 	if GameVariables().player.stable and GameVariables().player.health > 0:
@@ -1908,7 +1920,7 @@ def gameMain(game_config: GameConfig=None):
 
 	Game(game_config)
 	WeaponManager()
-	TeamManager()     
+	TeamManager()
 	
 	damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
 	TimeTravel()
@@ -1982,7 +1994,7 @@ def gameMain(game_config: GameConfig=None):
 					if event.key == pygame.K_TAB:
 						onKeyPressTab()
 					if event.key == pygame.K_t:
-						pass
+						onKeyPressTest()
 					if event.key == pygame.K_F1:
 						toast_info()
 					if event.key == pygame.K_F2:
@@ -2207,7 +2219,8 @@ def gameMain(game_config: GameConfig=None):
 			damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
 		win.blit(damageText[1], ((int(5), int(GameVariables().win_height -5 -damageText[1].get_height()))))
 
-		debug_text = fonts.pixel5_halo.render(str(GameVariables().game_state), False, GameVariables().initial_variables.hud_color)
+		debug_string = f'Turn: {GameVariables().game_turn_count}, Round: {GameVariables().game_round_count}'
+		debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
 		win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
 		
 		# draw loading screen
@@ -2258,12 +2271,11 @@ if __name__ == "__main__":
 	still in wip:
 		water rise
 		loading screen
-		weapon delay
+		electric weapons should affect other weapons
 		shoot gun if died before all shooted
 		optimize fire drawing for it is slowing
 		holding mjolnir
 		winning
-		plants on init eat worms
 		darkness outside area (either close or draw black)
 	'''
 	print(wip)
@@ -2274,4 +2286,5 @@ if __name__ == "__main__":
 		config.map_path = r'assets/worms_maps/Nyc.png'
 		config.game_mode = GameMode.BATTLE
 		config.option_artifacts = True
+		config.option_digging = True
 		gameMain(config)

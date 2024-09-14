@@ -58,14 +58,16 @@ class TeamManager(metaclass=SingletonMeta):
 
         self.generate_hats()
 
-        self.num_of_teams = len(self.teams)
+        num_of_teams = len(self.teams)
+        GameVariables().num_of_teams = num_of_teams
+        GameVariables().turns_in_round = GameVariables().num_of_teams
         self.current_team: Team = None
         self.team_choser = 0
         shuffle(self.teams)
 
         # todo: calculate for david vs goliath
         self.health_bar_hud = HealthBar(
-            self.num_of_teams,
+            num_of_teams,
             GameVariables().config.worm_initial_health,
             GameVariables().config.worms_per_team,
             [team.color for team in self.teams]

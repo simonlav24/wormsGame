@@ -60,10 +60,11 @@ class Acid(PhysObj):
 	def draw(self, win: pygame.Surface):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius + 1)
 
-class AcidBottle(PetrolBomb):
+
+
+class AcidBottle(PhysObj):
 	def __init__(self, pos, direction, energy):
-		super().__init__(pos, direction, energy)
-		self.pos = Vector(pos[0], pos[1])
+		super().__init__(pos)
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (200,255,200)
@@ -75,14 +76,14 @@ class AcidBottle(PetrolBomb):
 	
 	def step(self):
 		super().step()
-		self.angle -= self.vel.x*4
+		self.angle -= self.vel.x * 4
 	
 	def death_response(self):
 		boom(self.pos, 10)
 		for i in range(40):
-			s = Acid(self.pos, Vector(cos(2*pi*i/40), sin(2*pi*i/40))*uniform(1.3,2))
+			s = Acid(self.pos, Vector(cos(2 * pi * i / 40), sin(2 * pi * i / 40)) * uniform(1.3, 2))
 	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size()) / 2))

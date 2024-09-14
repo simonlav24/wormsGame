@@ -46,7 +46,7 @@ class TimeManager(metaclass=SingletonMeta):
 		win.blit(self.timeSurf[1] , ((5, 5)))
 	
 	def time_reset(self):
-		self.time_counter = self.turnTime
+		self.time_counter = self.turnTime + 1
 	
 	def time_remaining(self, amount):
 		self.time_counter = amount

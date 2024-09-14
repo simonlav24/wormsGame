@@ -280,11 +280,15 @@ class GasParticles:
 
 def splash(pos: Vector, vel: Vector) -> None:
 	amount = 10 + int(vel.getMag())
-	for _ in range(amount):
-		vel = vectorUnitRandom()
-		vel.y = uniform(-1,0) * vel.getMag() * 10
-		vel.x *= vel.getMag() * 0.17
-		DropLet(Vector(pos.x, pos.y), vel)
+	for i in range(2):
+		for _ in range(amount):
+			x = vel.x * 0.5 * uniform(0.5, 1.5) + uniform(-4, 4)
+			y = -abs(vel.getMag() * uniform(0.8, 1.2))
+			if i == 1:
+				y = y * uniform(0, 0.9)
+			velocity = Vector(x, y) * 0.7
+			DropLet(Vector(pos.x, pos.y), velocity)
+	
 
 class DropLet(Effect):
 	def __init__(self, pos: Vector, vel: Vector):
@@ -295,7 +299,7 @@ class DropLet(Effect):
 		self.acc = Vector()
 
 	def step(self) -> None:
-		factor = 2.5# 2.5 if self.water else 1
+		factor = 2.5
 		self.acc.y += GameVariables().physics.global_gravity * factor
 
 		self.vel += self.acc * GameVariables().dt

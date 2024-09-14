@@ -82,7 +82,10 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.game_stable = False
         self.game_stable_counter = 0
-        self.game_turn_count = 1
+        self.game_turn_count = 0
+        self.game_round_count = 0
+        self.turns_in_round = 0
+        self.num_of_teams = 0
 
         self.game_state = GameState.RESET
         self.game_next_state = GameState.RESET

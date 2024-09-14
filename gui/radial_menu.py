@@ -79,11 +79,10 @@ def is_pos_in_arc(pos: Vector2, center: Vector2, inner, outer, start, end, iprin
 	return False
 
 class RadialButton(GuiBase):
-	def __init__(self, key: Any, tooltip: str='', super_text: str='', back_color=None, surf_portion: SurfacePortion=None, layout: List['RadialButton']=None):
+	def __init__(self, key: Any, tooltip: str='', super_text: str='', back_color=None, surf_portion: SurfacePortion=None, layout: List['RadialButton']=None, is_enabled=True):
 		self.key = key
 		self.tooltip = fonts.pixel5_halo.render(tooltip, False, (255,255,255))
 		self.super_text = None
-		self.surf_portion = surf_portion
 		if super_text != '':
 			self.super_text = fonts.pixel5.render(super_text, False, (0,0,0))
 		self.layout = layout
@@ -92,13 +91,20 @@ class RadialButton(GuiBase):
 		self.start_angle: float = 0
 		self.end_angle: float = 0
 		self.center: Vector2 = None
+		self.is_enabled = is_enabled
 
 		self.color = back_color if back_color is not None else (128, 128, 128)
 		self.back_color = back_color if back_color is not None else (128, 128, 128)
 		self.in_focus = False
 
 		self.elements: List[RadialButton] = []
-		self.is_open = False		
+		self.is_open = False
+
+		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
+		self.surf.blit(surf_portion[0], (0, 0), surf_portion[1])
+		if not self.is_enabled:
+			self.surf.fill((200, 200, 200), special_flags= pygame.BLEND_SUB)
+			self.surf.fill((200, 200, 200), special_flags= pygame.BLEND_ADD)
 	
 	@property
 	def inner_radius(self):
@@ -143,7 +149,8 @@ class RadialButton(GuiBase):
 		# if self.key.name == 'missile':
 		# 	print(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle)
 		if is_pos_in_arc(mouse, self.center, self.inner_radius, self.outer_radius, self.start_angle, self.end_angle, self.key.name=='missile'):
-			self.in_focus = True
+			if self.is_enabled:
+				self.in_focus = True
 			self.color = (255,0,0)
 		
 		if self.is_open:
@@ -157,9 +164,9 @@ class RadialButton(GuiBase):
 		radius = self.inner_radius + (self.outer_radius - self.inner_radius) / 2
 		pos = Vector2(self.center + Vector2.from_polar((radius , degrees(angle))))
 
-		surf = self.surf_portion[0]
-		rect = self.surf_portion[1]
-		win.blit(surf, pos - Vector2(8, 8), rect)
+		if not self.is_enabled:
+			pass
+		win.blit(self.surf, pos - Vector2(8, 8))
 		
 		if self.super_text is not None:
 			win.blit(self.super_text, pos + Vector2(4, 4))
