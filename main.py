@@ -258,17 +258,7 @@ class Game:
 		self.aimAid = False
 		self.switchingWorms = False
 		self.timeTravel = False
-		
-	def girder(self, pos):
-		surf = pygame.Surface((GameVariables().girder_size, 10)).convert_alpha()
-		for i in range(GameVariables().girder_size // 16 + 1):
-			surf.blit(sprites.sprite_atlas, (i * 16, 0), (64,80,16,16))
-		surfGround = pygame.transform.rotate(surf, GameVariables().girder_angle)
-		self.map_manager.ground_map.blit(surfGround, (int(pos[0] - surfGround.get_width()/2), int(pos[1] - surfGround.get_height()/2)) )
-		surf.fill(GRD)
-		surfMap = pygame.transform.rotate(surf, GameVariables().girder_angle)
-		self.map_manager.game_map.blit(surfMap, (int(pos[0] - surfMap.get_width()/2), int(pos[1] - surfMap.get_height()/2)) )
-	
+			
 	def drawTrampolineHint(self):
 		surf = pygame.Surface((24, 7), pygame.SRCALPHA)
 		surf.blit(sprites.sprite_atlas, (0,0), (100, 117, 24, 7))
@@ -398,7 +388,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 					break
 			if  not goodPlace:
 				continue
-			Game._game.girder(place + Vector(0,20))
+			girder(place + Vector(0,20))
 			return place
 		
 		# put place down
@@ -571,6 +561,41 @@ class TimeSlow:
 ################################################################################ Weapons setup
 
 def fire(weapon = None):
+	if not weapon:
+		weapon = WeaponManager().current_weapon
+	
+	energy = Game._game.energyLevel
+
+	director = WeaponManager().current_director
+	if WeaponManager().current_director is None:
+		director = WeaponManager().create_weapon_director()
+		WeaponManager().current_director = director
+
+	director.shoot(energy)
+	obj = director.get_object()
+
+	if obj is not None:
+		GameVariables().cam_track = obj
+	
+	if director.is_done() and not director.weapon.decrease_on_end:
+		# decrease ammo in team
+		if TeamManager().current_team.ammo(weapon.index) != -1:
+			TeamManager().current_team.ammo(weapon.index, -1)
+		WeaponManager().render_weapon_count()
+		director.remove_from_game()
+	
+	if director.weapon.turn_ending:
+		GameVariables().game_state = GameVariables().game_next_state
+		if GameVariables().game_state == GameState.PLAYER_RETREAT:
+			TimeManager().time_remaining_etreat()
+	
+	Game._game.fireWeapon = False
+	Game._game.energising = False
+	Game._game.energyLevel = 0
+
+
+
+def fire_(weapon = None):
 	global decrease
 	if not weapon:
 		weapon = WeaponManager().current_weapon
@@ -594,7 +619,7 @@ def fire(weapon = None):
 		'minigun':       {'count': 20, 'func': fireMiniGun, 'burst': True},
 		'gamma gun':     {'count': 2,  'func': fireGammaGun},
 		'long bow':      {'count': 3,  'func': fireLongBow},
-		'portal gun':    {'count': 2,  'func': firePortal, 'end_turn': False},
+		'portal gun':    {'count': 2,  'func': firePortal, 'end_turn_on_done': False},
 		'laser gun':     {'count': 70, 'func': fireLaser, 'burst': True},
 		'spear':         {'count': 2,  'func': fireSpear},
 		'bubble gun':    {'count': 10, 'func': fireBubbleGun, 'burst': True},
@@ -603,8 +628,8 @@ def fire(weapon = None):
 		'fire ball':     {'count': 3,  'func': fireFireBall},
 		'fireworks':     {'count': 5,  'func': fireFireWork},
 		'earth spike':   {'count': 2,  'func': fireEarthSpike},
-		'pick axe':      {'count': 6,  'func': None, 'end_turn': False, 'cls': PickAxe},
-		'build':         {'count': 6,  'func': None, 'end_turn': False, 'cls': MineBuild},
+		'pick axe':      {'count': 6,  'func': None, 'end_turn_on_done': False, 'cls': PickAxe},
+		'build':         {'count': 6,  'func': None, 'end_turn_on_done': False, 'cls': MineBuild},
 	}
 
 	avail = True
@@ -621,9 +646,10 @@ def fire(weapon = None):
 		decrease = False
 		GameVariables().game_next_state = GameState.PLAYER_PLAY
 
+		# if weapon is done
 		if WeaponManager().current_gun.is_done():
 			decrease = True
-			if WeaponManager().current_gun.is_end_turn():
+			if WeaponManager().current_gun.is_end_turn_on_done():
 				GameVariables().game_next_state = GameState.PLAYER_RETREAT
 			else:
 				GameVariables().game_next_state = GameState.PLAYER_PLAY
@@ -777,13 +803,7 @@ def fire(weapon = None):
 
 	if w and not TimeTravel._tt.timeTravelFire:
 		GameVariables().cam_track = w	
-	
-	# position to available position
-	if w and avail:
-		availpos = MapManager().get_closest_pos_available(w.pos, w.radius)
-		if availpos:
-			w.pos = availpos
-	
+		
 	if decrease:
 		if TeamManager().current_team.ammo(weapon.index) != -1:
 			TeamManager().current_team.ammo(weapon.index, -1)
@@ -817,16 +837,16 @@ def fireClickable():
 	addToUsed = True
 	
 	if current_weapon.name == "girder":
-		Game._game.girder(mousePosition)
+		girder(mousePosition)
 	elif current_weapon.name == "teleport":
 		GameVariables().player.pos = mousePosition
 		addToUsed = False
 	elif current_weapon.name == "airstrike":
-		fireAirstrike(mousePosition)
+		fire_airstrike(mousePosition)
 	elif current_weapon.name == "mine strike":
-		fireMineStrike(mousePosition)
+		fire_minestrike(mousePosition)
 	elif current_weapon.name == "napalm strike":
-		fireNapalmStrike(mousePosition)
+		fire_napalmstrike(mousePosition)
 
 	if decrease and TeamManager().current_team.ammo(WeaponManager().current_weapon.index) != -1:
 		TeamManager().current_team.ammo(WeaponManager().current_weapon.index, -1)
@@ -837,7 +857,7 @@ def fireClickable():
 	WeaponManager().render_weapon_count()
 	TimeManager().time_remaining_etreat()
 	GameVariables().game_state = GameVariables().game_next_state
-  
+
 def fireUtility(weapon = None):
 	if not weapon:
 		weapon = WeaponManager().current_weapon
@@ -1121,6 +1141,7 @@ def cycle_worms():
 	GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
 	
 	GameVariables().on_cycle()
+	WeaponManager().on_cycle()
 
 	# actual worm switch:
 	switched = False
@@ -1904,8 +1925,7 @@ def onKeyPressTab():
 		switch_worms()
 
 def onKeyPressTest():
-	pos = mouse_pos_in_world()
-	splash(pos, Vector(choice([5, 10, 20]),0))
+	GameVariables().debug_print()
 
 def onKeyPressEnter():
 	# jump
@@ -2286,5 +2306,4 @@ if __name__ == "__main__":
 		config.map_path = r'assets/worms_maps/Nyc.png'
 		config.game_mode = GameMode.BATTLE
 		config.option_artifacts = True
-		config.option_digging = True
 		gameMain(config)

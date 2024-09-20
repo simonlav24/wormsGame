@@ -76,6 +76,7 @@ class FireWorkRockets:
 
 
 def fireFireWork(**kwargs):
+	# todo: refactor
 	if FireWorkRockets._fw is None:
 		FireWorkRockets()
 		return

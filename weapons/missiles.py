@@ -15,7 +15,6 @@ from game.map_manager import MapManager, GRD, SKY
 class Missile (PhysObj):
 	def __init__(self, pos, direction, energy, weapon_name="missile"):
 		super().__init__(pos)
-		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (255,255,0)
@@ -64,7 +63,7 @@ class DrillMissile(PhysObj):
 	mode = False #True = drill
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos)
-		self.pos = Vector(pos[0], pos[1])
+		self.pos = MapManager().get_closest_pos_available(Vector(pos[0], pos[1]), self.radius)
 		self.lastPos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 7

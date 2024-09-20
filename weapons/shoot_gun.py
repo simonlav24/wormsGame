@@ -9,7 +9,7 @@ class ShootGun:
 		GameVariables().register_non_physical(self)
 		self.ammo = kwargs.get('count')
 		self.shoot_action = kwargs.get('func')
-		self.end_turn = kwargs.get('end_turn', True)
+		self.end_turn_on_done = kwargs.get('end_turn_on_done', True)
 		self.burst = kwargs.get('burst', False)
 
 		self.shooted_object: EntityPhysical | None = None
@@ -42,8 +42,8 @@ class ShootGun:
 	def is_done(self) -> bool:
 		return self.ammo == 0
 	
-	def is_end_turn(self) -> bool:
-		return self.end_turn
+	def is_end_turn_on_done(self) -> bool:
+		return self.end_turn_on_done
 	
 	def remove(self) -> None:
 		GameVariables().unregister_non_physical(self)

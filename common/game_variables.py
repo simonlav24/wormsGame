@@ -240,6 +240,19 @@ class GameVariables(metaclass=SingletonMeta):
     def get_light_sources(self) -> List[EntityLightSource]:
         return self.database.light_sources
 
+    def debug_print(self) -> None:
+        output = '# non_physicals:\n'
+        for i in self.database.non_physicals:
+            output += f'\t{i}\n'
+        
+        output += '\n# physicals:\n'
+        for i in self.database.physicals:
+            output += f'\t{i}\n'
+
+        with open('debug.txt', 'w+') as file:
+            file.write(output)
+
+
 
 def point2world(point) -> Tuple[int, int]:
 	''' point in vector space to point in world map space '''

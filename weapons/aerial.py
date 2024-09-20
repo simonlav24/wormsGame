@@ -17,7 +17,8 @@ from weapons.mine import Mine
 
 
 
-def fireAirstrike(pos):
+def fire_airstrike(**kwargs):
+	pos = kwargs.get('pos')
 	x = pos[0]
 	y = 5
 	for i in range(5):
@@ -29,7 +30,8 @@ def fireAirstrike(pos):
 		if i == 2:
 			GameVariables().cam_track = f
 
-def fireMineStrike(pos):
+def fire_minestrike(**kwargs):
+	pos = kwargs.get('pos')
 	megaBoom = False
 	if randint(0,50) == 1 or GameVariables().mega_weapon_trigger:
 		megaBoom = True
@@ -48,7 +50,8 @@ def fireMineStrike(pos):
 			if i == 2:
 				GameVariables().cam_track = m
 
-def fireNapalmStrike(pos):
+def fire_napalmstrike(**kwargs):
+	pos = kwargs.get('pos')
 	x = pos[0]
 	y = 5
 	for i in range(70):

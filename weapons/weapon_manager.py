@@ -1,68 +1,21 @@
 
 import json
-from enum import Enum
-from pydantic import BaseModel
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Callable, Any
 
 import pygame
 
 import common
-from common import GREY, sprites, fonts, ColorType, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world, ArtifactType
+from common import GREY, sprites, fonts, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world, ArtifactType
 from common.vector import *
 import common.drawing_utilities
 
+from weapons.weapon import Weapon, WeaponCategory, WeaponStyle, weapon_bg_color
+from weapons.weapon_funcs import weapon_funcs
+from weapons.directors.directors import *
 from game.team_manager import TeamManager
 from weapons.earth_spike import calc_earth_spike_pos
 
-class WeaponStyle(Enum):
-    CHARGABLE = 0
-    GUN = 1
-    PUTABLE = 2
-    CLICKABLE = 3
-    UTILITY = 4
 
-
-class WeaponCategory(Enum):
-    MISSILES = 0
-    GRENADES = 1
-    GUNS = 2
-    FIREY = 3
-    BOMBS = 4
-    TOOLS = 5
-    AIRSTRIKE = 6
-    LEGENDARY = 7
-    UTILITIES = 8
-    ARTIFACTS = 9
-
-
-weapon_bg_color = {
-    WeaponCategory.MISSILES : (255, 255, 255),
-    WeaponCategory.GRENADES : (204, 255, 204),
-    WeaponCategory.GUNS : (255, 204, 153),
-    WeaponCategory.FIREY : (255, 204, 204),
-    WeaponCategory.BOMBS : (200, 255, 200),
-    WeaponCategory.TOOLS : (224, 224, 235),
-    WeaponCategory.AIRSTRIKE : (204, 255, 255),
-    WeaponCategory.LEGENDARY : (255, 255, 102),
-    WeaponCategory.UTILITIES : (254, 254, 254),
-    WeaponCategory.ARTIFACTS : (255, 255, 101),
-}
-
-class Weapon(BaseModel):
-    ''' weapon base model '''
-    index: int
-    name: str
-    style: WeaponStyle
-    category: WeaponCategory
-    initial_amount: int
-    is_fused: bool = False
-    round_delay: int = 0
-    artifact: ArtifactType = ArtifactType.NONE
-    draw_hint: bool = False
-
-    def get_bg_color(self) -> ColorType:
-        ''' returns weapons background color '''
-        return weapon_bg_color[self.category]
 
 class WeaponManager(metaclass=SingletonMeta):
     ''' weapons manager '''
@@ -93,6 +46,8 @@ class WeaponManager(metaclass=SingletonMeta):
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
         self.current_gun = None
+        self.current_director: WeaponDirector = None
+        self.weapons_funcs: Dict[str, Callable[[Any], Any]] = weapon_funcs
 
         # read weapon set if exits and adjust basic set
         # if globals.game_manager.game_config.weapon_set is not None:
@@ -162,6 +117,11 @@ class WeaponManager(metaclass=SingletonMeta):
             return False
         
         return True
+
+    def on_cycle(self) -> None:
+        if self.current_director is not None:
+            WeaponManager().current_director.remove_from_game()
+            WeaponManager().current_director = None
 
     def switch_weapon(self, weapon: Weapon):
         """ switch weapon and draw weapon sprite """
@@ -344,3 +304,19 @@ class WeaponManager(metaclass=SingletonMeta):
             spikeTarget = calc_earth_spike_pos()
             if spikeTarget:
                 draw_target(win, spikeTarget)
+
+
+    def create_weapon_director(self):
+        ''' weaponDirector factory method '''
+
+        director: WeaponDirector = None
+
+        weapon = self.current_weapon
+        if weapon.style == WeaponStyle.GUN:
+            director = GunDirector(weapon, weapon_func=self.weapons_funcs[weapon.name])
+
+        elif weapon.style == WeaponStyle.CHARGABLE:
+            director = ChargeableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name])
+        
+        return director
+        

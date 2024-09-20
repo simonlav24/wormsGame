@@ -95,6 +95,7 @@
         "style": 1,
         "category": 2,
         "initial_amount": 5,
+        "shots": 3,
         "is_fused": false
     },
     {
@@ -102,6 +103,7 @@
         "name": "long bow",
         "style": 1,
         "category": 2,
+        "shots": 3,
         "initial_amount": 3,
         "is_fused": false
     },
@@ -110,6 +112,8 @@
         "name": "minigun",
         "style": 1,
         "category": 2,
+        "shots": 20,
+        "burst": true,
         "initial_amount": 5,
         "is_fused": false
     },
@@ -118,6 +122,7 @@
         "name": "gamma gun",
         "style": 1,
         "category": 2,
+        "shots": 2,
         "initial_amount": 3,
         "is_fused": false
     },
@@ -126,6 +131,7 @@
         "name": "spear",
         "style": 0,
         "category": 2,
+        "shots": 2,
         "initial_amount": 2,
         "is_fused": false
     },
@@ -133,6 +139,8 @@
         "index": 16,
         "name": "laser gun",
         "style": 1,
+        "shots": 70,
+        "burst": true,
         "category": 2,
         "initial_amount": 3,
         "is_fused": false
@@ -142,6 +150,8 @@
         "name": "bubble gun",
         "style": 1,
         "category": 2,
+        "shots": 2,
+        "burst": true,
         "initial_amount": 1,
         "is_fused": false,
         "round_delay": 2,
@@ -158,7 +168,9 @@
     {
         "index": 19,
         "name": "flame thrower",
-        "style": 2,
+        "style": 1,
+        "shots": 2,
+        "burst": true,
         "category": 3,
         "initial_amount": 5,
         "is_fused": false
@@ -242,7 +254,8 @@
         "style": 2,
         "category": 5,
         "initial_amount": 3,
-        "is_fused": false
+        "is_fused": false,
+        "decrease_on_end": true
     },
     {
         "index": 30,
@@ -264,6 +277,8 @@
         "index": 32,
         "name": "portal gun",
         "style": 1,
+        "shots": 2,
+        "turn_ending": false,
         "category": 5,
         "initial_amount": 0,
         "is_fused": false
@@ -459,6 +474,7 @@
         "name": "fireworks",
         "style": 2,
         "category": 7,
+        "shots": 5,
         "initial_amount": 0,
         "is_fused": false,
         "round_delay": 1,
@@ -604,6 +620,7 @@
         "style": 1,
         "category": 9,
         "initial_amount": -1,
+        "shots": 3,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 3
@@ -611,9 +628,10 @@
     {
         "index": 69,
         "name": "earth spike",
-        "style": 2,
+        "style": 1,
         "category": 9,
         "initial_amount": -1,
+        "shots": 2,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 3,
@@ -625,6 +643,7 @@
         "style": 1,
         "category": 9,
         "initial_amount": -1,
+        "shots": 3,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 3
@@ -642,21 +661,25 @@
     {
         "index": 72,
         "name": "pick axe",
-        "style": 2,
+        "style": 1,
         "category": 9,
+        "shots": 6,
         "initial_amount": 1,
         "is_fused": false,
         "round_delay": 0,
-        "artifact": 4
+        "artifact": 4,
+        "turn_ending":false
     },
     {
         "index": 73,
         "name": "build",
-        "style": 2,
+        "style": 1,
         "category": 9,
+        "shots": 6,
         "initial_amount": 1,
         "is_fused": false,
         "round_delay": 0,
-        "artifact": 4
+        "artifact": 4,
+        "turn_ending":false
     }
 ]
