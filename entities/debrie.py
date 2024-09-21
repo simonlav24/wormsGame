@@ -13,7 +13,7 @@ from game.visual_effects import Blast
 class Debrie (PhysObj):
 	''' debrie resulting from explossions '''
 	
-	def __init__(self, pos, blast, colors: List[ColorType], bounces=2, firey=True):
+	def __init__(self, pos: Vector, blast: float, colors: List[ColorType], bounces=2, firey=True):
 		super().__init__(pos)
 		GameVariables().get_debries().append(self)
 		self.vel = Vector(cos(uniform(0,1) * 2 *pi), sin(uniform(0,1) * 2 *pi)) * blast

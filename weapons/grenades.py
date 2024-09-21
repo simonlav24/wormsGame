@@ -60,14 +60,10 @@ class StickyBomb (Grenade):
 			self.stick = vectorCopy((self.pos + ppos)/2)
 		self.vel *= 0
 	
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
-		self.stable = False
+	def step(self):
+		super().step()
 		if self.stick:
 			self.pos = self.stick
-		self.timer += 1
-		if self.timer == GameVariables().fuse_time:
-			self.dead = True
 
 
 class HolyGrenade(Grenade):
@@ -80,12 +76,8 @@ class HolyGrenade(Grenade):
 	def death_response(self):
 		boom(self.pos, 45)
 		
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
-		self.stable = False
-		self.timer += 1
-		if self.timer == GameVariables().fuse_time + 2 * GameVariables().fps:
-			self.dead = True
+	def step(self):
+		super().step()
 		if self.timer == GameVariables().fuse_time + GameVariables().fps:
 			comments = [
 				[{'text': "o lord bless this thy "}, {'text': 'hand grenade', 'color': (210,210,0)}],
@@ -122,12 +114,10 @@ class Banana(Grenade):
 			if i == 2:
 				GameVariables().cam_track = m
 
-	def secondaryStep(self):
-		if not self.used: 
-			self.timer += 1
-		if self.timer == GameVariables().fuse_time:
-			self.dead = True
-		self.angle -= self.vel.x * 4
+	def step(self):
+		super().step()
+		if self.used: 
+			self.timer = 0
 
 
 class GasGrenade(PhysObj):

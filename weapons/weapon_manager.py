@@ -9,10 +9,11 @@ from common import GREY, sprites, fonts, blit_weapon_sprite, GameVariables, Game
 from common.vector import *
 import common.drawing_utilities
 
-from weapons.weapon import Weapon, WeaponCategory, WeaponStyle, weapon_bg_color
+from weapons.weapon import Weapon, WeaponCategory
 from weapons.weapon_funcs import weapon_funcs
 from weapons.directors.directors import *
 from game.team_manager import TeamManager
+from game.time_manager import TimeManager
 from weapons.earth_spike import calc_earth_spike_pos
 
 
@@ -20,6 +21,10 @@ from weapons.earth_spike import calc_earth_spike_pos
 class WeaponManager(metaclass=SingletonMeta):
     ''' weapons manager '''
     def __init__(self) -> None:
+        
+        self.energising = False
+        self.energy_level = 0
+        self.fire_weapon = False
 
         self.cool_down_list: List[Weapon] = [] # weapon cool down list
         self.cool_down_list_surfaces: List[pygame.Surface] = [] # weapon cool down surfaces
@@ -45,7 +50,6 @@ class WeaponManager(metaclass=SingletonMeta):
         self.surf = fonts.pixel5.render(self.current_weapon.name, False, GameVariables().initial_variables.hud_color)
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
-        self.current_gun = None
         self.current_director: WeaponDirector = None
         self.weapons_funcs: Dict[str, Callable[[Any], Any]] = weapon_funcs
 
@@ -65,10 +69,10 @@ class WeaponManager(metaclass=SingletonMeta):
         return self.weapon_dict[item].index
 
     def can_open_menu(self) -> bool:
-        return self.current_gun is None
+        return self.current_director is None
     
     def can_switch_weapon(self) -> bool:
-        return self.current_gun is None
+        return self.current_director is None
 
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
@@ -155,18 +159,6 @@ class WeaponManager(metaclass=SingletonMeta):
                     return
                 GameVariables().weapon_hold.blit(sprites.sprite_atlas, (0,0), (64,64,16,16))
     
-    # def add_artifact_moves(self, artifact):
-    #     # when team pick up artifact add them to weapon_set
-    #     for w in self.weapons[self.weaponCount + self.utilityCount:]:
-    #         if w[6] == artifact:
-    #             if w[0] in ["magic bean", "pick axe", "build"]:
-    #                 TeamManager().current_team.ammo(w[0], 1, True)
-    #                 continue
-    #             if w[0] == "fly":
-    #                 TeamManager().current_team.ammo(w[0], 3, True)
-    #                 continue
-    #             TeamManager().current_team.ammo(w[0], -1, True)
-
     def currentArtifact(self):
         if self.current_weapon.category == WeaponCategory.ARTIFACTS:
             return self.weapons[self.currentIndex()][6]
@@ -265,6 +257,14 @@ class WeaponManager(metaclass=SingletonMeta):
                 self.render_weapon_count()
         return False
 
+    def step(self):
+        # Fire
+        if self.fire_weapon and GameVariables().player_can_shoot:
+            self.fire()
+        if GameVariables().continuous_fire:
+            GameVariables().continuous_fire = False
+            self.fire()
+
     def draw(self, win: pygame.Surface) -> None:
         # draw use list
         space = 0
@@ -305,18 +305,44 @@ class WeaponManager(metaclass=SingletonMeta):
             if spikeTarget:
                 draw_target(win, spikeTarget)
 
-
     def create_weapon_director(self):
         ''' weaponDirector factory method '''
-
         director: WeaponDirector = None
 
         weapon = self.current_weapon
-        if weapon.style == WeaponStyle.GUN:
-            director = GunDirector(weapon, weapon_func=self.weapons_funcs[weapon.name])
-
-        elif weapon.style == WeaponStyle.CHARGABLE:
-            director = ChargeableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name])
+        director = ChargeableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name])
         
         return director
         
+    def fire(self, weapon: Weapon=None):
+        # todo: refactor Game stuff and move to weapon manager
+        if not weapon:
+            weapon = self.current_weapon
+        
+        energy = self.energy_level
+
+        if self.current_director is None:
+            self.current_director = self.create_weapon_director()
+
+        self.current_director.shoot(energy)
+        obj = self.current_director.get_object()
+
+        if obj is not None:
+            GameVariables().cam_track = obj
+        
+        if self.current_director.is_done() and not self.current_director.weapon.decrease_on_end:
+            # decrease ammo in team
+            if TeamManager().current_team.ammo(weapon.index) != -1:
+                TeamManager().current_team.ammo(weapon.index, -1)
+            self.render_weapon_count()
+            self.current_director.remove_from_game()
+        
+            if self.current_director.weapon.turn_ending:
+                GameVariables().game_state = GameVariables().game_next_state
+                if GameVariables().game_state == GameState.PLAYER_RETREAT:
+                    TimeManager().time_remaining_etreat()
+            self.current_director = None
+        
+        self.fire_weapon = False
+        self.energising = False
+        self.energy_level = 0

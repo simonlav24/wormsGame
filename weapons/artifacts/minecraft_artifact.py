@@ -11,7 +11,6 @@ from game.map_manager import MapManager, SKY, GRD
 from game.visual_effects import Blast
 from entities import Debrie
 from weapons.artifacts.deployable_artifact import DeployableArtifact, ArtifactType
-from weapons.shoot_gun import ShootGun
 
 
 class PickAxeArtifact(DeployableArtifact):
@@ -32,7 +31,7 @@ class PickAxeArtifact(DeployableArtifact):
 		self.angle -= self.vel.x*4
 
 
-class PickAxe(ShootGun):
+class PickAxe():
 	''' non-physical.
 		pickaxe logic and graphics  '''
 	def __init__(self, **kwargs):
@@ -92,7 +91,7 @@ class PickAxe(ShootGun):
 		win.blit(weaponSurf, point2world(worm.pos - tup2vec(weaponSurf.get_size())/2 + Vector(worm.facing * 9, -4)))
 
 
-class MineBuild(ShootGun):
+class MineBuild():
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		self.used_locations: List[Vector] = []

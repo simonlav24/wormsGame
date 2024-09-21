@@ -43,7 +43,7 @@ class Artillery(PhysObj):
 			else:
 				self.timer = 0
 			if randint(0, 5) == 0:
-				EffectManager.add_smoke(self.pos, color=(200,0,0))
+				EffectManager().add_smoke(self.pos, color=(200,0,0))
 			self.stable = False
 			if self.timer == 50:
 				self.bombing = True

@@ -2,28 +2,33 @@
 import pygame
 from math import cos, pi, sin
 from random import uniform, randint, choice
+from typing import List
 
 from common.vector import *
-from common import GameVariables, Entity, sprites, SHOCK_RADIUS, point2world
+from common import GameVariables, Entity, sprites, SHOCK_RADIUS, point2world, ColorType
 
 from game.map_manager import MapManager, SKY, GRD
 from game.visual_effects import Blast, Explossion
 from entities import Debrie
+
+def sample_colors(pos: Vector, radius: float, default_if_none=True) -> List[ColorType]:
+	colors = []
+	for _ in range(10):
+		sample = (pos + vectorUnitRandom() * uniform(0, radius)).vec2tupint()
+		if MapManager().is_on_map(sample):
+			color = MapManager().ground_map.get_at(sample)
+			if not color == SKY:
+				colors.append(color)
+	if default_if_none and len(colors) == 0:
+		colors = Blast._color
+	return colors
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
 	if not fire: radius *= GameVariables().boom_radius_mult
 	boomPos = Vector(pos[0], pos[1])
 	# sample Game._game.map_manager.ground_map colors:
 	if debries:
-		colors = []
-		for _ in range(10):
-			sample = (pos + vectorUnitRandom() * uniform(0,radius)).vec2tupint()
-			if MapManager().is_on_map(sample):
-				color = MapManager().ground_map.get_at(sample)
-				if not color == SKY:
-					colors.append(color)
-		if len(colors) == 0:
-			colors = Blast._color
+		colors = sample_colors(pos, radius)
 
 	# Game._game.map_manager.ground_map delete
 	if not fire:

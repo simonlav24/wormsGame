@@ -150,7 +150,7 @@
         "name": "bubble gun",
         "style": 1,
         "category": 2,
-        "shots": 2,
+        "shots": 10,
         "burst": true,
         "initial_amount": 1,
         "is_fused": false,
@@ -169,7 +169,7 @@
         "index": 19,
         "name": "flame thrower",
         "style": 1,
-        "shots": 2,
+        "shots": 70,
         "burst": true,
         "category": 3,
         "initial_amount": 5,
@@ -262,6 +262,7 @@
         "name": "parachute",
         "style": 2,
         "category": 5,
+        "turn_ending": false,
         "initial_amount": 3,
         "is_fused": false
     },
@@ -286,6 +287,7 @@
     {
         "index": 33,
         "name": "ender pearl",
+        "turn_ending": false,
         "style": 0,
         "category": 5,
         "initial_amount": 0,
@@ -296,6 +298,7 @@
         "name": "trampoline",
         "style": 2,
         "category": 5,
+        "turn_ending": false,
         "initial_amount": 0,
         "is_fused": false,
         "draw_hint": true
@@ -581,6 +584,7 @@
         "category": 9,
         "initial_amount": -1,
         "is_fused": false,
+        "turn_ending": false,
         "round_delay": 0,
         "artifact": 2
     },
@@ -590,6 +594,7 @@
         "style": 0,
         "category": 9,
         "initial_amount": 1,
+        "turn_ending": false,
         "is_fused": false,
         "round_delay": 0,
         "artifact": 2

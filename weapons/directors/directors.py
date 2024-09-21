@@ -27,7 +27,7 @@ class WeaponDirector(Entity):
         ...
     
     def get_object(self) -> EntityPhysical:
-        return None
+        return self.shooted_object
     
     def is_end_turn_on_done(self) -> bool:
         return self.weapon.turn_ending
@@ -40,7 +40,6 @@ class WeaponDirector(Entity):
 
 
 class ChargeableDirector(WeaponDirector):
-
     def shoot(self, energy: float) -> None:
         if self.shots == 0:
             return
@@ -52,21 +51,4 @@ class ChargeableDirector(WeaponDirector):
 		}
         self.shooted_object = self.weapon_func(**kwargs)
         self.shots -= 1
-    
-    def get_object(self) -> EntityPhysical:
-        return self.shooted_object
 
-
-class GunDirector(WeaponDirector):
-    def shoot(self, energy: float) -> None:
-        if self.shots == 0:
-            return
-        
-        kwargs = {
-            'pos': vectorCopy(GameVariables().player.pos),
-            'direction': GameVariables().player.get_shooting_direction(),
-            'shooter': GameVariables().player,
-            'energy': energy,
-        }
-        self.weapon_func(**kwargs)
-        self.shots -= 1

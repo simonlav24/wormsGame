@@ -34,6 +34,7 @@ from entities.worm import Worm
 from entities.deployables import *
 
 from weapons.weapon_manager import *
+from weapons.weapon import weapon_bg_color, WeaponCategory, WeaponStyle
 from weapons.missiles import *
 from weapons.grenades import *
 from weapons.cluster_grenade import ClusterGrenade
@@ -44,7 +45,6 @@ from weapons.guided_missile import GuidedMissile
 from weapons.tools import *
 from weapons.bubble import Bubble
 from weapons.aerial import *
-from weapons.shoot_gun import *
 from weapons.guns import *
 from weapons.long_bow import LongBow
 from weapons.mine import *
@@ -248,10 +248,6 @@ class Game:
 
 		self.cheatCode = "" # cheat code
 		self.shotCount = 0 # number of gun shots fired
-
-		self.energising = False
-		self.energyLevel = 0
-		self.fireWeapon = False
 
 		self.actionMove = False
 
@@ -470,7 +466,7 @@ class TimeAgent:
 	def step(self):
 		if len(self.positions) == 0:
 			TimeTravel._tt.timeTravelFire = True
-			fire(TimeTravel._tt.timeTravelList["weapon"])
+			WeaponManager().fire(TimeTravel._tt.timeTravelList["weapon"])
 			GameVariables().unregister_non_physical(self)
 			TimeTravel._tt.timeTravelPositions = []
 			TimeTravel._tt.timeTravelList = {}
@@ -520,7 +516,7 @@ class TimeTravel:
 		Game._game.timeTravel = False
 		self.timeTravelList["weapon"] = WeaponManager().current_weapon
 		self.timeTravelList["weaponOrigin"] = vectorCopy(GameVariables().player.pos)
-		self.timeTravelList["energy"] = Game._game.energyLevel
+		self.timeTravelList["energy"] = WeaponManager().energy_level
 		self.timeTravelList["weaponDir"] = GameVariables().player.get_shooting_direction()
 		GameVariables().player.health = self.timeTravelList["health"]
 		if Worm.healthMode == 1:
@@ -560,270 +556,6 @@ class TimeSlow:
 
 ################################################################################ Weapons setup
 
-def fire(weapon = None):
-	if not weapon:
-		weapon = WeaponManager().current_weapon
-	
-	energy = Game._game.energyLevel
-
-	director = WeaponManager().current_director
-	if WeaponManager().current_director is None:
-		director = WeaponManager().create_weapon_director()
-		WeaponManager().current_director = director
-
-	director.shoot(energy)
-	obj = director.get_object()
-
-	if obj is not None:
-		GameVariables().cam_track = obj
-	
-	if director.is_done() and not director.weapon.decrease_on_end:
-		# decrease ammo in team
-		if TeamManager().current_team.ammo(weapon.index) != -1:
-			TeamManager().current_team.ammo(weapon.index, -1)
-		WeaponManager().render_weapon_count()
-		director.remove_from_game()
-	
-	if director.weapon.turn_ending:
-		GameVariables().game_state = GameVariables().game_next_state
-		if GameVariables().game_state == GameState.PLAYER_RETREAT:
-			TimeManager().time_remaining_etreat()
-	
-	Game._game.fireWeapon = False
-	Game._game.energising = False
-	Game._game.energyLevel = 0
-
-
-
-def fire_(weapon = None):
-	global decrease
-	if not weapon:
-		weapon = WeaponManager().current_weapon
-	decrease = True
-	if GameVariables().player is not None:
-		weaponOrigin = vectorCopy(GameVariables().player.pos)
-		weaponDir = GameVariables().player.get_shooting_direction()
-		energy = Game._game.energyLevel
-		
-	if TimeTravel._tt.timeTravelFire:
-		decrease = False
-		weaponOrigin = TimeTravel._tt.timeTravelList["weaponOrigin"]
-		energy = TimeTravel._tt.timeTravelList["energy"]
-		weaponDir = TimeTravel._tt.timeTravelList["weaponDir"]
-	
-	# guns dictionary, weapons count, activation function, kwargs
-	shoot_gun_cls = ShootGun
-	gun_weapons_map = {
-		'shotgun':       {'count': 3,  'func': fireShotgun},
-		'flame thrower': {'count': 70, 'func': fireFlameThrower, 'burst': True},
-		'minigun':       {'count': 20, 'func': fireMiniGun, 'burst': True},
-		'gamma gun':     {'count': 2,  'func': fireGammaGun},
-		'long bow':      {'count': 3,  'func': fireLongBow},
-		'portal gun':    {'count': 2,  'func': firePortal, 'end_turn_on_done': False},
-		'laser gun':     {'count': 70, 'func': fireLaser, 'burst': True},
-		'spear':         {'count': 2,  'func': fireSpear},
-		'bubble gun':    {'count': 10, 'func': fireBubbleGun, 'burst': True},
-		'razor leaf':    {'count': 50, 'func': fireRazorLeaf, 'burst': True},
-		'icicle':        {'count': 4,  'func': fireIcicle},
-		'fire ball':     {'count': 3,  'func': fireFireBall},
-		'fireworks':     {'count': 5,  'func': fireFireWork},
-		'earth spike':   {'count': 2,  'func': fireEarthSpike},
-		'pick axe':      {'count': 6,  'func': None, 'end_turn_on_done': False, 'cls': PickAxe},
-		'build':         {'count': 6,  'func': None, 'end_turn_on_done': False, 'cls': MineBuild},
-	}
-
-	avail = True
-	w = None
-
-	if weapon.name in gun_weapons_map.keys():
-		# fire gun weapon
-		shoot_gun_cls = gun_weapons_map.get(weapon.name).get('cls', shoot_gun_cls)
-		if WeaponManager().current_gun is None:
-			WeaponManager().current_gun = shoot_gun_cls(**gun_weapons_map[weapon.name])
-		
-		WeaponManager().current_gun.shoot(energy)
-		w = WeaponManager().current_gun.get_object()
-		decrease = False
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-
-		# if weapon is done
-		if WeaponManager().current_gun.is_done():
-			decrease = True
-			if WeaponManager().current_gun.is_end_turn_on_done():
-				GameVariables().game_next_state = GameState.PLAYER_RETREAT
-			else:
-				GameVariables().game_next_state = GameState.PLAYER_PLAY
-			WeaponManager().current_gun.remove()
-			WeaponManager().current_gun = None
-
-	elif weapon.name == "missile":
-		w = Missile(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "grenade":
-		w = Grenade(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "cluster grenade":
-		w = ClusterGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "petrol bomb":
-		w = PetrolBomb(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "TNT":
-		w = TNT(weaponOrigin)
-		w.vel.x = GameVariables().player.facing * 0.5
-		w.vel.y = -0.8
-	elif weapon.name == "sticky bomb":
-		w = StickyBomb(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "mine":
-		w = Mine(weaponOrigin, fps * 2.5)
-		w.vel.x = GameVariables().player.facing * 0.5
-	elif weapon.name == "baseball":
-		Baseball()
-	elif weapon.name == "gas grenade":
-		w = GasGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "gravity missile":
-		w = GravityMissile(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "holy grenade":
-		w = HolyGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "banana":
-		w = Banana(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "earthquake":
-		Earthquake()
-	elif weapon.name == "gemino mine":
-		w = Gemino(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "venus fly trap":
-		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantMode.VENUS)
-	elif weapon.name == "sentry turret":
-		w = SentryGun(weaponOrigin, GameVariables().player.get_team_data().color, GameVariables().player.get_team_data().team_name)
-		w.pos.y -= GameVariables().player.radius + w.radius
-	elif weapon.name == "bee hive":
-		w = BeeHive(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "drill missile":
-		w = DrillMissile(weaponOrigin, weaponDir, energy)
-		avail = False
-	elif weapon.name == "electric grenade":
-		w = ElectricGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "homing missile":
-		w = HomingMissile(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "vortex grenade":
-		w = VortexGrenade(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "chilli pepper":
-		w = ChilliPepper(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "covid 19":
-		w = Covid19(weaponOrigin, GameVariables().player.get_team_data().team_name)
-		for worm in GameVariables().player.team.worms:
-			w.bitten.append(worm)
-	elif weapon.name == "artillery assist":
-		w = Artillery(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "sheep":
-		w = Sheep(weaponOrigin + Vector(0,-5))
-		w.facing = GameVariables().player.facing
-	elif weapon.name == "rope":
-		angle = weaponDir.getAngle()
-		decrease = False
-		if angle <= 0:
-			GameVariables().player.worm_tool.set(Rope(GameVariables().player, weaponOrigin, weaponDir))
-
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-	elif weapon.name == "raging bull":
-		w = Bull(weaponOrigin + Vector(0,-5))
-		w.facing = GameVariables().player.facing
-		w.ignore.append(GameVariables().player)
-	elif weapon.name == "electro boom":
-		w = ElectroBoom(weaponOrigin, weaponDir, energy, GameVariables().player.get_team_data().team_name)
-	elif weapon.name == "parachute":
-		if GameVariables().player.vel.y > 1:
-			tool_set = GameVariables().player.worm_tool.set(Parachute(GameVariables().player))
-			if not tool_set:
-				decrease = False
-		else:
-			decrease = False
-
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-	elif weapon.name == "pokeball":
-		w = PokeBall(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "green shell":
-		w = GreenShell(weaponOrigin + Vector(0,-5))
-		w.facing = GameVariables().player.facing
-		w.ignore.append(GameVariables().player)
-	elif weapon.name == "guided missile":
-		w = GuidedMissile(weaponOrigin + Vector(0,-5))
-		GameVariables().game_next_state = GameState.WAIT_STABLE
-	elif weapon.name == "flare":
-		w = Flare(weaponOrigin, weaponDir, energy)
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-	elif weapon.name == "ender pearl":
-		w = EndPearl(weaponOrigin, weaponDir, energy)
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-	elif weapon.name == "raon launcher":
-		w = Raon(weaponOrigin, weaponDir, energy * 0.95)
-		w = Raon(weaponOrigin, weaponDir, energy * 1.05)
-		if randint(0, 10) == 0 or GameVariables().mega_weapon_trigger:
-			w = Raon(weaponOrigin, weaponDir, energy * 1.08)
-			w = Raon(weaponOrigin, weaponDir, energy * 0.92)
-	elif weapon.name == "snail":
-		w = SnailShell(weaponOrigin, weaponDir, energy, GameVariables().player.facing)
-	elif weapon.name == "acid bottle":
-		w = AcidBottle(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "seeker":
-		w = Seeker(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "chum bucket":
-		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
-		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 2)
-		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 3)
-		Chum(weaponOrigin, weaponDir * uniform(0.8, 1.2), energy * uniform(0.8, 1.2), 1)
-		w = Chum(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "trampoline":
-		position = GameVariables().player.pos + GameVariables().player.get_shooting_direction() * 20
-		anchored = False
-		for i in range(25):
-			if MapManager().is_ground_at(position + Vector(0, i)):
-				anchored = True
-				break
-		if anchored:
-			Trampoline(position)
-		else:
-			decrease = False
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-
-	# artifacts
-	elif weapon.name == "mjolnir strike":
-		MjolnirStrike()
-	elif weapon.name == "mjolnir throw":
-		w = MjolnirThrow(weaponOrigin, weaponDir, energy)
-	elif weapon.name == "fly":
-		if not MjolnirFly.flying:
-			w = MjolnirFly(weaponOrigin, weaponDir, energy)
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-	elif weapon.name == "control plants":
-		PlantControl()
-	elif weapon.name == "magic bean":
-		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantMode.BEAN)
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-	elif weapon.name == "mine plant":
-		w = PlantSeed(weaponOrigin, weaponDir, energy, PlantMode.MINE)
-	elif weapon.name == "air tornado":
-		w = Tornado(GameVariables().player.pos, GameVariables().player.facing)
-
-	if w and not TimeTravel._tt.timeTravelFire:
-		GameVariables().cam_track = w	
-		
-	if decrease:
-		if TeamManager().current_team.ammo(weapon.index) != -1:
-			TeamManager().current_team.ammo(weapon.index, -1)
-		WeaponManager().render_weapon_count()
-
-	Game._game.fireWeapon = False
-	Game._game.energyLevel = 0
-	Game._game.energising = False
-	
-	if TimeTravel._tt.timeTravelFire:
-		TimeTravel._tt.timeTravelFire = False
-		return
-	
-	GameVariables().game_state = GameVariables().game_next_state
-	if GameVariables().game_state == GameState.PLAYER_RETREAT:
-		TimeManager().time_remaining_etreat()
-	
-	# for uselist:
-	if Game._game.game_config.option_cool_down and GameVariables().game_state in [GameState.PLAYER_RETREAT, GameState.WAIT_STABLE]:
-		WeaponManager().add_to_cool_down(WeaponManager().current_weapon)
 
 def fireClickable():
 	current_weapon = WeaponManager().current_weapon
@@ -857,6 +589,7 @@ def fireClickable():
 	WeaponManager().render_weapon_count()
 	TimeManager().time_remaining_etreat()
 	GameVariables().game_state = GameVariables().game_next_state
+
 
 def fireUtility(weapon = None):
 	if not weapon:
@@ -1043,8 +776,6 @@ def cycle_worms():
 	
 	'''
 
-
-
 	# reset special effects:
 	GameVariables().physics.global_gravity = 0.2
 	GameVariables().damage_mult = 0.8
@@ -1116,8 +847,6 @@ def cycle_worms():
 	
 	# change wind:
 	GameVariables().physics.wind = uniform(-1, 1)
-	
-	
 	
 	# sick:
 	for worm in GameVariables().get_worms():
@@ -1852,42 +1581,42 @@ def onKeyPressSpace():
 		return
 
 	if WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE:
-		Game._game.energising = True
-		Game._game.energyLevel = 0
-		Game._game.fireWeapon = False
+		WeaponManager().energising = True
+		WeaponManager().energy_level = 0
+		WeaponManager().fire_weapon = False
 		if WeaponManager().current_weapon in ["homing missile", "seeker"]:
-			Game._game.energising = False
+			WeaponManager().energising = False
 
 def onKeyHoldSpace():
-	Game._game.energyLevel += 0.05
-	if Game._game.energyLevel >= 1:
+	WeaponManager().energy_level += 0.05
+	if WeaponManager().energy_level >= 1:
 		if Game._game.timeTravel:
 			TimeTravel._tt.timeTravelPlay()
-			Game._game.energyLevel = 0
-			Game._game.energising = False
+			WeaponManager().energy_level = 0
+			WeaponManager().energising = False
 		else:
-			Game._game.energyLevel = 1
-			Game._game.fireWeapon = True
+			WeaponManager().energy_level = 1
+			WeaponManager().fire_weapon = True
 
 def onKeyReleaseSpace():
 	if WeaponManager().can_shoot():
 		if Game._game.timeTravel:
 			TimeTravel._tt.timeTravelPlay()
-			Game._game.energyLevel = 0
+			WeaponManager().energy_level = 0
 		
 		# chargeable
-		elif WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and Game._game.energising:
-			Game._game.fireWeapon = True
+		elif WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
+			WeaponManager().fire_weapon = True
 		
 		# putable & guns
 		elif (WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN]):
-			Game._game.fireWeapon = True
+			WeaponManager().fire_weapon = True
 			GameVariables().player_can_shoot = False
 		
 		elif (WeaponManager().current_weapon.style in [WeaponStyle.UTILITY]):
 			fireUtility()
 			
-		Game._game.energising = False
+		WeaponManager().energising = False
 	elif Sheep.trigger == False:
 		Sheep.trigger = True
 
@@ -2045,7 +1774,7 @@ def gameMain(game_config: GameConfig=None):
 		keys = pygame.key.get_pressed()
 		if GameVariables().player is not None and GameVariables().player_in_control and GameVariables().player_can_move:
 			# fire hold
-			if keys[pygame.K_SPACE] and GameVariables().player_can_shoot and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and Game._game.energising:
+			if keys[pygame.K_SPACE] and GameVariables().player_can_shoot and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
 				onKeyHoldSpace()
 		
 		if pause:
@@ -2115,11 +1844,7 @@ def gameMain(game_config: GameConfig=None):
 		if Earthquake.earthquake > 0:
 			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
 			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(GameVariables().time_overall * 1.8)
-		
-		# Fire
-		if Game._game.fireWeapon and GameVariables().player_can_shoot:
-			fire()
-		
+
 		# ------- step -------
 		Game._game.step()
 		GameVariables().game_stable = True
@@ -2130,6 +1855,9 @@ def gameMain(game_config: GameConfig=None):
 		# step effects
 		EffectManager().step()
 		
+		# step weapon manager
+		WeaponManager().step()
+
 		for t in Toast._toasts:
 			t.step()
 
@@ -2171,9 +1899,6 @@ def gameMain(game_config: GameConfig=None):
 			p.draw(win)
 		
 		GameVariables().draw_non_physicals(win)
-		if GameVariables().continuous_fire:
-			GameVariables().continuous_fire = False
-			fire()
 
 		# draw effects
 		EffectManager().draw(win)
@@ -2191,7 +1916,7 @@ def gameMain(game_config: GameConfig=None):
 				p2 = p1 + GameVariables().player.get_shooting_direction() * 500
 				pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
 			i = 0
-			while i < 20 * Game._game.energyLevel:
+			while i < 20 * WeaponManager().energy_level:
 				cPos = vectorCopy(GameVariables().player.pos)
 				pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + GameVariables().player.get_shooting_direction() * i))
 				i += 1
@@ -2239,7 +1964,8 @@ def gameMain(game_config: GameConfig=None):
 			damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
 		win.blit(damageText[1], ((int(5), int(GameVariables().win_height -5 -damageText[1].get_height()))))
 
-		debug_string = f'Turn: {GameVariables().game_turn_count}, Round: {GameVariables().game_round_count}'
+		weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
+		debug_string = f'director: {weapon}'
 		debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
 		win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
 		

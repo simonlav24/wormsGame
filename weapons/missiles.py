@@ -8,7 +8,8 @@ from common import blit_weapon_sprite, GameVariables, point2world, seek, flee
 from common.vector import *
 
 from entities.physical_entity import PhysObj
-from game.world_effects import boom
+from entities import Debrie
+from game.world_effects import boom, sample_colors
 from game.visual_effects import Blast
 from game.map_manager import MapManager, GRD, SKY
 
@@ -76,6 +77,7 @@ class DrillMissile(PhysObj):
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "drill missile")
+		self.colors = Blast._color
 
 	def step(self):
 		self.apply_force()
@@ -98,11 +100,10 @@ class DrillMissile(PhysObj):
 		self.acc *= 0
 		self.stable = False
 		
-		collision = False
 		# colission with world:
 		direction = self.vel.getDir()
 		
-		checkPos = (self.pos + direction*self.radius).vec2tupint()
+		checkPos = (self.pos + direction * self.radius).vec2tupint()
 		if not(checkPos[0] >= MapManager().game_map.get_width() or checkPos[0] < 0 or checkPos[1] >= MapManager().game_map.get_height() or checkPos[1] < 0):
 			if MapManager().game_map.get_at(checkPos) == GRD:
 				self.inGround = True
@@ -122,7 +123,15 @@ class DrillMissile(PhysObj):
 		self.pos = ppos
 		
 		if self.inGround:
-			boom(self.pos, self.radius, False)
+			colors = sample_colors(self.pos, self.radius, default_if_none=False)
+			if len(colors) > 0:
+				self.colors = colors
+
+			boom(self.pos, self.radius, fire=True, debries=False)
+			for _ in range(randint(1, 5)):
+				debrie = Debrie(self.pos - normalize(self.vel) * self.radius + normalize(self.vel).getNormal() * self.radius * uniform(-1, 1), 1.0, colors=self.colors, firey=False)
+				debrie.vel = vectorCopy(self.vel * -1) + vectorUnitRandom()
+				
 		self.lineOut((self.lastPos.vec2tupint(), self.pos.vec2tupint()))
 		
 		# flew out MapManager().game_map but not worms !

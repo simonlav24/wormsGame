@@ -4,7 +4,7 @@ import pygame
 from common import GameVariables, EntityPhysical
 from common.vector import vectorCopy
 
-class ShootGun:
+class _ShootGun:
 	def __init__(self, **kwargs) -> None:
 		GameVariables().register_non_physical(self)
 		self.ammo = kwargs.get('count')

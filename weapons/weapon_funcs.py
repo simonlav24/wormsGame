@@ -141,7 +141,7 @@ def fire_minigun(*args, **kwargs) -> EntityPhysical:
 
 def fire_gamma_gun(*args, **kwargs) -> EntityPhysical:
     """ fire gamma gun """
-    return fireMiniGun(**kwargs)
+    return fireGammaGun(**kwargs)
 
 
 
@@ -231,6 +231,8 @@ def fire_covid_19(*args, **kwargs) -> EntityPhysical:
 
 def fire_baseball(*args, **kwargs) -> EntityPhysical:
     """ fire baseball """
+    # todo: implement
+    print('not implemented baseball')
     return fire_baseball(**kwargs)
 
 
