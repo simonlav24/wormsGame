@@ -56,6 +56,15 @@ class EntityPhysical(Entity):
 	def damage(self, value, damageType=0):
 		...
 
+
+class EntityWormTool(Entity):
+    def activate(self) -> None:
+        ...
+    
+    def release(self) -> None:
+        ...
+
+
 class EntityWorm(EntityPhysical):
 	''' a object with position and velocity '''
 	name_str: str
@@ -82,6 +91,12 @@ class EntityWorm(EntityPhysical):
 		...
 	
 	def sicken(self, sickness: Sickness=Sickness.SICK):
+		...
+	
+	def get_tool(self) -> EntityWormTool:
+		...
+	
+	def set_tool(self, tool: EntityWormTool) -> None:
 		...
 
 
@@ -149,6 +164,11 @@ class EntityPlant(Entity):
 
 class EntityLightSource(Entity):
 	light_radius: int
+
+
+class InterfaceEventHandler(Protocol):
+	def handle_event(self, event):
+		...
 
 
 # color utilities

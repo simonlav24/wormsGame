@@ -11,6 +11,7 @@ class WeaponStyle(Enum):
     PUTABLE = 2
     CLICKABLE = 3
     UTILITY = 4
+    WORM_TOOL = 5
 
 
 class WeaponCategory(Enum):
@@ -54,7 +55,8 @@ class Weapon(BaseModel):
     shots: int = 1
     burst: bool = False
     turn_ending: bool = True
-    decrease_on_end: bool = False
+    decrease: bool = True
+    worm_tool: bool = False
 
     def get_bg_color(self) -> ColorType:
         ''' returns weapons background color '''

@@ -9,7 +9,7 @@ from common import GREY, sprites, fonts, blit_weapon_sprite, GameVariables, Game
 from common.vector import *
 import common.drawing_utilities
 
-from weapons.weapon import Weapon, WeaponCategory
+from weapons.weapon import Weapon, WeaponCategory, WeaponStyle
 from weapons.weapon_funcs import weapon_funcs
 from weapons.directors.directors import *
 from game.team_manager import TeamManager
@@ -25,6 +25,8 @@ class WeaponManager(metaclass=SingletonMeta):
         self.energising = False
         self.energy_level = 0
         self.fire_weapon = False
+
+        GameVariables().register_cycle_observer(self)
 
         self.cool_down_list: List[Weapon] = [] # weapon cool down list
         self.cool_down_list_surfaces: List[pygame.Surface] = [] # weapon cool down surfaces
@@ -124,7 +126,7 @@ class WeaponManager(metaclass=SingletonMeta):
 
     def on_cycle(self) -> None:
         if self.current_director is not None:
-            WeaponManager().current_director.remove_from_game()
+            self.finalize_director()
             WeaponManager().current_director = None
 
     def switch_weapon(self, weapon: Weapon):
@@ -259,6 +261,8 @@ class WeaponManager(metaclass=SingletonMeta):
 
     def step(self):
         # Fire
+        if self.current_director:
+            self.current_director.step()
         if self.fire_weapon and GameVariables().player_can_shoot:
             self.fire()
         if GameVariables().continuous_fire:
@@ -310,10 +314,30 @@ class WeaponManager(metaclass=SingletonMeta):
         director: WeaponDirector = None
 
         weapon = self.current_weapon
-        director = ChargeableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name])
+        team_data = TeamManager().current_team.data
         
+        if weapon.style in [WeaponStyle.CHARGABLE, WeaponStyle.GUN, WeaponStyle.PUTABLE, WeaponStyle.UTILITY]:
+            director = ChargeableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
+        
+        elif weapon.style == WeaponStyle.CLICKABLE:
+            director = ClickableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
+        
+        elif weapon.style == WeaponStyle.WORM_TOOL:
+            director = WormToolDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
+
         return director
-        
+    
+    def finalize_director(self):
+        # decrease ammo in team
+        if self.current_director is None:
+            return
+
+        if self.current_director.is_decrease():
+            team = TeamManager().get_by_name(self.current_director.team_data.team_name)
+            if team.ammo(self.current_director.weapon.index) != -1:
+                team.ammo(self.current_director.weapon.index, -1)
+                self.render_weapon_count()
+
     def fire(self, weapon: Weapon=None):
         # todo: refactor Game stuff and move to weapon manager
         if not weapon:
@@ -330,12 +354,8 @@ class WeaponManager(metaclass=SingletonMeta):
         if obj is not None:
             GameVariables().cam_track = obj
         
-        if self.current_director.is_done() and not self.current_director.weapon.decrease_on_end:
-            # decrease ammo in team
-            if TeamManager().current_team.ammo(weapon.index) != -1:
-                TeamManager().current_team.ammo(weapon.index, -1)
-            self.render_weapon_count()
-            self.current_director.remove_from_game()
+        if self.current_director.is_done():
+            self.finalize_director()
         
             if self.current_director.weapon.turn_ending:
                 GameVariables().game_state = GameVariables().game_next_state

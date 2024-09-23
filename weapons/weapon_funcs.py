@@ -17,13 +17,14 @@ from weapons.guns import fireShotgun, fireMiniGun, fireLongBow, fireBubbleGun, f
 from weapons.fire_weapons import PetrolBomb, ChilliPepper
 from weapons.bombs import TNT, Sheep, Bull
 from weapons.mine import Mine, Gemino
+from weapons.portal import firePortal
 from weapons.acid import AcidBottle
 from weapons.snail import SnailShell
 from weapons.plants import PlantSeed, PlantMode
 from weapons.covid import Covid19
 from weapons.sentry_gun import SentryGun
 from weapons.ender_pearl import EndPearl
-from weapons.tools import Trampoline, Flare
+from weapons.tools import Trampoline, Flare, Baseball, WormSwitcher
 from weapons.aerial import fire_airstrike, fire_minestrike, fire_napalmstrike, Chum
 from weapons.artillery import Artillery
 from weapons.bee_hive import BeeHive
@@ -231,9 +232,7 @@ def fire_covid_19(*args, **kwargs) -> EntityPhysical:
 
 def fire_baseball(*args, **kwargs) -> EntityPhysical:
     """ fire baseball """
-    # todo: implement
-    print('not implemented baseball')
-    return fire_baseball(**kwargs)
+    Baseball()
 
 
 
@@ -243,22 +242,26 @@ def fire_girder(*args, **kwargs) -> EntityPhysical:
 
 
 
-def fire_rope(*args, **kwargs) -> EntityPhysical:
+def fire_rope(*args, **kwargs) -> bool:
     """ fire rope """
     direction: Vector = kwargs.get('direction')
     angle = direction.getAngle()
     # todo: refactor
-    if angle <= 0:
-        GameVariables().player.worm_tool.set(Rope(GameVariables().player, kwargs.get('pos'), direction))
+    if GameVariables().player.get_tool() is not None:
+        GameVariables().player.get_tool().release()
+        return False
+    elif angle <= 0:
+        GameVariables().player.set_tool(Rope(GameVariables().player, kwargs.get('pos'), direction))
+        return GameVariables().player.get_tool() is not None
 
 
 
-def fire_parachute(*args, **kwargs) -> EntityPhysical:
+def fire_parachute(*args, **kwargs) -> bool:
     """ fire parachute """
     # todo: refactor
     if GameVariables().player.vel.y > 1:
-        GameVariables().player.worm_tool.set(Parachute(GameVariables().player))
-
+        GameVariables().player.set_tool(Parachute(GameVariables().player))
+    return GameVariables().player.get_tool() is not None
 
 
 def fire_sentry_turret(*args, **kwargs) -> EntityPhysical:
@@ -270,7 +273,7 @@ def fire_sentry_turret(*args, **kwargs) -> EntityPhysical:
 
 def fire_portal_gun(*args, **kwargs) -> EntityPhysical:
     """ fire portal gun """
-    return fire_portal_gun(**kwargs)
+    return firePortal(**kwargs)
 
 
 
@@ -291,24 +294,6 @@ def fire_trampoline(*args, **kwargs) -> EntityPhysical:
     if anchored:
         Trampoline(position)
     # todo: handle not created case
-
-
-
-def fire_airstrike(*args, **kwargs) -> EntityPhysical:
-    """ fire airstrike """
-    return fire_airstrike(**kwargs)
-
-
-
-def fire_napalm_strike(*args, **kwargs) -> EntityPhysical:
-    """ fire napalm strike """
-    return fire_napalmstrike(**kwargs)
-
-
-
-def fire_mine_strike(*args, **kwargs) -> EntityPhysical:
-    """ fire mine strike """
-    return fire_minestrike(**kwargs)
 
 
 
@@ -383,7 +368,8 @@ def fire_raging_bull(*args, **kwargs) -> EntityPhysical:
 
 def fire_electro_boom(*args, **kwargs) -> EntityPhysical:
     """ fire electro boom """
-    return create_with_pos_dir_energy(ElectroBoom, **kwargs)
+    args = get_pos_dir_energy(**kwargs)
+    return ElectroBoom(*args, GameVariables().player.get_team_data().team_name)
 
 
 
@@ -398,6 +384,7 @@ def fire_green_shell(*args, **kwargs) -> EntityPhysical:
     obj = GreenShell(kwargs.get('pos') + Vector(0, -5))
     obj.facing = GameVariables().player.facing
     obj.ignore.append(GameVariables().player)
+    return obj
 
 
 
@@ -432,22 +419,21 @@ def fire_double_damage(*args, **kwargs) -> EntityPhysical:
 def fire_aim_aid(*args, **kwargs) -> EntityPhysical:
     """ fire aim aid """
     # todo: implement
-    print('not implemented aim aid')
+    GameVariables().aim_aid = True
     GameVariables().commentator.comment([{'text': "snipe em'"}])
 
 
 
 def fire_teleport(*args, **kwargs) -> EntityPhysical:
     """ fire teleport """
-    # todo: implement
-    print('not implemented teleport')
+    GameVariables().player.pos = kwargs['pos']
 
 
 
 def fire_switch_worms(*args, **kwargs) -> EntityPhysical:
     """ fire switch worms """
     # todo: implement
-    print('not implemented switch worms')
+    WormSwitcher()
     GameVariables().commentator.comment([{'text': "the ol' switcheroo"}])
 
 
@@ -460,9 +446,10 @@ def fire_time_travel(*args, **kwargs) -> EntityPhysical:
 
 
 
-def fire_jet_pack(*args, **kwargs) -> EntityPhysical:
+def fire_jet_pack(*args, **kwargs) -> bool:
     """ fire jet pack """
-    GameVariables().player.worm_tool.set(JetPack(GameVariables().player))
+    GameVariables().player.set_tool(JetPack(GameVariables().player))
+    return GameVariables().player.get_tool() is not None
 
 
 
@@ -594,8 +581,8 @@ weapon_funcs['portal gun'] = fire_portal_gun
 weapon_funcs['ender pearl'] = fire_ender_pearl
 weapon_funcs['trampoline'] = fire_trampoline
 weapon_funcs['airstrike'] = fire_airstrike
-weapon_funcs['napalm strike'] = fire_napalm_strike
-weapon_funcs['mine strike'] = fire_mine_strike
+weapon_funcs['napalm strike'] = fire_napalmstrike
+weapon_funcs['mine strike'] = fire_minestrike
 weapon_funcs['artillery assist'] = fire_artillery_assist
 weapon_funcs['chum bucket'] = fire_chum_bucket
 weapon_funcs['holy grenade'] = fire_holy_grenade

@@ -2,11 +2,13 @@
 
 import pygame
 from random import randint, uniform
+from math import degrees
 
 from common import blit_weapon_sprite, point2world, GameVariables, sprites, GameState, JUMP_VELOCITY, LEFT
 from common.vector import Vector, vectorCopy, tup2vec, normalize, distus
 
 from game.map_manager import MapManager
+from game.team_manager import TeamManager
 from entities import PhysObj
 from game.visual_effects import Blast, EffectManager
 from entities.gun_shell import GunShell
@@ -142,5 +144,38 @@ class Baseball:
 			GameVariables().unregister_non_physical(self)
 
 	def draw(self, win: pygame.Surface):
-		weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, GameVariables().player.facing == LEFT), 12 + 180)
-		win.blit(weaponSurf, point2world(GameVariables().player.pos - tup2vec(weaponSurf.get_size())/2 + self.direction * 16))
+		angle = -degrees(self.direction.getAngle()) + 180
+		weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, GameVariables().player.facing == LEFT), angle)
+		win.blit(weaponSurf, point2world(GameVariables().player.pos - tup2vec(weaponSurf.get_size()) / 2 + self.direction * 16))
+
+
+class WormSwitcher:
+	def __init__(self):
+		GameVariables().register_non_physical(self)
+		GameVariables().register_cycle_observer(self)
+		GameVariables().get_event_handlers().append(self)
+	
+	def handle_event(self, event) -> None:
+		if event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
+			if GameVariables().game_state == GameState.PLAYER_PLAY:
+				self.switch()
+	
+	def step(self) -> None:
+		pass
+
+	def draw(self, win: pygame.Surface) -> None:
+		pass
+
+	def switch(self) -> None:
+		worm = GameVariables().player
+		current_worm_index = TeamManager().current_team.worms.index(worm)
+		total_worms = len(TeamManager().current_team.worms)
+		current_worm_index = (current_worm_index + 1) % total_worms
+		GameVariables().player = TeamManager().current_team.worms[current_worm_index]
+		GameVariables().cam_track = GameVariables().player
+
+
+	def on_cycle(self):
+		GameVariables().unregister_non_physical(self)
+		GameVariables().unregister_cycle_observer(self)
+		GameVariables().get_event_handlers().remove(self)

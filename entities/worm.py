@@ -6,7 +6,7 @@ from random import randint, choice
 
 import pygame
 
-from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData, Sickness
+from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData, Sickness, EntityWormTool
 from common.vector import *
 
 from game.visual_effects import EffectManager
@@ -23,7 +23,6 @@ class DeathCause(Enum):
 
 class Worm (PhysObj):
     healthMode = 0
-    roped = False
     def __init__(self, pos, name, team=None):
         super().__init__(pos)
         GameVariables().get_worms().append(self)
@@ -313,3 +312,9 @@ class Worm (PhysObj):
     
     def give_point(self, points: int) -> None:
         self.team.points += points
+    
+    def get_tool(self) -> EntityWormTool:
+        return self.worm_tool.tool
+    
+    def set_tool(self, tool: EntityWormTool):
+        self.worm_tool.set(tool)

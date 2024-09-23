@@ -8,6 +8,7 @@ from common.vector import *
 from game.visual_effects import Blast
 from game.map_manager import MapManager, GRD
 
+
 class WormUtility:
     def __init__(self):
         self.is_done: bool = False
@@ -77,7 +78,7 @@ class Rope(WormUtility):
 
     def shoot(self, pos: Vector, direction: Vector):
         hit = False
-        for t in range(5,500):
+        for t in range(5, 500):
             testPos = pos + direction * t
             if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
                 continue
@@ -85,13 +86,12 @@ class Rope(WormUtility):
                 self.rope = [[testPos], dist(self.worm.pos, testPos)]
                 self.worm.damp = 0.6
                 self.worm.is_fall_affected = False
-                self.worm.roped = True
                 hit = True
                 break
         if not hit:
             self.release()
     
-    def release(self):
+    def release(self) -> None:
         self.is_done = True
         self.worm.damp = 0.2
         self.worm.is_fall_affected = True
@@ -200,6 +200,10 @@ class WormTool():
         else:
             self.release()
             return False
+
+    def activate(self):
+        if self.tool is not None:
+            self.tool.activate()
 
     def release(self):
         if self.tool is not None:

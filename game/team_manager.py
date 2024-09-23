@@ -11,7 +11,7 @@ from game.hud import HealthBar
 
 class Team:
     def __init__(self, data: TeamData) -> None:
-        self.data = data
+        self.data: TeamData=data
         self.color = data.color
         self.weapon_set: List[int] = []
         self.worms: List[EntityWorm] = []
@@ -73,6 +73,12 @@ class TeamManager(metaclass=SingletonMeta):
             [team.color for team in self.teams]
         )
     
+    def get_by_name(self, name: str) -> Team:
+        for team in self.teams:
+            if team.name == name:
+                return team
+        return None
+
     def generate_hats(self) -> None:
         hats_chosen = []
         for team in self.teams:

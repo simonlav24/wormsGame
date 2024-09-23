@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -44,6 +44,7 @@ class DataBase:
         self.plants: List[EntityPlant] = []
         self.cycle_observers: List[CycleObserver] = []
         self.light_sources: List[EntityLightSource] = []
+        self.pygame_event_listeners: List[InterfaceEventHandler] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -102,6 +103,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.girder_size: int = 50
         self.girder_angle: int = 0
         self.airstrike_direction = RIGHT
+        self.aim_aid = False
 
         self._player: EntityWorm = None
 
@@ -197,6 +199,13 @@ class GameVariables(metaclass=SingletonMeta):
         for object in self.database.autonomous_objects:
             any_engaged |= object.engage()
         return any_engaged
+
+    def get_event_handlers(self) -> List[InterfaceEventHandler]:
+        return self.database.pygame_event_listeners
+
+    def handle_event(self, event) -> None:
+        for handler in self.get_event_handlers():
+            handler.handle_event(event)
 
     # refactor later
     def add_extra(self, pos, color = (255,255,255), delay = 5, absolute = False):

@@ -251,16 +251,17 @@
     {
         "index": 29,
         "name": "rope",
-        "style": 2,
+        "style": 5,
         "category": 5,
         "initial_amount": 3,
-        "is_fused": false,
-        "decrease_on_end": true
+        "turn_ending": false,
+        "decrease": false,
+        "is_fused": false
     },
     {
         "index": 30,
         "name": "parachute",
-        "style": 2,
+        "style": 5,
         "category": 5,
         "turn_ending": false,
         "initial_amount": 3,
@@ -489,7 +490,8 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false
+        "is_fused": false,
+        "turn_ending": false
     },
     {
         "index": 54,
@@ -497,7 +499,8 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false
+        "is_fused": false,
+        "turn_ending": false
     },
     {
         "index": 55,
@@ -505,7 +508,8 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false
+        "is_fused": false,
+        "turn_ending": false
     },
     {
         "index": 56,
@@ -521,7 +525,8 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false
+        "is_fused": false,
+        "turn_ending": false
     },
     {
         "index": 58,
@@ -529,15 +534,17 @@
         "style": 4,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false
+        "is_fused": false,
+        "turn_ending": false
     },
     {
         "index": 59,
         "name": "jet pack",
-        "style": 4,
+        "style": 5,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false
+        "is_fused": false,
+        "turn_ending": false
     },
     {
         "index": 60,
@@ -545,7 +552,8 @@
         "style": 0,
         "category": 8,
         "initial_amount": 0,
-        "is_fused": false
+        "is_fused": false,
+        "turn_ending": false
     },
     {
         "index": 61,

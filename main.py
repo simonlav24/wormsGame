@@ -251,8 +251,6 @@ class Game:
 
 		self.actionMove = False
 
-		self.aimAid = False
-		self.switchingWorms = False
 		self.timeTravel = False
 			
 	def drawTrampolineHint(self):
@@ -557,87 +555,9 @@ class TimeSlow:
 ################################################################################ Weapons setup
 
 
-def fireClickable():
-	current_weapon = WeaponManager().current_weapon
-
-	decrease = True
-	if not Game._game.radial_weapon_menu is None:
-		return
-	if TeamManager().current_team.ammo(current_weapon.index) == 0:
-		return
-	mousePosition = mouse_pos_in_world()
-	addToUsed = True
-	
-	if current_weapon.name == "girder":
-		girder(mousePosition)
-	elif current_weapon.name == "teleport":
-		GameVariables().player.pos = mousePosition
-		addToUsed = False
-	elif current_weapon.name == "airstrike":
-		fire_airstrike(mousePosition)
-	elif current_weapon.name == "mine strike":
-		fire_minestrike(mousePosition)
-	elif current_weapon.name == "napalm strike":
-		fire_napalmstrike(mousePosition)
-
-	if decrease and TeamManager().current_team.ammo(WeaponManager().current_weapon.index) != -1:
-		TeamManager().current_team.ammo(WeaponManager().current_weapon.index, -1)
-	
-	if GameVariables().config.option_cool_down and GameVariables().game_next_state in [GameState.PLAYER_RETREAT, GameState.WAIT_STABLE] and addToUsed:
-		WeaponManager().add_to_cool_down(WeaponManager().current_weapon)
-	
-	WeaponManager().render_weapon_count()
-	TimeManager().time_remaining_etreat()
-	GameVariables().game_state = GameVariables().game_next_state
 
 
-def fireUtility(weapon = None):
-	if not weapon:
-		weapon = WeaponManager().current_weapon
-	decrease = True
-	if weapon.name == "moon gravity":
-		GameVariables().physics.global_gravity = 0.1
-		GameVariables().commentator.comment([{'text': "small step for wormanity"}])
 
-	elif weapon.name == "double damage":
-		GameVariables().damage_mult *= 2
-		GameVariables().boom_radius_mult *= 1.5
-		comments = ["that's will hurt", "that'll leave a mark"]
-		GameVariables().commentator.comment([{'text': choice(comments)}])
-
-	elif weapon.name == "aim aid":
-		Game._game.aimAid = True
-		GameVariables().commentator.comment([{'text': "snipe em'"}])
-
-	elif weapon.name == "teleport":
-		WeaponManager().switch_weapon(weapon)
-		decrease = False
-	
-	elif weapon.name == "switch worms":
-		if Game._game.switchingWorms:
-			decrease = False
-		Game._game.switchingWorms = True
-		GameVariables().commentator.comment([{'text': "the ol' switcheroo"}])
-
-	elif weapon.name == "time travel":
-		if not Game._game.timeTravel:
-			TimeTravel._tt.timeTravelInitiate()
-		GameVariables().commentator.comment([{'text': "great scott"}])
-
-	elif weapon.name == "jet pack":
-		tool_set = GameVariables().player.worm_tool.set(JetPack(GameVariables().player))
-		if not tool_set:
-			decrease = False
-	
-	elif weapon.name == "flare":
-		WeaponManager().switch_weapon(weapon)
-		decrease = False
-	
-	elif weapon.name == "control plants":
-		PlantControl()
-	
-	if decrease:
-		TeamManager().current_team.ammo(weapon.index, -1)
 
 
 ################################################################################ more functions
@@ -781,15 +701,13 @@ def cycle_worms():
 	GameVariables().damage_mult = 0.8
 	GameVariables().boom_radius_mult = 1
 	GameVariables().mega_weapon_trigger = False
-	Game._game.aimAid = False
+	GameVariables().aim_aid = False
 	if Game._game.timeTravel: TimeTravel._tt.timeTravelReset()
 
-	GameVariables().player.worm_tool.release()
-
-	Game._game.switchingWorms = False
-	if Worm.roped:
-		GameVariables().player.team.ammo(WeaponManager()["rope"], -1)
-		Worm.roped = False
+	# release worm tool
+	worm_tool = GameVariables().player.get_tool()
+	if worm_tool is not None:
+		worm_tool.release()
 	
 	# update damage:
 	wormName = GameVariables().player.name_str
@@ -862,15 +780,12 @@ def cycle_worms():
 		index = (index + 1) % GameVariables().num_of_teams
 		TeamManager().current_team = TeamManager().teams[index]
 	
-	
-
 	Game._game.damageThisTurn = 0
 	
 	# sort worms by health for drawing purpuses
 	GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
 	
 	GameVariables().on_cycle()
-	WeaponManager().on_cycle()
 
 	# actual worm switch:
 	switched = False
@@ -899,16 +814,6 @@ def cycle_worms():
 	WeaponManager().switch_weapon(WeaponManager().current_weapon)
 	if Game._game.gameMode == GameMode.MISSIONS:
 		MissionManager._mm.cycle()
-
-def switch_worms():
-	currentWorm = TeamManager().current_team.worms.index(GameVariables().player)
-	totalWorms = len(TeamManager().current_team.worms)
-	currentWorm = (currentWorm + 1) % totalWorms
-	GameVariables().player = TeamManager().current_team.worms[currentWorm]
-	GameVariables().cam_track = GameVariables().player
-	if Game._game.gameMode == GameMode.MISSIONS:
-		MissionManager._mm.cycle()
-
 
 
 def random_placing():
@@ -1396,7 +1301,7 @@ def cheat_activate(code: str):
 	if code == "gibguns":
 		for team in TeamManager().teams:
 			for i, _ in enumerate(team.weapon_set):
-				team.weapon_set[i] = -1
+				team.weapon_set[i] = 100
 		for weapon in WeaponManager().weapons:
 			weapon.round_delay = 0
 		Game._game.game_config.option_cool_down = False
@@ -1579,13 +1484,11 @@ def onKeyPressSpace():
 	if not WeaponManager().can_shoot():
 		print('cant shoot')
 		return
-
+	# energize weapon
 	if WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE:
 		WeaponManager().energising = True
 		WeaponManager().energy_level = 0
 		WeaponManager().fire_weapon = False
-		if WeaponManager().current_weapon in ["homing missile", "seeker"]:
-			WeaponManager().energising = False
 
 def onKeyHoldSpace():
 	WeaponManager().energy_level += 0.05
@@ -1613,9 +1516,9 @@ def onKeyReleaseSpace():
 			WeaponManager().fire_weapon = True
 			GameVariables().player_can_shoot = False
 		
-		elif (WeaponManager().current_weapon.style in [WeaponStyle.UTILITY]):
-			fireUtility()
-			
+		elif (WeaponManager().current_weapon.style in [WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL]):
+			WeaponManager().fire_weapon = True
+
 		WeaponManager().energising = False
 	elif Sheep.trigger == False:
 		Sheep.trigger = True
@@ -1650,8 +1553,6 @@ def onKeyPressTab():
 		WeaponManager().render_weapon_count()
 	elif WeaponManager().current_weapon.category == WeaponCategory.AIRSTRIKE:
 		GameVariables().airstrike_direction *= -1
-	elif Game._game.switchingWorms:
-		switch_worms()
 
 def onKeyPressTest():
 	GameVariables().debug_print()
@@ -1685,6 +1586,7 @@ def gameMain(game_config: GameConfig=None):
 			is_handled = Game._game.handle_event(event)
 			if is_handled:
 				continue
+			GameVariables().handle_event(event)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
 			# mouse click event
@@ -1693,7 +1595,8 @@ def gameMain(game_config: GameConfig=None):
 				mousePos = pygame.mouse.get_pos()
 				# CLICKABLE weapon check:
 				if GameVariables().game_state == GameState.PLAYER_PLAY and WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE:
-					fireClickable()
+					# fireClickable()
+					WeaponManager().fire_weapon = True
 				if GameVariables().game_state == GameState.PLAYER_PLAY and WeaponManager().current_weapon.name in ["homing missile", "seeker"] and not Game._game.radial_weapon_menu:
 					mouse_pos = mouse_pos_in_world()
 					GameVariables().point_target = vectorCopy(mouse_pos)
@@ -1911,7 +1814,7 @@ def gameMain(game_config: GameConfig=None):
 		# draw shooting indicator
 		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:
 			GameVariables().player.drawCursor(win)
-			if Game._game.aimAid and WeaponManager().current_weapon.style == WeaponStyle.GUN:
+			if GameVariables().aim_aid and WeaponManager().current_weapon.style == WeaponStyle.GUN:
 				p1 = vectorCopy(GameVariables().player.pos)
 				p2 = p1 + GameVariables().player.get_shooting_direction() * 500
 				pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
@@ -2020,9 +1923,12 @@ if __name__ == "__main__":
 		electric weapons should affect other weapons
 		shoot gun if died before all shooted
 		optimize fire drawing for it is slowing
+		optimize laser (?)
 		holding mjolnir
 		winning
 		darkness outside area (either close or draw black)
+		decrease rope count
+		dont decrease parachute, trampoline if not opened
 	'''
 	print(wip)
 
