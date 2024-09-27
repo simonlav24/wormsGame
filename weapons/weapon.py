@@ -12,6 +12,7 @@ class WeaponStyle(Enum):
     CLICKABLE = 3
     UTILITY = 4
     WORM_TOOL = 5
+    SPECIAL = 6
 
 
 class WeaponCategory(Enum):

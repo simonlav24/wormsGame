@@ -145,20 +145,20 @@ class GamePlayMode:
 
 
 class CycleObserver(Protocol):
-	def on_cycle(self):
+	def on_cycle(self) -> None:
 		...
 
 
 class IComment(Entity):
-	def comment(self, text_dict):
+	def comment(self, text_dict) -> None:
 		...
 
 
 class EntityPlant(Entity):
-	def rotate(self, angle: float):
+	def rotate(self, angle: float) -> None:
 		...
 
-	def mutate(self):
+	def mutate(self) -> None:
 		...
 
 
@@ -168,6 +168,11 @@ class EntityLightSource(Entity):
 
 class InterfaceEventHandler(Protocol):
 	def handle_event(self, event):
+		...
+
+
+class EntityElectrocuted(EntityPhysical):
+	def electrocute(self) -> None:
 		...
 
 

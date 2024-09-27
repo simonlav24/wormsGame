@@ -11,60 +11,36 @@ import pygame
 import pygame.gfxdraw
 
 from common import *
-from common.vector import *
-from common.game_config import *
+from common.vector import Vector
+from common.game_config import GameMode, RandomMode, SuddenDeathMode
 
 from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
 from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay, DarknessGamePlay
 from game.time_manager import TimeManager
-from game.map_manager import *
+from game.map_manager import MapManager, GRD, SKY, SKY_COL
 from game.background import BackGround
-from game.visual_effects import *
+from game.visual_effects import FloatingText
 
-from game.world_effects import *
+from game.world_effects import girder, boom, Earthquake
 
-from game.hud import *
-from gui.radial_menu import *
+from game.hud import Commentator, Toast, WindFlag
+from gui.radial_menu import RadialMenu, RadialButton
 from game.team_manager import TeamManager
 
-from entities.worm_tools import *
-from entities.props import *
+from entities.props import PetrolCan
+from entities.deployables import deploy_pack, HealthPack, WeaponPack, UtilityPack
 from entities.worm import Worm
-from entities.deployables import *
 
-from weapons.weapon_manager import *
+from weapons.weapon_manager import WeaponManager
 from weapons.weapon import weapon_bg_color, WeaponCategory, WeaponStyle
-from weapons.missiles import *
-from weapons.grenades import *
-from weapons.cluster_grenade import ClusterGrenade
-from weapons.bombs import *
-from weapons.fire_weapons import *
-from weapons.artillery import Artillery
-from weapons.guided_missile import GuidedMissile
-from weapons.tools import *
-from weapons.bubble import Bubble
-from weapons.aerial import *
-from weapons.guns import *
+from weapons.missiles import DrillMissile
+from weapons.aerial import Seagull, Chum # refactor
+from weapons.guns import Bubble # refactor
 from weapons.long_bow import LongBow
-from weapons.mine import *
-from weapons.plants import *
-from weapons.bee_hive import BeeHive
-from weapons.vortex import VortexGrenade
-from weapons.pokeball import PokeBall
-from weapons.snail import SnailShell
-from weapons.portal import Portal, firePortal
+from weapons.plants import PlantSeed
 from weapons.green_shell import GreenShell
-from weapons.ender_pearl import EndPearl
-from weapons.raon import Raon
-from weapons.acid import AcidBottle
-from weapons.sentry_gun import SentryGun
-from weapons.electric import ElectricGrenade, ElectroBoom
-from weapons.fireworks import fireFireWork
-from weapons.covid import Covid19
-from weapons.artifacts.minecraft_artifact import PickAxe, MineBuild
-from weapons.artifacts.plant_master import PlantControl
-from weapons.artifacts.mjolnir_artifact import MjolnirFly, MjolnirStrike, MjolnirThrow
+from weapons.mine import Mine
 
 from weapons.misc.springs import MasterOfPuppets
 from weapons.misc.armageddon import Armageddon
@@ -214,16 +190,8 @@ class Game:
 			globals.time_manager.turnTime += 10
 			MissionManager._mm.cycle()
 
-			
-	def point_to_world(self, point):
-		return (int(point[0]) - int(GameVariables().cam_pos[0]), int(point[1]) - int(GameVariables().cam_pos[1]))
-
 	def clearLists(self):
 		# clear lists
-		Portal._reg.clear()
-		GreenShell._shells.clear()
-		Seagull._reg.clear()
-		Chum._chums.clear()
 		MissionManager._mm = None
 	
 	def create_map(self) -> None:
@@ -270,6 +238,7 @@ class Game:
 		
 		win.blit(surf, point2world(position - Vector(24,7) / 2))
 	
+
 	def evaluate_config(self, game_config: GameConfig):
 		self.game_config: GameConfig = game_config
 
@@ -428,7 +397,7 @@ def giveGoodPlace(div = 0, girderPlace = True):
 			pygame.draw.circle(MapManager().ground_map, SKY, place.vec2tup(), 5)
 	return place
 
-def place_object(cls: Any, args, girder_place: bool=False) -> Any:
+def place_object(cls: Any, args, girder_place: bool=False) -> EntityPhysical:
 	''' create an instance of cls, return the last created'''
 	place = giveGoodPlace(-1, girder_place)
 	if place:
@@ -678,7 +647,7 @@ def deploy_crate() -> None:
 		GameVariables().commentator.comment(choice(comments))
 
 		for _ in range(Game._game.game_config.deployed_packs):
-			w = deploy_pack(choice([HealthPack,UtilityPack, WeaponPack]))
+			w = deploy_pack(choice([HealthPack, UtilityPack, WeaponPack]))
 			GameVariables().cam_track = w
 
 def cycle_worms():
@@ -1503,25 +1472,17 @@ def onKeyHoldSpace():
 
 def onKeyReleaseSpace():
 	if WeaponManager().can_shoot():
-		if Game._game.timeTravel:
-			TimeTravel._tt.timeTravelPlay()
-			WeaponManager().energy_level = 0
-		
-		# chargeable
-		elif WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
-			WeaponManager().fire_weapon = True
-		
-		# putable & guns
-		elif (WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN]):
-			WeaponManager().fire_weapon = True
-			GameVariables().player_can_shoot = False
-		
-		elif (WeaponManager().current_weapon.style in [WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL]):
-			WeaponManager().fire_weapon = True
 
+		fire_weapon_conditions = [
+			WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising,
+			WeaponManager().current_weapon.style in [WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL, WeaponStyle.SPECIAL],
+			WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN],
+		]
+
+		if any(fire_weapon_conditions):
+			WeaponManager().fire_weapon = True
 		WeaponManager().energising = False
-	elif Sheep.trigger == False:
-		Sheep.trigger = True
+		
 
 def onKeyPressTab():
 	if WeaponManager().current_weapon.name == "drill missile":
@@ -1553,7 +1514,7 @@ def onKeyPressTab():
 		WeaponManager().render_weapon_count()
 	elif WeaponManager().current_weapon.category == WeaponCategory.AIRSTRIKE:
 		GameVariables().airstrike_direction *= -1
-
+ 
 def onKeyPressTest():
 	GameVariables().debug_print()
 
@@ -1920,8 +1881,6 @@ if __name__ == "__main__":
 	still in wip:
 		water rise
 		loading screen
-		electric weapons should affect other weapons
-		shoot gun if died before all shooted
 		optimize fire drawing for it is slowing
 		optimize laser (?)
 		holding mjolnir
@@ -1929,6 +1888,8 @@ if __name__ == "__main__":
 		darkness outside area (either close or draw black)
 		decrease rope count
 		dont decrease parachute, trampoline if not opened
+		icicle werid behaviour on hit
+		minecraft weapons
 	'''
 	print(wip)
 

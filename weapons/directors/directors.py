@@ -87,3 +87,18 @@ class WormToolDirector(ChargeableDirector):
     
     def is_decrease(self) -> bool:
         return self.decrease
+
+
+class PortalDirector(ChargeableDirector):
+    def shoot(self, energy: float) -> None:
+        if self.shots == 0:
+            return
+        kwargs = {
+			'pos': vectorCopy(GameVariables().player.pos),
+			'direction': GameVariables().player.get_shooting_direction(),
+			'shooter': GameVariables().player,
+			'energy': energy,
+            'portal': self.shooted_object
+		}
+        self.shooted_object = self.weapon_func(**kwargs)
+        self.shots -= 1

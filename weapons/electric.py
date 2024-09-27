@@ -1,19 +1,16 @@
 
 from random import randint, uniform
+from typing import List
 
 import pygame
 
-from common import GameVariables, point2world, blit_weapon_sprite, RIGHT, LEFT
+from common import GameVariables, point2world, blit_weapon_sprite, EntityElectrocuted
 from common.vector import *
 from common.drawing_utilities import draw_lightning
 
 from game.world_effects import boom
-from entities import PhysObj, Worm
+from entities import PhysObj
 from entities.gun_shell import GunShell
-
-from weapons.raon import Raon
-from weapons.green_shell import GreenShell
-from weapons.sentry_gun import SentryGun
 
 
 class ElectricGrenade(PhysObj):
@@ -26,10 +23,7 @@ class ElectricGrenade(PhysObj):
 		self.color = (120, 230, 230)
 		self.damp = 0.525
 		self.timer = 0
-		self.worms = []
-		self.raons = []
-		self.shells = []
-		self.sentries = []
+		self.electrocuted: List[EntityElectrocuted] = []
 		self.electrifying = False
 		self.emptyCounter = 0
 		self.lifespan = 300
@@ -38,13 +32,11 @@ class ElectricGrenade(PhysObj):
 		self.angle = 0
 	
 	def death_response(self):
-		rad = 20
-		boom(self.pos, rad)
-		for sentry in self.sentries:
-			sentry.electrified = False
+		boom(self.pos, 20)
 	
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
+	def step(self):
+		super().step()
+		self.angle -= self.vel.x * 4
 		self.stable = False
 		self.timer += 1
 		if self.timer == GameVariables().fuse_time:
@@ -53,61 +45,29 @@ class ElectricGrenade(PhysObj):
 			self.dead = True
 		if self.electrifying:
 			self.stable = False
-			self.worms = []
-			self.raons = []
-			self.shells = []
-			for worm in GameVariables().get_worms():
-				if distus(self.pos, worm.pos) < 10000:
-					self.worms.append(worm)
-			# for raon in Raon._raons:
-			# 	if distus(self.pos, raon.pos) < 10000:
-			# 		self.raons.append(raon)
-			for shell in GreenShell._shells:
-				if distus(self.pos, shell.pos) < 10000:
-					self.shells.append(shell)
-			# for sentry in SentryGun._sentries:
-			# 	if distus(self.pos, sentry.pos) < 10000:
-			# 		sentry.electrified = True
-			# 		if sentry not in self.sentries:
-			# 			self.sentries.append(sentry)
-			# 	else:
-			# 		sentry.electrified = False
-			if len(self.worms) == 0 and len(self.raons) == 0:
+			self.electrocuted = []
+			
+			for electrocuted in GameVariables().get_electrocuted():
+				if distus(self.pos, electrocuted.pos) < 10000:
+					self.electrocuted.append(electrocuted)
+
+			if len(self.electrocuted) == 0:
 				self.emptyCounter += 1
 				if self.emptyCounter == GameVariables().fps:
 					self.dead = True
 			else:
 				self.emptyCounter = 0
-		for worm in self.worms:
-			if randint(1,100) < 5:
-				worm.damage(randint(1,8))
-				a = lambda x : 1 if x >= 0 else -1
-				worm.vel -= Vector(a(self.pos.x - worm.pos.x)*uniform(1.2,2.2), uniform(1.2,3.2))
-			if worm.health <= 0:
-				self.worms.remove(worm)
-		for raon in self.raons:
-			if randint(1,100) < 5:
-				raon.electrified()
-		for shell in self.shells:
-			if randint(1,100) < 5:
-				if shell.speed < 3:
-					shell.facing = LEFT if self.pos.x > shell.pos.x else RIGHT
-				shell.speed = 3
-				shell.timer = 0
+		
+		for electrocuted in self.electrocuted:
+			if randint(1, 100) < 5:
+				electrocuted.electrocute()
 	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
-		for worm in self.worms:
-			draw_lightning(win, self.pos, worm.pos)
-		for raon in self.raons:
-			draw_lightning(win, self.pos, raon.pos)
-		for shell in self.shells:
-			draw_lightning(win, self.pos, shell.pos)
-		for sentry in self.sentries:
-			if sentry.electrified:
-				draw_lightning(win, self.pos, sentry.pos)
+		for electrocuted in self.electrocuted:
+			draw_lightning(win, self.pos, electrocuted.pos)
 
 
 class ElectroBoom(PhysObj):

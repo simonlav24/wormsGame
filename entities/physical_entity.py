@@ -126,7 +126,7 @@ class PhysObj(Entity):
 		else:
 			self.pos = ppos
 			
-		# flew out Game._game.map_manager.game_map but not worms !
+		# flew out map but not worms !
 		if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level and not self in GameVariables().get_worms():
 			splash(self.pos, self.vel)
 			angle = self.vel.getAngle()
@@ -144,8 +144,8 @@ class PhysObj(Entity):
 			self.stable = True
 		
 		if self.dead:
-			self.remove_from_game()
 			self.death_response()
+			self.remove_from_game()
 		
 		self.secondaryStep()
 	
@@ -181,6 +181,7 @@ class PhysObj(Entity):
 		pass
 	
 	def remove_from_game(self) -> None:
+		''' remove from game, happens adjacent to death or to flew out of map '''
 		GameVariables().unregister_physical(self)
 	
 	def damage(self, value, damageType=0):

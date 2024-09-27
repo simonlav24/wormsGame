@@ -19,7 +19,7 @@ class RaonState(Enum):
 class Raon(AutonomousObject):
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos)
-		GameVariables()
+		GameVariables().get_electrocuted().append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 3
@@ -72,14 +72,18 @@ class Raon(AutonomousObject):
 	def death_response(self):
 		boom(self.pos, 25)
 	
+	def remove_from_game(self) -> None:
+		super().remove_from_game()
+		GameVariables().get_electrocuted().remove(self)
+
 	def proximity(self):
 		if self.target is None:
 			return False
 		if distus(self.target.pos, self.pos) < (self.radius + self.target.radius + 2) * (self.radius + self.target.radius + 2):
 			return True
 		return False
-		
-	def electrified(self):
+	
+	def electrocute(self) -> None:
 		self.dead = True
 	
 	def draw(self, win: pygame.Surface):

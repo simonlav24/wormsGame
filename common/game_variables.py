@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -45,6 +45,7 @@ class DataBase:
         self.cycle_observers: List[CycleObserver] = []
         self.light_sources: List[EntityLightSource] = []
         self.pygame_event_listeners: List[InterfaceEventHandler] = []
+        self.elecrocuted: List[EntityElectrocuted] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -248,6 +249,9 @@ class GameVariables(metaclass=SingletonMeta):
     
     def get_light_sources(self) -> List[EntityLightSource]:
         return self.database.light_sources
+
+    def get_electrocuted(self) -> List[EntityElectrocuted]:
+        return self.database.elecrocuted
 
     def debug_print(self) -> None:
         output = '# non_physicals:\n'

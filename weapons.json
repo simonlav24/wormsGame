@@ -278,7 +278,7 @@
     {
         "index": 32,
         "name": "portal gun",
-        "style": 1,
+        "style": 6,
         "shots": 2,
         "turn_ending": false,
         "category": 5,
@@ -582,6 +582,7 @@
         "category": 9,
         "initial_amount": 3,
         "is_fused": false,
+        "turn_ending": false,
         "round_delay": 0,
         "artifact": 1
     },
@@ -620,6 +621,8 @@
     {
         "index": 67,
         "name": "razor leaf",
+        "burst": true,
+        "shots": 50,
         "style": 1,
         "category": 9,
         "initial_amount": -1,

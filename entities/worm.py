@@ -2,7 +2,7 @@
 
 from enum import Enum
 from math import pi, degrees, cos, sin
-from random import randint, choice
+from random import randint, choice, uniform
 
 import pygame
 
@@ -21,11 +21,12 @@ class DeathCause(Enum):
     FLEW_OUT = 0
     DAMAGE = 1
 
-class Worm (PhysObj):
+class Worm(PhysObj):
     healthMode = 0
     def __init__(self, pos, name, team=None):
         super().__init__(pos)
         GameVariables().get_worms().append(self)
+        GameVariables().get_electrocuted().append(self)
 
         self.color = (255, 206, 167)
         self.radius = 3.5
@@ -192,9 +193,10 @@ class Worm (PhysObj):
             GameVariables().game_next_state = GameState.PLAYER_RETREAT
             GameVariables().game_state = GameVariables().game_next_state
             TimeManager().time_remaining_die()
-                
-        # todo: notify killed
+        
+        GameVariables().get_electrocuted().remove(self)
         GameVariables().game_mode.on_worm_death(self)
+
 
     def draw_health(self, win: pygame.Surface):
         healthHeight = -15
@@ -318,3 +320,8 @@ class Worm (PhysObj):
     
     def set_tool(self, tool: EntityWormTool):
         self.worm_tool.set(tool)
+    
+    def electrocute(self) -> None:
+        self.damage(randint(1,8))
+        a = lambda x : 1 if x >= 0 else -1
+        self.vel -= Vector(a(self.pos.x - self.pos.x) * uniform(1.2, 2.2), uniform(1.2, 3.2))

@@ -23,6 +23,7 @@ class SentryState(Enum):
 class SentryGun(AutonomousObject):
 	def __init__(self, pos: Vector, team_color: ColorType, team_name: str, **kwargs):
 		super().__init__(pos, **kwargs)
+		GameVariables().get_electrocuted().append(self)
 		self.color = (0, 102, 0)
 		self.is_boom_affected = True
 		self.radius = 9
@@ -42,10 +43,17 @@ class SentryGun(AutonomousObject):
 		pygame.draw.circle(self.surf, self.team_color, tup2vec(self.surf.get_size())//2, 2)
 		self.inner_state = SentryState.IDLE
 	
+	def remove_from_game(self) -> None:
+		super().remove_from_game()
+		GameVariables().get_electrocuted().remove(self)
+
 	def engage(self) -> bool:
 		self.inner_state = SentryState.SEARCHING
 		return super().engage()
 	
+	def shoot(self, direction) -> None:
+		fireMiniGun(pos=self.pos, direction=direction)
+
 	def step(self):
 		super().step()
 
@@ -72,7 +80,7 @@ class SentryGun(AutonomousObject):
 			self.angle2for = (self.target.pos - self.pos).getAngle()
 			if self.timer <= 0 and self.target:
 				direction = self.target.pos - self.pos
-				fireMiniGun(pos=self.pos, direction=direction)
+				self.shoot(direction)
 				self.angle = direction.getAngle()
 				self.shots -= 1
 				if self.shots == 0:
@@ -88,7 +96,7 @@ class SentryGun(AutonomousObject):
 		if self.electrified:
 			if GameVariables().time_overall % 2 == 0:
 				self.angle = uniform(0, 2 * pi)
-				fireMiniGun(self.pos, vectorFromAngle(self.angle))
+				self.shoot(vectorFromAngle(self.angle))
 			self.electrified = False
 		
 		self.angle += (self.angle2for - self.angle) * 0.2
@@ -111,6 +119,9 @@ class SentryGun(AutonomousObject):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 		pygame.draw.line(win, self.team_color, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
 	
+	def electrocute(self) -> None:
+		self.electrified = True
+
 	def damage(self, value, damageType=0):
 		dmg = value
 		if self.health > 0:

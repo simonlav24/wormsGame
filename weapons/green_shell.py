@@ -10,11 +10,11 @@ from entities import PhysObj
 
 
 class GreenShell(PhysObj):
-	_shells = []
 	def __init__(self, pos):
 		super().__init__(pos)
+		GameVariables().get_electrocuted().append(self)
 		self.ignore = []
-		GreenShell._shells.append(self)
+
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(0,-0.5)
 		self.radius = 6
@@ -28,8 +28,11 @@ class GreenShell(PhysObj):
 	
 	def on_out_of_map(self):
 		self.dead = True
-		GreenShell._shells.remove(self)
 	
+	def remove_from_game(self) -> None:
+		super().remove_from_game()
+		GameVariables().get_electrocuted().remove(self)
+
 	def step(self):
 		super().step()
 		self.timer += 1
@@ -88,3 +91,9 @@ class GreenShell(PhysObj):
 		else:
 			index = 0	
 		win.blit(sprites.sprite_atlas, point2world(self.pos - Vector(16,16)/2), ((index*16, 48), (16,16)))
+
+	def electrocute(self) -> None:
+		if self.speed < 3:
+			self.facing = LEFT if self.pos.x > self.pos.x else RIGHT
+			self.speed = 3
+			self.timer = 0

@@ -17,7 +17,7 @@ from weapons.guns import fireShotgun, fireMiniGun, fireLongBow, fireBubbleGun, f
 from weapons.fire_weapons import PetrolBomb, ChilliPepper
 from weapons.bombs import TNT, Sheep, Bull
 from weapons.mine import Mine, Gemino
-from weapons.portal import firePortal
+from weapons.portal import fire_portal_gun
 from weapons.acid import AcidBottle
 from weapons.snail import SnailShell
 from weapons.plants import PlantSeed, PlantMode
@@ -268,12 +268,6 @@ def fire_sentry_turret(*args, **kwargs) -> EntityPhysical:
     """ fire sentry turret """
     obj = SentryGun(kwargs.get('pos'), GameVariables().player.get_team_data().color, GameVariables().player.get_team_data().team_name)
     obj.pos.y -= GameVariables().player.radius + obj.radius
-
-
-
-def fire_portal_gun(*args, **kwargs) -> EntityPhysical:
-    """ fire portal gun """
-    return firePortal(**kwargs)
 
 
 

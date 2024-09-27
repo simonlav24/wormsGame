@@ -64,7 +64,6 @@ class Seagull(Seeker):
 	_reg = []
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos, direction, energy)
-		Seagull._reg.append(self)
 		self.timer = 15 * GameVariables().fps
 		self.target = Vector()
 		self.chum = None
@@ -74,8 +73,6 @@ class Seagull(Seeker):
 		self.remove_from_game()
 	
 	def remove_from_game(self):
-		if self in Seagull._reg:
-			Seagull._reg.remove(self)
 		GameVariables().unregister_non_physical(self)
 		self.chum.dead = True
 	
@@ -94,11 +91,9 @@ class Seagull(Seeker):
 		
 
 class Chum(PhysObj):
-	_chums = []
 	def __init__(self, pos, direction, energy, radius=0):
 		super().__init__(pos)
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
-		Chum._chums.append(self)
 		self.radius = radius
 		if radius == 0:
 			self.radius = randint(1,3)
@@ -122,7 +117,6 @@ class Chum(PhysObj):
 			MapManager().game_map.set_at(self.stick.integer(), GRD)
 	
 	def death_response(self):
-		Chum._chums.remove(self)
 		if self.stick:
 			MapManager().game_map.set_at(self.stick.integer(), SKY)
 	

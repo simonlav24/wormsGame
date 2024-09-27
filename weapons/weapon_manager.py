@@ -324,6 +324,10 @@ class WeaponManager(metaclass=SingletonMeta):
         
         elif weapon.style == WeaponStyle.WORM_TOOL:
             director = WormToolDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
+        
+        elif weapon.style == WeaponStyle.SPECIAL:
+            if weapon.name == 'portal gun':
+                director = PortalDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
 
         return director
     

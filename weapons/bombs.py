@@ -39,9 +39,9 @@ class TNT(PhysObj):
 
 
 class Sheep(PhysObj):
-	trigger = False
 	def __init__(self, pos):
 		super().__init__(pos)
+		GameVariables().get_event_handlers().append(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(0,-3)
 		self.radius = 6
@@ -50,29 +50,33 @@ class Sheep(PhysObj):
 		self.timer = 0
 		self.facing = RIGHT
 		self.is_wind_affected = 0
+		self.trigger = False
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.timer += 1
 		self.stable = False
 		moved = self.move(self.facing)
 		if self.timer % 3 == 0:
 			moved = self.move(self.facing)
 		if not moved:
-			if MapManager().is_ground_around(self.pos, self.radius+1):
+			if MapManager().is_ground_around(self.pos, self.radius + 1):
 				self.facing *= -1
-		if self.timer % (GameVariables().fps / 2) == 0 and MapManager().is_ground_around(self.pos, self.radius+1):
+		if self.timer % (GameVariables().fps / 2) == 0 and MapManager().is_ground_around(self.pos, self.radius + 1):
 			self.vel.y -= 4.5
-		if Sheep.trigger and self.timer > 5:
+		if self.trigger and self.timer > 5:
 			self.dead = True
-		else:
-			Sheep.trigger = False
 		if self.timer >= 300:
 			self.dead = True
 	
 	def death_response(self):
-		Sheep.trigger = False
 		boom(self.pos, 35)
-	
+		GameVariables().get_event_handlers().remove(self)
+		
+	def handle_event(self, event) -> None:
+		if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+			self.trigger = True
+
 	def draw(self, win: pygame.Surface):
 		rad = self.radius + 1
 		wig = 0.4 * sin(0.5 * self.timer)

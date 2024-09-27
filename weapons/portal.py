@@ -13,8 +13,7 @@ RADIUS_OF_RELEASE = 10
 
 class Portal:
 	_reg = []
-	def __init__(self, pos: Vector, direction: Vector):
-		Portal._reg.append(self)
+	def __init__(self, pos: Vector, direction: Vector, first: bool):
 		GameVariables().register_non_physical(self)
 		GameVariables().register_cycle_observer(self)
 		self.direction = direction
@@ -26,7 +25,7 @@ class Portal:
 		
 		surf = pygame.Surface((width, height), pygame.SRCALPHA)
 
-		if len(Portal._reg) % 2 == 0:
+		if first:
 			surf.blit(sprites.sprite_atlas, (0,0), (32, 128, width, height))
 		else:
 			surf.blit(sprites.sprite_atlas, (0,0), (0, 128, width, height))
@@ -83,22 +82,20 @@ class Portal:
 	def remove_from_game(self):
 		GameVariables().unregister_non_physical(self)
 		GameVariables().unregister_cycle_observer(self)
-		if self in Portal._reg:
-			Portal._reg.remove(self)
 
 
-def firePortal(**kwargs):
+def fire_portal_gun(*args, **kwargs) -> Portal:
 	steps = 500
+	second_portal: Portal = kwargs.get('portal')
+	new_portal = None
 	for t in range(5 , steps):
 		testPos = kwargs.get('pos') + kwargs.get('direction') * t
 		GameVariables().add_extra(testPos, (255,255,255), 3)
 		
 		# missed
 		if t == steps - 1:
-			if len(Portal._reg) % 2 == 1:
-				p = Portal._reg.pop(-1)
-				if p in GameVariables().get_physicals():
-					GameVariables().get_physicals().remove(p)
+			if second_portal is not None:
+				second_portal.remove_from_game()
 
 		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
 			continue
@@ -121,12 +118,12 @@ def firePortal(**kwargs):
 			
 			direction = response.normalize()
 			
-			p = Portal(testPos, direction)
-			if len(Portal._reg) % 2 == 0:
-				brother = Portal._reg[-2]
-				p.brother = brother
-				brother.brother = p
+			new_portal = Portal(testPos, direction, second_portal is None)
+			if second_portal is not None:
+				new_portal.brother = second_portal
+				second_portal.brother = new_portal
 			break
+	return new_portal
 
 
 
