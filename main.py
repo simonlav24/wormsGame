@@ -13,7 +13,8 @@ from common import *
 from common.vector import Vector
 from common.game_config import GameMode, RandomMode, SuddenDeathMode
 
-from mainMenus import mainMenu, pauseMenu, initGui, updateWin
+from rooms.room_main_menu import MainMenuRoom
+# from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
 from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay, DarknessGamePlay
 from game.time_manager import TimeManager
@@ -46,14 +47,13 @@ import globals
 
 
 def getGlobals():
-	global fpsClock, fps, win, screen
+	global fpsClock, win, screen
 	fpsClock = globals.fpsClock
-	fps = GameVariables().fps
 	win = globals.win
 	screen = globals.screen
 
 globals.globalsInit()
-initGui()
+# initGui()
 getGlobals()
 
 class Game:
@@ -494,7 +494,7 @@ def check_winners() -> bool:
 	if end:
 		if winningTeam is not None:
 			print("Team", winningTeam.name, "won!")
-			dic["time"] = str(GameVariables().time_overall // fps)
+			dic["time"] = str(GameVariables().time_overall // GameVariables().fps)
 			dic["winner"] = winningTeam.name
 			if Game._game.mostDamage[1]:
 				dic["mostDamage"] = str(int(Game._game.mostDamage[0]))
@@ -979,7 +979,7 @@ class Mission:
 		self.marker = None
 		self.completed = False
 		self.readyToChange = False
-		self.timer = 3 * fps
+		self.timer = 3 * GameVariables().fps
 		self.textSurf = None
 		self.surf = None
 
@@ -1095,7 +1095,7 @@ class Mission:
 			self.surf = pygame.Surface((self.textSurf.get_width() + 2, self.textSurf.get_height() + 2))
 
 		# interpolate from Black to Green base on timer [0, 3 * fps]
-		amount = (1 - self.timer / (3 * fps)) * 4
+		amount = (1 - self.timer / (3 * GameVariables().fps)) * 4
 		bColor = (0, min(255 * amount, 255), 0)
 
 		self.surf.fill(bColor)
@@ -1334,10 +1334,10 @@ def onKeyPressTab():
 			GameVariables().girder_size = 50
 			GameVariables().girder_angle = 0
 	elif WeaponManager().current_weapon.is_fused:
-		GameVariables().fuse_time += fps
-		if GameVariables().fuse_time > fps * 4:
-			GameVariables().fuse_time = fps
-		string = "delay " + str(GameVariables().fuse_time//fps) + " sec"
+		GameVariables().fuse_time += GameVariables().fps
+		if GameVariables().fuse_time > GameVariables().fps * 4:
+			GameVariables().fuse_time = GameVariables().fps
+		string = "delay " + str(GameVariables().fuse_time // GameVariables().fps) + " sec"
 		FloatingText(GameVariables().player.pos + Vector(0, -5), string, (20, 20, 20))
 		WeaponManager().render_weapon_count()
 	elif WeaponManager().current_weapon.category == WeaponCategory.AIRSTRIKE:
@@ -1678,11 +1678,11 @@ def gameMain(game_config: GameConfig=None):
 
 		end_time = time.time()
 		# print(f'fps: {end_time - start_time}')
-		fpsClock.tick(fps)
+		fpsClock.tick(GameVariables().fps)
 
 def splashScreen():
 	splashImage = pygame.image.load("assets/simeGames.png")
-	timer = 1 * fps // 2
+	timer = 1 * GameVariables().fps // 2
 	run = True
 	while run:
 		for event in pygame.event.get():
@@ -1699,9 +1699,32 @@ def splashScreen():
 		win.blit(splashImage, ((GameVariables().win_width/2 - splashImage.get_width()/2, GameVariables().win_height/2 - splashImage.get_height()/2)))
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 		pygame.display.update()
-		fpsClock.tick(fps)
+		fpsClock.tick(GameVariables().fps)
 
-if __name__ == "__main__":
+def main():
+	current_room = MainMenuRoom()
+
+	done = False
+	while not done:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				done = True
+			current_room.handle_pygame_event(event)
+		
+		# step
+		current_room.step()
+
+		# draw
+		current_room.draw(win)
+
+		pygame.transform.scale(win, screen.get_rect().size, screen)
+		pygame.display.update()
+
+		fpsClock.tick(GameVariables().fps)
+
+
+
+def _main():
 	gameParameters = [None]
 	splashScreen()
 
@@ -1729,3 +1752,7 @@ if __name__ == "__main__":
 		config.option_artifacts = True
 		config.option_forts = True
 		gameMain(config)
+
+if __name__ == "__main__":
+	main()
+	

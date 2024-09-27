@@ -13,7 +13,7 @@ from common.game_config import RandomMode, GameMode, SuddenDeathMode
 from common.vector import *
 
 from perlinNoise import generateNoise
-from gui.menu_gui import *
+from gui._menu_gui import *
 from game.map_manager import grab_maps
 from game.background import BackGround
 
@@ -22,12 +22,7 @@ feelIndex = randint(0, len(feels) - 1)
 debug = False
 
 def initGui():
-	Gui(globals.win, fonts.pixel5, GameVariables().scale_factor, GameVariables().fps)
-
-def updateWin(win, scale_factor):
-	Gui._instance.updateWindow(win)
-	Gui._instance.scalingFactor = scale_factor
-
+	Gui(fonts.pixel5, GameVariables().scale_factor, GameVariables().fps)
 
 def spriteIndex2rect(index):
 	return (index % 8) * 16, (index // 8) * 16, 16, 16
@@ -70,9 +65,6 @@ class MainMenu:
 		weaponIndex = 0
 		indexOffset = 72
 
-		categDict = {"MISSILES": MISSILES, "GRENADES": GRENADES, "GUNS": GUNS, "FIREY": FIREY, "BOMBS": BOMBS, "TOOLS": TOOLS,
-						"AIRSTRIKE": AIRSTRIKE, "LEGENDARY": LEGENDARY}
-
 		items = ["-1"] + [str(i) for i in range(11)]
 		mapping = {"-1":"inf"}
 
@@ -81,7 +73,7 @@ class MainMenu:
 			for j in range(6):
 				pic = MenuElementImage()
 				pic.customSize = 16
-				bgColor = categDict[weapons[weaponIndex].attrib["category"]]
+				bgColor = (255, 255, 255)
 				pic.setImage(weaponSprites, spriteIndex2rect(weaponIndex + indexOffset), background=bgColor)
 				pic.tooltip = weapons[weaponIndex].attrib["name"]
 
@@ -240,15 +232,8 @@ class MainMenu:
 
 		pos = (x,y_average)
 	
-	def updateWeaponSets(self):
-		weaponSetCombo = getElementByName("weapon_combo")
-		weaponsSets = ['default']
-		if os.path.exists("./assets/weaponsSets"):
-			for file in os.listdir("./assets/weaponsSets"):
-				weaponsSets.append(file.split(".")[0])
-		weaponSetCombo.setItems(weaponsSets)
-
 	def handleMainMenu(self, event):
+		''' handle main menu events '''
 		key = event.key
 		# print(event.key, event.value)
 		if key == "random_image":
@@ -292,27 +277,6 @@ class MainMenu:
 			endPos = Menu._reg[0].pos + Vector(0, GameVariables().win_height)
 			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, endPos, trigger=menuPop)
 			self.updateWeaponSets()
-		if key == "weaponssetup":
-			# create the weapons menu
-			self.initializeWeaponMenu()
-			# animate weapons menu in
-			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, GameVariables().win_height), Menu._reg[-1].pos)
-			# animate main menu out
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameVariables().win_height))
-		if key == "defaultweapons":
-			wepmenu = getMenubyName("weapons")
-			Menu._reg.remove(wepmenu)
-			self.initializeWeaponMenu()
-		if key == "zeroweapons":
-			wepmenu = getMenubyName("weapons")
-			Menu._reg.remove(wepmenu)
-			self.initializeWeaponMenu(zero=True)
-		if key == "saveweapons":
-			wepmenu = getMenubyName("weapons")
-			values = {}
-			wepmenu.evaluate(values)
-			saveWeaponsXml(values, values["filename"])
-			Gui._instance.toaster.toast("weapons set " + values["filename"] + " saved")
 		if key == "exit":
 			exit(0)
 
@@ -441,7 +405,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
 			mousePos = pygame.mouse.get_pos()
-			handleEvents(event, MainMenu._mm.handleMainMenu)
+			handle_pygame_events(event, MainMenu._mm.handleMainMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
 
@@ -453,7 +417,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 		# draw
 		background.draw(globals.win)
 
-		Gui._instance.draw()
+		Gui._instance.draw(globals.win)
 
 		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
 		globals.fpsClock.tick(GameVariables().fps)
@@ -469,7 +433,7 @@ def pauseMenu(args, result=None):
 	PauseMenu._pm.result = result
 	while PauseMenu._pm.run:
 		for event in pygame.event.get():
-			handleEvents(event, PauseMenu._pm.handlePauseMenu)
+			handle_pygame_events(event, PauseMenu._pm.handlePauseMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
