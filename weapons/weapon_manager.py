@@ -1,6 +1,7 @@
 
 import json
 from typing import List, Dict, Tuple, Callable, Any
+from random import randint, choice
 
 import pygame
 
@@ -15,7 +16,7 @@ from weapons.directors.directors import *
 from game.team_manager import TeamManager
 from game.time_manager import TimeManager
 from weapons.earth_spike import calc_earth_spike_pos
-
+from weapons.tools import draw_trampoline_hint
 
 
 class WeaponManager(metaclass=SingletonMeta):
@@ -56,11 +57,11 @@ class WeaponManager(metaclass=SingletonMeta):
         self.weapons_funcs: Dict[str, Callable[[Any], Any]] = weapon_funcs
 
         # read weapon set if exits and adjust basic set
-        # if globals.game_manager.game_config.weapon_set is not None:
+        # if game_manager.game_config.weapon_set is not None:
         #     # zero out basic set
         #     self.basic_set = [0 for i in self.basic_set]
 
-        #     weaponSet = ET.parse('./assets/weaponsSets/' + globals.game_manager.game_config.weapon_set + '.xml').getroot()
+        #     weaponSet = ET.parse('./assets/weaponsSets/' + game_manager.game_config.weapon_set + '.xml').getroot()
         #     for weapon in weaponSet:
         #         name = weapon.attrib["name"]
         #         amount = int(weapon.attrib["amount"])
@@ -294,20 +295,34 @@ class WeaponManager(metaclass=SingletonMeta):
         if self.current_weapon.name == "girder":
             draw_girder_hint(win)
     
-        if self.current_weapon == "trampoline":
-            # todo: draw trampoline hint
-            pass
+        if self.current_weapon.name == "trampoline":
+            draw_trampoline_hint(win)
         
         if self.current_weapon.category == WeaponCategory.AIRSTRIKE:
             mouse = mouse_pos_in_world()
             flip = False if GameVariables().airstrike_direction == RIGHT else True
             win.blit(pygame.transform.flip(sprites.air_strike_indicator, flip, False), point2world(mouse - tup2vec(sprites.air_strike_indicator.get_size())/2))
         
-        # todo: draw earth spike hitn
         if self.current_weapon.name == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY] and TeamManager().current_team.ammo(self["earth spike"]) != 0:
             spikeTarget = calc_earth_spike_pos()
             if spikeTarget:
                 draw_target(win, spikeTarget)
+
+    def give_extra_starting_weapons(self) -> None:
+        ''' give teams starting legendary weapons, utilities and tools '''
+        legendary = ["holy grenade", "gemino mine", "bee hive", "electro boom", "pokeball", "green shell", "guided missile", "fireworks"]
+        if GameVariables().initial_variables.allow_air_strikes:
+            legendary.append("mine strike")
+
+        for team in TeamManager().teams:
+            chosen_weapon = WeaponManager().get_weapon(choice(legendary)).index
+            team.ammo(chosen_weapon, 1)
+            if randint(0,2) >= 1:
+                chosen_weapon = WeaponManager().get_weapon(choice(["moon gravity", "teleport", "jet pack", "aim aid", "switch worms"])).index
+                team.ammo(chosen_weapon, 1)
+            if randint(0,6) == 1:
+                chosen_weapon = WeaponManager().get_weapon(choice(["portal gun", "trampoline", "ender pearl"])).index
+                team.ammo(chosen_weapon, 3)
 
     def create_weapon_director(self):
         ''' weaponDirector factory method '''

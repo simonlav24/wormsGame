@@ -20,23 +20,19 @@ class HaloFont:
         return surf
 
 def globalsInit():
-    global fpsClock, screenWidth, screenHeight, win, screen
+    global fpsClock, win, screen
 
     pygame.init()
 
     fpsClock = pygame.time.Clock()
-
-    screenWidth = 1280
-    screenHeight = 720
     
-    GameVariables().win_width = int(screenWidth / GameVariables().scale_factor)
-    GameVariables().win_height = int(screenHeight / GameVariables().scale_factor)
+    GameVariables().win_width = int(GameVariables().screen_width / GameVariables().scale_factor)
+    GameVariables().win_height = int(GameVariables().screen_height / GameVariables().scale_factor)
 
     win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
     
     pygame.display.set_caption("Simon's Worms")
-    # screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF | pygame.NOFRAME)
-    screen = pygame.display.set_mode((screenWidth,screenHeight), pygame.DOUBLEBUF)
+    screen = pygame.display.set_mode((GameVariables().screen_width, GameVariables().screen_height), pygame.DOUBLEBUF)
 
     common.constants.initialize()
 

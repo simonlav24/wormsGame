@@ -3,7 +3,6 @@
 from math import pi, cos, sin
 from random import randint, uniform, choice
 import os
-from typing import Any
 
 import time
 
@@ -18,11 +17,11 @@ from mainMenus import mainMenu, pauseMenu, initGui, updateWin
 
 from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay, DarknessGamePlay
 from game.time_manager import TimeManager
-from game.map_manager import MapManager, GRD, SKY, SKY_COL
+from game.map_manager import MapManager, SKY
 from game.background import BackGround
 from game.visual_effects import FloatingText
 
-from game.world_effects import girder, boom, Earthquake
+from game.world_effects import boom, Earthquake
 
 from game.hud import Commentator, Toast, WindFlag
 from gui.radial_menu import RadialMenu, RadialButton
@@ -35,11 +34,9 @@ from entities.worm import Worm
 from weapons.weapon_manager import WeaponManager
 from weapons.weapon import weapon_bg_color, WeaponCategory, WeaponStyle
 from weapons.missiles import DrillMissile
-from weapons.aerial import Seagull, Chum # refactor
 from weapons.guns import Bubble # refactor
 from weapons.long_bow import LongBow
 from weapons.plants import PlantSeed
-from weapons.green_shell import GreenShell
 from weapons.mine import Mine
 
 from weapons.misc.springs import MasterOfPuppets
@@ -49,11 +46,9 @@ import globals
 
 
 def getGlobals():
-	global fpsClock, fps, screenWidth, screenHeight, win, screen
+	global fpsClock, fps, win, screen
 	fpsClock = globals.fpsClock
 	fps = GameVariables().fps
-	screenWidth = globals.screenWidth
-	screenHeight = globals.screenHeight
 	win = globals.win
 	screen = globals.screen
 
@@ -127,36 +122,36 @@ class Game:
 		TeamManager().team_choser = TeamManager().teams.index(TeamManager().current_team)
 
 		# place worms
-		random_placing()
+		self.place_worms_random()
 		
 		# place objects
 		if not self.game_config.option_digging:
 			amount = randint(2,4)
 			for _ in range(amount):
-				mine = place_object(Mine, None, True)
+				mine = MapManager().place_object(Mine, None, True)
 				mine.damp = 0.1
 
 		amount = randint(2,4)
 		for _ in range(amount):
-			place_object(PetrolCan, None, False)
+			MapManager().place_object(PetrolCan, None, False)
 
 		if not self.game_config.option_digging:
 			amount = randint(0, 2)
 			for _ in range(amount):
-				place_object(PlantSeed, ((0,0), (0,0), 0, PlantMode.VENUS), False)
+				MapManager().place_object(PlantSeed, ((0,0), (0,0), 0, PlantMode.VENUS), False)
 
 		# give random legendary starting weapons:
-		give_random_legendary_weapon(1)
+		WeaponManager().give_extra_starting_weapons()
 
 		# choose starting worm
-		w = TeamManager().current_team.worms.pop(0)
-		TeamManager().current_team.worms.append(w)
-				
+		starting_worm = TeamManager().current_team.worms.pop(0)
+		TeamManager().current_team.worms.append(starting_worm)
+
 		if Game._game.game_config.random_mode != RandomMode.NONE:
-			w = choice(TeamManager().current_team.worms)
+			starting_worm = choice(TeamManager().current_team.worms)
 		
-		GameVariables().player = w
-		GameVariables().cam_track = w
+		GameVariables().player = starting_worm
+		GameVariables().cam_track = starting_worm
 
 		# reset time
 		TimeManager().time_reset()
@@ -168,13 +163,32 @@ class Game:
 		# handle game mode
 		self.init_handle_game_mode()
 
+
+	def place_worms_random(self) -> None:
+		''' create worms and place them randomly '''
+		for i in range(self.game_config.worms_per_team * len(TeamManager().teams)):
+			if self.game_config.option_forts:
+				place = MapManager().get_good_place(div=i)
+			else:
+				place = MapManager().get_good_place()
+			if self.game_config.option_digging:
+				pygame.draw.circle(MapManager().game_map, SKY, place, 35)
+				pygame.draw.circle(MapManager().ground_map, SKY, place, 35)
+				pygame.draw.circle(MapManager().ground_secondary, SKY, place, 30)
+			current_team = TeamManager().teams[TeamManager().team_choser]
+			new_worm_name = current_team.get_new_worm_name()
+			current_team.worms.append(Worm(place, new_worm_name, current_team))
+			TeamManager().team_choser = (TeamManager().team_choser + 1) % GameVariables().num_of_teams
+			self.lstepper()
+		GameVariables().game_state = GameVariables().game_next_state
+
+
 	def init_handle_game_mode(self) -> None:
 		''' on init, handle game mode parameter and variables '''
-
 		# digging match
 		if Game._game.game_config.option_digging:
 			for _ in range(80):
-				mine = place_object(Mine, None)
+				mine = MapManager().place_object(Mine, None)
 				mine.damp = 0.1
 			# more digging
 			for team in TeamManager().teams:
@@ -187,7 +201,7 @@ class Game:
 
 		if Game._game.gameMode == GameMode.MISSIONS:
 			MissionManager()
-			globals.time_manager.turnTime += 10
+			TimeManager().turnTime += 10
 			MissionManager._mm.cycle()
 
 	def clearLists(self):
@@ -207,8 +221,6 @@ class Game:
 		else:
 			self.map_manager.create_map_image(self.game_config.map_path, custom_height, self.game_config.is_recolor)
 		
-	
-
 	def initiateGameVariables(self):
 		self.waterRise = False # whether water rises at the end of each turn
 		self.waterRising = False # water rises in current state
@@ -220,24 +232,6 @@ class Game:
 		self.actionMove = False
 
 		self.timeTravel = False
-			
-	def drawTrampolineHint(self):
-		surf = pygame.Surface((24, 7), pygame.SRCALPHA)
-		surf.blit(sprites.sprite_atlas, (0,0), (100, 117, 24, 7))
-		position = self.player.pos + self.player.get_shooting_direction() * 20
-		anchored = False
-		for i in range(25):
-			cpos = position.y + i
-			if MapManager().is_ground_at(Vector(position.x, cpos)):
-				anchored = True
-				break
-		if anchored:
-			surf.set_alpha(200)
-		else:
-			surf.set_alpha(100)
-		
-		win.blit(surf, point2world(position - Vector(24,7) / 2))
-	
 
 	def evaluate_config(self, game_config: GameConfig):
 		self.game_config: GameConfig = game_config
@@ -283,13 +277,13 @@ class Game:
 	def step(self):
 		pass
 	
-	def addToScoreList(self, amount=1):
+	def add_to_score_list(self, amount=1):
 		"""add to score list if points, list entry: (surf, name, score)"""
-		if len(self.killList) > 0 and self.killList[0][1] == self.player.name_str:
+		if len(self.killList) > 0 and self.killList[0][1] == GameVariables().player.name_str:
 			amount += self.killList[0][2]
 			self.killList.pop(0)
-		string = self.player.name_str + ": " + str(amount)
-		self.killList.insert(0, (fonts.pixel5_halo.render(string, False, GameVariables().initial_variables.hud_color), self.player.name_str, amount))
+		string = GameVariables().player.name_str + ": " + str(amount)
+		self.killList.insert(0, (fonts.pixel5_halo.render(string, False, GameVariables().initial_variables.hud_color), GameVariables().player.name_str, amount))
 
 	def lstepper(self):
 		self.lstep += 1
@@ -300,115 +294,8 @@ class Game:
 		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
 		pygame.display.update()
 
-# todo: determine where this belongs, refactor mines better: add bad places as argument with mines places
-def giveGoodPlace(div = 0, girderPlace = True):
-	goodPlace = False
-	counter = 0
-	
-	if Game._game.game_config.option_forts and div != -1:
-		half = MapManager().game_map.get_width() / GameVariables().num_of_teams
-		Slice = div % GameVariables().num_of_teams
-		
-		left = half * Slice
-		right = left + half
-		if left <= 0:
-			left += 6
-		if right >= MapManager().game_map.get_width():
-			right -= 6
-	else:
-		left, right = 6, MapManager().game_map.get_width() - 6
-	
-	if Game._game.game_config.option_digging:
-		while not goodPlace:
-			place = Vector(randint(int(left), int(right)), randint(6, MapManager().game_map.get_height() - 50))
-			goodPlace = True
-			for worm in GameVariables().get_worms():
-				if distus(worm.pos, place) < 5625:
-					goodPlace = False
-					break
-				if  not goodPlace:
-					continue
-		return place
-	
-	while not goodPlace:
-		# give rand place
-		counter += 1
-		goodPlace = True
-		place = Vector(randint(int(left), int(right)), randint(6, MapManager().game_map.get_height() - 6))
-		
-		# if in MapManager().ground_map 
-		if MapManager().is_ground_around(place):
-			goodPlace = False
-			continue
-		
-		if counter > 8000:
-			# if too many iterations, girder place
-			if not girderPlace:
-				return None
-			for worm in GameVariables().get_worms():
-				if distus(worm.pos, place) < 2500:
-					goodPlace = False
-					break
-			if  not goodPlace:
-				continue
-			girder(place + Vector(0,20))
-			return place
-		
-		# put place down
-		y = place.y
-		for i in range(MapManager().game_map.get_height()):
-			if y + i >= MapManager().game_map.get_height():
-				goodPlace = False
-				break
-			if MapManager().game_map.get_at((place.x, y + i)) == GRD or MapManager().worm_col_map.get_at((place.x, y + i)) != SKY_COL or MapManager().objects_col_map.get_at((place.x, y + i)) != SKY_COL:
-				y = y + i - 7
-				break
-		if  not goodPlace:
-			continue
-		place.y = y
-		
-		# check for nearby worms in radius 50
-		for worm in GameVariables().get_worms():
-			if distus(worm.pos, place) < 2500:
-				goodPlace = False
-				break
-		if  not goodPlace:
-			continue
-		
-		# check for nearby mines in radius 40
-		for mine in [mine for mine in GameVariables().get_physicals() if isinstance(mine, Mine)]:
-			if distus(mine.pos, place) < 1600:
-				goodPlace = False
-				break
-		if  not goodPlace:
-			continue
-		
-		# check for nearby petrol cans in radius 30
-		for can in GameVariables().get_exploding_props():
-			if distus(can.pos, place) < 1600:
-				goodPlace = False
-				break
-		if  not goodPlace:
-			continue
-		
-		# if all conditions are met, make hole and place
-		if MapManager().is_ground_around(place):
-			pygame.draw.circle(MapManager().game_map, SKY, place.vec2tup(), 5)
-			pygame.draw.circle(MapManager().ground_map, SKY, place.vec2tup(), 5)
-	return place
 
-def place_object(cls: Any, args, girder_place: bool=False) -> EntityPhysical:
-	''' create an instance of cls, return the last created'''
-	place = giveGoodPlace(-1, girder_place)
-	if place:
-		if args is None:
-			instance = cls()
-		else:
-			instance = cls(*args)
-		instance.pos = Vector(place.x, place.y - 2)
-	else:
-		return None
-	return instance
+
 
 
 ################################################################################ Objects
@@ -430,6 +317,7 @@ class TimeAgent:
 		
 		self.energy = 0
 		self.stepsForEnergy = int(TimeTravel._tt.timeTravelList["energy"]/0.05)
+	
 	def step(self):
 		if len(self.positions) == 0:
 			TimeTravel._tt.timeTravelFire = True
@@ -443,6 +331,7 @@ class TimeAgent:
 			self.energy += 0.05
 			
 		self.time_counter += 1
+	
 	def draw(self, win: pygame.Surface):
 		pygame.draw.circle(win, GameVariables().player.color, point2world(self.pos), 3+1)
 		facing = self.facings.pop(0)
@@ -784,25 +673,6 @@ def cycle_worms():
 	if Game._game.gameMode == GameMode.MISSIONS:
 		MissionManager._mm.cycle()
 
-
-def random_placing():
-	for i in range(Game._game.game_config.worms_per_team * len(TeamManager().teams)):
-		if Game._game.game_config.option_forts:
-			place = giveGoodPlace(i)
-		else:
-			place = giveGoodPlace()
-		if Game._game.game_config.option_digging:
-			pygame.draw.circle(MapManager().game_map, SKY, place, 35)
-			pygame.draw.circle(MapManager().ground_map, SKY, place, 35)
-			pygame.draw.circle(MapManager().ground_secondary, SKY, place, 30)
-		current_team = TeamManager().teams[TeamManager().team_choser]
-		new_worm_name = current_team.get_new_worm_name()
-		current_team.worms.append(Worm(place, new_worm_name, current_team))
-		TeamManager().team_choser = (TeamManager().team_choser + 1) % GameVariables().num_of_teams
-		Game._game.lstepper()
-	GameVariables().game_state = GameVariables().game_next_state
-
-
 ################################################################################ Gui
 
 def weapon_menu_init():
@@ -999,8 +869,8 @@ class MissionManager:
 			worms.append(worm)
 		return worms
 
-	def createMarker(self):
-		return giveGoodPlace(-1, True)
+	def createMarker(self) -> Vector:
+		return MapManager().get_good_place()
 
 	def chooseTarget(self):
 		notFromTeam = GameVariables().player.team
@@ -1140,7 +1010,7 @@ class Mission:
 
 		GameVariables().commentator.comment(comment)
 		GameVariables().player.team.points += self.reward
-		Game._game.addToScoreList(self.reward)
+		Game._game.add_to_score_list(self.reward)
 
 		self.completed = True
 		MissionManager._log += f"{GameVariables().player.name_str} completed mission {self.missionType} {str(self.reward)}\n"
@@ -1231,20 +1101,7 @@ class Mission:
 		self.surf.fill(bColor)
 		self.surf.blit(self.textSurf, (1,1))
 
-def give_random_legendary_weapon(amount: int):
-	startingWeapons = ["holy grenade", "gemino mine", "bee hive", "electro boom", "pokeball", "green shell", "guided missile", "fireworks"]
-	if GameVariables().initial_variables.allow_air_strikes:
-		startingWeapons.append("mine strike")
-	for _ in range(amount):
-		for team in TeamManager().teams:
-			chosen_weapon = WeaponManager().get_weapon(choice(startingWeapons)).index
-			team.ammo(chosen_weapon, 1)
-			if randint(0,2) >= 1:
-				chosen_weapon = WeaponManager().get_weapon(choice(["moon gravity", "teleport", "jet pack", "aim aid", "switch worms"])).index
-				team.ammo(chosen_weapon, 1)
-			if randint(0,6) == 1:
-				chosen_weapon = WeaponManager().get_weapon(choice(["portal gun", "trampoline", "ender pearl"])).index
-				team.ammo(chosen_weapon, 3)
+
 
 def suddenDeath():
 	sudden_death_modes = [Game._game.game_config.sudden_death_style]
@@ -1338,35 +1195,7 @@ def cheat_activate(code: str):
 
 
 
-class Anim:
-	_a = None
-	def __init__(self):
-		Anim._a = self
-		GameVariables().register_non_physical(self)
-		num = -1
-		for folder in os.listdir("./anims"):
-			if not os.path.isdir("./anims/" + folder):
-				continue
-			try:
-				folderNum = int(folder)
-			except:
-				continue
-			num = max(num, folderNum)
-		self.folder = "./anims/" + str(num + 1)
-		# create folder
-		if not os.path.isdir(self.folder):
-			os.mkdir(self.folder)
-		self.time = 0
-		print("record Start")
-	def step(self):
-		pygame.image.save(win, self.folder + "/" + str(self.time).zfill(3) + ".png")
-		self.time += 1
-		if self.time == 5 * fps:
-			Anim._a = None
-			GameVariables().unregister_non_physical(self)
-			print("record End")
-	def draw(self, win: pygame.Surface):
-		pass
+
 
 ################################################################################ State machine
 
@@ -1482,7 +1311,6 @@ def onKeyReleaseSpace():
 		if any(fire_weapon_conditions):
 			WeaponManager().fire_weapon = True
 		WeaponManager().energising = False
-		
 
 def onKeyPressTab():
 	if WeaponManager().current_weapon.name == "drill missile":
@@ -1507,10 +1335,10 @@ def onKeyPressTab():
 			GameVariables().girder_angle = 0
 	elif WeaponManager().current_weapon.is_fused:
 		GameVariables().fuse_time += fps
-		if GameVariables().fuse_time > fps*4:
+		if GameVariables().fuse_time > fps * 4:
 			GameVariables().fuse_time = fps
 		string = "delay " + str(GameVariables().fuse_time//fps) + " sec"
-		FloatingText(GameVariables().player.pos + Vector(0,-5), string, (20,20,20))
+		FloatingText(GameVariables().player.pos + Vector(0, -5), string, (20, 20, 20))
 		WeaponManager().render_weapon_count()
 	elif WeaponManager().current_weapon.category == WeaponCategory.AIRSTRIKE:
 		GameVariables().airstrike_direction *= -1
@@ -1664,35 +1492,37 @@ def gameMain(game_config: GameConfig=None):
 			scroll = Vector()
 			if mousePos[0] < EDGE_BORDER:
 				scroll.x -= MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
-			if mousePos[0] > screenWidth - EDGE_BORDER:
+			if mousePos[0] > GameVariables().screen_width - EDGE_BORDER:
 				scroll.x += MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
 			if mousePos[1] < EDGE_BORDER:
 				scroll.y -= MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
-			if mousePos[1] > screenHeight - EDGE_BORDER:
+			if mousePos[1] > GameVariables().screen_height - EDGE_BORDER:
 				scroll.y += MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
 			if scroll != Vector():
 				GameVariables().cam_track = Camera(GameVariables().cam_pos + Vector(GameVariables().win_width, GameVariables().win_height)/2 + scroll)
 		
 		# handle scale:
 		oldSize = (GameVariables().win_width, GameVariables().win_height)
-		GameVariables().win_width += (globals.screenWidth / GameVariables().scale_factor - GameVariables().win_width) * 0.2
-		GameVariables().win_height += (globals.screenHeight / GameVariables().scale_factor - GameVariables().win_height) * 0.2
+		GameVariables().win_width += (GameVariables().screen_width / GameVariables().scale_factor - GameVariables().win_width) * 0.2
+		GameVariables().win_height += (GameVariables().screen_height / GameVariables().scale_factor - GameVariables().win_height) * 0.2
 		GameVariables().win_width = int(GameVariables().win_width)
 		GameVariables().win_height = int(GameVariables().win_height)
 		
 		if oldSize != (GameVariables().win_width, GameVariables().win_height):
 			globals.win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
 			win = globals.win
-			globals.GameVariables().win_width = GameVariables().win_width
-			globals.GameVariables().win_height = GameVariables().win_height
+			GameVariables().win_width = GameVariables().win_width
+			GameVariables().win_height = GameVariables().win_height
 			updateWin(win, GameVariables().scale_factor)
 		
 		# handle position:
 		if GameVariables().cam_track:
-			# actual position target:
-			### GameVariables().cam_pos = GameVariables().cam_track.pos - Vector(GameVariables().win_width, GameVariables().win_height)/2
-			# with smooth transition:
-			GameVariables().cam_pos += ((GameVariables().cam_track.pos - Vector(int(globals.screenWidth / GameVariables().scale_factor), int(globals.screenHeight / GameVariables().scale_factor))/2) - GameVariables().cam_pos) * 0.2
+			GameVariables().cam_pos += (
+				(
+					GameVariables().cam_track.pos - Vector(int(GameVariables().screen_width / GameVariables().scale_factor),
+					int(GameVariables().screen_height / GameVariables().scale_factor)) / 2
+				) - GameVariables().cam_pos
+			) * 0.2
 		
 		# constraints:
 		if GameVariables().cam_pos[1] < 0:
@@ -1804,8 +1634,6 @@ def gameMain(game_config: GameConfig=None):
 		# draw health bar
 		TeamManager().step()
 		TeamManager().draw(win)
-		
-		
 
 		if Game._game.gameMode == GameMode.MISSIONS:
 			if MissionManager._mm:
@@ -1899,4 +1727,5 @@ if __name__ == "__main__":
 		config.map_path = r'assets/worms_maps/Nyc.png'
 		config.game_mode = GameMode.BATTLE
 		config.option_artifacts = True
+		config.option_forts = True
 		gameMain(config)

@@ -13,6 +13,8 @@ from entities import PhysObj
 from game.visual_effects import Blast, EffectManager
 from entities.gun_shell import GunShell
 
+TRAMPOLINE_MAX_VEL = 8
+TRAMPOLINE_MIN_VEL = 3
 
 class Flare(PhysObj):
 	def __init__(self, pos, direction, energy):
@@ -49,8 +51,25 @@ class Flare(PhysObj):
 		GameVariables().get_light_sources().remove(self)
 
 
+def draw_trampoline_hint(win: pygame.Surface) -> None:
+	surf = pygame.Surface((24, 7), pygame.SRCALPHA)
+	surf.blit(sprites.sprite_atlas, (0,0), (100, 117, 24, 7))
+	position = GameVariables().player.pos + GameVariables().player.get_shooting_direction() * 20
+	anchored = False
+	for i in range(25):
+		cpos = position.y + i
+		if MapManager().is_ground_at(Vector(position.x, cpos)):
+			anchored = True
+			break
+	if anchored:
+		surf.set_alpha(200)
+	else:
+		surf.set_alpha(100)
+	
+	win.blit(surf, point2world(position - Vector(24,7) / 2))
+
+
 class Trampoline:
-	_reg = []
 	_sprite = None
 	def __init__(self, pos):
 		GameVariables().register_non_physical(self)
@@ -62,7 +81,6 @@ class Trampoline:
 			if MapManager().is_ground_at(self.pos + Vector(0, i)):
 				self.anchor = self.pos + Vector(0, i)
 				break
-		Trampoline._reg.append(self)
 		self.size = Vector(24, 8)
 		if Trampoline._sprite == None:
 			Trampoline._sprite = pygame.Surface((24, 7), pygame.SRCALPHA)
@@ -83,21 +101,26 @@ class Trampoline:
 				self.directionalVel = 0
 				self.offset = 0
 				self.stable = True
+		
 		if not MapManager().is_ground_at(self.anchor):
 			GameVariables().unregister_non_physical(self)
-			Trampoline._reg.remove(self)
 			gs = GunShell(vectorCopy(self.pos))
 			gs.surf = Trampoline._sprite
+		
 		for obj in GameVariables().get_physicals():
 			# trampoline
 			if obj.vel.y > 0 and self.collide(obj.pos):
 				self.spring(obj.vel.y)
-				if abs(obj.vel.y) <= 10:
-					obj.vel.y *= -1.2
+
+				if abs(obj.vel.y) <= TRAMPOLINE_MAX_VEL:
+					obj.vel.y *= -1.3
 				else:
-					obj.vel.y *= -1.0
-				if abs(obj.vel.y) < JUMP_VELOCITY:
-					obj.vel.y = - JUMP_VELOCITY
+					obj.vel.y = -obj.vel.y
+				
+				if abs(obj.vel.y) <= TRAMPOLINE_MIN_VEL:
+					obj.vel.y = -TRAMPOLINE_MIN_VEL
+
+				# prevent stucking on trampoline
 				if GameVariables().game_state == GameState.WAIT_STABLE:
 					obj.vel.x += uniform(-0.5,0.5)
 	

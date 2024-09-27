@@ -72,16 +72,6 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 			d = Debrie(pos, radius / 5, colors, 2, radius > 25)
 			d.radius = choice([2, 1])
 
-def girder(pos: Vector):
-	surf = pygame.Surface((GameVariables().girder_size, 10)).convert_alpha()
-	for i in range(GameVariables().girder_size // 16 + 1):
-		surf.blit(sprites.sprite_atlas, (i * 16, 0), (64, 80, 16, 16))
-	surf_ground = pygame.transform.rotate(surf, GameVariables().girder_angle)
-	MapManager().ground_map.blit(surf_ground, (int(pos[0] - surf_ground.get_width() / 2), int(pos[1] - surf_ground.get_height() / 2)) )
-	surf.fill(GRD)
-	surfMap = pygame.transform.rotate(surf, GameVariables().girder_angle)
-	MapManager().game_map.blit(surfMap, (int(pos[0] - surfMap.get_width() / 2), int(pos[1] - surfMap.get_height() / 2)) )
-
 class Earthquake(Entity):
 	earthquake = 0
 	def __init__(self, timer = 7 * GameVariables().fps, decorative = False, strength = 1):

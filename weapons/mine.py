@@ -15,6 +15,7 @@ from entities.physical_entity import PhysObj
 class Mine(PhysObj):
 	def __init__(self, pos=(0,0), delay=0):
 		super().__init__(pos)
+		GameVariables().get_obscuring_objects().append(self)
 		self.radius = 2
 		self.color = (52,66,71)
 		self.damp = 0.35
@@ -49,6 +50,10 @@ class Mine(PhysObj):
 
 	def death_response(self):
 		boom(self.pos, 30)
+	
+	def remove_from_game(self) -> None:
+		super().remove_from_game()
+		GameVariables().get_obscuring_objects().remove(self)
 
 	def draw(self, win: pygame.Surface):
 		if GameVariables().config.option_digging:

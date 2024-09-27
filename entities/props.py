@@ -13,6 +13,7 @@ class ExplodingProp(PhysObj):
 	def __init__(self, pos, **kwargs) -> None:
 		super().__init__(pos, **kwargs)
 		GameVariables().get_exploding_props().append(self)
+		GameVariables().get_obscuring_objects().append(self)
 		self.health = 5
 
 	def death_response(self):
@@ -21,8 +22,12 @@ class ExplodingProp(PhysObj):
 		for i in range(40):
 			s = Fire(self.pos, 5)
 			s.vel = vectorFromAngle(2 * pi * i / 40, uniform(1.3, 2))
-		GameVariables().get_exploding_props().remove(self)
 	
+	def remove_from_game(self) -> None:
+		super().remove_from_game()
+		GameVariables().get_exploding_props().remove(self)
+		GameVariables().get_obscuring_objects().remove(self)
+
 	def damage(self, value, damageType=0):
 		dmg = value * GameVariables().damage_mult
 		if self.health > 0:

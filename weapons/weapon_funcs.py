@@ -6,7 +6,7 @@ from common import GameVariables, EntityPhysical
 from common.vector import Vector
 
 from game.map_manager import MapManager
-from game.world_effects import girder, Earthquake, Tornado
+from game.world_effects import Earthquake, Tornado
 from entities.worm_tools import Rope, Parachute, JetPack
 from weapons.missiles import Missile, GravityMissile, DrillMissile, HomingMissile, Seeker
 from weapons.grenades import Grenade, StickyBomb, GasGrenade, HolyGrenade, Banana
@@ -238,7 +238,7 @@ def fire_baseball(*args, **kwargs) -> EntityPhysical:
 
 def fire_girder(*args, **kwargs) -> EntityPhysical:
     """ fire girder """
-    return girder(kwargs.get('pos'))
+    return MapManager().girder(kwargs.get('pos'))
 
 
 

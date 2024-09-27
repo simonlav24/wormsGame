@@ -39,6 +39,7 @@ class DataBase:
         self.worms: List[EntityWorm] = []
         self.debries: List[EntityPhysical] = []
         self.exploding_props: List[EntityPhysical] = []
+        self.obscuring_objects: List[EntityPhysical] = []
         self.autonomous_objects: List[AutonomousEntity] = []
         self.targets: List[EntityPhysical] = []
         self.plants: List[EntityPlant] = []
@@ -69,13 +70,15 @@ class GameVariables(metaclass=SingletonMeta):
         self.cam_pos: Vector = Vector(0,0)
         self.cam_track: EntityPhysical = None
         self.scale_factor = 3
-        self.scale_range = (1,3)
+        self.scale_range = (1, 3)
 
         self.win_width = 0
         self.win_height = 0
+        self.screen_width = 1280
+        self.screen_height = 720
 
         self.water_level = self.initial_variables.water_level
-        self.water_color = (255,255,255)
+        self.water_color = (255, 255, 255)
 
         self.mega_weapon_trigger = False
         self.fuse_time = 2 * self.fps
@@ -99,7 +102,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.commentator: IComment = None
 
         self.continuous_fire = False
-        self.weapon_hold: pygame.Surface = pygame.Surface((16,16), pygame.SRCALPHA)
+        self.weapon_hold: pygame.Surface = pygame.Surface((16, 16), pygame.SRCALPHA)
         self.point_target: Vector = Vector(-100, -100)
         self.girder_size: int = 50
         self.girder_angle: int = 0
@@ -180,6 +183,9 @@ class GameVariables(metaclass=SingletonMeta):
 
     def get_exploding_props(self) -> List[EntityPhysical]:
         return self.database.exploding_props
+
+    def get_obscuring_objects(self) -> List[EntityPhysical]:
+        return self.database.obscuring_objects
 
     def get_plants(self) -> List[EntityPlant]:
         return self.database.plants

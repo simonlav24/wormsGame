@@ -3,9 +3,9 @@ import os
 import pygame
 from math import cos, pi, sin, atan2
 from random import choice, randint
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
-from common import PATH_ASSETS, feels, GameVariables, SingletonMeta, point2world
+from common import PATH_ASSETS, feels, GameVariables, SingletonMeta, point2world, sprites, EntityPhysical
 from common.vector import *
 
 SKY = (0,0,0,0)
@@ -39,6 +39,7 @@ class MapManager(metaclass=SingletonMeta):
         self.ground_secondary: pygame.Surface = None
 
         self.draw_ground_secondary = True
+        self._is_digging_map = False
 
     def get_map_height(self) -> int:
         return self.game_map.get_height()
@@ -99,6 +100,7 @@ class MapManager(metaclass=SingletonMeta):
         self.create_map_surfaces((int(1024 * 1.5), ratio))
         self.game_map.fill(GRD)
         self.recolor_ground()
+        self._is_digging_map = True
 
     def create_map_surfaces(self, dims) -> None:
         ''' create all map related surfaces '''
@@ -292,4 +294,123 @@ class MapManager(metaclass=SingletonMeta):
                     return None
         return check_pos
 
+    def girder(self, pos: Vector) -> None:
+        ''' place girder in position '''
+        surf = pygame.Surface((GameVariables().girder_size, 10)).convert_alpha()
+        for i in range(GameVariables().girder_size // 16 + 1):
+            surf.blit(sprites.sprite_atlas, (i * 16, 0), (64, 80, 16, 16))
+        surf_ground = pygame.transform.rotate(surf, GameVariables().girder_angle)
+        self.ground_map.blit(
+            surf_ground,
+            (int(pos[0] - surf_ground.get_width() / 2), int(pos[1] - surf_ground.get_height() / 2)) 
+        )
+        surf.fill(GRD)
+        surfMap = pygame.transform.rotate(surf, GameVariables().girder_angle)
+        self.game_map.blit(
+            surfMap,
+            (int(pos[0] - surfMap.get_width() / 2), int(pos[1] - surfMap.get_height() / 2))
+        )
+
+    def get_good_place(self, *, div = -1, girder_place = True) -> Vector:
+        ''' return unobscured, unoccupied place on ground '''
+        goodPlace = False
+        counter = 0
+        
+        if div != -1:
+            half = self.game_map.get_width() / GameVariables().num_of_teams
+            slice = div % GameVariables().num_of_teams
+            
+            left = half * slice
+            right = left + half
+            if left <= 0:
+                left += 6
+            if right >= self.game_map.get_width():
+                right -= 6
+        else:
+            left, right = 6, self.game_map.get_width() - 6
+        
+        if self._is_digging_map:
+            while not goodPlace:
+                place = Vector(randint(int(left), int(right)), randint(6, self.game_map.get_height() - 50))
+                goodPlace = True
+                for worm in GameVariables().get_worms():
+                    if distus(worm.pos, place) < 5625:
+                        goodPlace = False
+                        break
+                    if  not goodPlace:
+                        continue
+            return place
+        
+        while not goodPlace:
+            # give rand place
+            counter += 1
+            goodPlace = True
+            place = Vector(randint(int(left), int(right)), randint(6, self.game_map.get_height() - 6))
+            
+            # if in .ground_map 
+            if self.is_ground_around(place):
+                goodPlace = False
+                continue
+            
+            if counter > 8000:
+                # if too many iterations, girder place
+                if not girder_place:
+                    return None
+                for worm in GameVariables().get_worms():
+                    if distus(worm.pos, place) < 2500:
+                        goodPlace = False
+                        break
+                if  not goodPlace:
+                    continue
+                self.girder(place + Vector(0, 20))
+                return place
+            
+            # put place down
+            y = place.y
+            for i in range(self.game_map.get_height()):
+                if y + i >= self.game_map.get_height():
+                    goodPlace = False
+                    break
+                if (self.game_map.get_at((place.x, y + i)) == GRD
+                    or self.worm_col_map.get_at((place.x, y + i)) != SKY_COL
+                    or self.objects_col_map.get_at((place.x, y + i)) != SKY_COL):
+                    y = y + i - 7
+                    break
+            if  not goodPlace:
+                continue
+            place.y = y
+            
+            # check for nearby worms in radius 50
+            for worm in GameVariables().get_worms():
+                if distus(worm.pos, place) < 2500:
+                    goodPlace = False
+                    break
+            if  not goodPlace:
+                continue
+                    
+            # check for nearby petrol cans in radius 30
+            for can in GameVariables().get_obscuring_objects():
+                if distus(can.pos, place) < 1600:
+                    goodPlace = False
+                    break
+            if  not goodPlace:
+                continue
+            
+            # if all conditions are met, make hole and place
+            if self.is_ground_around(place):
+                pygame.draw.circle(self.game_map, SKY, place.vec2tup(), 5)
+                pygame.draw.circle(self.ground_map, SKY, place.vec2tup(), 5)
+        return place
     
+    def place_object(self, cls: Any, args, girder_place: bool=False) -> EntityPhysical:
+        ''' create an instance of cls, return the last created'''
+        place = self.get_good_place(girder_place=girder_place)
+        if place:
+            if args is None:
+                instance = cls()
+            else:
+                instance = cls(*args)
+            instance.pos = Vector(place.x, place.y - 2)
+        else:
+            return None
+        return instance
