@@ -13,8 +13,9 @@ from common import *
 from common.vector import Vector
 from common.game_config import GameMode, RandomMode, SuddenDeathMode
 
+from rooms.room import Room, Rooms, SwitchRoom
 from rooms.room_main_menu import MainMenuRoom
-# from mainMenus import mainMenu, pauseMenu, initGui, updateWin
+from rooms.splash_screen import SplashScreenRoom
 
 from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay, DarknessGamePlay
 from game.time_manager import TimeManager
@@ -1358,11 +1359,9 @@ def gameMain(game_config: GameConfig=None):
 	global win
 
 	Game(game_config)
-	WeaponManager()
-	TeamManager()
 	
 	damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
-	TimeTravel()
+	# TimeTravel()
 
 	wind_flag = WindFlag()
 
@@ -1513,7 +1512,6 @@ def gameMain(game_config: GameConfig=None):
 			win = globals.win
 			GameVariables().win_width = GameVariables().win_width
 			GameVariables().win_height = GameVariables().win_height
-			updateWin(win, GameVariables().scale_factor)
 		
 		# handle position:
 		if GameVariables().cam_track:
@@ -1680,29 +1678,345 @@ def gameMain(game_config: GameConfig=None):
 		# print(f'fps: {end_time - start_time}')
 		fpsClock.tick(GameVariables().fps)
 
-def splashScreen():
-	splashImage = pygame.image.load("assets/simeGames.png")
-	timer = 1 * GameVariables().fps // 2
-	run = True
-	while run:
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				run = False
-			if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-				run = False
-		
-		timer -= 1
-		if timer <= 0:
-			break
 
-		win.fill((11,126,193))
-		win.blit(splashImage, ((GameVariables().win_width/2 - splashImage.get_width()/2, GameVariables().win_height/2 - splashImage.get_height()/2)))
-		screen.blit(pygame.transform.scale(win, screen.get_rect().size), (0,0))
-		pygame.display.update()
-		fpsClock.tick(GameVariables().fps)
+class GameRoom(Room):
+	def __init__(self, *args, **kwargs) -> None:
+		super().__init__(*args, **kwargs)
+
+		config = kwargs.get('input')
+		Game(config)
+
+		# refactor these
+		self.wind_flag = WindFlag()
+		self.damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
+	
+	def handle_pygame_event(self, event) -> None:
+		''' handle pygame events in game '''
+		super().handle_pygame_event(event)
+		is_handled = Game._game.handle_event(event)
+		if is_handled:
+			return
+		GameVariables().handle_event(event)
+		if event.type == pygame.QUIT:
+			globals.exitGame()
+		# mouse click event
+		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # left click (main)
+			# mouse position:
+			mousePos = pygame.mouse.get_pos()
+			# CLICKABLE weapon check:
+			if GameVariables().game_state == GameState.PLAYER_PLAY and WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE:
+				# fireClickable()
+				WeaponManager().fire_weapon = True
+			if GameVariables().game_state == GameState.PLAYER_PLAY and WeaponManager().current_weapon.name in ["homing missile", "seeker"] and not Game._game.radial_weapon_menu:
+				mouse_pos = mouse_pos_in_world()
+				GameVariables().point_target = vectorCopy(mouse_pos)
+
+		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
+			pass
+		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
+			# this is the next GameVariables().game_state after placing all worms
+			if GameVariables().game_state == GameState.PLAYER_PLAY:
+				if Game._game.radial_weapon_menu is None:
+					if WeaponManager().can_open_menu():
+						weapon_menu_init()
+				else:
+					Game._game.radial_weapon_menu = None
+		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down
+			if not Game._game.radial_weapon_menu:
+				GameVariables().scale_factor *= 1.1
+				GameVariables().scale_factor = GameVariables().scale_factor
+				if GameVariables().scale_factor >= GameVariables().scale_range[1]:
+					GameVariables().scale_factor = GameVariables().scale_range[1]
+					GameVariables().scale_factor = GameVariables().scale_factor
+		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll up
+			if not Game._game.radial_weapon_menu:
+				GameVariables().scale_factor *= 0.9
+				GameVariables().scale_factor = GameVariables().scale_factor
+				if GameVariables().scale_factor <= GameVariables().scale_range[0]:
+					GameVariables().scale_factor = GameVariables().scale_range[0]
+					GameVariables().scale_factor = GameVariables().scale_factor
+
+		# key press
+		if event.type == pygame.KEYDOWN:
+			# controll worm, jump and facing
+				if GameVariables().player is not None and GameVariables().player_in_control:
+					if event.key == pygame.K_RETURN:
+						onKeyPressEnter()
+					if event.key == pygame.K_RIGHT:
+						onKeyPressRight()
+					if event.key == pygame.K_LEFT:
+						onKeyPressLeft()
+				# fire on key press
+				if event.key == pygame.K_SPACE:
+					onKeyPressSpace()
+				# weapon change by keyboard
+				# misc
+				if event.key == pygame.K_ESCAPE:
+					pause = not pause
+				if event.key == pygame.K_TAB:
+					onKeyPressTab()
+				if event.key == pygame.K_t:
+					onKeyPressTest()
+				if event.key == pygame.K_F1:
+					toast_info()
+				if event.key == pygame.K_F2:
+					Worm.healthMode = (Worm.healthMode + 1) % 2
+					if Worm.healthMode == 1:
+						for worm in GameVariables().get_worms():
+							worm.healthStr = fonts.pixel5.render(str(worm.health), False, worm.team.color)
+				if event.key == pygame.K_F3:
+					MapManager().draw_ground_secondary = not MapManager().draw_ground_secondary
+				if event.key == pygame.K_m:
+					pass
+					# TimeSlow()
+				if event.key in [pygame.K_RCTRL, pygame.K_LCTRL]:
+					GameVariables().scale_factor = GameVariables().scale_range[1]
+					if GameVariables().cam_track is None:
+						GameVariables().cam_track = GameVariables().player
+
+				Game._game.cheatCode += event.unicode
+				if event.key == pygame.K_EQUALS:
+					cheat_activate(Game._game.cheatCode)
+					Game._game.cheatCode = ""
+		if event.type == pygame.KEYUP:
+			# fire release
+			if event.key == pygame.K_SPACE:
+				onKeyReleaseSpace()
+
+	def step(self):
+		''' game step '''
+		
+		# key hold:
+		keys = pygame.key.get_pressed()
+		if GameVariables().player is not None and GameVariables().player_in_control and GameVariables().player_can_move:
+			# fire hold
+			if keys[pygame.K_SPACE] and GameVariables().player_can_shoot and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
+				onKeyHoldSpace()
+		
+		# if pause:
+		# 	result = [0]
+		# 	# todo here False V
+		# 	args = {"showPoints": False, "teams":TeamManager().teams}
+		# 	pauseMenu(args, result)
+		# 	pause = not pause
+		# 	if result[0] == 1:
+		# 		run = False
+		# 	continue
+		
+		result = stateMachine()
+		if result == 1:
+			run = False
+
+		if GameVariables().game_state in [GameState.RESET]:
+			return
+
+		# use edge map scroll
+		if pygame.mouse.get_focused():
+			mousePos = pygame.mouse.get_pos()
+			scroll = Vector()
+			if mousePos[0] < EDGE_BORDER:
+				scroll.x -= MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
+			if mousePos[0] > GameVariables().screen_width - EDGE_BORDER:
+				scroll.x += MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
+			if mousePos[1] < EDGE_BORDER:
+				scroll.y -= MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
+			if mousePos[1] > GameVariables().screen_height - EDGE_BORDER:
+				scroll.y += MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
+			if scroll != Vector():
+				GameVariables().cam_track = Camera(GameVariables().cam_pos + Vector(GameVariables().win_width, GameVariables().win_height)/2 + scroll)
+		
+		# handle scale:
+		oldSize = (GameVariables().win_width, GameVariables().win_height)
+		GameVariables().win_width += (GameVariables().screen_width / GameVariables().scale_factor - GameVariables().win_width) * 0.2
+		GameVariables().win_height += (GameVariables().screen_height / GameVariables().scale_factor - GameVariables().win_height) * 0.2
+		GameVariables().win_width = int(GameVariables().win_width)
+		GameVariables().win_height = int(GameVariables().win_height)
+		
+		if oldSize != (GameVariables().win_width, GameVariables().win_height):
+			globals.win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
+			GameVariables().win_width = GameVariables().win_width
+			GameVariables().win_height = GameVariables().win_height
+		
+		# handle position:
+		if GameVariables().cam_track:
+			GameVariables().cam_pos += (
+				(
+					GameVariables().cam_track.pos - Vector(int(GameVariables().screen_width / GameVariables().scale_factor),
+					int(GameVariables().screen_height / GameVariables().scale_factor)) / 2
+				) - GameVariables().cam_pos
+			) * 0.2
+		
+		# constraints:
+		if GameVariables().cam_pos[1] < 0:
+			GameVariables().cam_pos[1] = 0
+		if GameVariables().cam_pos[1] >= MapManager().game_map.get_height() - GameVariables().win_height:
+			GameVariables().cam_pos[1] = MapManager().game_map.get_height() - GameVariables().win_height
+		# if GameVariables().config.option_closed_map or Game._game.darkness:
+		# 	if GameVariables().cam_pos[0] < 0:
+		# 		GameVariables().cam_pos[0] = 0
+		# 	if GameVariables().cam_pos[0] >= MapManager().game_map.get_width() - GameVariables().win_width:
+		# 		GameVariables().cam_pos[0] = MapManager().game_map.get_width() - GameVariables().win_width
+		
+		if Earthquake.earthquake > 0:
+			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
+			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(GameVariables().time_overall * 1.8)
+
+		# ------- step -------
+		Game._game.step()
+		GameVariables().game_stable = True
+
+		GameVariables().step_physicals()
+		GameVariables().step_non_physicals()
+
+		# step effects
+		EffectManager().step()
+		
+		# step weapon manager
+		WeaponManager().step()
+
+		for t in Toast._toasts:
+			t.step()
+
+		if Game._game.timeTravel: 
+			TimeTravel._tt.step()
+		
+		GameVariables().game_mode.step()
+
+		# camera for wait to stable:
+		if GameVariables().game_state == GameState.WAIT_STABLE and GameVariables().time_overall % 20 == 0:
+			for worm in GameVariables().get_worms():
+				if worm.stable:
+					continue
+				GameVariables().cam_track = worm
+				break
+		
+		# advance timer
+		TimeManager().step()
+		Game._game.background.step()
+		
+		if MissionManager._mm:
+			MissionManager._mm.step()
+		
+		# menu step
+		if Game._game.radial_weapon_menu:
+			Game._game.radial_weapon_menu.step()
+
+		
+		# reset actions
+		Game._game.actionMove = False
+
+		self.wind_flag.step()
+		GameVariables().commentator.step()
+	
+	def draw(self, win: pygame.Surface) -> None:
+		''' draw game '''
+		super().draw(win)
+		if GameVariables().game_state in [GameState.RESET]:
+			return
+		# ------- draw -------
+		Game._game.background.draw(win)
+		MapManager().draw_land(win)
+		for p in GameVariables().get_physicals(): 
+			p.draw(win)
+		
+		GameVariables().draw_non_physicals(win)
+
+		# draw effects
+		EffectManager().draw(win)
+
+		Game._game.background.drawSecondary(win)
+		for t in Toast._toasts:
+			t.draw(win)
+		
+		
+		# draw shooting indicator
+		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:
+			GameVariables().player.drawCursor(win)
+			if GameVariables().aim_aid and WeaponManager().current_weapon.style == WeaponStyle.GUN:
+				p1 = vectorCopy(GameVariables().player.pos)
+				p2 = p1 + GameVariables().player.get_shooting_direction() * 500
+				pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
+			i = 0
+			while i < 20 * WeaponManager().energy_level:
+				cPos = vectorCopy(GameVariables().player.pos)
+				pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + GameVariables().player.get_shooting_direction() * i))
+				i += 1
+		
+		GameVariables().draw_extra(win)
+		GameVariables().draw_layers(win)
+		
+		# draw game play mode
+		GameVariables().game_mode.draw(win)
+
+		# HUD
+		self.wind_flag.draw(win)
+		TimeManager().draw(win)
+		if WeaponManager().surf:
+			win.blit(WeaponManager().surf, (25, 5))
+		GameVariables().commentator.draw(win)
+		# draw weapon indicators
+		WeaponManager().draw_weapon_hint(win)
+		WeaponManager().draw(win)
+		
+		# draw health bar
+		TeamManager().step()
+		TeamManager().draw(win)
+
+		if Game._game.gameMode == GameMode.MISSIONS:
+			if MissionManager._mm:
+				MissionManager._mm.draw(win)
+		
+		
+		# weapon menu:
+		# move menus
+		for t in Toast._toasts:
+			if t.mode == Toast.bottom:
+				t.updateWinPos((GameVariables().win_width/2, GameVariables().win_height))
+			elif t.mode == Toast.middle:
+				t.updateWinPos(Vector(GameVariables().win_width/2, GameVariables().win_height/2) - tup2vec(t.surf.get_size())/2)
+		
+		if Game._game.radial_weapon_menu:
+			Game._game.radial_weapon_menu.draw(win)
+		
+		# debug:
+		if self.damageText[0] != Game._game.damageThisTurn:
+			self.damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
+		win.blit(self.damageText[1], ((int(5), int(GameVariables().win_height -5 -self.damageText[1].get_height()))))
+
+		weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
+		debug_string = f'director: {weapon}'
+		debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
+		win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
+		
+		# draw loading screen
+		if GameVariables().game_state in [GameState.RESET]:
+			win.fill((0,0,0))
+			pos = (GameVariables().win_width/2 - Game._game.loadingSurf.get_width()/2, GameVariables().win_height/2 - Game._game.loadingSurf.get_height()/2)
+			win.blit(Game._game.loadingSurf, pos)
+			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + 20))
+			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + Game._game.loadingSurf.get_height() + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + Game._game.loadingSurf.get_height() + 20))
+			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0], pos[1] + Game._game.loadingSurf.get_height() + 20))
+			pygame.draw.line(win, (255,255,255), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + Game._game.loadingSurf.get_height() + 20))
+			pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((Game._game.lstep/Game._game.lstepmax)*Game._game.loadingSurf.get_width(), Game._game.loadingSurf.get_height())))
+		
+
+
+
+
+
 
 def main():
-	current_room = MainMenuRoom()
+	# room enum to room class converter
+	rooms_creation_dict = {
+		Rooms.MAIN_MENU: MainMenuRoom,
+		Rooms.GAME_ROOM: GameRoom,
+	}
+
+	# current active rooms
+	rooms_dict: Dict[Rooms, Room] = {}
+
+	current_room = SplashScreenRoom()
+	rooms_dict[Rooms.MAIN_MENU] = current_room
 
 	done = False
 	while not done:
@@ -1713,6 +2027,16 @@ def main():
 		
 		# step
 		current_room.step()
+		if current_room.is_ready_to_switch():
+			# switch room
+			switch = current_room.switch
+			if switch.craete_new_room:
+				new_room = rooms_creation_dict[switch.next_room](input=switch.room_input)
+				rooms_dict[switch.next_room] = new_room
+				current_room = new_room
+			else:
+				existing_room = rooms_dict[switch.next_room]
+				current_room = existing_room
 
 		# draw
 		current_room.draw(win)
@@ -1726,7 +2050,6 @@ def main():
 
 def _main():
 	gameParameters = [None]
-	splashScreen()
 
 	wip = '''refactoring stage:
 	still in wip:

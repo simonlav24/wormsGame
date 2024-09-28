@@ -12,11 +12,23 @@ class Gui:
         self.focusElement = None
         self.menus = []
         self.animators = []
+        self.event_que = []
     
     def showCursor(self, cursor, element):
         self.focusElement = element
         pygame.mouse.set_cursor(cursor)
     
+    def get_event_values(self):
+        ''' check for gui events '''
+        event = None
+        values = {}
+        for menu in self.menus:
+            menu_event, menu_values = menu.get_event_values()
+            if menu_event is not None:
+                event = menu_event
+            values |= menu_values
+        return event, values
+
     def handle_pygame_event(self, event):
         for menu in self.menus:
             menu.handle_pygame_event(event)
@@ -39,10 +51,11 @@ class Gui:
             menu.step()
         for animation in self.animators:
             animation.step()
-        if self.focusElement:
-            if not self.focusElement.selected:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                self.focusElement = None
+
+        # if self.focusElement:
+            # if not self.focusElement.selected:
+                # pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                # self.focusElement = None
         self.toaster.step()
     
     def draw(self, win: pygame.Surface) -> None:
@@ -111,6 +124,16 @@ class StackPanel:
             return self.menu.getSuperPos() + self.pos
         return self.pos
     
+    def get_event_values(self):
+        event = None
+        values = {}
+        for element in self.elements:
+            element_event, element_values = element.get_event_values()
+            if element_event is not None:
+                event = element_event
+            values |= element_values
+        return event, values
+
     def addElement(self, newElement):
         newElement.menu = self
         self.elements.append(newElement)
@@ -194,6 +217,9 @@ class MenuElement(ABC):
     def handle_pygame_event(self, event):
         pass
 
+    def get_event_values(self):
+        return None, {self.key: self.value}
+
     def getSuperPos(self):
         return self.menu.getSuperPos()
         
@@ -247,7 +273,21 @@ class MenuElementButton(MenuElement):
         self.type = MENU_BUTTON
         self.mouseInButton = False
         self.cursor = pygame.SYSTEM_CURSOR_HAND
+        self.event = None
     
+    def handle_pygame_event(self, event):
+        super().handle_pygame_event(event)
+        if self.selected:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.event = self.key
+    
+    def get_event_values(self):
+        if self.event is not None:
+            event = self.event
+            self.event = None
+            return event, {}
+        return None, {}
+
     def step(self):
         mousePos = mouseInWin()
         buttonPos = self.getSuperPos() + self.pos
@@ -276,7 +316,6 @@ class MenuElementUpDown(MenuElementButton):
         super().__init__(*args, **kwargs)
         self.text = kwargs.get('text', "")
         self.showValue = True
-        self.value = 0
         self.mode = 0
         self.renderSurf(str(self.value))
         self.type = MENU_UPDOWN
@@ -292,6 +331,9 @@ class MenuElementUpDown(MenuElementButton):
         if self.selected:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.advance()
+
+    def get_event_values(self):
+        return None, {self.key: self.value}
 
     def advance(self):
         if self.values:
@@ -338,6 +380,7 @@ class MenuElementUpDown(MenuElementButton):
         pygame.draw.polygon(win, rightColor, [(buttonPos[0] + self.size[0] - arrowSize, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + arrowSize)])
         pygame.draw.polygon(win, leftColor, [(buttonPos[0] + border ,buttonPos[1] + self.size[1] - arrowSize), (buttonPos[0] + border, buttonPos[1] + self.size[1] - border - 1), (buttonPos[0] + arrowSize, buttonPos[1] + self.size[1] - border - 1)])
 
+
 class MenuElementToggle(MenuElementButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -350,6 +393,9 @@ class MenuElementToggle(MenuElementButton):
         if self.selected:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.value = not self.value
+
+    def get_event_values(self):
+        return None, {self.key: self.value}
 
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
@@ -370,6 +416,9 @@ class MenuElementComboSwitch(MenuElementButton):
             self.setCurrentItem(self.text)
         self.forward = False
         self.mapping = {}
+    
+    def get_event_values(self):
+        return None, {self.key: self.value}
     
     def setItems(self, strings, mapping={}):
         self.items = []
@@ -450,6 +499,9 @@ class MenuElementImage(MenuElementButton):
             self.imageSurf.fill(background)
         self.imageSurf.blit(image, (0, 0), rect)
     
+    def get_event_values(self):
+        return None, {self.key: self.value}
+
     def draw(self, win: pygame.Surface) -> None:
         buttonPos = self.getSuperPos() + self.pos
         win.blit(self.imageSurf, (buttonPos[0], buttonPos[1]))
@@ -458,10 +510,10 @@ class MenuElementDragImage(MenuElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         image = kwargs.get('image')
-        self.setImage(image)
         self.type = MENU_DRAGIMAGE
         self.imageSurf = None
         self.imagePath = None
+        self.setImage(image)
         self.dragDx = 0
         self.draggable = True
     
@@ -486,6 +538,9 @@ class MenuElementDragImage(MenuElement):
         win.blit(self.surf, buttonPos)
         pygame.draw.rect(win, StackPanel._buttonColor, (buttonPos, self.surf.get_size()), 2)
     
+    def get_event_values(self):
+        return None, {self.key: self.value}
+
     def recalculateImage(self):
         self.surf.fill((0,0,0,0))
         self.surf.blit(self.imageSurf, (self.size[0] // 2  + self.dragDx, 0))
@@ -515,7 +570,7 @@ class MenuElementSurf(MenuElement):
         super().__init__(*args, **kwargs)
         self.type = MENU_SURF
         self.surf = None
-    
+
     def set_surf(self, surf):
         self.surf = surf
     

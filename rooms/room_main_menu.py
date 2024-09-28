@@ -4,7 +4,7 @@ from random import choice, randint
 
 import pygame
 
-from rooms.room import Room
+from rooms.room import Room, Rooms, SwitchRoom
 from gui.menu_gui_new import (
     Gui, MenuAnimator, HORIZONTAL, VERTICAL,
     StackPanel, MenuElementText, MenuElementButton,
@@ -14,7 +14,7 @@ from gui.menu_gui_new import (
 
 from common import GameVariables, fonts
 from common.constants import feels
-from common.game_config import GameMode, RandomMode, SuddenDeathMode
+from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
 from game.background import BackGround
 from game.map_manager import grab_maps
@@ -26,31 +26,56 @@ class MainMenuRoom(Room):
         self.background = BackGround(feels[0])
         self.gui = Gui()
 
-        # MainMenu()
-        # MainMenu._maps = grab_maps(['assets/worms_maps', 'assets/more_maps'])
-
         main_menu = self.initialize_main_menu()
         self.gui.menus.append(main_menu)
-        # endPos = Menu._reg[0].pos
-        # MenuAnimator(Menu._reg[0], endPos + Vector(0, GameVariables().win_height), endPos)
 
     def handle_pygame_event(self, event) -> None:
-        # handle gui events
+        ''' handle gui events '''
         super().handle_pygame_event(event)
         self.gui.handle_pygame_event(event)
-    
 
     def step(self) -> None:
         super().step()
         self.background.step()
         self.gui.step()
+
+        gui_event, gui_values = self.gui.get_event_values()
+        self.handle_gui_events(gui_event, gui_values)
     
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
         self.background.draw(win)
         self.gui.draw(win)
 
+    def handle_gui_events(self, event, values):
+        if event is None:
+            return
+        if event == 'play':
+            self.on_play(values)
+
+    def on_play(self, values):
+        config = GameConfig(
+            option_artifacts=values['option_artifacts'],
+            option_closed_map=values['option_closed_map'],
+            option_cool_down=values['option_cool_down'],
+            option_darkness=values['option_darkness'],
+            option_digging=values['option_digging'],
+            option_forts=values['option_forts'],
+            game_mode=GameMode(values['game_mode']),
+            worm_initial_health=values['worm_initial_health'],
+            worms_per_team=values['worms_per_team'],
+            deployed_packs=values['deployed_packs'],
+            rounds_for_sudden_death=values['rounds_for_sudden_death'],
+            sudden_death_style=SuddenDeathMode(values['sudden_death_style']),
+            random_mode=RandomMode(values['random_mode']),
+            map_path=values['map_path'],
+            is_recolor=values['is_recolor']
+        )
+        self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
+        
+
     def initialize_main_menu(self) -> StackPanel:
+        ''' create menu layout '''
         mainMenu = StackPanel(name="menu", pos=[40, (GameVariables().win_height - 196) // 2], size=[GameVariables().win_width - 80, 196], register=True)
         mainMenu.insert(MenuElementButton(key="play", text="play", customSize=16))
 
@@ -64,14 +89,16 @@ class MainMenuRoom(Room):
         subMode.insert(MenuElementComboSwitch(key="game_mode", text=list(GameMode)[0].value, items=[mode.value for mode in GameMode]))
         optionsMenu.addElement(subMode)
 
+        config = GameConfig()
+
         # toggles
         toggles = [
-            ('cool down', 'option_cool_down', False),
-            ('artifacts', 'option_artifacts', False),
-            ('closed map', 'option_closed_map', False),
-            ('forts', 'option_forts', False),
-            ('digging', 'option_digging', False),
-            ('darkness', 'option_darkness', False)
+            ('cool down', 'option_cool_down', config.option_cool_down),
+            ('artifacts', 'option_artifacts', config.option_artifacts),
+            ('closed map', 'option_closed_map', config.option_closed_map),
+            ('forts', 'option_forts', config.option_forts),
+            ('digging', 'option_digging', config.option_digging),
+            ('darkness', 'option_darkness', config.option_darkness)
         ]
         
         for i in range(0, len(toggles) - 1, 2):
@@ -84,15 +111,24 @@ class MainMenuRoom(Room):
 
         # counters
         counters = [
-            ('worms per team', 'worms_per_team', 8, 1, 8, 1),
-            ('worm health', 'worm_initial_health', 100, 0, 1000, 50),
-            ('packs', 'deployed_packs', 1, 0, 10, 1)
+            {'text': 'worms per team', 'key': 'worms_per_team', 'value': 8, 'limMin': 1, 'limMax': 8, 'stepSize': 1},
+            {'text': 'worm health', 'key': 'worm_initial_health', 'value': 100, 'limMin': 0, 'limMax': 1000, 'stepSize': 50},
+            {'text': 'packs', 'key': 'deployed_packs', 'value': 1, 'limMin': 0, 'limMax': 10, 'stepSize': 1},
         ]
 
-        for c in counters:
+        for counter in counters:
             subOpt = StackPanel(orientation=HORIZONTAL)
-            subOpt.insert(MenuElementText(text=c[0]))
-            subOpt.insert(MenuElementUpDown(key=c[1], text=c[0], value=c[2], limitMax=True, limitMin=True, limMin=c[3], limMax=c[4], stepSize=c[5]))	
+            subOpt.insert(MenuElementText(text=counter['text']))
+            subOpt.insert(MenuElementUpDown(
+                key=counter['key'], 
+                text=counter['text'], 
+                value=counter['value'], 
+                limitMax=True,
+                limitMin=True, 
+                limMin=counter['limMin'], 
+                limMax=counter['limMax'],
+                stepSize=counter['stepSize']
+            ))
             optionsMenu.addElement(subOpt)
 
         # random turns
@@ -124,7 +160,7 @@ class MainMenuRoom(Room):
 
         # recolor & ratio
         subMap = StackPanel(orientation = HORIZONTAL, customSize = 15)
-        subMap.insert(MenuElementToggle(key="is_recolor", text="recolor"))
+        subMap.insert(MenuElementToggle(key="is_recolor", text="recolor", value=False))
         subMap.insert(MenuElementText(text="ratio"))
         subMap.insert(MenuElementInput(key="map_ratio", text="enter ratio", evaluatedType='int'))
 
