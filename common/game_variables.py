@@ -72,6 +72,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.scale_factor = 3
         self.scale_range = (1, 3)
 
+        self.win: pygame.Surface = None
         self.win_width = 0
         self.win_height = 0
         self.screen_width = 1280

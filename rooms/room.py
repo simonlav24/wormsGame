@@ -11,6 +11,7 @@ class Rooms(Enum):
     WEAPON_SETTINGS = 'weapon_settings'
     PAUSE_MENU = 'pause_menu'
     WIN_MENU = 'win_menu'
+    EXIT = 'exit'
 
 
 @dataclass

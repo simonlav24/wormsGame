@@ -8,7 +8,7 @@ class SplashScreenRoom(Room):
 	def __init__(self, *args, **kwargs) -> None:
 		super().__init__(*args, **kwargs)
 		self.splashImage = pygame.image.load("assets/simeGames.png")
-		self.timer = 5 * GameVariables().fps
+		self.timer = 2 * GameVariables().fps
 	
 	def handle_pygame_event(self, event) -> None:
 		super().handle_pygame_event(event)
