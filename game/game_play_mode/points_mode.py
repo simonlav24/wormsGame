@@ -14,3 +14,9 @@ class PointsGamePlay(GamePlayMode):
         if worm.get_team_data().team_name == GameVariables().player.get_team_data().team_name:
             return
         GameVariables().player.give_point(50)
+    
+    def win_bonus(self) -> int:
+        return 150
+
+    def is_points_game(self) -> bool:
+        return True

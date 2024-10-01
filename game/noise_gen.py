@@ -5,10 +5,6 @@ import argparse
 import datetime
 import os
 
-
-
-################################################################################
-
 def perlin1D(count, seedArray, octaves, bias):
 	output = []
 	for x in range(count):
@@ -59,23 +55,6 @@ def perlin2D(width, height, seedArray, octaves, bias):
 			average += noise / scaleAcc
 	return (output, average / (width * height))
 
-def generatePerlinNoise(width, height):
-	noiseSeed2D = [uniform(0,1) for i in range(noiseWid * noiseHei)]
-	octaveCount = 7
-	bias = 1.2
-	
-	perlin, avrg = perlin2D(noiseWid, noiseHei, noiseSeed2D, octaveCount, bias)
-	
-	surf = pygame.Surface((width, height))
-	
-	for x in range(noiseWid):
-		for y in range(noiseHei):
-			pixel = perlin[y * noiseWid + x]
-			if pixel < avrg: surf.set_at((x,y), (255,255,255))
-			if pixel >= avrg: surf.set_at((x,y), (0,0,0))
-	
-	return surf
-
 def random_bw(minimum=0, maximum=255):
 	color = randint(minimum, maximum)
 	return (color, color, color)
@@ -87,7 +66,8 @@ def threshold(surf, avrg):
 			if pixel < avrg: surf.set_at((x,y), (255,255,255))
 			if pixel >= avrg: surf.set_at((x,y), (0,0,0))
 
-def generateNoise(width, height):
+def generate_noise(width, height):
+	''' generate surf with random noise thresholded to black and white '''
 	ratio = height / width
 	pool = randint(20, 50)
 	size = (pool, int(pool * ratio))
@@ -96,84 +76,16 @@ def generateNoise(width, height):
 		for x in range(size[0]):
 			noise_org.set_at((x,y), random_bw())
 			if x == 0:
-				noise_org.set_at((x,y), random_bw(128,255))
+				noise_org.set_at((x,y), random_bw(128, 255))
 			if x == size[0] - 1:
-				noise_org.set_at((x,y), random_bw(128,255))
+				noise_org.set_at((x,y), random_bw(128, 255))
 			if y == 0:
-				noise_org.set_at((x,y), random_bw(128,255))
+				noise_org.set_at((x,y), random_bw(128, 255))
 			if y in [size[1] - 1, size[1] - 2]:
-				noise_org.set_at((x,y), random_bw(0,128))
+				noise_org.set_at((x,y), random_bw(0, 128))
 	
 	pygame.draw.circle(noise_org, (255, 255, 255), (randint(5, size[0] - 5), randint(5, size[0] - 5)), size[1] //2 - randint(2,6))
 	surf = pygame.transform.smoothscale(noise_org, (width, height))
 	threshold(surf, randint(100, 128))
 	return surf
-
-################################################################################ Main Loop
-
-if __name__ == "__main__":
-
-	parser = argparse.ArgumentParser()
-
-	parser.add_argument("-d", "--dump", action='store_true', help='generate image and quit')
-	parser.add_argument("-t", "--type", default="noise", help="noise type", type=str)
-	
-	args = parser.parse_args()
-	
-	winWidth = 800
-	winHeight = 300
-	
-	pygame.init()
-	
-	win = pygame.display.set_mode((winWidth,winHeight))
-
-	if args.type == "perlin":
-		noise = generatePerlinNoise(winWidth, winHeight)
-	elif args.type == "noise":
-		noise = generateNoise(winWidth, winHeight)
-	win.blit(noise, (0,0))
-
-	run = True
-	while run:
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				run = False
-	
-			if event.type == pygame.KEYDOWN:
-				#key pressed once:
-				if event.key == pygame.K_x:
-					if args.type == "perlin":
-						noise = generatePerlinNoise(winWidth, winHeight)
-					elif args.type == "noise":
-						noise = generateNoise(winWidth, winHeight)
-					win.blit(noise, (0,0))
-		keys = pygame.key.get_pressed()
-		if keys[pygame.K_ESCAPE]:
-			run = False
-		
-		if args.dump:
-			break
-		pygame.display.update()
-	
-	x = datetime.datetime.now()
-	if not os.path.exists("wormsMaps/PerlinMaps"):
-		os.mkdir("wormsMaps/PerlinMaps")
-		
-	imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
-	pygame.image.save(win, imageString)
-	print(imageString)
-	pygame.quit()
-
-
-
-
-
-
-
-
-
-
-
-
-
 

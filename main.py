@@ -3,8 +3,8 @@
 from math import pi, cos, sin
 from random import randint, uniform, choice
 import os
-
 import time
+import traceback
 
 import pygame
 import pygame.gfxdraw
@@ -15,6 +15,7 @@ from common.game_config import GameMode, RandomMode, SuddenDeathMode
 
 from rooms.room import Room, Rooms, SwitchRoom
 from rooms.room_main_menu import MainMenuRoom
+from rooms.room_pause import PauseRoom
 from rooms.splash_screen import SplashScreenRoom
 
 from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay, DarknessGamePlay
@@ -22,12 +23,12 @@ from game.time_manager import TimeManager
 from game.map_manager import MapManager, SKY
 from game.background import BackGround
 from game.visual_effects import FloatingText
+from game.team_manager import TeamManager, Team
 
 from game.world_effects import boom, Earthquake
 
 from game.hud import Commentator, Toast, WindFlag
 from gui.radial_menu import RadialMenu, RadialButton
-from game.team_manager import TeamManager
 
 from entities.props import PetrolCan
 from entities.deployables import deploy_pack, HealthPack, WeaponPack, UtilityPack
@@ -53,7 +54,6 @@ class Game:
 		self.evaluate_config(game_config)
 		GameVariables().config = game_config
 		
-		
 		self.map_manager = MapManager()
 		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
 
@@ -63,7 +63,6 @@ class Game:
 		self.game_vars = GameVariables()
 		GameVariables().commentator = Commentator()
 
-		self.damageThisTurn = 0
 		self.mostDamage = (0, None)
 
 		self.killList = []
@@ -196,7 +195,7 @@ class Game:
 
 		if self.game_config.option_digging:
 			self.map_manager.create_map_digging(custom_height)
-		elif 'PerlinMaps' in self.game_config.map_path:
+		elif 'noise' in self.game_config.map_path:
 			self.map_manager.create_map_image(self.game_config.map_path, custom_height, True)
 		else:
 			self.map_manager.create_map_image(self.game_config.map_path, custom_height, self.game_config.is_recolor)
@@ -429,6 +428,56 @@ def add_to_record(dic):
 		file.write(contents)
 
 def check_winners() -> bool:
+	game_over = False
+	last_team: Team = None
+
+	# check for last team standing
+	teams = [team for team in TeamManager().teams if len(team.worms) > 0]
+	if len(teams) == 1:
+		game_over = True
+		last_team = teams[0]
+	if len(teams) == 0:
+		game_over = True
+	
+	game_over |= GameVariables().game_mode.is_game_over()
+
+	if not game_over:
+		return False
+	
+	# game over
+	winning_team: Team = None
+	points_mode = GameVariables().game_mode.is_points_game()
+	
+	# determine winning team
+	if not points_mode:
+		winning_team = last_team
+	else:
+		if last_team is not None:
+			last_team.points += GameVariables().game_mode.win_bonus()
+		finals = sorted(TeamManager().teams, key = lambda x: x.points)
+		winning_team = finals[-1]
+	
+	# declare winner
+	if winning_team is not None:
+		print("Team", winning_team.name, "won!")
+		if len(winning_team.worms) > 0:
+			GameVariables().cam_track = winning_team.worms[0]
+		GameVariables().commentator.comment([
+			{'text': 'team '},
+			{'text': winning_team.name, 'color': winning_team.color},
+			{'text': ' Won!'}
+		])
+	else:
+		print("Tie!")
+		GameVariables().commentator.comment([{'text': 'its a tie!'}])
+	
+	# todo: add to dict
+	# todo: save win as image
+
+	GameVariables().game_next_state = GameState.WIN
+	return True
+
+def _check_winners() -> bool:
 	end = False
 	lastTeam = None
 	count = 0
@@ -451,12 +500,12 @@ def check_winners() -> bool:
 	# game end:
 	dic = {}
 	winningTeam = None
-							
-	if Game._game.game_config.game_mode == GameMode.MISSIONS:
-		pointsGame = True
-		if lastTeam:
-			pass
-		dic["mode"] = "missions"
+	
+	# if Game._game.game_config.game_mode == GameMode.MISSIONS:
+	# 	pointsGame = True
+	# 	if lastTeam:
+	# 		pass
+	# 	dic["mode"] = "missions"
 	
 	# win points:
 	if pointsGame:
@@ -707,7 +756,6 @@ def toast_info():
 		surf.blit(s[1], (toastWidth - s[1].get_width(), i))
 		i += s[0].get_height() + 3
 	Toast(surf)
-
 
 
 class MissionManager:
@@ -1081,7 +1129,6 @@ class Mission:
 		self.surf.blit(self.textSurf, (1,1))
 
 
-
 def suddenDeath():
 	sudden_death_modes = [Game._game.game_config.sudden_death_style]
 	if Game._game.game_config.sudden_death_style == SuddenDeathMode.ALL:
@@ -1172,10 +1219,6 @@ def cheat_activate(code: str):
 			closest.damage(1000)
 
 
-
-
-
-
 ################################################################################ State machine
 
 def stateMachine():
@@ -1221,10 +1264,10 @@ def stateMachine():
 
 				elif GameVariables().game_state == GameState.DEPLOYEMENT:
 					# deployed crates, cycle worms
+					GameVariables().game_next_state = GameState.PLAYER_PLAY
 					cycle_worms()
 					TimeManager().time_reset()
 					WeaponManager().render_weapon_count()
-					GameVariables().game_next_state = GameState.PLAYER_PLAY
 				
 				GameVariables().game_state = GameVariables().game_next_state
 	
@@ -1246,7 +1289,6 @@ def stateMachine():
 		GameVariables().game_stable_counter += 1
 		if GameVariables().game_stable_counter == 30 * 3:
 			return 1
-			# subprocess.Popen("wormsLauncher.py -popwin", shell=True)
 	
 	return 0
 
@@ -1357,8 +1399,6 @@ class GameRoom(Room):
 			return
 		# mouse click event
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # left click (main)
-			# mouse position:
-			mousePos = pygame.mouse.get_pos()
 			# CLICKABLE weapon check:
 			if GameVariables().game_state == GameState.PLAYER_PLAY and WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE:
 				# fireClickable()
@@ -1408,7 +1448,8 @@ class GameRoom(Room):
 				# weapon change by keyboard
 				# misc
 				if event.key == pygame.K_ESCAPE:
-					pause = not pause
+					# switch to pause menu
+					self.switch = SwitchRoom(Rooms.PAUSE_MENU, True, None)
 				if event.key == pygame.K_TAB:
 					onKeyPressTab()
 				if event.key == pygame.K_t:
@@ -1448,20 +1489,11 @@ class GameRoom(Room):
 			# fire hold
 			if keys[pygame.K_SPACE] and GameVariables().player_can_shoot and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
 				onKeyHoldSpace()
-		
-		# if pause:
-		# 	result = [0]
-		# 	# todo here False V
-		# 	args = {"showPoints": False, "teams":TeamManager().teams}
-		# 	pauseMenu(args, result)
-		# 	pause = not pause
-		# 	if result[0] == 1:
-		# 		run = False
-		# 	continue
-		
+				
 		result = stateMachine()
 		if result == 1:
-			run = False
+			self.switch = SwitchRoom(Rooms.MAIN_MENU, False, None)
+			return
 
 		if GameVariables().game_state in [GameState.RESET]:
 			return
@@ -1658,6 +1690,8 @@ class GameRoom(Room):
 
 wip = '''refactoring stage:
 	still in wip:
+		major: reseting a game keeps every state of previous game
+		collecting weapons create make the number float, not the nemae
 		water rise
 		loading screen
 		optimize fire drawing for it is slowing
@@ -1690,6 +1724,7 @@ def main():
 	rooms_creation_dict = {
 		Rooms.MAIN_MENU: MainMenuRoom,
 		Rooms.GAME_ROOM: GameRoom,
+		Rooms.PAUSE_MENU: PauseRoom,
 	}
 
 	# current active rooms
@@ -1705,24 +1740,28 @@ def main():
 				done = True
 			current_room.handle_pygame_event(event)
 		
-		# step
-		current_room.step()
-		if current_room.is_ready_to_switch():
-			# switch room
-			switch = current_room.switch
-			if switch.craete_new_room:
-				new_room = rooms_creation_dict[switch.next_room](input=switch.room_input)
-				rooms_dict[switch.next_room] = new_room
-				current_room = new_room
-			else:
-				if switch.next_room == Rooms.EXIT:
-					done = True
-					break
-				existing_room = rooms_dict[switch.next_room]
-				current_room = existing_room
+		try:
+			# step
+			current_room.step()
+			if current_room.is_ready_to_switch():
+				# switch room
+				switch = current_room.switch
+				current_room.switch = None
+				if switch.craete_new_room:
+					new_room = rooms_creation_dict[switch.next_room](input=switch.room_input)
+					rooms_dict[switch.next_room] = new_room
+					current_room = new_room
+				else:
+					if switch.next_room == Rooms.EXIT:
+						done = True
+						break
+					existing_room = rooms_dict[switch.next_room]
+					current_room = existing_room
 
-		# draw
-		current_room.draw(GameVariables().win)
+			# draw
+			current_room.draw(GameVariables().win)
+		except Exception:
+			print(traceback.format_exc())
 
 		pygame.transform.scale(GameVariables().win, screen.get_rect().size, screen)
 		pygame.display.update()

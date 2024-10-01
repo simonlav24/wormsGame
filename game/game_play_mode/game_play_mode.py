@@ -50,7 +50,21 @@ class GamePlayCompound(GamePlayMode):
         for mode in self.modes:
             mode.on_worm_death(worm)
 
-    def win_bonus(self):
+    def win_bonus(self) -> int:
+        result = 0
         for mode in self.modes:
-            mode.win_bonus()
+            result += mode.win_bonus()
+        return result
+    
+    def is_game_over(self) -> bool:
+        result = False
+        for mode in self.modes:
+            result |= mode.is_game_over()
+        return result
+
+    def is_points_game(self) -> bool:
+        result = False
+        for mode in self.modes:
+            result |= mode.is_points_game()
+        return result
 

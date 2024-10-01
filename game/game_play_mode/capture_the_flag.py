@@ -54,7 +54,11 @@ class CTFGamePlay(GamePlayMode):
         if self.current_holder:
             self.current_holder.give_point(1)
 
+    def win_bonus(self) -> int:
+        return 3
 
+    def is_points_game(self) -> bool:
+        True
         
 
 

@@ -12,7 +12,7 @@ from common.constants import *
 from common.game_config import RandomMode, GameMode, SuddenDeathMode
 from common.vector import *
 
-from perlinNoise import generateNoise
+from game.noise_gen import generateNoise
 from gui._menu_gui import *
 from game.map_manager import grab_maps
 from game.background import BackGround

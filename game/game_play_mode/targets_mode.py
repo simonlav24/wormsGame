@@ -41,7 +41,14 @@ class TargetsGamePlay(GamePlayMode):
     def draw(self, win: pygame.Surface):
         super().draw(win)
         [draw_dir_indicator(win, target.pos) for target in self.targets]
+    
+    def is_game_over(self) -> bool:
+        return len(self.targets) == 0
 
-
+    def is_points_game(self) -> bool:
+        return True
+    
+    def win_bonus(self) -> int:
+        return 3
 
 

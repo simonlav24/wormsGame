@@ -1,6 +1,9 @@
 
 import os
+import datetime
 from random import choice, randint
+import tkinter
+from tkinter.filedialog import askopenfile
 
 import pygame
 
@@ -12,12 +15,13 @@ from gui.menu_gui_new import (
     MenuElementDragImage, MenuElementInput
 )
 
-from common import GameVariables, fonts
+from common import GameVariables, fonts, PATH_MAPS, PATH_GENERATED_MAPS
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
 from game.background import BackGround
 from game.map_manager import grab_maps
+from game.noise_gen import generate_noise
 
 class MainMenuRoom(Room):
     def __init__(self, *args, **kwargs):
@@ -25,6 +29,9 @@ class MainMenuRoom(Room):
         
         self.background = BackGround(feels[0])
         self.gui = Gui()
+
+        self.map_paths = grab_maps([PATH_MAPS])
+        self.image_element: MenuElementDragImage = None
 
         main_menu = self.initialize_main_menu()
         self.gui.menus.append(main_menu)
@@ -52,8 +59,29 @@ class MainMenuRoom(Room):
             return
         if event == 'play':
             self.on_play(values)
+        if event == 'exit':
+            self.switch = SwitchRoom(Rooms.EXIT, False, None)
+        if event == 'random_image':
+            self.image_element.setImage(choice(self.map_paths))
+        if event == "generate":
+            width, height = 800, 300
+            noise = generate_noise(width, height)
+            x = datetime.datetime.now()
+            if not os.path.exists(PATH_GENERATED_MAPS):
+                os.mkdir(PATH_GENERATED_MAPS)
+            output_path = os.path.join(
+                PATH_GENERATED_MAPS,
+                f'noise{x.day}{x.month}{x.year % 100}{x.hour}{x.minute}.png'
+            )
+            pygame.image.save(noise, output_path)
+            self.image_element.setImage(output_path)
+        if event == 'browse':
+            filepath = browse_file()
+            if filepath:
+                self.image_element.setImage(filepath)
 
     def on_play(self, values):
+        ''' on press play button '''
         config = GameConfig(
             option_artifacts=values['option_artifacts'],
             option_closed_map=values['option_closed_map'],
@@ -148,7 +176,8 @@ class MainMenuRoom(Room):
 
         # map options vertical sub menu
         mapMenu = StackPanel(name="map menu", orientation=VERTICAL)
-        mapMenu.insert(MenuElementDragImage(key="map_path", image=choice(grab_maps(['assets/worms_maps', 'assets/more_maps']))))
+        self.image_element = MenuElementDragImage(key="map_path", image=choice(self.map_paths))
+        mapMenu.insert(self.image_element)
 
         # map buttons
         subMap = StackPanel(orientation = HORIZONTAL, customSize=15)
@@ -195,3 +224,10 @@ class MainMenuRoom(Room):
         bgMenu.insert(MenuElementUpDown(text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], showValue=False))
 
         return mainMenu
+
+def browse_file():
+	root = tkinter.Tk()
+	root.withdraw()
+	file = askopenfile(mode ='r', filetypes =[('Image Files', '*.png')])
+	if file is not None: 
+		return file.name

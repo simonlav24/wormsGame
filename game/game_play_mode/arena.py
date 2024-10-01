@@ -31,6 +31,9 @@ class ArenaGamePlay(GamePlayMode):
             check_pos = worm.pos + Vector(0, worm.radius * 2)
             if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and check_pos.y > self.pos.y and check_pos.y < self.pos.y + self.size.y:
                 worm.give_point(1)
+    
+    def is_points_game(self) -> bool:
+        True
                 
     
 

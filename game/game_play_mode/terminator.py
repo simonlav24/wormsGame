@@ -65,3 +65,9 @@ class TerminatorGamePlay(GamePlayMode):
             self.hit_this_turn = False
             GameVariables().player.give_point(2)
             self.pick_target()
+    
+    def is_points_game(self) -> bool:
+        return True
+    
+    def win_bonus(self) -> int:
+        return 3

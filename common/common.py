@@ -10,15 +10,17 @@ from common.constants import ColorType, Sickness
 
 # paths
 PATH_ASSETS = r'./assets'
+PATH_MAPS = r'./assets/worms_maps'
+PATH_GENERATED_MAPS = r'./assets/worms_maps/generated_maps'
 
 class SingletonMeta(type):
-    ''' singleton metaclass '''
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
+	''' singleton metaclass '''
+	_instances = {}
+	def __call__(cls, *args, **kwargs):
+		if cls not in cls._instances:
+			instance = super().__call__(*args, **kwargs)
+			cls._instances[cls] = instance
+		return cls._instances[cls]
 
 
 class TeamData(BaseModel):
@@ -140,8 +142,17 @@ class GamePlayMode:
 	def on_worm_death(self, worm: EntityWorm):
 		...
 
-	def win_bonus(self):
+	def win_bonus(self) -> int:
+		return 0
+	
+	def is_game_over(self) -> bool:
 		...
+	
+	def is_game_over(self) -> bool:
+		return False
+	
+	def is_points_game(self) -> bool:
+		return False
 
 
 class CycleObserver(Protocol):

@@ -23,12 +23,17 @@ def grab_maps(paths: List[str]) -> List[str]:
     for path in paths:
         if not os.path.isdir(path):
             continue
-        for image_file in os.listdir(path):
-            if not image_file.endswith(".png"):
-                continue
-            string = os.path.join(path, image_file)
-            string = os.path.abspath(string)
-            maps.append(string)
+        for root, _, files in os.walk(path):
+            for file in files:
+                conditions = [
+                    file.endswith('.png'),
+                    'perlin' not in file,
+                    'generated' not in file,
+                    'noise' not in file,
+                ]
+                if not all(conditions):
+                    continue
+                maps.append(os.path.join(root, file))
     return maps
 
 class MapManager(metaclass=SingletonMeta):
