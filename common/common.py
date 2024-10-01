@@ -197,6 +197,11 @@ class EntityElectrocuted(EntityPhysical):
 		...
 
 
+class Camera:
+	def __init__(self, pos):
+		self.pos = pos
+		self.radius = 1
+
 # color utilities
 
 def grayen(color: ColorType) -> ColorType:

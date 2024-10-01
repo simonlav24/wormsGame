@@ -7,6 +7,7 @@ from .targets_mode import TargetsGamePlay
 from .david_vs_goliath import DVGGamePlay
 from .capture_the_flag import CTFGamePlay
 from .arena import ArenaGamePlay
+from .missions import MissionsGamePlay
 
 from .artifacts_mode import ArtifactsGamePlay
 from .dark_mode import DarknessGamePlay

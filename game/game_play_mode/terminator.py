@@ -63,7 +63,7 @@ class TerminatorGamePlay(GamePlayMode):
     def on_worm_death(self, worm: EntityWorm):
         if worm is self.current_target:
             self.hit_this_turn = False
-            GameVariables().player.give_point(2)
+            GameVariables().player.give_point(1)
             self.pick_target()
     
     def is_points_game(self) -> bool:

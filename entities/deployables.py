@@ -39,6 +39,7 @@ class Deployable(ExplodingProp):
 	def effect(self, worm: EntityWorm):
 		...
 
+
 class HealthPack(Deployable):
 	def __init__(self, pos = (0,0)):
 		super().__init__(pos)
@@ -47,6 +48,7 @@ class HealthPack(Deployable):
 	def effect(self, worm: EntityWorm):
 		worm.heal(50)
 		FloatingText(self.pos, "+50", (0,230,0))
+
 
 class UtilityPack(Deployable):
 	def __init__(self, pos = (0,0)):
@@ -67,18 +69,20 @@ class UtilityPack(Deployable):
 			return
 		worm.team.ammo(WeaponManager()[self.box], 1)
 
+
 class WeaponPack(Deployable):
 	def __init__(self, pos = (0,0)):
 		super().__init__(pos)
 		weaponsInBox = ["banana", "holy grenade", "earthquake", "gemino mine", "sentry turret", "bee hive", "vortex grenade", "chilli pepper", "covid 19", "raging bull", "electro boom", "pokeball", "green shell", "guided missile", "fireworks"]
 		if GameVariables().initial_variables.allow_air_strikes:
 			weaponsInBox .append("mine strike")
-		self.box = WeaponManager()[choice(weaponsInBox)]
+
+		self.box = choice(weaponsInBox)
 		self.surf.blit(sprites.sprite_atlas, (0,0), (80, 96, 16, 16))
 
 	def effect(self, worm: EntityWorm):
 		FloatingText(self.pos, self.box, (0,200,200))
-		worm.team.ammo(self.box, 1)
+		worm.team.ammo(WeaponManager()[self.box], 1)
 
 def deploy_pack(pack):
 	x = 0

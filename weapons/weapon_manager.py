@@ -164,14 +164,7 @@ class WeaponManager(metaclass=SingletonMeta):
                     GameVariables().weapon_hold.blit(sprites.sprite_atlas, (0,0), (16,96,16,16))
                     return
                 GameVariables().weapon_hold.blit(sprites.sprite_atlas, (0,0), (64,64,16,16))
-    
-    def currentArtifact(self):
-        if self.current_weapon.category == WeaponCategory.ARTIFACTS:
-            return self.weapons[self.currentIndex()][6]
 
-    def currentIndex(self):
-        return self.current_weapon.index
-    
     def is_current_weapon_active(self) -> bool:
         ''' check if current weapon active in this round '''
         # check for round delay
