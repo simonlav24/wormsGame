@@ -4,7 +4,7 @@ import pygame
 from math import atan2, pi, sin, cos
 from typing import List
 
-from common import Entity, GameVariables, point2world, CRITICAL_FALL_VELOCITY, sprites
+from common import Entity, GameVariables, point2world, CRITICAL_FALL_VELOCITY, sprites, DamageType
 from common.vector import Vector
 
 from game.map_manager import MapManager, GRD, SKY, SKY_COL, GRD_COL
@@ -100,7 +100,7 @@ class PhysObj(Entity):
 			
 			self.on_collision(ppos)
 			if magVel > CRITICAL_FALL_VELOCITY and self.is_fall_affected:
-				self.damage(magVel * 1.5 * GameVariables().fall_damage_mult, 1)
+				self.damage(magVel * 1.5 * GameVariables().fall_damage_mult)
 			self.stable = True
 			
 			response.normalize()
@@ -127,7 +127,7 @@ class PhysObj(Entity):
 			self.pos = ppos
 			
 		# flew out map but not worms !
-		if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level and not self in GameVariables().get_worms():
+		if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level:
 			splash(self.pos, self.vel)
 			angle = self.vel.getAngle()
 			if (angle > 2.7 and angle < 3.14) or (angle > 0 and angle < 0.4):
@@ -137,7 +137,8 @@ class PhysObj(Entity):
 					self.vel.x *= 0.8
 			else:
 				self.on_out_of_map()
-				self.remove_from_game()
+				if not self in GameVariables().get_worms():
+					self.remove_from_game()
 				return
 		
 		if magVel < 0.1: # creates a double jump problem
@@ -184,7 +185,7 @@ class PhysObj(Entity):
 		''' remove from game, happens adjacent to death or to flew out of map '''
 		GameVariables().unregister_physical(self)
 	
-	def damage(self, value, damageType=0):
+	def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
 		pass
 	
 	def on_collision(self, ppos):

@@ -7,6 +7,7 @@ from common.vector import Vector
 
 from game.game_play_mode.game_play_mode import GamePlayMode
 from game.map_manager import MapManager, GRD
+from game.team_manager import TeamManager
 
 
 class ArenaGamePlay(GamePlayMode):
@@ -25,8 +26,8 @@ class ArenaGamePlay(GamePlayMode):
         for i in range(10):
             MapManager().ground_map.blit(sprites.sprite_atlas, self.pos + Vector(i * 16, 0), (64,80,16,16))
 
-    def on_cycle(self):
-        super().on_cycle()
+    def on_turn_end(self):
+        super().on_turn_end()
         for worm in GameVariables().get_worms():
             check_pos = worm.pos + Vector(0, worm.radius * 2)
             if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and check_pos.y > self.pos.y and check_pos.y < self.pos.y + self.size.y:

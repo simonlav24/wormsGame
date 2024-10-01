@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import pygame
 
 from common.vector import *
-from common.constants import ColorType, Sickness
+from common.constants import ColorType, Sickness, DamageType
 
 # paths
 PATH_ASSETS = r'./assets'
@@ -55,7 +55,7 @@ class EntityPhysical(Entity):
 	def remove_from_game(self):
 		...
 
-	def damage(self, value, damageType=0):
+	def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
 		...
 
 
@@ -74,7 +74,7 @@ class EntityWorm(EntityPhysical):
 	facing: int
 	alive: bool
 
-	def dieded(self):
+	def dieded(self, cause: DamageType=DamageType.HURT):
 		...
 	
 	def get_team_data(self) -> TeamData:
@@ -88,7 +88,7 @@ class EntityWorm(EntityPhysical):
 
 	def get_shooting_angle(self) -> float:
 		...
-	
+		
 	def give_point(self, points: int) -> None:
 		...
 	
@@ -121,7 +121,10 @@ class GamePlayMode:
 	def on_game_init(self):
 		...
 
-	def on_cycle(self):
+	def on_turn_begin(self):
+		...
+	
+	def on_turn_end(self):
 		...
 
 	def on_deploy(self):
@@ -153,11 +156,18 @@ class GamePlayMode:
 	
 	def is_points_game(self) -> bool:
 		return False
+	
+	def debug_print(self) -> str:
+		return ''
 
 
 class CycleObserver(Protocol):
-	def on_cycle(self) -> None:
+	def on_turn_end(self) -> None:
 		...
+	
+	def on_turn_begin(self) -> None:
+		...
+
 
 
 class IComment(Entity):

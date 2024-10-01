@@ -34,7 +34,7 @@ class Spear(PhysObj):
 				continue
 			if distus(self.pos, worm.pos) < (worm.radius + 3) * (worm.radius + 3):
 				self.worms.append(worm)
-				worm.damage(20 + self.vel.getMag()*1.5)
+				worm.damage(20 + self.vel.getMag() * 1.5)
 				self.ignore.append(worm)
 		for i, worm in enumerate(self.worms):
 			worm.pos = vectorCopy(self.pos) - 5 * normalize(self.vel) * i

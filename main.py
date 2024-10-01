@@ -18,7 +18,18 @@ from rooms.room_main_menu import MainMenuRoom
 from rooms.room_pause import PauseRoom
 from rooms.splash_screen import SplashScreenRoom
 
-from game.game_play_mode import GamePlayCompound, TerminatorGamePlay, PointsGamePlay, TargetsGamePlay, DVGGamePlay, CTFGamePlay, ArenaGamePlay, ArtifactsGamePlay, DarknessGamePlay
+from game.game_play_mode import (
+    GamePlayCompound, 
+    TerminatorGamePlay,
+    PointsGamePlay,
+    TargetsGamePlay,
+    DVGGamePlay, 
+    CTFGamePlay,
+    ArenaGamePlay,
+    ArtifactsGamePlay,
+    DarknessGamePlay,
+	StatsGamePlay
+)
 from game.time_manager import TimeManager
 from game.map_manager import MapManager, SKY
 from game.background import BackGround
@@ -219,6 +230,8 @@ class Game:
 			self.game_config.feel_index = randint(0, len(feels) - 1)
 
 		GameVariables().game_mode = GamePlayCompound()
+		self.game_stats = StatsGamePlay()
+		GameVariables().game_mode.add_mode(self.game_stats)
 
 		game_mode_map = {
 			GameMode.TERMINATOR: TerminatorGamePlay(),
@@ -597,31 +610,6 @@ def cycle_worms():
 	if worm_tool is not None:
 		worm_tool.release()
 	
-	# update damage:
-	wormName = GameVariables().player.name_str
-	wormColor = GameVariables().player.team.color
-	if Game._game.damageThisTurn > Game._game.mostDamage[0]:
-		Game._game.mostDamage = (Game._game.damageThisTurn, GameVariables().player.name_str)	
-	if Game._game.damageThisTurn > int(Game._game.game_config.worm_initial_health * 2.5):
-		if Game._game.damageThisTurn == 300:
-			GameVariables().commentator.comment([{'text': "THIS IS "}, {'text': wormName, 'color': wormColor}])
-		else:
-			comment = choice([
-					[{'text': 'awesome shot '}, {'text': wormName, 'color': wormColor}, {'text': '!'}],
-					[{'text': wormName, 'color': wormColor}, {'text': ' is on fire!'}],
-					[{'text': wormName, 'color': wormColor}, {'text': ' shows no mercy'}],
-				])
-			GameVariables().commentator.comment(comment)
-
-	elif Game._game.damageThisTurn > int(Game._game.game_config.worm_initial_health * 1.5):
-		comment = choice([
-					[{'text': 'good shot '}, {'text': wormName, 'color': wormColor}, {'text': '!'}],
-					[{'text': 'nicely done '}, {'text': wormName, 'color': wormColor}],
-				])
-		GameVariables().commentator.comment(comment)
-	
-	TeamManager().current_team.damage += Game._game.damageThisTurn
-	Game._game.damageThisTurn = 0
 	if check_winners():
 		return
 
@@ -657,7 +645,7 @@ def cycle_worms():
 	# sick:
 	for worm in GameVariables().get_worms():
 		if worm.sick != Sickness.NONE and worm.health > 5:
-			worm.damage(min(int(5 / GameVariables().damage_mult) + 1, int((worm.health - 5) / GameVariables().damage_mult) + 1), 2)
+			worm.damage(min(int(5 / GameVariables().damage_mult) + 1, int((worm.health - 5) / GameVariables().damage_mult) + 1), DamageType.SICK)
 		
 	# select next team
 	index = TeamManager().teams.index(TeamManager().current_team)
@@ -667,13 +655,12 @@ def cycle_worms():
 		index = TeamManager().teams.index(TeamManager().current_team)
 		index = (index + 1) % GameVariables().num_of_teams
 		TeamManager().current_team = TeamManager().teams[index]
-	
-	Game._game.damageThisTurn = 0
-	
+		
 	# sort worms by health for drawing purpuses
 	GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
 	
-	GameVariables().on_cycle()
+	GameVariables().on_turn_end()
+	GameVariables().game_mode.on_turn_end()
 
 	# actual worm switch:
 	switched = False
@@ -697,7 +684,8 @@ def cycle_worms():
 	GameVariables().cam_track = GameVariables().player
 	GameVariables().player_can_move = True
 
-	GameVariables().game_mode.on_cycle()
+	GameVariables().on_turn_begin()
+	GameVariables().game_mode.on_turn_begin()
 
 	WeaponManager().switch_weapon(WeaponManager().current_weapon)
 	if Game._game.game_config.game_mode == GameMode.MISSIONS:
@@ -1078,7 +1066,7 @@ class Mission:
 			if self.target in missionManager.hitThisTurn:
 				self.complete(self.target.name_str)
 		elif self.missionType == "above 50 damage":
-			if Game._game.damageThisTurn >= 50:
+			if 'condition':
 				self.complete()
 
 	def step(self):
@@ -1385,7 +1373,7 @@ class GameRoom(Room):
 
 		# refactor these
 		self.wind_flag = WindFlag()
-		self.damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
+		self.damageText = (Game._game.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(Game._game.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 	
 	def handle_pygame_event(self, event) -> None:
 		''' handle pygame events in game '''
@@ -1667,8 +1655,8 @@ class GameRoom(Room):
 			Game._game.radial_weapon_menu.draw(win)
 		
 		# debug:
-		if self.damageText[0] != Game._game.damageThisTurn:
-			self.damageText = (Game._game.damageThisTurn, fonts.pixel5_halo.render(str(int(Game._game.damageThisTurn)), False, GameVariables().initial_variables.hud_color))
+		if self.damageText[0] != Game._game.game_stats.damage_this_turn:
+			self.damageText = (Game._game.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(Game._game.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 		win.blit(self.damageText[1], ((int(5), int(GameVariables().win_height -5 -self.damageText[1].get_height()))))
 
 		weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name

@@ -125,10 +125,13 @@ class WeaponManager(metaclass=SingletonMeta):
         
         return True
 
-    def on_cycle(self) -> None:
+    def on_turn_end(self) -> None:
         if self.current_director is not None:
             self.finalize_director()
             WeaponManager().current_director = None
+    
+    def on_turn_begin(self) -> None:
+        pass
 
     def switch_weapon(self, weapon: Weapon):
         """ switch weapon and draw weapon sprite """

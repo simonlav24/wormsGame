@@ -124,8 +124,8 @@ class ArtifactsGamePlay(GamePlayMode):
                 deplyoed_artifact = drop_artifact(self.artifact_classes[artifact_type], artifact_type, None, comment=True)
                 self.deployed_artifacts.append(deplyoed_artifact)
 
-    def on_cycle(self):
-        super().on_cycle()
+    def on_turn_begin(self):
+        super().on_turn_begin()
 
         # refresh artifact weapon count
         for team, artifact_type in self.team_artifact_dict.items():

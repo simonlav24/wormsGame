@@ -6,7 +6,7 @@ from enum import Enum
 
 import pygame
 
-from common import GameVariables, point2world, ColorType, sprites, EntityWorm
+from common import GameVariables, point2world, ColorType, sprites, EntityWorm, DamageType
 from common.vector import *
 
 from game.world_effects import boom
@@ -122,7 +122,7 @@ class SentryGun(AutonomousObject):
 	def electrocute(self) -> None:
 		self.electrified = True
 
-	def damage(self, value, damageType=0):
+	def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
 		dmg = value
 		if self.health > 0:
 			self.health -= int(dmg)

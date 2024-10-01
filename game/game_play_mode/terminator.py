@@ -49,7 +49,7 @@ class TerminatorGamePlay(GamePlayMode):
     def on_game_init(self):
         self.pick_target()
 
-    def on_cycle(self):
+    def on_turn_begin(self):
         self.hit_this_turn = False
         self.pick_target()
     

@@ -32,7 +32,7 @@ class TargetsGamePlay(GamePlayMode):
         for _ in range(self.number_of_targets - len(self.targets)):
             self.targets.append(ShootingTarget())
     
-    def on_cycle(self):
+    def on_turn_begin(self):
         # todo: change to on round end decrease
         self.number_of_targets -= 1
         if(self.number_of_targets == 1):

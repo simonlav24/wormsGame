@@ -72,7 +72,7 @@ class Portal:
 					finalAngle = broAngle + angle
 					obj.vel.setAngle(finalAngle)
 	
-	def on_cycle(self):
+	def on_turn_end(self):
 		if self.brother is None:
 			self.remove_from_game()
 

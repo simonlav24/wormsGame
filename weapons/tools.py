@@ -198,7 +198,7 @@ class WormSwitcher:
 		GameVariables().cam_track = GameVariables().player
 
 
-	def on_cycle(self):
+	def on_turn_end(self):
 		GameVariables().unregister_non_physical(self)
 		GameVariables().unregister_cycle_observer(self)
 		GameVariables().get_event_handlers().remove(self)

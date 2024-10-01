@@ -1,11 +1,11 @@
 
-from typing import List
+from typing import List, Dict, Any
 import json
 from random import choice, shuffle
 
 import pygame
 
-from common import desaturate, GameVariables, sprites, SingletonMeta, TeamData, EntityWorm
+from common import desaturate, GameVariables, sprites, SingletonMeta, TeamData, EntityWorm, fonts
 from game.hud import HealthBar
 
 
@@ -72,6 +72,9 @@ class TeamManager(metaclass=SingletonMeta):
             GameVariables().config.worms_per_team,
             [team.color for team in self.teams]
         )
+
+        # score list
+        self.score_list: List[Dict[str, Any]] = []
     
     def get_by_name(self, name: str) -> Team:
         for team in self.teams:
@@ -101,3 +104,33 @@ class TeamManager(metaclass=SingletonMeta):
     
     def draw(self, win: pygame.Surface) -> None:
         self.health_bar_hud.draw(win)
+
+        height = sum([l['surf'].get_height() for l in self.score_list])
+        x = 5
+        y = win.get_height() - 25 - height
+        for score_dict in self.score_list:
+            win.blit(score_dict['surf'], (x, y))
+            y += score_dict['surf'].get_height() + 1
+
+    def give_point_to_team(self, team: Team, worm: EntityWorm, points) -> None:
+        team.points += points
+
+        # update point list
+        if len(self.score_list) > 0:
+            if self.score_list[-1]['worm'] == worm.name_str:
+                last_score_dict = self.score_list.pop(-1)
+                points += last_score_dict['points']
+
+        # create surf
+        s1 = fonts.pixel5_halo.render(f'{worm.name_str}: ', False, team.color)
+        s2 = fonts.pixel5_halo.render(f'{points}', False, GameVariables().initial_variables.hud_color)
+        surf = pygame.Surface((s1.get_width() + s2.get_width(), s1.get_height()), pygame.SRCALPHA)
+        surf.blit(s1, (0,0))
+        surf.blit(s2, (s1.get_width(), 0))
+
+        score_surf = {
+            'worm': worm.name_str,
+            'points': points,
+            'surf': surf
+        }
+        self.score_list.append(score_surf)

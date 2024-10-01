@@ -244,9 +244,13 @@ class GameVariables(metaclass=SingletonMeta):
                 pygame.draw.circle(win, i[0], point2world(i[1]), int(i[2]))
         self.layers_circles = [[],[],[]]
 
-    def on_cycle(self):
+    def on_turn_begin(self):
         for observer in self.database.cycle_observers:
-            observer.on_cycle()
+            observer.on_turn_begin()
+    
+    def on_turn_end(self):
+        for observer in self.database.cycle_observers:
+            observer.on_turn_end()
     
     def register_cycle_observer(self, obj: CycleObserver):
         self.database.cycle_observers.append(obj)
@@ -269,8 +273,11 @@ class GameVariables(metaclass=SingletonMeta):
         for i in self.database.physicals:
             output += f'\t{i}\n'
 
+        output += self.game_mode.debug_print()
+
         with open('debug.txt', 'w+') as file:
             file.write(output)
+        
 
 
 

@@ -1,25 +1,20 @@
 
 
-from enum import Enum
 from math import pi, degrees, cos, sin
 from random import randint, choice, uniform
 
 import pygame
 
-from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData, Sickness, EntityWormTool
+from common import GameVariables, point2world, RIGHT, LEFT, DOWN, UP, fonts, sprites, GameState, grayen, comments_damage, comments_flew, clamp, CRITICAL_FALL_VELOCITY, TeamData, Sickness, EntityWormTool, DamageType
 from common.vector import *
 
 from game.visual_effects import EffectManager
-from game.team_manager import Team
+from game.team_manager import Team, TeamManager
 from game.time_manager import TimeManager
 from game.visual_effects import FloatingText, splash
 from entities.physical_entity import PhysObj
 from game.map_manager import MapManager, GRD_COL
 from entities.worm_tools import WormTool
-
-class DeathCause(Enum):
-    FLEW_OUT = 0
-    DAMAGE = 1
 
 class Worm(PhysObj):
     healthMode = 0
@@ -93,22 +88,32 @@ class Worm(PhysObj):
         self.surf.blit(sprites.sprite_atlas, (0,0), (0,0,16,16))
         self.surf.blit(self.team.hat_surf, (0,0))
             
-    def damage(self, value, damageType=0):
-        if self.alive:
-            dmg = int(value * GameVariables().damage_mult)
-            if dmg < 1:
-                dmg = 1
-            if dmg > self.health:
-                dmg = self.health
-            
-            if dmg != 0: FloatingText(self.pos.vec2tup(), str(dmg))
-            self.health -= dmg
-            if self.health < 0:
-                self.health = 0
-            if Worm.healthMode == 1:
-                self.healthStr = fonts.pixel5.render(str(self.health), False, self.team.color)
-            
-            GameVariables().game_mode.on_worm_damage(self, dmg)
+    def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
+        if not self.alive:
+            return
+        
+        dmg = int(value * GameVariables().damage_mult)
+        if dmg < 1:
+            dmg = 1
+        if dmg > self.health:
+            dmg = self.health
+        
+        if kill:
+            dmg = self.health
+        
+        if damage_type == DamageType.HURT and dmg != 0:
+            FloatingText(self.pos.vec2tup(), str(dmg))
+        
+        self.health -= dmg
+        if self.health < 0:
+            self.health = 0
+        if Worm.healthMode == 1:
+            self.healthStr = fonts.pixel5.render(str(self.health), False, self.team.color)
+        
+        GameVariables().game_mode.on_worm_damage(self, dmg)
+
+        if self.health <= 0:
+            self.dieded(damage_type)
     
     def draw(self, win: pygame.Surface):
         # draw collision
@@ -158,34 +163,37 @@ class Worm(PhysObj):
     def __repr__(self):
         return str(self)
     
-    def dieded(self, cause=DeathCause.DAMAGE):
-        
+    def dieded(self, cause: DamageType=DamageType.HURT):
         self.alive = False
         self.color = (167,167,167)
         self.surf.fill((0,0,0,0))
         self.surf.blit(sprites.sprite_atlas, (0,0), (32,0,16,16))
         self.name = fonts.pixel5.render(self.name_str, False, grayen(self.team.color))
 
-        self.health = 0
+        # self.health = 0
                 
         # comment:
-        if cause == DeathCause.DAMAGE:
+        to_comment = False
+        if cause == DamageType.HURT:
             comment = choice(comments_damage)
-        elif cause == DeathCause.FLEW_OUT:
+            to_comment = True
+        elif cause == DamageType.DROWN:
             comment = choice(comments_flew)
-        comment_dict = [
-            {'text': comment[0]},
-            {'text': self.name_str, 'color': self.team.color},
-            {'text': comment[1]},
-        ]
-        GameVariables().commentator.comment(comment_dict)
-                
+            to_comment = True
+        if to_comment:
+            comment_dict = [
+                {'text': comment[0]},
+                {'text': self.name_str, 'color': self.team.color},
+                {'text': comment[1]},
+            ]
+            GameVariables().commentator.comment(comment_dict)
+
         # remove from regs:
         if self in GameVariables().get_worms():
             GameVariables().get_worms().remove(self)
         if self in self.team.worms:
             self.team.worms.remove(self)
-        if cause != DeathCause.DAMAGE:
+        if cause == DamageType.PLANT:
             self.remove_from_game()
         
         # if under control 
@@ -246,20 +254,21 @@ class Worm(PhysObj):
         self._shoot_angle = clamp(self._shoot_angle + self.shoot_vel * self.facing, pi, 0)
 
         # check if killed:
-        if self.health <= 0 and self.alive:
-            self.dieded()
+        # if self.health <= 0 and self.alive:
+        #     self.dieded()
         
         # check if on map:
-        if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level:
-            splash(self.pos, self.vel)
-            angle = self.vel.getAngle()
-            if 3.14 > angle > 2.7 or 0.4 > angle > 0:
-                if self.vel.getMag() > 7:
-                    self.pos.y = MapManager().game_map.get_height() - GameVariables().water_level - 1
-                    self.vel.y *= -1
-                    self.vel.x *= 0.7
-            else:
-                self.dieded(DeathCause.FLEW_OUT)
+
+        # if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level:
+        #     splash(self.pos, self.vel)
+        #     angle = self.vel.getAngle()
+        #     if 3.14 > angle > 2.7 or 0.4 > angle > 0:
+        #         if self.vel.getMag() > 7:
+        #             self.pos.y = MapManager().game_map.get_height() - GameVariables().water_level - 1
+        #             self.vel.y *= -1
+        #             self.vel.x *= 0.7
+        #     else:
+        #         self.dieded(DeathCause.FLEW_OUT)
         
         if self.pos.y < 0:
             self.gravity = DOWN
@@ -308,12 +317,16 @@ class Worm(PhysObj):
                     if distus(self.pos, worm.pos) < (self.radius + worm.radius) * (self.radius + worm.radius):
                         worm.vel = vectorCopy(self.vel)
 
+    def on_out_of_map(self):
+        super().on_out_of_map()
+        self.damage(100, DamageType.DROWN, kill=True)
+
     def on_collision(self, ppos):
         if self.vel.getMag() > CRITICAL_FALL_VELOCITY and not self.worm_tool.in_use():
             MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
-    
+        
     def give_point(self, points: int) -> None:
-        self.team.points += points
+        TeamManager().give_point_to_team(self.team, self, points)
     
     def get_tool(self) -> EntityWormTool:
         return self.worm_tool.tool

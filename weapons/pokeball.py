@@ -5,7 +5,7 @@ from random import choice
 import pygame
 
 from common.vector import Vector, dist, tup2vec
-from common import GameVariables, point2world, blit_weapon_sprite, clamp, fonts, draw_lightning
+from common import GameVariables, point2world, blit_weapon_sprite, clamp, fonts, draw_lightning, DamageType
 
 from entities import PhysObj, Worm
 from game.world_effects import boom
@@ -27,8 +27,8 @@ class PokeBall(PhysObj):
 		blit_weapon_sprite(self.surf, (0,0), "pokeball")
 		self.angle = 0
 	
-	def damage(self, value, damageType=0):
-		if damageType == 1:
+	def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
+		if damage_type == 1:
 			return
 		dmg = int(value * GameVariables().damage_mult)
 		dmg = clamp(dmg, self.health, 1)

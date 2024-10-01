@@ -20,10 +20,15 @@ class GamePlayCompound(GamePlayMode):
         for mode in self.modes:
             mode.on_game_init()
 
-    def on_cycle(self):
-        ''' on cycle update, precondition: new turn worm is determined '''
+    def on_turn_begin(self):
+        ''' on cycle update '''
         for mode in self.modes:
-            mode.on_cycle()
+            mode.on_turn_begin()
+
+    def on_turn_end(self):
+        ''' on cycle update '''
+        for mode in self.modes:
+            mode.on_turn_end()
 
     def on_deploy(self):
         ''' on drop deployable update '''
@@ -67,4 +72,10 @@ class GamePlayCompound(GamePlayMode):
         for mode in self.modes:
             result |= mode.is_points_game()
         return result
+    
+    def debug_print(self) -> str:
+        output = ''
+        for mode in self.modes:
+            output += mode.debug_print()
+        return output
 

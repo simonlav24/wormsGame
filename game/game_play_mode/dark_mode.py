@@ -26,7 +26,7 @@ class DarknessGamePlay(GamePlayMode):
     def step(self):
         super().step()
     
-    def on_cycle(self):
+    def on_turn_begin(self):
         # restock flares
         for team in TeamManager().teams:
             team.ammo(WeaponManager()["flare"], 1)

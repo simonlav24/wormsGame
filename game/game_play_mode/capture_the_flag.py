@@ -49,8 +49,8 @@ class CTFGamePlay(GamePlayMode):
             pygame.draw.rect(win, (220,0,0), (point2world(self.current_holder.pos + Vector(1, -3 * self.current_holder.radius)), (self.current_holder.radius * 2, self.current_holder.radius * 2)))
 
 
-    def on_cycle(self):
-        super().on_cycle()
+    def on_turn_end(self):
+        super().on_turn_end()
         if self.current_holder:
             self.current_holder.give_point(1)
 

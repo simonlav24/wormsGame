@@ -15,7 +15,7 @@ from game.world_effects import boom
 from entities import PhysObj, Debrie, Worm
 from weapons.mine import Mine
 from entities.gun_shell import GunShell
-from entities.worm import DeathCause
+from entities.worm import DamageType
 
 def generate_leaf(pos, direction, color) -> None:
 	''' draw procedural leaf on the map '''
@@ -138,7 +138,7 @@ class Venus:
 
 						# if PLANT_MASTER in worm.team.artifacts:
 						# 	continue
-						worm.dieded(DeathCause.FLEW_OUT)
+						worm.damage(100, damage_type=DamageType.PLANT, kill=True)
 						name = worm.name_str
 						color = worm.team.color # todo
 						comments = [

@@ -2,7 +2,7 @@ import pygame
 from random import uniform, randint
 from math import sin, pi
 
-from common import GameVariables, sprites, point2world
+from common import GameVariables, sprites, point2world, DamageType
 from common.vector import *
 from game.map_manager import MapManager, SKY_COL, GRD_COL
 from entities import PhysObj, Fire
@@ -28,7 +28,7 @@ class ExplodingProp(PhysObj):
 		GameVariables().get_exploding_props().remove(self)
 		GameVariables().get_obscuring_objects().remove(self)
 
-	def damage(self, value, damageType=0):
+	def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
 		dmg = value * GameVariables().damage_mult
 		if self.health > 0:
 			self.health -= int(dmg)
