@@ -267,7 +267,7 @@ class Worm(PhysObj):
         move_action = False
         if (self is GameVariables().player and
             GameVariables().player_can_move and
-            GameVariables().player_in_control and
+            GameVariables().is_player_in_control() and
             self.alive):
 
             # move and turn

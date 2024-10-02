@@ -106,22 +106,23 @@ class WeaponManager(metaclass=SingletonMeta):
         ''' get weapon by name '''
         return self.weapon_dict[name]
 
-    def can_shoot(self) -> bool:
+    def can_shoot(self, ignore_state: bool=False) -> bool:
         ''' check if can shoot current weapon '''
         # if no ammo
         if TeamManager().current_team.ammo(self.current_weapon.index) == 0:
             return False
         
-        # if not active
-        if not self.is_current_weapon_active():
+        # check delay
+        if self.current_weapon.round_delay > GameVariables().game_round_count:
             return False
 
         # if in use list
         if GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list:
             return False
         
-        if (not GameVariables().player_in_control) or (not GameVariables().player_can_shoot):
-            return False
+        if not ignore_state:
+            if (not GameVariables().is_player_in_control()) or (not GameVariables().can_player_shoot()):
+                return False
         
         return True
 
@@ -165,25 +166,12 @@ class WeaponManager(metaclass=SingletonMeta):
                     return
                 GameVariables().weapon_hold.blit(sprites.sprite_atlas, (0,0), (64,64,16,16))
 
-    def is_current_weapon_active(self) -> bool:
-        ''' check if current weapon active in this round '''
-        # check for round delay
-        # if self.current_weapon.round_delay < GameVariables().game_turn_count:
-        #     return False
-        # todo this
-        
-        # check for cool down
-        if GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list:
-            return False
-        
-        return True
-
     def render_weapon_count(self):
         ''' changes surf to fit current weapon '''
         color = GameVariables().initial_variables.hud_color
         # if no ammo in current team
         ammo = TeamManager().current_team.ammo(self.current_weapon.index)
-        if ammo == 0 or not self.is_current_weapon_active() or (GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list):
+        if ammo == 0 or not self.can_shoot(ignore_state=True) or (GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list):
             color = GREY
         weaponStr = self.current_weapon.name
 
@@ -260,7 +248,7 @@ class WeaponManager(metaclass=SingletonMeta):
         # Fire
         if self.current_director:
             self.current_director.step()
-        if self.fire_weapon and GameVariables().player_can_shoot:
+        if self.fire_weapon and GameVariables().can_player_shoot():
             self.fire()
         if GameVariables().continuous_fire:
             GameVariables().continuous_fire = False

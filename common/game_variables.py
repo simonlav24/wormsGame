@@ -95,9 +95,7 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.game_state = GameState.RESET
         self.game_next_state = GameState.RESET
-        self.player_in_control = False
         self.player_can_move = True
-        self.player_can_shoot = False
 
         self.game_mode: GamePlayMode = None
         self.commentator: IComment = None
@@ -278,7 +276,11 @@ class GameVariables(metaclass=SingletonMeta):
         with open('debug.txt', 'w+') as file:
             file.write(output)
         
-
+    def can_player_shoot(self) -> bool:
+        return self.game_state == GameState.PLAYER_PLAY
+    
+    def is_player_in_control(self) -> bool:
+        return self.game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT]
 
 
 def point2world(point) -> Tuple[int, int]:

@@ -51,6 +51,7 @@ class HealthBar:
 		if max_points != 0:
 			for i, points in enumerate(self.team_points):
 				value = points / max_points * width
+				value = int(value)
 				pygame.draw.rect(win, (220,220,220), ((x - value - 1, y + i * 3), (value, height)))
 
 

@@ -802,22 +802,15 @@ def stateMachine():
 		GameVariables().game_next_state = GameState.PLAYER_PLAY
 		GameVariables().game_state = GameVariables().game_next_state
 	
-	elif GameVariables().game_state == GameState.PLAYER_PLAY:
-		GameVariables().player_in_control = True #can play
-		GameVariables().player_can_shoot = True
-		
+	elif GameVariables().game_state == GameState.PLAYER_PLAY:		
 		GameVariables().game_next_state = GameState.PLAYER_RETREAT
 	
 	elif GameVariables().game_state == GameState.PLAYER_RETREAT:
-		GameVariables().player_in_control = True #can play
-		GameVariables().player_can_shoot = False
 		
 		GameVariables().game_stable_counter = 0
 		GameVariables().game_next_state = GameState.WAIT_STABLE
 	
 	elif GameVariables().game_state in [GameState.WAIT_STABLE, GameState.AUTONOMOUS_PLAY, GameState.DEPLOYEMENT]:
-		GameVariables().player_in_control = False #can play
-		GameVariables().player_can_shoot = False
 		if GameVariables().game_stable:
 			GameVariables().game_stable_counter += 1
 			if GameVariables().game_stable_counter == 10:
@@ -842,21 +835,7 @@ def stateMachine():
 					WeaponManager().render_weapon_count()
 				
 				GameVariables().game_state = GameVariables().game_next_state
-	
-	elif GameVariables().game_state == GameState.AUTONOMOUS_PLAY:
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-		GameVariables().player_in_control = False
-		GameVariables().player_can_shoot = False
-		if GameVariables().game_stable:
-			GameVariables().game_stable_counter += 1
-			if GameVariables().game_stable_counter == 10:
-				# next turn
-				GameVariables().game_stable_counter = 0
-				TimeManager().time_reset()
-				cycle_worms()
-				WeaponManager().render_weapon_count()
-				GameVariables().game_state = GameVariables().game_next_state
-	
+		
 	elif GameVariables().game_state == GameState.WIN:
 		GameVariables().game_stable_counter += 1
 		if GameVariables().game_stable_counter == 30 * 3:
@@ -894,16 +873,30 @@ def onKeyHoldSpace():
 
 def onKeyReleaseSpace():
 	if WeaponManager().can_shoot():
-
 		fire_weapon_conditions = [
 			WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising,
 			WeaponManager().current_weapon.style in [WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL, WeaponStyle.SPECIAL],
 			WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN],
 		]
-
 		if any(fire_weapon_conditions):
 			WeaponManager().fire_weapon = True
 		WeaponManager().energising = False
+
+def onMouseButtonPressed():
+	# CLICKABLE weapon check:
+	if (
+		GameVariables().game_state == GameState.PLAYER_PLAY and
+		WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE and
+		WeaponManager().can_shoot()
+	):
+		WeaponManager().fire_weapon = True
+	if (
+		GameVariables().game_state == GameState.PLAYER_PLAY and 
+		WeaponManager().current_weapon.name in ["homing missile", "seeker"] and
+		not Game._game.radial_weapon_menu
+	):
+		mouse_pos = mouse_pos_in_world()
+		GameVariables().point_target = vectorCopy(mouse_pos)
 
 def onKeyPressTab():
 	if WeaponManager().current_weapon.name == "drill missile":
@@ -971,13 +964,7 @@ class GameRoom(Room):
 			return
 		# mouse click event
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # left click (main)
-			# CLICKABLE weapon check:
-			if GameVariables().game_state == GameState.PLAYER_PLAY and WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE:
-				# fireClickable()
-				WeaponManager().fire_weapon = True
-			if GameVariables().game_state == GameState.PLAYER_PLAY and WeaponManager().current_weapon.name in ["homing missile", "seeker"] and not Game._game.radial_weapon_menu:
-				mouse_pos = mouse_pos_in_world()
-				GameVariables().point_target = vectorCopy(mouse_pos)
+			onMouseButtonPressed()
 
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
 			pass
@@ -1007,7 +994,7 @@ class GameRoom(Room):
 		# key press
 		if event.type == pygame.KEYDOWN:
 			# controll worm, jump and facing
-				if GameVariables().player is not None and GameVariables().player_in_control:
+				if GameVariables().player is not None and GameVariables().is_player_in_control():
 					if event.key == pygame.K_RETURN:
 						onKeyPressEnter()
 					if event.key == pygame.K_RIGHT:
@@ -1057,11 +1044,11 @@ class GameRoom(Room):
 		
 		# key hold:
 		keys = pygame.key.get_pressed()
-		if GameVariables().player is not None and GameVariables().player_in_control and GameVariables().player_can_move:
+		if GameVariables().player is not None and GameVariables().is_player_in_control() and GameVariables().player_can_move:
 			# fire hold
-			if keys[pygame.K_SPACE] and GameVariables().player_can_shoot and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
+			if keys[pygame.K_SPACE] and GameVariables().can_player_shoot() and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
 				onKeyHoldSpace()
-				
+
 		result = stateMachine()
 		if result == 1:
 			self.switch = SwitchRoom(Rooms.MAIN_MENU, False, None)
@@ -1070,7 +1057,7 @@ class GameRoom(Room):
 		if GameVariables().game_state in [GameState.RESET]:
 			return
 
-		# use edge map scroll
+		# edge map scroll
 		if pygame.mouse.get_focused():
 			mousePos = pygame.mouse.get_pos()
 			scroll = Vector()
@@ -1091,7 +1078,7 @@ class GameRoom(Room):
 		GameVariables().win_height += (GameVariables().screen_height / GameVariables().scale_factor - GameVariables().win_height) * 0.2
 		GameVariables().win_width = int(GameVariables().win_width)
 		GameVariables().win_height = int(GameVariables().win_height)
-		
+
 		if oldSize != (GameVariables().win_width, GameVariables().win_height):
 			GameVariables().win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
 			GameVariables().win_width = GameVariables().win_width
@@ -1105,7 +1092,7 @@ class GameRoom(Room):
 					int(GameVariables().screen_height / GameVariables().scale_factor)) / 2
 				) - GameVariables().cam_pos
 			) * 0.2
-		
+
 		# constraints:
 		if GameVariables().cam_pos[1] < 0:
 			GameVariables().cam_pos[1] = 0
@@ -1117,11 +1104,12 @@ class GameRoom(Room):
 		# 	if GameVariables().cam_pos[0] >= MapManager().game_map.get_width() - GameVariables().win_width:
 		# 		GameVariables().cam_pos[0] = MapManager().game_map.get_width() - GameVariables().win_width
 		
+		# ------- objects step -------
+
 		if Earthquake.earthquake > 0:
 			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
 			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(GameVariables().time_overall * 1.8)
-
-		# ------- step -------
+		
 		Game._game.step()
 		GameVariables().game_stable = True
 
@@ -1134,12 +1122,19 @@ class GameRoom(Room):
 		# step weapon manager
 		WeaponManager().step()
 
+		# step time manager
+		TimeManager().step()
+
+		# step background
+		Game._game.background.step()
+
 		for t in Toast._toasts:
 			t.step()
 
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
 		
+		# step game mode
 		GameVariables().game_mode.step()
 
 		# camera for wait to stable:
@@ -1149,10 +1144,6 @@ class GameRoom(Room):
 					continue
 				GameVariables().cam_track = worm
 				break
-		
-		# advance timer
-		TimeManager().step()
-		Game._game.background.step()
 				
 		# menu step
 		if Game._game.radial_weapon_menu:
@@ -1262,10 +1253,13 @@ wip = '''refactoring stage:
 		holding mjolnir
 		winning
 		darkness outside area (either close or draw black)
-		decrease rope count
-		dont decrease parachute, trampoline if not opened
+		decrease rope count only in the end of the turn
+		dont decrease parachute, ropes, trampoline if not opened
+		cant release jetpack if ammo = 0
 		icicle weird behaviour on hit
 		minecraft weapons
+		surf of weapon holding on next turn
+		targets mode should remain targets every Round, not turn
 	'''
 
 
