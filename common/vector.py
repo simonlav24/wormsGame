@@ -146,7 +146,7 @@ def vectorUnitRandom():
 	y = random.randint(-10000,10000)
 	return Vector(x,y).normalize()
 
-def vectorFromAngle(angle, mag = 1):
+def vector_from_angle(angle, mag = 1):
 	return Vector(mag * math.cos(angle), mag * math.sin(angle))
 
 def rotateVector(vec, angle):

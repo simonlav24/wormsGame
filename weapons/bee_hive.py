@@ -39,13 +39,13 @@ class Bee:
 			self.angle = (self.target.pos - self.pos).getAngle()
 		else:
 			self.angle += uniform(-0.6,0.6)
-		ppos = self.pos + vectorFromAngle(self.angle)
+		ppos = self.pos + vector_from_angle(self.angle)
 		if ppos.x >= MapManager().game_map.get_width() or ppos.y >= MapManager().game_map.get_height() or ppos.x < 0 or ppos.y < 0:
-			ppos = self.pos + vectorFromAngle(self.angle) * -1
+			ppos = self.pos + vector_from_angle(self.angle) * -1
 			self.angle += pi
 		try:
 			if MapManager().game_map.get_at((ppos.vec2tupint())) == GRD:
-				ppos = self.pos + vectorFromAngle(self.angle) * -1
+				ppos = self.pos + vector_from_angle(self.angle) * -1
 				self.angle += pi
 				if self.target:
 					self.unreachable.append(self.target)

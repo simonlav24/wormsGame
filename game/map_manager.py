@@ -286,7 +286,7 @@ class MapManager(metaclass=SingletonMeta):
         org_pos = vectorCopy(pos)
         t = 0
         while not found:
-            check_pos = org_pos + t * vectorFromAngle(r)
+            check_pos = org_pos + t * vector_from_angle(r)
             if self.check_free_pos(radius, check_pos, True):
                 found = check_pos
                 break

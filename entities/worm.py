@@ -115,6 +115,11 @@ class Worm(PhysObj):
         if self.health <= 0:
             self.dieded(damage_type)
     
+    def fall_damage(self) -> None:
+        if self.worm_tool.in_use():
+            return
+        super().fall_damage()
+
     def draw(self, win: pygame.Surface):
         # draw collision
         if not self is GameVariables().player and self.alive:
@@ -196,6 +201,8 @@ class Worm(PhysObj):
         if cause == DamageType.PLANT:
             self.remove_from_game()
         
+        self.worm_tool.release()
+
         # if under control 
         if GameVariables().player == self:
             GameVariables().game_next_state = GameState.PLAYER_RETREAT
@@ -252,23 +259,6 @@ class Worm(PhysObj):
         # shooting angle
         self.shoot_vel = clamp(self.shoot_vel + self.shoot_acc, 0.1, -0.1)
         self._shoot_angle = clamp(self._shoot_angle + self.shoot_vel * self.facing, pi, 0)
-
-        # check if killed:
-        # if self.health <= 0 and self.alive:
-        #     self.dieded()
-        
-        # check if on map:
-
-        # if self.pos.y > MapManager().game_map.get_height() - GameVariables().water_level:
-        #     splash(self.pos, self.vel)
-        #     angle = self.vel.getAngle()
-        #     if 3.14 > angle > 2.7 or 0.4 > angle > 0:
-        #         if self.vel.getMag() > 7:
-        #             self.pos.y = MapManager().game_map.get_height() - GameVariables().water_level - 1
-        #             self.vel.y *= -1
-        #             self.vel.x *= 0.7
-        #     else:
-        #         self.dieded(DeathCause.FLEW_OUT)
         
         if self.pos.y < 0:
             self.gravity = DOWN

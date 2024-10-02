@@ -124,7 +124,7 @@ class Blast(Effect):
 				radius = self.rad * 0.1 if i % 2 == 0 else self.rad * 4
 				rand = Vector() if i % 2 == 0 else 5 * vectorUnitRandom()
 				radrand = 1.0 if i % 2 == 0 else uniform(0.8,3)
-				point = point2world(self.pos + vectorFromAngle((i/num) * 2 * pi, radius + radrand) + rand)
+				point = point2world(self.pos + vector_from_angle((i/num) * 2 * pi, radius + radrand) + rand)
 				points.append(point)
 			pygame.draw.polygon(win, choice(self.color[0:2]), points)
 		
@@ -324,7 +324,7 @@ class FireWork:
 		self.timer = 0
 		blastNum = 20
 		for i in range(blastNum):
-			self.blasts.append([vectorCopy(self.pos), vectorFromAngle(i * 2 * pi / blastNum, 7 + uniform(-1,1))])
+			self.blasts.append([vectorCopy(self.pos), vector_from_angle(i * 2 * pi / blastNum, 7 + uniform(-1,1))])
 
 		self.color = color
 		self.state = "blow"

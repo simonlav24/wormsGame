@@ -21,7 +21,7 @@ class ExplodingProp(PhysObj):
 		boom(self.pos, 20)
 		for i in range(40):
 			s = Fire(self.pos, 5)
-			s.vel = vectorFromAngle(2 * pi * i / 40, uniform(1.3, 2))
+			s.vel = vector_from_angle(2 * pi * i / 40, uniform(1.3, 2))
 	
 	def remove_from_game(self) -> None:
 		super().remove_from_game()

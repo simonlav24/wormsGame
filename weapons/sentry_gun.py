@@ -96,7 +96,7 @@ class SentryGun(AutonomousObject):
 		if self.electrified:
 			if GameVariables().time_overall % 2 == 0:
 				self.angle = uniform(0, 2 * pi)
-				self.shoot(vectorFromAngle(self.angle))
+				self.shoot(vector_from_angle(self.angle))
 			self.electrified = False
 		
 		self.angle += (self.angle2for - self.angle) * 0.2
@@ -117,7 +117,7 @@ class SentryGun(AutonomousObject):
 	
 	def draw(self, win: pygame.Surface):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
-		pygame.draw.line(win, self.team_color, point2world(self.pos), point2world(self.pos + vectorFromAngle(self.angle) * 18))
+		pygame.draw.line(win, self.team_color, point2world(self.pos), point2world(self.pos + vector_from_angle(self.angle) * 18))
 	
 	def electrocute(self) -> None:
 		self.electrified = True

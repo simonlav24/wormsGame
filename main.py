@@ -152,7 +152,6 @@ class Game:
 		# handle game mode
 		self.init_handle_game_mode()
 
-
 	def place_worms_random(self) -> None:
 		''' create worms and place them randomly '''
 		for i in range(self.game_config.worms_per_team * len(TeamManager().teams)):
@@ -170,7 +169,6 @@ class Game:
 			TeamManager().team_choser = (TeamManager().team_choser + 1) % GameVariables().num_of_teams
 			self.lstepper()
 		GameVariables().game_state = GameVariables().game_next_state
-
 
 	def init_handle_game_mode(self) -> None:
 		''' on init, handle game mode parameter and variables '''
@@ -230,7 +228,7 @@ class Game:
 			GameMode.DAVID_AND_GOLIATH: DVGGamePlay(),
 			GameMode.CAPTURE_THE_FLAG: CTFGamePlay(),
 			GameMode.ARENA: ArenaGamePlay(),
-			GameMode.MISSIONS: MissionsGamePlay(),
+			GameMode.MISSIONS: MissionsGamePlay(self.game_stats),
 		}
 
 		GameVariables().game_mode.add_mode(game_mode_map.get(self.game_config.game_mode))
@@ -1236,10 +1234,10 @@ class GameRoom(Room):
 			self.damageText = (Game._game.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(Game._game.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 		win.blit(self.damageText[1], ((int(5), int(GameVariables().win_height -5 -self.damageText[1].get_height()))))
 
-		weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
-		debug_string = f'director: {weapon}'
-		debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
-		win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
+		# weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
+		# debug_string = f'director: {weapon}'
+		# debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
+		# win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
 		
 		# draw loading screen
 		if GameVariables().game_state in [GameState.RESET]:

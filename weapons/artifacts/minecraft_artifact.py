@@ -5,7 +5,7 @@ from typing import List
 import pygame
 
 from common import GameVariables, blit_weapon_sprite, point2world, LEFT, sprites
-from common.vector import vectorFromAngle, vectorUnitRandom, Vector, tup2vec
+from common.vector import vector_from_angle, vectorUnitRandom, Vector, tup2vec
 
 from game.map_manager import MapManager, SKY, GRD
 from game.visual_effects import Blast

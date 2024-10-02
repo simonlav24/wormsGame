@@ -152,7 +152,7 @@ class Icicle(LongBow):
 	
 	def worm_collision(self, worm: EntityWorm):
 		for i in range(8):
-			pos = worm.pos + vectorFromAngle(2 * pi * i / 8, worm.radius + 1)
+			pos = worm.pos + vector_from_angle(2 * pi * i / 8, worm.radius + 1)
 			Frost(pos)
 		worm.vel += self.direction*4
 		worm.vel.y -= 2

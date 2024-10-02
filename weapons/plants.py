@@ -52,7 +52,7 @@ class Venus:
 		if angle == -1:
 			self.direction = vectorUnitRandom()
 		else:
-			self.direction = vectorFromAngle(angle)
+			self.direction = vector_from_angle(angle)
 		self.angle = self.direction.getAngle()
 		self.d1 = self.direction.normal()
 		self.d2 = self.d1 * -1
@@ -244,7 +244,7 @@ class GrowingPlant:
 		self.mode = mode
 
 	def step(self):
-		self.pos += vectorFromAngle(self.angle + uniform(-1,1))
+		self.pos += vector_from_angle(self.angle + uniform(-1,1))
 		if randint(1,100) <= 2 and not self.mode == PlantMode.VENUS:
 			GrowingPlant(self.pos, self.radius, self.angle + choice([pi/3, -pi/3]), self.mode)
 		self.time_counter += 1

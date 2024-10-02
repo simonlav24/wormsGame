@@ -19,7 +19,7 @@ class ShootingTarget:
 		self.pos = Vector(randint(10, MapManager().game_map.get_width() - 10), randint(10, MapManager().game_map.get_height() - 50))
 		self.radius = 10
 		pygame.draw.circle(MapManager().game_map, GRD, self.pos, self.radius)
-		self.points = [self.pos + vectorFromAngle((i / 11) * 2 * pi) * (self.radius - 2) for i in range(10)]
+		self.points = [self.pos + vector_from_angle((i / 11) * 2 * pi) * (self.radius - 2) for i in range(10)]
 		self.is_done = False
 	
 	def step(self):

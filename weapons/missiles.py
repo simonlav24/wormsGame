@@ -238,10 +238,10 @@ class Seeker:
 			self.avoid = []
 			visibility = int(0.1 * distance + 10)
 			for i in range(20):
-				direction = vectorFromAngle((i / 20) * 2 * pi)
+				direction = vector_from_angle((i / 20) * 2 * pi)
 				for j in range(visibility):
 					testPos = self.pos + direction * j
-					if MapManager().is_ground_at(testPos):
+					if MapManager().is_ground_at(testPos.integer()):
 						self.avoid.append(testPos)
 		else:
 			if MapManager().is_ground_at(self.pos):

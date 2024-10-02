@@ -28,7 +28,7 @@ class PetrolBomb(PhysObj):
 	
 	def secondaryStep(self):
 		self.angle -= self.vel.x * 4
-		Blast(self.pos + vectorUnitRandom() * randint(0,4) + vectorFromAngle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
+		Blast(self.pos + vectorUnitRandom() * randint(0,4) + vector_from_angle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
 	
 	def death_response(self):
 		boom(self.pos, 15)

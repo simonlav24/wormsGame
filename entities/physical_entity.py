@@ -100,7 +100,7 @@ class PhysObj(Entity):
 			
 			self.on_collision(ppos)
 			if magVel > CRITICAL_FALL_VELOCITY and self.is_fall_affected:
-				self.damage(magVel * 1.5 * GameVariables().fall_damage_mult)
+				self.fall_damage()
 			self.stable = True
 			
 			response.normalize()
@@ -150,6 +150,11 @@ class PhysObj(Entity):
 		
 		self.secondaryStep()
 	
+	def fall_damage(self) -> None:
+		''' damage only upon collision '''
+		magVel = self.vel.getMag()
+		self.damage(magVel * 1.5 * GameVariables().fall_damage_mult)
+
 	def apply_force(self) -> None:
 		# gravity:
 		self.acc.y += GameVariables().physics.global_gravity
