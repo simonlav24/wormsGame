@@ -1,7 +1,7 @@
 
 ''' common interfaces, definitions and utilities '''
 
-from typing import Protocol, List
+from typing import Protocol, List, Any
 from pydantic import BaseModel
 import pygame
 
@@ -172,6 +172,11 @@ class CycleObserver(Protocol):
 
 class IComment(Entity):
 	def comment(self, text_dict) -> None:
+		...
+
+
+class IHud(Entity):
+	def render_weapon_count(self, weapon: Any, amount: int, adding: str='', enabled: bool=True):
 		...
 
 

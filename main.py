@@ -39,7 +39,7 @@ from game.team_manager import TeamManager, Team
 
 from game.world_effects import boom, Earthquake
 
-from game.hud import Commentator, Toast, WindFlag
+from game.hud import Commentator, Toast, Hud
 from gui.radial_menu import RadialMenu, RadialButton
 
 from entities.props import PetrolCan
@@ -72,6 +72,7 @@ class Game:
 		self.initiateGameVariables()
 		self.game_vars = GameVariables()
 		GameVariables().commentator = Commentator()
+		GameVariables().hud = Hud()
 
 		self.mostDamage = (0, None)
 
@@ -241,7 +242,6 @@ class Game:
 
 	def handle_event(self, event) -> bool:
 		''' handle pygame event, return true if event handled '''
-		is_handled = False
 
 		if self.radial_weapon_menu:
 			self.radial_weapon_menu.handle_event(event)
@@ -249,9 +249,9 @@ class Game:
 			if menu_event:
 				WeaponManager().switch_weapon(menu_event)
 				self.radial_weapon_menu = None
-				is_handled = True
+				return True
 		
-		is_handled |= WeaponManager().handle_event(event)
+		is_handled = WeaponManager().handle_event(event)
 		
 		return is_handled
 
@@ -853,46 +853,53 @@ def onKeyPressLeft():
 	GameVariables().player.turn(LEFT)
 
 def onKeyPressSpace():
-	if not WeaponManager().can_shoot():
-		print('cant shoot')
-		return
 	# energize weapon
-	if WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE:
-		WeaponManager().energising = True
-		WeaponManager().energy_level = 0
+	# if WeaponManager().can_shoot():
+	# 	if WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE:
+	# 		WeaponManager().energising = True
+	# 		WeaponManager().energy_level = 0
+	
+	# release worm_tool
+	if GameVariables().game_state == GameState.PLAYER_RETREAT:
+		worm_tool = GameVariables().player.get_tool()
+		if worm_tool is not None:
+			worm_tool.release()
 
 def onKeyHoldSpace():
-	WeaponManager().energy_level += 0.05
-	if WeaponManager().energy_level >= 1:
-		WeaponManager().energy_level = 1
-		WeaponManager().fire()
+	...
+	# WeaponManager().energy_level += 0.05
+	# if WeaponManager().energy_level >= 1:
+	# 	WeaponManager().energy_level = 1
+	# 	WeaponManager().fire()
 
 def onKeyReleaseSpace():
-	if WeaponManager().can_shoot():
-		fire_weapon_conditions = [
-			WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising,
-			WeaponManager().current_weapon.style in [WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL, WeaponStyle.SPECIAL],
-			WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN],
-		]
-		if any(fire_weapon_conditions):
-			WeaponManager().fire()
-		WeaponManager().energising = False
+	...
+	# if WeaponManager().can_shoot(check_ammo=False):
+	# 	fire_weapon_conditions = [
+	# 		WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising,
+	# 		WeaponManager().current_weapon.style in [WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL, WeaponStyle.SPECIAL],
+	# 		WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN],
+	# 	]
+	# 	if any(fire_weapon_conditions):
+	# 		WeaponManager().fire()
+	# 	WeaponManager().energising = False
 
 def onMouseButtonPressed():
+	...
 	# CLICKABLE weapon check:
-	if (
-		GameVariables().game_state == GameState.PLAYER_PLAY and
-		WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE and
-		WeaponManager().can_shoot()
-	):
-		WeaponManager().fire()
-	if (
-		GameVariables().game_state == GameState.PLAYER_PLAY and 
-		WeaponManager().current_weapon.name in ["homing missile", "seeker"] and
-		not Game._game.radial_weapon_menu
-	):
-		mouse_pos = mouse_pos_in_world()
-		GameVariables().point_target = vectorCopy(mouse_pos)
+	# if (
+	# 	GameVariables().game_state == GameState.PLAYER_PLAY and
+	# 	WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE and
+	# 	WeaponManager().can_shoot()
+	# ):
+	# 	WeaponManager().fire()
+	# if (
+	# 	GameVariables().game_state == GameState.PLAYER_PLAY and 
+	# 	WeaponManager().current_weapon.name in ["homing missile", "seeker"] and
+	# 	not Game._game.radial_weapon_menu
+	# ):
+	# 	mouse_pos = mouse_pos_in_world()
+	# 	GameVariables().point_target = vectorCopy(mouse_pos)
 
 def onKeyPressTab():
 	if WeaponManager().current_weapon.name == "drill missile":
@@ -926,7 +933,9 @@ def onKeyPressTab():
 		GameVariables().airstrike_direction *= -1
  
 def onKeyPressTest():
-	GameVariables().debug_print()
+	# GameVariables().debug_print()
+	actors = WeaponManager().weapon_director.actors
+	print(actors)
 
 def onKeyPressEnter():
 	# jump
@@ -945,7 +954,7 @@ class GameRoom(Room):
 		WeaponManager()
 
 		# refactor these
-		self.wind_flag = WindFlag()
+		# self.wind_flag = WindFlag()
 		self.damageText = (Game._game.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(Game._game.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 	
 	def handle_pygame_event(self, event) -> None:
@@ -968,7 +977,7 @@ class GameRoom(Room):
 			# this is the next GameVariables().game_state after placing all worms
 			if GameVariables().game_state == GameState.PLAYER_PLAY:
 				if Game._game.radial_weapon_menu is None:
-					if WeaponManager().can_open_menu():
+					if WeaponManager().can_switch_weapon():
 						weapon_menu_init()
 				else:
 					Game._game.radial_weapon_menu = None
@@ -1039,11 +1048,11 @@ class GameRoom(Room):
 		''' game step '''
 		
 		# key hold:
-		keys = pygame.key.get_pressed()
-		if GameVariables().player is not None and GameVariables().is_player_in_control() and GameVariables().player_can_move:
+		# keys = pygame.key.get_pressed()
+		# if GameVariables().player is not None and GameVariables().is_player_in_control() and GameVariables().player_can_move:
 			# fire hold
-			if keys[pygame.K_SPACE] and GameVariables().can_player_shoot() and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
-				onKeyHoldSpace()
+			# if keys[pygame.K_SPACE] and GameVariables().can_player_shoot() and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
+			# 	onKeyHoldSpace()
 
 		result = stateMachine()
 		if result == 1:
@@ -1120,6 +1129,7 @@ class GameRoom(Room):
 
 		# step time manager
 		TimeManager().step()
+		GameVariables().hud.step()
 
 		# step background
 		Game._game.background.step()
@@ -1148,7 +1158,6 @@ class GameRoom(Room):
 		# reset actions
 		Game._game.actionMove = False
 
-		self.wind_flag.step()
 		GameVariables().commentator.step()
 	
 	def draw(self, win: pygame.Surface) -> None:
@@ -1179,11 +1188,11 @@ class GameRoom(Room):
 				p1 = vectorCopy(GameVariables().player.pos)
 				p2 = p1 + GameVariables().player.get_shooting_direction() * 500
 				pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
-			i = 0
-			while i < 20 * WeaponManager().energy_level:
-				cPos = vectorCopy(GameVariables().player.pos)
-				pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + GameVariables().player.get_shooting_direction() * i))
-				i += 1
+			# i = 0
+			# while i < 20 * WeaponManager().energy_level:
+			# 	cPos = vectorCopy(GameVariables().player.pos)
+			# 	pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + GameVariables().player.get_shooting_direction() * i))
+			# 	i += 1
 		
 		GameVariables().draw_extra(win)
 		GameVariables().draw_layers(win)
@@ -1192,10 +1201,9 @@ class GameRoom(Room):
 		GameVariables().game_mode.draw(win)
 
 		# HUD
-		self.wind_flag.draw(win)
+		GameVariables().hud.draw(win)
 		TimeManager().draw(win)
-		if WeaponManager().surf:
-			win.blit(WeaponManager().surf, (25, 5))
+
 		GameVariables().commentator.draw(win)
 		# draw weapon indicators
 		WeaponManager().draw_weapon_hint(win)
@@ -1241,6 +1249,8 @@ class GameRoom(Room):
 wip = '''refactoring stage:
 	still in wip:
 		major: reseting a game keeps every state of previous game
+		seaguls are on fire
+		pokeball damages by falling
 		collecting weapons create make the number float, not the nemae
 		water rise
 		loading screen

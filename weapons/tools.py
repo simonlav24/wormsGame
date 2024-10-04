@@ -58,7 +58,7 @@ def draw_trampoline_hint(win: pygame.Surface) -> None:
 	anchored = False
 	for i in range(25):
 		cpos = position.y + i
-		if MapManager().is_ground_at(Vector(position.x, cpos)):
+		if MapManager().is_ground_at(Vector(position.x, cpos).integer()):
 			anchored = True
 			break
 	if anchored:
@@ -78,7 +78,7 @@ class Trampoline:
 		self.offset = 0
 		self.stable = False
 		for i in range(25):
-			if MapManager().is_ground_at(self.pos + Vector(0, i)):
+			if MapManager().is_ground_at((self.pos + Vector(0, i)).integer()):
 				self.anchor = self.pos + Vector(0, i)
 				break
 		self.size = Vector(24, 8)
@@ -102,7 +102,7 @@ class Trampoline:
 				self.offset = 0
 				self.stable = True
 		
-		if not MapManager().is_ground_at(self.anchor):
+		if not MapManager().is_ground_at(self.anchor.integer()):
 			GameVariables().unregister_non_physical(self)
 			gs = GunShell(vectorCopy(self.pos))
 			gs.surf = Trampoline._sprite

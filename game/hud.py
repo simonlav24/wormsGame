@@ -4,8 +4,9 @@ from random import uniform
 from typing import List, Dict, Any
 from enum import Enum
 
-from common import ColorType, fonts, GameVariables
+from common import ColorType, fonts, GameVariables, GREY
 from common.vector import *
+from weapons.weapon import Weapon
 
 HEALTH_BAR_WIDTH = 40
 HEALTH_BAR_HEIGHT = 2
@@ -53,7 +54,6 @@ class HealthBar:
 				value = points / max_points * width
 				value = int(value)
 				pygame.draw.rect(win, (220,220,220), ((x - value - 1, y + i * 3), (value, height)))
-
 
 class CommentatorState(Enum):
 	IDLE = 0
@@ -204,3 +204,35 @@ class WindFlag:
 			pygame.draw.line(win, (255, 255 * it, 255 * it), self.vertices[i] * scale + pos, self.vertices[i + 1] * scale + pos, rad)
 			it = (it + 1) % 2
 			rad -= 1
+
+class Hud:
+	def __init__(self):
+		self.weapon_count_surf: pygame.Surface = None
+		self.wind_flag = WindFlag()
+	
+	def step(self):
+		self.wind_flag.step()
+
+	def draw(self, win: pygame.Surface):
+		# draw weapon count
+		win.blit(self.weapon_count_surf, (25, 5))
+		self.wind_flag.draw(win)
+
+	def render_weapon_count(self, weapon: Weapon, amount: int, adding: str='', enabled: bool=True):
+		amount_str = str(amount)
+		if amount == -1:
+			amount_str = ''
+		if amount == 0:
+			enabled = False
+		
+		color = GameVariables().initial_variables.hud_color
+		if not enabled:
+			color = GREY
+		text = f'{weapon.name} {amount_str}'
+		if weapon.is_fused:
+			text +=   f'  delay: {GameVariables().fuse_time // GameVariables().fps}'
+		text += f'  {adding}'
+
+		self.weapon_count_surf = fonts.pixel5_halo.render(text, False, color)
+
+	

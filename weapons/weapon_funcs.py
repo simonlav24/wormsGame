@@ -279,15 +279,17 @@ def fire_ender_pearl(*args, **kwargs) -> EntityPhysical:
 
 def fire_trampoline(*args, **kwargs) -> EntityPhysical:
     """ fire trampoline """
+    success = False
     position = GameVariables().player.pos + GameVariables().player.get_shooting_direction() * 20
     anchored = False
     for i in range(25):
-        if MapManager().is_ground_at(position + Vector(0, i)):
+        if MapManager().is_ground_at((position + Vector(0, i)).integer()):
             anchored = True
             break
     if anchored:
         Trampoline(position)
-    # todo: handle not created case
+        success = True
+    return success
 
 
 

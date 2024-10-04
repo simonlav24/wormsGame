@@ -1,9 +1,11 @@
 
 from enum import Enum
 from pydantic import BaseModel
+from typing import Dict, Callable, Any
 
 from common import ArtifactType, ColorType
 
+weapon_func_type = Dict[str, Callable[[Any], Any]]
 
 class WeaponStyle(Enum):
     CHARGABLE = 0
@@ -59,6 +61,7 @@ class Weapon(BaseModel):
     decrease: bool = True
     worm_tool: bool = False
     decrease_on_turn_end: bool = False
+    can_fail: bool = False
 
     def get_bg_color(self) -> ColorType:
         ''' returns weapons background color '''

@@ -252,12 +252,14 @@
         "index": 29,
         "name": "rope",
         "style": 5,
+        "shots": -1,
         "category": 5,
         "initial_amount": 3,
         "decrease_on_turn_end": true,
         "turn_ending": false,
         "decrease": false,
-        "is_fused": false
+        "is_fused": false,
+        "can_fail": true
     },
     {
         "index": 30,
@@ -266,7 +268,8 @@
         "category": 5,
         "turn_ending": false,
         "initial_amount": 3,
-        "is_fused": false
+        "is_fused": false,
+        "can_fail": true
     },
     {
         "index": 31,
@@ -279,7 +282,7 @@
     {
         "index": 32,
         "name": "portal gun",
-        "style": 6,
+        "style": 1,
         "shots": 2,
         "turn_ending": false,
         "category": 5,
@@ -303,7 +306,8 @@
         "turn_ending": false,
         "initial_amount": 0,
         "is_fused": false,
-        "draw_hint": true
+        "draw_hint": true,
+        "can_fail": true
     },
     {
         "index": 35,

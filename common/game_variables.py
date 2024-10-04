@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted
+from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -99,6 +99,7 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.game_mode: GamePlayMode = None
         self.commentator: IComment = None
+        self.hud: IHud = None
 
         self.continuous_fire = False
         self.weapon_hold: pygame.Surface = pygame.Surface((16, 16), pygame.SRCALPHA)

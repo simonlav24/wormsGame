@@ -263,7 +263,7 @@ class Seeker:
 		self.vel.limit(self.maxSpeed)
 		
 		ppos = self.pos + self.vel
-		while MapManager().is_ground_at(ppos):
+		while MapManager().is_ground_at(ppos.integer()):
 			self.vel *= -1
 			self.vel.rotate(uniform(-0.5,0.5))
 			ppos = self.pos + self.vel

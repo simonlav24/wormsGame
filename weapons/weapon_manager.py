@@ -12,7 +12,7 @@ import common.drawing_utilities
 
 from weapons.weapon import Weapon, WeaponCategory, WeaponStyle
 from weapons.weapon_funcs import weapon_funcs
-from weapons.directors.directors import *
+from weapons.directors.directors import WeaponDirector
 from game.team_manager import TeamManager
 from game.time_manager import TimeManager
 from weapons.earth_spike import calc_earth_spike_pos
@@ -23,9 +23,6 @@ class WeaponManager(metaclass=SingletonMeta):
     ''' weapons manager '''
     def __init__(self) -> None:
         
-        self.energising = False
-        self.energy_level = 0
-
         GameVariables().register_cycle_observer(self)
 
         self.cool_down_list: List[Weapon] = [] # weapon cool down list
@@ -49,11 +46,10 @@ class WeaponManager(metaclass=SingletonMeta):
             team.weapon_set = self.basic_set.copy()
 
         self.current_weapon: Weapon = self.weapons[0]
-        self.surf = fonts.pixel5.render(self.current_weapon.name, False, GameVariables().initial_variables.hud_color)
+        # self.surf = fonts.pixel5.render(self.current_weapon.name, False, GameVariables().initial_variables.hud_color)
         self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
-        self.current_director: WeaponDirector = None
-        self.weapons_funcs: Dict[str, Callable[[Any], Any]] = weapon_funcs
+        self.weapon_director: WeaponDirector = WeaponDirector(weapon_funcs)
 
         # read weapon set if exits and adjust basic set
         # if game_manager.game_config.weapon_set is not None:
@@ -69,12 +65,9 @@ class WeaponManager(metaclass=SingletonMeta):
     def __getitem__(self, item: str) -> int:
         ''' return index of weapon by string '''
         return self.weapon_dict[item].index
-
-    def can_open_menu(self) -> bool:
-        return self.current_director is None
     
     def can_switch_weapon(self) -> bool:
-        return self.current_director is None
+        return self.weapon_director.can_switch_weapon()
 
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
@@ -105,30 +98,31 @@ class WeaponManager(metaclass=SingletonMeta):
         ''' get weapon by name '''
         return self.weapon_dict[name]
 
-    def can_shoot(self, ignore_state: bool=False) -> bool:
+    def can_shoot(self, check_ammo: bool=True, check_cool_down: bool=True, check_state: bool=True, check_delay: bool=True) -> bool:
         ''' check if can shoot current weapon '''
-        # if no ammo
-        if TeamManager().current_team.ammo(self.current_weapon.index) == 0:
-            return False
-        
         # check delay
-        if self.current_weapon.round_delay > GameVariables().game_round_count:
-            return False
+        if check_delay:
+            if self.current_weapon.round_delay > GameVariables().game_round_count:
+                return False
 
-        # if in use list
-        if GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list:
-            return False
+        # if no ammo
+        if check_ammo:
+            if TeamManager().current_team.ammo(self.current_weapon.index) == 0:
+                return False
         
-        if not ignore_state:
+        # if in cool down
+        if check_cool_down:
+            if GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list:
+                return False
+        
+        if check_state:
             if (not GameVariables().is_player_in_control()) or (not GameVariables().can_player_shoot()):
                 return False
         
         return True
 
     def on_turn_end(self) -> None:
-        if self.current_director is not None:
-            self.finalize_director()
-            WeaponManager().current_director = None
+        self.weapon_director.on_turn_end()
     
     def on_turn_begin(self) -> None:
         pass
@@ -167,92 +161,122 @@ class WeaponManager(metaclass=SingletonMeta):
 
     def render_weapon_count(self):
         ''' changes surf to fit current weapon '''
-        color = GameVariables().initial_variables.hud_color
-        # if no ammo in current team
-        ammo = TeamManager().current_team.ammo(self.current_weapon.index)
-        if ammo == 0 or not self.can_shoot(ignore_state=True) or (GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list):
-            color = GREY
-        weaponStr = self.current_weapon.name
+
+        amount = TeamManager().current_team.ammo(self.current_weapon.index)
+        enabled = True
+        if not self.can_shoot(check_state=False):
+            enabled = False
+        GameVariables().hud.render_weapon_count(self.current_weapon, amount, enabled=enabled)
+
+
+        # color = GameVariables().initial_variables.hud_color
+        # # if no ammo in current team
+        # ammo = TeamManager().current_team.ammo(self.current_weapon.index)
+        # if ammo == 0 or not self.can_shoot(check_state=False) or (GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list):
+        #     color = GREY
+        # weaponStr = self.current_weapon.name
 
         # special addings
         # if self.current_weapon == "drill missile":
         #     weaponStr += " (drill)" if DrillMissile.mode else " (rocket)"
         
         # add quantity
-        if ammo != -1:
-            weaponStr += " " + str(ammo)
+        # if ammo != -1:
+        #     weaponStr += " " + str(ammo)
             
-        # add fuse
-        if self.current_weapon.is_fused:
-            weaponStr += "  delay: " + str(GameVariables().fuse_time // GameVariables().fps)
+        # # add fuse
+        # if self.current_weapon.is_fused:
+        #     weaponStr += "  delay: " + str(GameVariables().fuse_time // GameVariables().fps)
             
-        self.surf = fonts.pixel5_halo.render(weaponStr, False, color)
+        # self.surf = fonts.pixel5_halo.render(weaponStr, False, color)
 
     def handle_event(self, event) -> bool:
-        ''' handle pygame events '''
+        handled = False
+        self.hot_keys_switch(event)
+        
+        self.weapon_director.handle_event(event)
+
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            handled |= self.fire()
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.current_weapon.style == WeaponStyle.CLICKABLE:
+                handled |= self.fire()
+            if (
+                self.can_shoot(check_ammo=False, check_cool_down=False, check_delay=False, check_state=True) and 
+                WeaponManager().current_weapon.name in ["homing missile", "seeker"]
+            ):
+                mouse_pos = mouse_pos_in_world()
+                GameVariables().point_target = vectorCopy(mouse_pos)
+
+
+        # fire handles
+        return handled
+
+
+
+    def hot_keys_switch(self, event) -> bool:
+        ''' handle pygame events, return true if event handled '''
         # weapon change by keyboard
         if GameVariables().game_state == GameState.PLAYER_PLAY:
             if not event.type == pygame.KEYDOWN:
                 return False
-            weaponsSwitch = False
+            is_weapon_switched = False
             if event.key == pygame.K_1:
-                keyWeapons = [self.weapon_dict[w] for w in ["missile", "gravity missile", "homing missile"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["missile", "gravity missile", "homing missile"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_2:
-                keyWeapons = [self.weapon_dict[w] for w in ["grenade", "sticky bomb", "electric grenade"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["grenade", "sticky bomb", "electric grenade"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_3:
-                keyWeapons = [self.weapon_dict[w] for w in ["cluster grenade", "raon launcher"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["cluster grenade", "raon launcher"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_4:
-                keyWeapons = [self.weapon_dict[w] for w in ["petrol bomb", "flame thrower"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["petrol bomb", "flame thrower"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_5:
-                keyWeapons = [self.weapon_dict[w] for w in ["TNT", "mine", "sheep"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["TNT", "mine", "sheep"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_6:
-                keyWeapons = [self.weapon_dict[w] for w in ["shotgun", "long bow", "gamma gun", "laser gun"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["shotgun", "long bow", "gamma gun", "laser gun"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_7:
-                keyWeapons = [self.weapon_dict[w] for w in ["girder", "baseball"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["girder", "baseball"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_8:
-                keyWeapons = [self.weapon_dict[w] for w in ["drill missile", "laser gun", "minigun"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["drill missile", "laser gun", "minigun"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_9:
-                keyWeapons = [self.weapon_dict[w] for w in ["minigun"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["minigun"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_0:
                 pass
             elif event.key == pygame.K_MINUS:
-                keyWeapons = [self.weapon_dict[w] for w in ["rope"]]
-                weaponsSwitch = True
+                key_weapons = [self.weapon_dict[w] for w in ["rope"]]
+                is_weapon_switched = True
             elif event.key == pygame.K_EQUALS:
-                keyWeapons = [self.weapon_dict[w] for w in ["parachute"]]
-                weaponsSwitch = True            
+                key_weapons = [self.weapon_dict[w] for w in ["parachute"]]
+                is_weapon_switched = True            
 
-            if weaponsSwitch:
-                if len(keyWeapons) > 0:
-                    if self.current_weapon in keyWeapons:
-                        index = keyWeapons.index(self.current_weapon)
-                        index = (index + 1) % len(keyWeapons)
-                        weaponSwitch = keyWeapons[index]
+            if is_weapon_switched:
+                if len(key_weapons) > 0:
+                    if self.current_weapon in key_weapons:
+                        index = key_weapons.index(self.current_weapon)
+                        index = (index + 1) % len(key_weapons)
+                        weaponSwitch = key_weapons[index]
                     else:
-                        weaponSwitch = keyWeapons[0]
+                        weaponSwitch = key_weapons[0]
                 self.switch_weapon(weaponSwitch)
                 self.render_weapon_count()
+                return True
         return False
 
     def step(self):
         # Fire
-        if self.current_director:
-            self.current_director.step()
-        if GameVariables().continuous_fire:
-            GameVariables().continuous_fire = False
-            self.fire()
-
+        self.weapon_director.step()
+    
     def draw(self, win: pygame.Surface) -> None:
         # draw use list
+        self.weapon_director.draw(win)
         space = 0
         for i, surf in enumerate(self.cool_down_list_surfaces):
             if i == 0:
@@ -305,65 +329,13 @@ class WeaponManager(metaclass=SingletonMeta):
                 chosen_weapon = WeaponManager().get_weapon(choice(["portal gun", "trampoline", "ender pearl"])).index
                 team.ammo(chosen_weapon, 3)
 
-    def create_weapon_director(self):
-        ''' weaponDirector factory method '''
-        director: WeaponDirector = None
-
-        weapon = self.current_weapon
-        team_data = TeamManager().current_team.data
-        
-        if weapon.style in [WeaponStyle.CHARGABLE, WeaponStyle.GUN, WeaponStyle.PUTABLE, WeaponStyle.UTILITY]:
-            director = ChargeableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
-        
-        elif weapon.style == WeaponStyle.CLICKABLE:
-            director = ClickableDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
-        
-        elif weapon.style == WeaponStyle.WORM_TOOL:
-            director = WormToolDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
-        
-        elif weapon.style == WeaponStyle.SPECIAL:
-            if weapon.name == 'portal gun':
-                director = PortalDirector(weapon, weapon_func=self.weapons_funcs[weapon.name], team_data=team_data)
-
-        return director
-    
-    def finalize_director(self):
-        # decrease ammo in team
-        if self.current_director is None:
-            return
-
-        if self.current_director.is_decrease():
-            team = TeamManager().get_by_name(self.current_director.team_data.team_name)
-            if team.ammo(self.current_director.weapon.index) != -1:
-                team.ammo(self.current_director.weapon.index, -1)
-                self.render_weapon_count()
-
-    def fire(self, weapon: Weapon=None):
-        if not GameVariables().can_player_shoot():
-            return
+    def fire(self, weapon: Weapon=None) -> bool:
+        ''' fire weapon, return True if fired '''
+        if not self.can_shoot(check_state=True, check_ammo=False, check_cool_down=False, check_delay=True):
+            return False
 
         if not weapon:
             weapon = self.current_weapon
         
-        energy = self.energy_level
-  
-        if self.current_director is None:
-            self.current_director = self.create_weapon_director()
-
-        self.current_director.shoot(energy)
-        obj = self.current_director.get_object()
-
-        if obj is not None:
-            GameVariables().cam_track = obj
-        
-        if self.current_director.is_done():
-            self.finalize_director()
-        
-            if self.current_director.weapon.turn_ending:
-                GameVariables().game_state = GameVariables().game_next_state
-                if GameVariables().game_state == GameState.PLAYER_RETREAT:
-                    TimeManager().time_remaining_etreat()
-            self.current_director = None
-        
-        self.energising = False
-        self.energy_level = 0
+        self.weapon_director.add_actor(weapon, TeamManager().current_team)
+        return True

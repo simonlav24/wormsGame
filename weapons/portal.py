@@ -86,7 +86,7 @@ class Portal:
 
 def fire_portal_gun(*args, **kwargs) -> Portal:
 	steps = 500
-	second_portal: Portal = kwargs.get('portal')
+	second_portal: Portal = kwargs.get('shooted_object')
 	new_portal = None
 	for t in range(5 , steps):
 		testPos = kwargs.get('pos') + kwargs.get('direction') * t

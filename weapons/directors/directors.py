@@ -1,173 +1,233 @@
+''' weapon directors and actors. handle weapon shooting and events handling '''
 
-from typing import Type, Callable, Any, List
-from enum import Enum
+from typing import List
 
-from common import GameVariables, EntityPhysical, Entity, mouse_pos_in_world, TeamData
-from common.vector import Vector, vectorCopy
+import pygame
+
+from common import GameVariables, EntityPhysical, mouse_pos_in_world, GameState, point2world
+from common.vector import vectorCopy
 
 from game.team_manager import Team
-from weapons.weapon import Weapon
+from game.time_manager import TimeManager
+from weapons.weapon import Weapon, WeaponStyle
+
+def end_turn():
+    ''' switch to player_retreat state and set remaining time '''
+    GameVariables().game_state = GameVariables().game_next_state
+    if GameVariables().game_state == GameState.PLAYER_RETREAT:
+        TimeManager().time_remaining_etreat()
+
+def decrease(weapon: Weapon, team: Team):
+    ''' decrease the weapon count of the team by -1 '''
+    team.ammo(weapon.index, -1)
+    GameVariables().hud.render_weapon_count(weapon, team.ammo(weapon.index))
+
+class WeaponDirector:
+    ''' creating and handling weapon actors '''
+    def __init__(self, weapon_funcs):
+        self.actors: List[WeaponActorBase] = []
+        self.weapon_funcs = weapon_funcs
+
+    def add_actor(self, weapon: Weapon, team: Team):
+        actor = None
+        weapon_func = self.weapon_funcs[weapon.name]
+
+        if weapon.style == WeaponStyle.CHARGABLE:
+            actor = ActorChargeable(weapon, weapon_func, team)
+
+        elif weapon.style == WeaponStyle.GUN:
+            actor = ActorGun(weapon, weapon_func, team)
+
+        elif weapon.style == WeaponStyle.PUTABLE:
+            actor = ActorPutable(weapon, weapon_func, team)
+        
+        elif weapon.style == WeaponStyle.CLICKABLE:
+            actor = ActorClickable(weapon, weapon_func, team)
+        
+        elif weapon.style == WeaponStyle.UTILITY:
+            actor = ActorPutable(weapon, weapon_func, team)
+        
+        elif weapon.style == WeaponStyle.WORM_TOOL:
+            actor = ActorWormTool(weapon, weapon_func, team)
+
+        elif weapon.style == WeaponStyle.SPECIAL:
+            pass
 
 
-class WeaponActor:
-    def __init__(self, weapon: Weapon, team: Team, weapon_func: Callable[[], Any], *args, **kwargs):
-        self.weapon = weapon
-        self.team = team
-
-        self.weapon_func = weapon_func
-        self.shots = self.weapon.shots
-        self.shooted_object: EntityPhysical | None = None
-
-    def fire(self, energy: float):
-        if self.shots == 0:
-            return
-        kwargs = {
-			'pos': vectorCopy(GameVariables().player.pos),
-			'direction': GameVariables().player.get_shooting_direction(),
-			'shooter': GameVariables().player,
-			'energy': energy,
-		}
-        self.shooted_object = self.weapon_func(**kwargs)
-        self.shots -= 1
-    
-    def is_done(self) -> bool:
-        return self.shots == 0
-
-class WeaponDirectorNew:
-    def __init__(self):
-        self.actors: List[WeaponActor] = []
-        self.turn_ending = False
-
-    def on_turn_end(self) -> None:
-        for actor in self.actors:
-            if actor.weapon.decrease_on_turn_end:
-                self.decrease(actor)
-        self.actors.clear()
-    
-    def handle_pygame_event(self, event) -> None:
-        pass
-
-    def step(self):
-        pass
-
-    def decrease(self, actor: WeaponActor) -> None:
-        if actor.team.ammo(self.actor.weapon.index) != -1:
-            actor.team.ammo(self.actor.weapon.index, -1)
-
-    def fire(self):
-        actor = self.actors[-1]
-
-        actor.fire()
-        if actor.is_done():
-            if actor.weapon.decrease:
-                self.decrease(actor)
-            
-            self.turn_ending = actor.weapon.turn_ending
-
-    def get_object(self) -> EntityPhysical:
-        ...
-
-    
-
-
-
-    
-
-
-
-
-
-class WeaponDirector(Entity):
-    def __init__(self, weapon: Weapon, weapon_func: Callable[[], Any], team_data: TeamData, *args, **kwargs) -> None:
-        self.weapon = weapon
-        self.weapon_func = weapon_func
-        self.shooted_object: EntityPhysical | None = None
-        self.shots = self.weapon.shots
-        self.team_data = team_data
-    
-    def is_decrease(self) -> bool:
-        return self.weapon.decrease
+        if actor is not None and actor.weapon in [actor.weapon for actor in self.actors]:
+            actor = None
+        if actor is not None and not actor.is_done:
+            self.actors.append(actor)
 
     def step(self) -> None:
-        if self.weapon.burst:
-            GameVariables().continuous_fire = True
+        for actor in self.actors:
+            actor.step()
+        if not GameVariables().player.alive:
+            for actor in self.actors:
+                actor.on_worm_death()
+        self.actors = [actor for actor in self.actors if not actor.is_done]
+    
+    def draw(self, win: pygame.Surface) -> None:
+        for actor in self.actors:
+            actor.draw(win)
 
-    def draw(self, win) -> None:
+    def handle_event(self, event) -> None:
+        for actor in self.actors:
+            actor.handle_event(event)
+    
+    def on_turn_end(self):
+        for actor in self.actors:
+            actor.on_turn_end()
+        self.actors.clear()
+    
+    def can_switch_weapon(self):
+        result = True
+        for actor in self.actors:
+            result &= actor.can_switch_weapon()
+        return result
+
+
+class WeaponActorBase:
+    def __init__(self, weapon: Weapon, weapon_func, team: Team):
+        self.weapon = weapon
+        self.shots: int = weapon.shots
+        self.is_done: bool = False
+        self.weapon_func = weapon_func
+        self.team = team
+
+        self.shooted_object: EntityPhysical = None
+
+    def step(self) -> None:
+        ...
+
+    def draw(self, win: pygame.Surface) -> None:
+        ...
+
+    def handle_event(self, event) -> None:
         ...
     
-    def shoot(self, energy: float) -> None:
-        ...
-    
-    def get_object(self) -> EntityPhysical:
+    def abort(self) -> None:
+        self.is_done = True
+
+    def can_shoot(self) -> bool:
+        return not self.team.ammo(self.weapon.index) == 0
+
+    def on_worm_death(self) -> None:
+        self.is_done = True
+
+    def fire(self, **kwargs) -> EntityPhysical:
+        if self.shots == 0:
+            return
+        args_dict = {
+			'pos': kwargs.get('pos', vectorCopy(GameVariables().player.pos)),
+			'direction': GameVariables().player.get_shooting_direction(),
+			'shooter': GameVariables().player,
+			'energy': kwargs.get('energy', 0.0),
+            'shooted_object': self.shooted_object
+		}
+        self.shooted_object = self.weapon_func(**args_dict)
+        if self.weapon.can_fail:
+            if not self.shooted_object:
+                # failed shot
+                self.abort()
+                return None
+            else:
+                self.shooted_object = None
+        
+
+        if self.shooted_object is not None:
+            GameVariables().cam_track = self.shooted_object
+
+        self.shots -= 1
+        self.finalize()
         return self.shooted_object
+
+    def on_turn_end(self):
+        ...
     
-    def is_end_turn_on_done(self) -> bool:
-        return self.weapon.turn_ending
+    def finalize(self):
+        if self.shots == 0:
+            if self.weapon.decrease:
+                decrease(self.weapon, self.team)
+                
+            if self.weapon.turn_ending:
+                end_turn()
+            self.is_done = True
     
-    def is_done(self) -> bool:
-        return self.shots == 0
+    def can_switch_weapon(self) -> bool:
+        return False
 
 
+class ActorChargeable(WeaponActorBase):
+    def __init__(self, weapon: Weapon, weapon_func, team: Team):
+        super().__init__(weapon, weapon_func, team)
+        self.energy = 0.0
+        self.energizing = True
+        if not self.can_shoot():
+            self.is_done = True
 
-class ChargeableDirector(WeaponDirector):
-    def shoot(self, energy: float) -> None:
-        if self.shots == 0:
-            return
-        kwargs = {
-			'pos': vectorCopy(GameVariables().player.pos),
-			'direction': GameVariables().player.get_shooting_direction(),
-			'shooter': GameVariables().player,
-			'energy': energy,
-		}
-        self.shooted_object = self.weapon_func(**kwargs)
-        self.shots -= 1
+    def handle_event(self, event) -> None:
+        super().handle_event(event)
+
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            self.energizing = True
+            self.energy = 0.0
+
+        if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+            if self.energizing:
+                self.energizing = False
+                self.fire(energy=self.energy)
+
+    def draw(self, win: pygame.Surface) -> None:
+        super().draw(win)
+        if self.energizing:
+            i = 0
+            while i < 20 * self.energy:
+                pos = vectorCopy(GameVariables().player.pos)
+                pygame.draw.line(win, (0,0,0), point2world(pos), point2world(pos + GameVariables().player.get_shooting_direction() * i))
+                i += 1
+
+    def step(self) -> None:
+        super().step()
+        if self.energizing:
+            self.energy += 0.05
+            if self.energy >= 1.0:
+                self.energizing = False
+                self.fire(energy=self.energy)
 
 
-class ClickableDirector(WeaponDirector):
-    def shoot(self, energy: float) -> None:
-        if self.shots == 0:
-            return
-        kwargs = {
-			'pos': mouse_pos_in_world(),
-			'shooter': GameVariables().player,
-		}
-        self.shooted_object = self.weapon_func(**kwargs)
-        self.shots -= 1
-
-
-class WormToolDirector(ChargeableDirector):
-    def __init__(self, weapon: Weapon, weapon_func: Callable[[], Any], team_data: TeamData, *args, **kwargs) -> None:
-        super().__init__(weapon, weapon_func, team_data, *args, **kwargs)
-        self.decrease = True
-
-    def shoot(self, energy: float) -> None:
-        if self.shots == 0:
-            return
-        kwargs = {
-			'pos': vectorCopy(GameVariables().player.pos),
-			'direction': GameVariables().player.get_shooting_direction(),
-			'shooter': GameVariables().player,
-			'energy': energy,
-		}
-        activated = self.weapon_func(**kwargs)
-        self.decrease = activated
-
-        self.shots -= 1
+class ActorGun(WeaponActorBase):
+    def handle_event(self, event) -> None:
+        super().handle_event(event)
+        if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+            self.fire()
     
-    def is_decrease(self) -> bool:
-        return self.decrease
+    def step(self) -> None:
+        super().step()
+        if self.weapon.burst:
+            self.fire()
+    
+    def can_switch_weapon(self) -> bool:
+        return False
+    
+    def on_worm_death(self) -> None:
+        super().on_worm_death()
+        decrease(self.weapon, self.team)
 
 
-class PortalDirector(ChargeableDirector):
-    def shoot(self, energy: float) -> None:
-        if self.shots == 0:
-            return
-        kwargs = {
-			'pos': vectorCopy(GameVariables().player.pos),
-			'direction': GameVariables().player.get_shooting_direction(),
-			'shooter': GameVariables().player,
-			'energy': energy,
-            'portal': self.shooted_object
-		}
-        self.shooted_object = self.weapon_func(**kwargs)
-        self.shots -= 1
+class ActorPutable(WeaponActorBase):
+    def handle_event(self, event) -> None:
+        super().handle_event(event)
+        if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+            self.fire()
+
+
+class ActorClickable(WeaponActorBase):
+    def handle_event(self, event) -> None:
+        super().handle_event(event)
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.fire(pos=mouse_pos_in_world())
+
+
+class ActorWormTool(WeaponActorBase):
+    ...
