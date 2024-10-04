@@ -254,6 +254,7 @@
         "style": 5,
         "category": 5,
         "initial_amount": 3,
+        "decrease_on_turn_end": true,
         "turn_ending": false,
         "decrease": false,
         "is_fused": false

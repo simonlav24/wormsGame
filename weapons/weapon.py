@@ -58,6 +58,7 @@ class Weapon(BaseModel):
     turn_ending: bool = True
     decrease: bool = True
     worm_tool: bool = False
+    decrease_on_turn_end: bool = False
 
     def get_bg_color(self) -> ColorType:
         ''' returns weapons background color '''

@@ -25,7 +25,6 @@ class WeaponManager(metaclass=SingletonMeta):
         
         self.energising = False
         self.energy_level = 0
-        self.fire_weapon = False
 
         GameVariables().register_cycle_observer(self)
 
@@ -248,8 +247,6 @@ class WeaponManager(metaclass=SingletonMeta):
         # Fire
         if self.current_director:
             self.current_director.step()
-        if self.fire_weapon and GameVariables().can_player_shoot():
-            self.fire()
         if GameVariables().continuous_fire:
             GameVariables().continuous_fire = False
             self.fire()
@@ -342,12 +339,14 @@ class WeaponManager(metaclass=SingletonMeta):
                 self.render_weapon_count()
 
     def fire(self, weapon: Weapon=None):
-        # todo: refactor Game stuff and move to weapon manager
+        if not GameVariables().can_player_shoot():
+            return
+
         if not weapon:
             weapon = self.current_weapon
         
         energy = self.energy_level
-
+  
         if self.current_director is None:
             self.current_director = self.create_weapon_director()
 
@@ -366,6 +365,5 @@ class WeaponManager(metaclass=SingletonMeta):
                     TimeManager().time_remaining_etreat()
             self.current_director = None
         
-        self.fire_weapon = False
         self.energising = False
         self.energy_level = 0

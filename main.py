@@ -1,4 +1,4 @@
-
+''' main entry point '''
 
 from math import pi, cos, sin
 from random import randint, uniform, choice
@@ -573,7 +573,8 @@ def cycle_worms():
 	GameVariables().boom_radius_mult = 1
 	GameVariables().mega_weapon_trigger = False
 	GameVariables().aim_aid = False
-	if Game._game.timeTravel: TimeTravel._tt.timeTravelReset()
+	if Game._game.timeTravel:
+		TimeTravel._tt.timeTravelReset()
 
 	# release worm tool
 	worm_tool = GameVariables().player.get_tool()
@@ -682,7 +683,7 @@ def weapon_menu_init():
 			button = RadialButton(weapon, weapon.name, get_amount(weapon), weapon_bg_color[category], surf_portion, is_enabled=is_enabled)
 			sub_layout.append(button)
 
-		is_enabled = not all([not button.is_enabled for button in sub_layout])
+		is_enabled = not all(not button.is_enabled for button in sub_layout)
 		main_button = RadialButton(weapons_in_category[0], '', '', weapon_bg_color[category], WeaponManager().get_surface_portion(weapons_in_category[0]), sub_layout, is_enabled=is_enabled)
 		layout.append(main_button)
 
@@ -711,6 +712,7 @@ def toast_info():
 
 
 def suddenDeath():
+	# todo: refactor this
 	sudden_death_modes = [Game._game.game_config.sudden_death_style]
 	if Game._game.game_config.sudden_death_style == SuddenDeathMode.ALL:
 		for mode in SuddenDeathMode:
@@ -858,18 +860,12 @@ def onKeyPressSpace():
 	if WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE:
 		WeaponManager().energising = True
 		WeaponManager().energy_level = 0
-		WeaponManager().fire_weapon = False
 
 def onKeyHoldSpace():
 	WeaponManager().energy_level += 0.05
 	if WeaponManager().energy_level >= 1:
-		if Game._game.timeTravel:
-			TimeTravel._tt.timeTravelPlay()
-			WeaponManager().energy_level = 0
-			WeaponManager().energising = False
-		else:
-			WeaponManager().energy_level = 1
-			WeaponManager().fire_weapon = True
+		WeaponManager().energy_level = 1
+		WeaponManager().fire()
 
 def onKeyReleaseSpace():
 	if WeaponManager().can_shoot():
@@ -879,7 +875,7 @@ def onKeyReleaseSpace():
 			WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN],
 		]
 		if any(fire_weapon_conditions):
-			WeaponManager().fire_weapon = True
+			WeaponManager().fire()
 		WeaponManager().energising = False
 
 def onMouseButtonPressed():
@@ -889,7 +885,7 @@ def onMouseButtonPressed():
 		WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE and
 		WeaponManager().can_shoot()
 	):
-		WeaponManager().fire_weapon = True
+		WeaponManager().fire()
 	if (
 		GameVariables().game_state == GameState.PLAYER_PLAY and 
 		WeaponManager().current_weapon.name in ["homing missile", "seeker"] and

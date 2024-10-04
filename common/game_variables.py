@@ -277,6 +277,7 @@ class GameVariables(metaclass=SingletonMeta):
             file.write(output)
         
     def can_player_shoot(self) -> bool:
+        ''' is player's state '''
         return self.game_state == GameState.PLAYER_PLAY
     
     def is_player_in_control(self) -> bool:
