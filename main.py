@@ -1257,8 +1257,6 @@ class GameRoom(Room):
 
 wip = '''refactoring stage:
 	still in wip:
-		major: reseting a game keeps every state of previous game
-		seaguls are on fire
 		pokeball damages by falling
 		collecting weapons create make the number float, not the nemae
 		water rise

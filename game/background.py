@@ -73,16 +73,14 @@ def renderCloud(colors=[(224, 233, 232), (192, 204, 220)]) -> pygame.Surface:
 
 class Cloud:
     ''' single cloud, procedurally rendered, affected by wind '''
-    _reg = []
-    _toRemove = []
-    cWidth = 170
+    cloud_width = 170
     def __init__(self, pos):
-        self._reg.append(self)
         self.pos = Vector(pos[0],pos[1])
         self.vel = Vector(0,0)
         self.acc = Vector(0,0)
         self.surf = renderCloud()
         self.randomness = uniform(0.97, 1.02)
+        self.is_done = False
         
     def step(self):
         self.acc.x = GameVariables().physics.wind
@@ -90,8 +88,8 @@ class Cloud:
         self.vel *= 0.85 * self.randomness
         self.pos += self.vel * GameVariables().dt
         
-        if self.pos.x > GameVariables().cam_pos[0] + GameGlobals().win_width + 100 or self.pos.x < GameVariables().cam_pos[0] - 100 - self.cWidth:
-            self._toRemove.append(self)
+        if self.pos.x > GameVariables().cam_pos[0] + GameGlobals().win_width + 100 or self.pos.x < GameVariables().cam_pos[0] - 100 - self.cloud_width:
+            self.is_done = True
             
     def draw(self, win: pygame.Surface):
         win.blit(self.surf, point2world(self.pos))
@@ -155,6 +153,9 @@ class BackGround:
         ]
         self.water_rise_amount = 0
 
+        self.clouds: List[Cloud] = []
+        self.clouds_remove: List[Cloud] = []
+
     def water_rise(self, amount: int) -> None:
         ''' water rise by amount '''
         self.water_rise_amount = amount
@@ -171,15 +172,15 @@ class BackGround:
             self.water_rise_amount -= 1
     
     def step_clouds(self) -> None:
-        if len(Cloud._reg) < 8 and randint(0,10) == 1:
+        if len(self.clouds) < 8 and randint(0,10) == 1:
             pos = Vector(choice([
-                GameVariables().cam_pos[0] - Cloud.cWidth - 100,
+                GameVariables().cam_pos[0] - Cloud.cloud_width - 100,
                 GameVariables().cam_pos[0] + GameGlobals().win_width + 100
                 ]), randint(5, MapManager().get_map_height() - 150))
-            Cloud(pos)
-        for cloud in Cloud._reg: cloud.step()
-        for cloud in Cloud._toRemove: Cloud._reg.remove(cloud)
-        Cloud._toRemove = []
+            self.clouds.append(Cloud(pos))
+        for cloud in self.clouds:
+            cloud.step()
+        self.clouds = [cloud for cloud in self.clouds if not cloud.is_done]
     
     def draw(self, win: pygame.Surface):
         win.fill(self.backColor)
@@ -187,7 +188,7 @@ class BackGround:
             pygame.transform.scale(self.imageSky, (win.get_width(), MapManager().get_map_height())),
             (0,0 - GameVariables().cam_pos[1]))
         
-        for cloud in Cloud._reg:
+        for cloud in self.clouds:
             cloud.draw(win)
         self.drawBackGround(self.mountains[1], 4, win)
         self.drawBackGround(self.mountains[0], 2, win)

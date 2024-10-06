@@ -12,7 +12,7 @@ from game.world_effects import boom
 from game.map_manager import MapManager, GRD, SKY
 from entities import Fire
 from weapons.grenades import PhysObj
-from weapons.missiles import Seeker, Missile
+from weapons.missiles import SeekerBase, Missile
 from weapons.mine import Mine
 
 
@@ -60,8 +60,7 @@ def fire_napalmstrike(**kwargs):
 		if i == 2:
 			GameVariables().cam_track = f
 
-class Seagull(Seeker):
-	_reg = []
+class Seagull(SeekerBase):
 	def __init__(self, pos, direction, energy):
 		super().__init__(pos, direction, energy)
 		self.timer = 15 * GameVariables().fps

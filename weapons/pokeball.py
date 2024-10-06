@@ -27,6 +27,9 @@ class PokeBall(PhysObj):
 		blit_weapon_sprite(self.surf, (0,0), "pokeball")
 		self.angle = 0
 	
+	def fall_damage(self) -> None:
+		pass
+
 	def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
 		if damage_type == 1:
 			return
@@ -48,7 +51,8 @@ class PokeBall(PhysObj):
 		else:
 			boom(self.pos, 20)
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		self.timer += 1
 		if self.timer >= GameVariables().fuse_time and self.timer <= GameVariables().fuse_time + GameVariables().fps * 2 and not self.hold:
 			self.stable = False
@@ -62,6 +66,7 @@ class PokeBall(PhysObj):
 				
 		if self.timer == GameVariables().fuse_time + GameVariables().fps * 2:
 			if self.hold:
+				self.hold.damage(10)
 				GameVariables().unregister_physical(self.hold)
 				GameVariables().get_worms().remove(self.hold)
 
@@ -84,8 +89,9 @@ class PokeBall(PhysObj):
 			GameVariables().game_distable()
 		
 		if self.vel.getMag() > 0.25:
-			self.angle -= self.vel.x*4
+			self.angle -= self.vel.x * 4
 	
+
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)

@@ -19,6 +19,9 @@ class WormUtility:
     def release(self) -> None:
         self.is_done = True
 
+    def is_movement_blocking(self) -> bool:
+        return True
+
     def step(self):
         pass
 
@@ -174,6 +177,9 @@ class Parachute(WormUtility):
         super().__init__()
         self.worm = worm
 
+    def is_movement_blocking(self) -> bool:
+        return False
+
     def apply_force(self):
         if self.worm.vel.y > 1:
             self.worm.vel.y = 1
@@ -227,4 +233,9 @@ class WormTool():
     def in_use(self) -> bool:
         ''' return true if tool in use '''
         return self.tool is not None
+    
+    def is_movement_blocking(self) -> bool:
+        if self.tool is None:
+            return False
+        return self.tool.is_movement_blocking()
 

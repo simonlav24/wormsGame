@@ -140,17 +140,18 @@ class WeaponActorBase:
                 self.shooted_object = None
         
 
-        if self.shooted_object is not None:
-            GameVariables().cam_track = self.shooted_object
-
         self.shots -= 1
         self.finalize()
         return self.shooted_object
 
     def on_turn_end(self):
-        ...
+        if self.weapon.decrease_on_turn_end:
+            decrease(self.weapon, self.team)
     
     def finalize(self):
+        if self.shooted_object is not None:
+            GameVariables().cam_track = self.shooted_object
+
         if self.shots == 0:
             if self.weapon.decrease:
                 decrease(self.weapon, self.team)
@@ -238,14 +239,22 @@ class ActorWormTool(WeaponActorBase):
     def handle_event(self, event) -> None:
         super().handle_event(event)
 
-        if not self.secondary:
+        if not self.secondary and GameVariables().game_state == GameState.PLAYER_PLAY:
             if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
                 self.fire()
     
     def can_switch_weapon(self) -> bool:
         return True
+    
+    def on_turn_end(self):
+        super().on_turn_end()
+        tool = GameVariables().player.get_tool()
+        if tool is not None:
+            tool.release()
+
 
     def finalize(self):
         super().finalize()
+        GameVariables().cam_track = GameVariables().player
         if GameVariables().game_state != GameState.PLAYER_PLAY:
             self.is_done = True

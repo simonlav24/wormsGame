@@ -12,7 +12,6 @@ RADIUS_OF_CONTACT = 8
 RADIUS_OF_RELEASE = 10
 
 class Portal:
-	_reg = []
 	def __init__(self, pos: Vector, direction: Vector, first: bool):
 		GameVariables().register_non_physical(self)
 		GameVariables().register_cycle_observer(self)

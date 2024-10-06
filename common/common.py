@@ -100,9 +100,11 @@ class EntityWorm(EntityPhysical):
 		...
 	
 	def get_tool(self) -> EntityWormTool:
+		''' returns worm's tool, None if no tool in use '''
 		...
 	
 	def set_tool(self, tool: EntityWormTool) -> None:
+		''' sets worm's tool '''
 		...
 
 

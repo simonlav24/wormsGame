@@ -315,7 +315,6 @@ class DropLet(Effect):
 		pygame.draw.circle(win, color, point2world(self.pos), self.radius)
 
 class FireWork:
-	_reg = []
 	def __init__(self, pos, color):
 		GameVariables().register_non_physical(self)
 		self.pos = Vector(pos[0], pos[1])

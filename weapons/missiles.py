@@ -209,7 +209,7 @@ class HomingMissile(PhysObj):
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 
-class Seeker:
+class SeekerBase:
 	def __init__(self, pos, direction, energy):
 		GameVariables().register_non_physical(self)
 		self.pos = vectorCopy(pos)
@@ -269,13 +269,9 @@ class Seeker:
 			ppos = self.pos + self.vel
 		
 		self.pos = ppos
-		self.secondaryStep()
 	
 	def hitResponse(self):
 		self.death_response()
-	
-	def secondaryStep(self):
-		Blast(self.pos + vectorUnitRandom()*2 - 10 * normalize(self.vel), randint(5,8), 30, 3)
 	
 	def death_response(self):
 		boom(self.pos, 30)
@@ -291,3 +287,7 @@ class Seeker:
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
 
 
+class Seeker(SeekerBase):
+	def step(self):
+		super().step()
+		Blast(self.pos + vectorUnitRandom() * 2 - 10 * normalize(self.vel), randint(5, 8), 30, 3)
