@@ -15,7 +15,8 @@ from gui.menu_gui_new import (
     MenuElementDragImage, MenuElementInput
 )
 
-from common import GameVariables, fonts, PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals
+from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals
+from common.vector import Vector
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
@@ -33,8 +34,11 @@ class MainMenuRoom(Room):
         self.map_paths = grab_maps([PATH_MAPS])
         self.image_element: MenuElementDragImage = None
 
-        main_menu = self.initialize_main_menu()
-        self.gui.menus.append(main_menu)
+        self.main_menu = self.initialize_main_menu()
+        self.gui.menus.append(self.main_menu)
+
+        animator = MenuAnimator(self.main_menu, self.main_menu.pos + Vector(0, GameGlobals().win_height), self.main_menu.pos)
+        self.gui.animators.append(animator)
 
     def handle_pygame_event(self, event) -> None:
         ''' handle gui events '''
@@ -58,7 +62,8 @@ class MainMenuRoom(Room):
         if event is None:
             return
         if event == 'play':
-            self.on_play(values)
+            self.gui.animators.append(MenuAnimator(self.main_menu, self.main_menu.pos, self.main_menu.pos - Vector(0, GameGlobals().win_height), trigger=self.on_play, args=[values]))
+            # self.on_play(values)
         if event == 'exit':
             self.switch = SwitchRoom(Rooms.EXIT, False, None)
         if event == 'random_image':

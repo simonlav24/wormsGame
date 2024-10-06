@@ -64,7 +64,7 @@ class Game:
 		Game._game = self
 
 		self.reset()
-		GameVariables().config = game_config
+		GameVariables().set_config(game_config)
 		GameVariables().commentator = Commentator()
 		GameVariables().hud = Hud()
 

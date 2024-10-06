@@ -4,7 +4,7 @@ from random import uniform, randint, choice
 from typing import List
 from math import exp, sin
 
-from common import GameVariables, point2world, DARK_COLOR, WATER_AMP, GameGlobals
+from common import GameVariables, point2world, DARK_COLOR, WATER_AMP, GameGlobals, calc_water_color
 from common.vector import *
 
 from game.map_manager import MapManager
@@ -143,16 +143,15 @@ class BackGround:
         if is_dark:
             self.backColor = DARK_COLOR
 
-        water_color = [tuple((feel_color[0][i] + feel_color[1][i]) // 2 for i in range(3))]
-        water_color.append(tuple(min(int(water_color[0][i] * 1.5), 255) for i in range(3)))
+        water_color = calc_water_color(feel_color)
 
         self.water_layers_bottom = [
-            WaterLayer(water_color, 22),
+            WaterLayer(water_color, 12),
         ]
 
         self.water_layers_top = [
-            WaterLayer(water_color, 12),
             WaterLayer(water_color, 2),
+            WaterLayer(water_color, -8),
         ]
         self.water_rise_amount = 0
 
@@ -195,7 +194,7 @@ class BackGround:
         for layer in self.water_layers_bottom:
             layer.draw(win)
     
-    def drawSecondary(self, win):
+    def drawSecondary(self, win: pygame.Surface):
         for layer in self.water_layers_top:
             layer.draw(win)
     

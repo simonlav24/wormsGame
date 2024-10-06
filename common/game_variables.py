@@ -2,12 +2,13 @@
 from enum import Enum
 from pydantic import BaseModel
 from typing import List, Dict, Tuple
+from random import uniform
 
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud
-from common.constants import WHITE, GameState, RIGHT
+from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud, calc_water_color
+from common.constants import WHITE, GameState, RIGHT, feels
 
 from common.vector import Vector
 
@@ -15,7 +16,7 @@ class WorldPhysics:
     ''' holds physics related data '''
     def __init__(self) -> None:
         self.global_gravity: float = 0.2
-        self.wind: float = 0.0
+        self.wind: float = uniform(-1.0, 1.0)
 
 
 class InitialVariables(BaseModel):
@@ -129,6 +130,10 @@ class GameVariables(metaclass=SingletonMeta):
     def player(self, value):
         self._player = value
     
+    def set_config(self, config: GameConfig) -> None:
+        self.config = config
+        self.water_color = calc_water_color(feels[config.feel_index])
+
     def register_non_physical(self, entity: Entity) -> None:
         self.database.non_physicals.append(entity)
 

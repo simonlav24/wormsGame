@@ -1,7 +1,9 @@
 
 
-import pygame
 from abc import ABC
+from typing import List
+
+import pygame
 
 from common import GameVariables, fonts, GameGlobals
 from common.vector import *
@@ -10,8 +12,8 @@ class Gui:
     def __init__(self):
         self.toaster = Toaster()
         self.focusElement = None
-        self.menus = []
-        self.animators = []
+        self.menus: List[StackPanel] = []
+        self.animators: List[AnimatorBase] = []
         self.event_que = []
     
     def showCursor(self, cursor, element):
@@ -51,6 +53,7 @@ class Gui:
             menu.step()
         for animation in self.animators:
             animation.step()
+        self.animators = [animator for animator in self.animators if not animator.is_done]
 
         # if self.focusElement:
             # if not self.focusElement.selected:
@@ -666,8 +669,19 @@ class MenuElementLoadBar(MenuElement):
             pygame.draw.rect(win, StackPanel._textElementColor, (buttonPos + Vector(self.size[0] - size[0], 0), size), 2)
             pygame.draw.rect(win, self.barColor, (buttonPos + Vector(self.size[0] - size[0] + 2, 2), size - Vector(4,4)))
 
-class MenuAnimator:
+class AnimatorBase:
+    def __init__(self) -> None:
+        self.is_done = False
+    
+    def step(self) -> None:
+        pass
+
+    def finish(self) -> None:
+        self.is_done = True
+
+class MenuAnimator(AnimatorBase):
     def __init__(self, menu, posStart, posEnd, trigger=None, args=None, ease="inout"):
+        super().__init__()
         self.posStart = posStart
         self.posEnd = posEnd
         self.timer = 0
@@ -678,7 +692,6 @@ class MenuAnimator:
         self.menu = menu
         self.ease = ease
         menu.pos = posStart
-        self.is_done = False
     
     def easeIn(self, t):
         return t * t
@@ -693,6 +706,7 @@ class MenuAnimator:
             return 1 - (2 * (1 - t)) * (1 - t)
     
     def step(self):
+        super().step()
         if self.ease == "in":
             ease = self.easeOut(self.timer / self.fullTime)
         elif self.ease == "out":
@@ -705,13 +719,13 @@ class MenuAnimator:
             self.finish()
     
     def finish(self):
+        super().finish()
         self.menu.pos = self.posEnd
         if self.trigger:
             if self.args:
                 self.trigger(*self.args)
             else:
                 self.trigger()
-        self.is_done = True
 
 class ElementAnimator:
     def __init__(self, element, start, end, duration = -1, timeOffset=0):

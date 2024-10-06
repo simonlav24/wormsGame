@@ -226,6 +226,12 @@ def darken(color: ColorType) -> ColorType:
 	''' darkens color '''
 	return tuple(max(i - 30,0) for i in color)
 
+def calc_water_color(feel_color):
+	''' calculate water color based on feel colors '''
+	water_color = [tuple((feel_color[0][i] + feel_color[1][i]) // 2 for i in range(3))]
+	water_color.append(tuple(min(int(water_color[0][i] * 1.5), 255) for i in range(3)))
+	return water_color
+
 # math utilities
 
 def clamp(value, upper, lower):
