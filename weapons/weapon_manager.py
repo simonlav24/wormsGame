@@ -6,7 +6,7 @@ from random import randint, choice
 import pygame
 
 import common
-from common import GREY, sprites, fonts, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world, ArtifactType
+from common import GREY, sprites, fonts, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world, ArtifactType, GameGlobals
 from common.vector import *
 import common.drawing_utilities
 
@@ -280,10 +280,10 @@ class WeaponManager(metaclass=SingletonMeta):
         space = 0
         for i, surf in enumerate(self.cool_down_list_surfaces):
             if i == 0:
-                win.blit(surf, (30 + 80 * i, GameVariables().win_height - 5 - surf.get_height()))
+                win.blit(surf, (30 + 80 * i, GameGlobals().win_height - 5 - surf.get_height()))
             else:
                 space += self.cool_down_list_surfaces[i-1].get_width() + 10
-                win.blit(surf, (30 + space, GameVariables().win_height - 5 - surf.get_height()))
+                win.blit(surf, (30 + space, GameGlobals().win_height - 5 - surf.get_height()))
 
     def draw_weapon_hint(self, win: pygame.Surface) -> None:
         ''' draw specific weapon indicator '''

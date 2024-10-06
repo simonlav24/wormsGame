@@ -21,6 +21,10 @@ class SingletonMeta(type):
 			instance = super().__call__(*args, **kwargs)
 			cls._instances[cls] = instance
 		return cls._instances[cls]
+	
+	def reset(cls):
+		if cls in cls._instances.keys():
+			cls._instances.pop(cls)
 
 
 class TeamData(BaseModel):

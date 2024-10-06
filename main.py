@@ -63,17 +63,17 @@ class Game:
 	def __init__(self, game_config: GameConfig=None):
 		Game._game = self
 
-		self.evaluate_config(game_config)
+		self.reset()
 		GameVariables().config = game_config
-		
-		self.map_manager = MapManager()
-		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
-
-		self.initiateGameVariables()
-		self.game_vars = GameVariables()
 		GameVariables().commentator = Commentator()
 		GameVariables().hud = Hud()
 
+		self.evaluate_config(game_config)
+		
+		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
+
+		self.initiateGameVariables()
+		
 		self.mostDamage = (0, None)
 
 		self.killList = []
@@ -88,7 +88,16 @@ class Game:
 		self.imageMjolnir.blit(sprites.sprite_atlas, (0,0), (100, 32, 24, 31))
 
 		self.radial_weapon_menu: RadialMenu = None
-		
+	
+	def reset(self):
+		''' reset all game singletons '''
+		GameVariables.reset()
+		MapManager.reset()
+		TeamManager.reset()
+		TimeManager.reset()
+		EffectManager.reset()
+		WeaponManager.reset()
+
 	def create_new_game(self):
 		''' initialize new game '''
 
@@ -98,7 +107,7 @@ class Game:
 		# check for sky opening for airstrikes
 		closedSkyCounter = 0
 		for i in range(100):
-			if self.map_manager.is_ground_at((randint(0, self.map_manager.game_map.get_width()-1), randint(0, 10))):
+			if MapManager().is_ground_at((randint(0, MapManager().game_map.get_width()-1), randint(0, 10))):
 				closedSkyCounter += 1
 		if closedSkyCounter > 50:
 			GameVariables().initial_variables.allow_air_strikes = False
@@ -194,11 +203,11 @@ class Game:
 			custom_height = self.game_config.map_ratio
 
 		if self.game_config.option_digging:
-			self.map_manager.create_map_digging(custom_height)
+			MapManager().create_map_digging(custom_height)
 		elif 'noise' in self.game_config.map_path:
-			self.map_manager.create_map_image(self.game_config.map_path, custom_height, True)
+			MapManager().create_map_image(self.game_config.map_path, custom_height, True)
 		else:
-			self.map_manager.create_map_image(self.game_config.map_path, custom_height, self.game_config.is_recolor)
+			MapManager().create_map_image(self.game_config.map_path, custom_height, self.game_config.is_recolor)
 		
 	def initiateGameVariables(self):
 		self.waterRise = False # whether water rises at the end of each turn
@@ -269,11 +278,11 @@ class Game:
 	def lstepper(self):
 		...
 		# self.lstep += 1
-		# pos = (GameVariables().win_width/2 - Game._game.loadingSurf.get_width()/2, GameVariables().win_height/2 - Game._game.loadingSurf.get_height()/2)
+		# pos = (GameGlobals().win_width/2 - Game._game.loadingSurf.get_width()/2, GameGlobals().win_height/2 - Game._game.loadingSurf.get_height()/2)
 		# width = Game._game.loadingSurf.get_width()
 		# height = Game._game.loadingSurf.get_height()
-		# pygame.draw.rect(GameVariables().win, (255,255,255), ((pos[0], pos[1] + 20), ((self.lstep / self.lstepmax)*width, height)))
-		# screen.blit(pygame.transform.scale(GameVariables().win, screen.get_rect().size), (0,0))
+		# pygame.draw.rect(GameGlobals().win, (255,255,255), ((pos[0], pos[1] + 20), ((self.lstep / self.lstepmax)*width, height)))
+		# screen.blit(pygame.transform.scale(GameGlobals().win, screen.get_rect().size), (0,0))
 		# pygame.display.update()
 
 
@@ -687,7 +696,7 @@ def weapon_menu_init():
 		main_button = RadialButton(weapons_in_category[0], '', '', weapon_bg_color[category], WeaponManager().get_surface_portion(weapons_in_category[0]), sub_layout, is_enabled=is_enabled)
 		layout.append(main_button)
 
-	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(GameVariables().win_width // 2, GameVariables().win_height // 2))
+	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(GameGlobals().win_width // 2, GameGlobals().win_height // 2))
 
 def toast_info():
 	if Toast.toastCount > 0:
@@ -983,18 +992,18 @@ class GameRoom(Room):
 					Game._game.radial_weapon_menu = None
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down
 			if not Game._game.radial_weapon_menu:
-				GameVariables().scale_factor *= 1.1
-				GameVariables().scale_factor = GameVariables().scale_factor
-				if GameVariables().scale_factor >= GameVariables().scale_range[1]:
-					GameVariables().scale_factor = GameVariables().scale_range[1]
-					GameVariables().scale_factor = GameVariables().scale_factor
+				GameGlobals().scale_factor *= 1.1
+				GameGlobals().scale_factor = GameGlobals().scale_factor
+				if GameGlobals().scale_factor >= GameGlobals().scale_range[1]:
+					GameGlobals().scale_factor = GameGlobals().scale_range[1]
+					GameGlobals().scale_factor = GameGlobals().scale_factor
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll up
 			if not Game._game.radial_weapon_menu:
-				GameVariables().scale_factor *= 0.9
-				GameVariables().scale_factor = GameVariables().scale_factor
-				if GameVariables().scale_factor <= GameVariables().scale_range[0]:
-					GameVariables().scale_factor = GameVariables().scale_range[0]
-					GameVariables().scale_factor = GameVariables().scale_factor
+				GameGlobals().scale_factor *= 0.9
+				GameGlobals().scale_factor = GameGlobals().scale_factor
+				if GameGlobals().scale_factor <= GameGlobals().scale_range[0]:
+					GameGlobals().scale_factor = GameGlobals().scale_range[0]
+					GameGlobals().scale_factor = GameGlobals().scale_factor
 
 		# key press
 		if event.type == pygame.KEYDOWN:
@@ -1031,7 +1040,7 @@ class GameRoom(Room):
 					pass
 					# TimeSlow()
 				if event.key in [pygame.K_RCTRL, pygame.K_LCTRL]:
-					GameVariables().scale_factor = GameVariables().scale_range[1]
+					GameGlobals().scale_factor = GameGlobals().scale_range[1]
 					if GameVariables().cam_track is None:
 						GameVariables().cam_track = GameVariables().player
 
@@ -1067,47 +1076,47 @@ class GameRoom(Room):
 			mousePos = pygame.mouse.get_pos()
 			scroll = Vector()
 			if mousePos[0] < EDGE_BORDER:
-				scroll.x -= MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
-			if mousePos[0] > GameVariables().screen_width - EDGE_BORDER:
-				scroll.x += MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
+				scroll.x -= MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
+			if mousePos[0] > GameGlobals().screen_width - EDGE_BORDER:
+				scroll.x += MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
 			if mousePos[1] < EDGE_BORDER:
-				scroll.y -= MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
-			if mousePos[1] > GameVariables().screen_height - EDGE_BORDER:
-				scroll.y += MAP_SCROLL_SPEED * (2.5 - GameVariables().scale_factor / 2)
+				scroll.y -= MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
+			if mousePos[1] > GameGlobals().screen_height - EDGE_BORDER:
+				scroll.y += MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
 			if scroll != Vector():
-				GameVariables().cam_track = Camera(GameVariables().cam_pos + Vector(GameVariables().win_width, GameVariables().win_height)/2 + scroll)
+				GameVariables().cam_track = Camera(GameVariables().cam_pos + Vector(GameGlobals().win_width, GameGlobals().win_height)/2 + scroll)
 		
 		# handle scale:
-		oldSize = (GameVariables().win_width, GameVariables().win_height)
-		GameVariables().win_width += (GameVariables().screen_width / GameVariables().scale_factor - GameVariables().win_width) * 0.2
-		GameVariables().win_height += (GameVariables().screen_height / GameVariables().scale_factor - GameVariables().win_height) * 0.2
-		GameVariables().win_width = int(GameVariables().win_width)
-		GameVariables().win_height = int(GameVariables().win_height)
+		oldSize = (GameGlobals().win_width, GameGlobals().win_height)
+		GameGlobals().win_width += (GameGlobals().screen_width / GameGlobals().scale_factor - GameGlobals().win_width) * 0.2
+		GameGlobals().win_height += (GameGlobals().screen_height / GameGlobals().scale_factor - GameGlobals().win_height) * 0.2
+		GameGlobals().win_width = int(GameGlobals().win_width)
+		GameGlobals().win_height = int(GameGlobals().win_height)
 
-		if oldSize != (GameVariables().win_width, GameVariables().win_height):
-			GameVariables().win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
-			GameVariables().win_width = GameVariables().win_width
-			GameVariables().win_height = GameVariables().win_height
+		if oldSize != (GameGlobals().win_width, GameGlobals().win_height):
+			GameGlobals().win = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height))
+			GameGlobals().win_width = GameGlobals().win_width
+			GameGlobals().win_height = GameGlobals().win_height
 		
 		# handle position:
 		if GameVariables().cam_track:
 			GameVariables().cam_pos += (
 				(
-					GameVariables().cam_track.pos - Vector(int(GameVariables().screen_width / GameVariables().scale_factor),
-					int(GameVariables().screen_height / GameVariables().scale_factor)) / 2
+					GameVariables().cam_track.pos - Vector(int(GameGlobals().screen_width / GameGlobals().scale_factor),
+					int(GameGlobals().screen_height / GameGlobals().scale_factor)) / 2
 				) - GameVariables().cam_pos
 			) * 0.2
 
 		# constraints:
 		if GameVariables().cam_pos[1] < 0:
 			GameVariables().cam_pos[1] = 0
-		if GameVariables().cam_pos[1] >= MapManager().game_map.get_height() - GameVariables().win_height:
-			GameVariables().cam_pos[1] = MapManager().game_map.get_height() - GameVariables().win_height
+		if GameVariables().cam_pos[1] >= MapManager().game_map.get_height() - GameGlobals().win_height:
+			GameVariables().cam_pos[1] = MapManager().game_map.get_height() - GameGlobals().win_height
 		# if GameVariables().config.option_closed_map or Game._game.darkness:
 		# 	if GameVariables().cam_pos[0] < 0:
 		# 		GameVariables().cam_pos[0] = 0
-		# 	if GameVariables().cam_pos[0] >= MapManager().game_map.get_width() - GameVariables().win_width:
-		# 		GameVariables().cam_pos[0] = MapManager().game_map.get_width() - GameVariables().win_width
+		# 	if GameVariables().cam_pos[0] >= MapManager().game_map.get_width() - GameGlobals().win_width:
+		# 		GameVariables().cam_pos[0] = MapManager().game_map.get_width() - GameGlobals().win_width
 		
 		# ------- objects step -------
 
@@ -1217,9 +1226,9 @@ class GameRoom(Room):
 		# move menus
 		for t in Toast._toasts:
 			if t.mode == Toast.bottom:
-				t.updateWinPos((GameVariables().win_width/2, GameVariables().win_height))
+				t.updateWinPos((GameGlobals().win_width/2, GameGlobals().win_height))
 			elif t.mode == Toast.middle:
-				t.updateWinPos(Vector(GameVariables().win_width/2, GameVariables().win_height/2) - tup2vec(t.surf.get_size())/2)
+				t.updateWinPos(Vector(GameGlobals().win_width/2, GameGlobals().win_height/2) - tup2vec(t.surf.get_size())/2)
 		
 		if Game._game.radial_weapon_menu:
 			Game._game.radial_weapon_menu.draw(win)
@@ -1227,7 +1236,7 @@ class GameRoom(Room):
 		# debug:
 		if self.damageText[0] != Game._game.game_stats.damage_this_turn:
 			self.damageText = (Game._game.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(Game._game.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
-		win.blit(self.damageText[1], ((int(5), int(GameVariables().win_height -5 -self.damageText[1].get_height()))))
+		win.blit(self.damageText[1], ((int(5), int(GameGlobals().win_height -5 -self.damageText[1].get_height()))))
 
 		# weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
 		# debug_string = f'director: {weapon}'
@@ -1237,7 +1246,7 @@ class GameRoom(Room):
 		# draw loading screen
 		if GameVariables().game_state in [GameState.RESET]:
 			win.fill((0,0,0))
-			pos = (GameVariables().win_width/2 - Game._game.loadingSurf.get_width()/2, GameVariables().win_height/2 - Game._game.loadingSurf.get_height()/2)
+			pos = (GameGlobals().win_width/2 - Game._game.loadingSurf.get_width()/2, GameGlobals().win_height/2 - Game._game.loadingSurf.get_height()/2)
 			win.blit(Game._game.loadingSurf, pos)
 			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + 20))
 			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + Game._game.loadingSurf.get_height() + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + Game._game.loadingSurf.get_height() + 20))
@@ -1273,13 +1282,13 @@ def main():
 	print(wip)
 	pygame.init()
 	fps_clock = pygame.time.Clock()
-	GameVariables().win_width = int(GameVariables().screen_width / GameVariables().scale_factor)
-	GameVariables().win_height = int(GameVariables().screen_height / GameVariables().scale_factor)
+	GameGlobals().win_width = int(GameGlobals().screen_width / GameGlobals().scale_factor)
+	GameGlobals().win_height = int(GameGlobals().screen_height / GameGlobals().scale_factor)
 
-	GameVariables().win = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
+	GameGlobals().win = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height))
 
 	pygame.display.set_caption("Simon's Worms")
-	screen = pygame.display.set_mode((GameVariables().screen_width, GameVariables().screen_height), pygame.DOUBLEBUF)
+	screen = pygame.display.set_mode((GameGlobals().screen_width, GameGlobals().screen_height), pygame.DOUBLEBUF)
 
 	constants.initialize()
 
@@ -1322,14 +1331,14 @@ def main():
 					current_room = existing_room
 
 			# draw
-			current_room.draw(GameVariables().win)
+			current_room.draw(GameGlobals().win)
 		except Exception:
 			print(traceback.format_exc())
 
-		pygame.transform.scale(GameVariables().win, screen.get_rect().size, screen)
+		pygame.transform.scale(GameGlobals().win, screen.get_rect().size, screen)
 		pygame.display.update()
 
-		fps_clock.tick(GameVariables().fps)
+		fps_clock.tick(GameGlobals().fps)
 
 	pygame.quit()
 

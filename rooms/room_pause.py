@@ -7,7 +7,7 @@ from gui.menu_gui_new import (
     Gui, StackPanel, MenuElementText, MenuElementButton,
 )
 
-from common import GameVariables
+from common import GameGlobals
 from common.vector import Vector
 
 class PauseRoom(Room):
@@ -44,7 +44,7 @@ class PauseRoom(Room):
 
     def initialize_pause_menu(self) -> StackPanel:
         ''' create pause layout '''
-        pauseMenu = StackPanel(name="endMenu", pos=[GameVariables().win_width//2  - GameVariables().win_width//4, 40], size=[GameVariables().win_width // 2, 160])
+        pauseMenu = StackPanel(name="endMenu", pos=[GameGlobals().win_width//2  - GameGlobals().win_width//4, 40], size=[GameGlobals().win_width // 2, 160])
         pauseMenu.insert(MenuElementText(text="Game paused"))
 
         # if "showPoints" in args.keys() and args["showPoints"]:
@@ -64,6 +64,6 @@ class PauseRoom(Room):
 
         pauseMenu.insert(MenuElementButton(key="resume", text="resume"))
         pauseMenu.insert(MenuElementButton(key="to_main_menu", text="back to main menu"))
-        pauseMenu.pos = Vector(GameVariables().win_width//2 - pauseMenu.size[0]//2, GameVariables().win_height//2 - pauseMenu.size[1]//2)
+        pauseMenu.pos = Vector(GameGlobals().win_width//2 - pauseMenu.size[0]//2, GameGlobals().win_height//2 - pauseMenu.size[1]//2)
 
         return pauseMenu

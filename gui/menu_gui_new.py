@@ -3,7 +3,7 @@
 import pygame
 from abc import ABC
 
-from common import GameVariables, fonts
+from common import GameVariables, fonts, GameGlobals
 from common.vector import *
 
 class Gui:
@@ -85,7 +85,7 @@ BLACK = (0,0,0,255)
 
 def mouseInWin():
     mouse = pygame.mouse.get_pos()
-    return Vector(mouse[0] / GameVariables().scale_factor, mouse[1] / GameVariables().scale_factor)
+    return Vector(mouse[0] / GameGlobals().scale_factor, mouse[1] / GameGlobals().scale_factor)
 
 class StackPanel:
     _buttonColor = (82,65,60)
@@ -555,7 +555,7 @@ class MenuElementDragImage(MenuElement):
                     vel = pygame.mouse.get_rel()
                     if abs(vel[0]) > 100:
                         return
-                    self.dragDx += vel[0] / GameVariables().scale_factor
+                    self.dragDx += vel[0] / GameGlobals().scale_factor
                     if self.imageSurf.get_width() < self.size[0]:
                         return
                     if self.dragDx > -self.size[0] // 2:

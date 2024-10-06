@@ -22,7 +22,7 @@ feelIndex = randint(0, len(feels) - 1)
 debug = False
 
 def initGui():
-	Gui(fonts.pixel5, GameVariables().scale_factor, GameVariables().fps)
+	Gui(fonts.pixel5, GameGlobals().scale_factor, GameGlobals().fps)
 
 def spriteIndex2rect(index):
 	return (index % 8) * 16, (index // 8) * 16, 16, 16
@@ -37,7 +37,7 @@ class MainMenu:
 		MainMenu._mm = self
 
 	def initializeEndGameMenu(self, parameters):
-		endMenu = Menu(name="endMenu", pos=[GameVariables().win_width // 2  - GameVariables().win_width//4, (GameVariables().win_height - 160)//2], size=[GameVariables().win_width // 2, 160], register=True)
+		endMenu = Menu(name="endMenu", pos=[GameGlobals().win_width // 2  - GameGlobals().win_width//4, (GameGlobals().win_height - 160)//2], size=[GameGlobals().win_width // 2, 160], register=True)
 		endMenu.insert(MENU_TEXT, text="Game Over", customSize=15)
 		if "winner" in parameters.keys():
 			endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
@@ -52,12 +52,12 @@ class MainMenu:
 			teamScore.insert(MENU_TEXT, text=team, customSize=50)
 			bar = teamScore.insert(MENU_LOADBAR, value = 0, color=parameters["teams"][team][0], maxValue=maxpoints)
 			endMenu.addElement(teamScore)
-			ElementAnimator(bar, 0, parameters["teams"][team][1], duration = GameVariables().fps, timeOffset=2 * GameVariables().fps)
+			ElementAnimator(bar, 0, parameters["teams"][team][1], duration = GameGlobals().fps, timeOffset=2 * GameGlobals().fps)
 
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
 	def initializeWeaponMenu(self, zero=False):
-		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (GameVariables().win_height - 180)//2], size=[GameVariables().win_width - 80, 180], register=True)
+		wepMenu = Menu(orientation=VERTICAL, name="weapons", pos=[40, (GameGlobals().win_height - 180)//2], size=[GameGlobals().win_width - 80, 180], register=True)
 		
 		weapons = ET.parse('weapons.xml').getroot()[0]
 		weaponCount = len(weapons)
@@ -101,7 +101,7 @@ class MainMenu:
 		wepMenu.addElement(sub)
 
 	def initializeMenuOptions(self):
-		mainMenu = Menu(name="menu", pos=[40, (GameVariables().win_height - 196)//2], size=[GameVariables().win_width - 80, 196], register=True)
+		mainMenu = Menu(name="menu", pos=[40, (GameGlobals().win_height - 196)//2], size=[GameGlobals().win_width - 80, 196], register=True)
 		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
 
 		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
@@ -204,13 +204,13 @@ class MainMenu:
 		mainMenu.addElement(subMore)
 
 		# background feel menu
-		bgMenu = Menu(pos=[GameVariables().win_width - 20, GameVariables().win_height - 20], size=[20, 20], register=True)
+		bgMenu = Menu(pos=[GameGlobals().win_width - 20, GameGlobals().win_height - 20], size=[20, 20], register=True)
 		bgMenu.insert(MENU_UPDOWN, text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
 
 	def initializeRecordMenu(self):
 		# clear graphs
 
-		recordMenu = Menu(name="record menu", pos=[GameVariables().win_width//2  - GameVariables().win_width//4, (GameVariables().win_height - 180)//2], size=[GameVariables().win_width // 2, 180], register=True)
+		recordMenu = Menu(name="record menu", pos=[GameGlobals().win_width//2  - GameGlobals().win_width//4, (GameGlobals().win_height - 180)//2], size=[GameGlobals().win_width // 2, 180], register=True)
 		recordMenu.insert(MENU_TEXT, text="worms game records", customSize=15)
 		b = recordMenu.insert(MENU_SURF)
 		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
@@ -256,25 +256,25 @@ class MainMenu:
 			pygame.image.save(noise, imageString)
 			MainMenu._picture.setImage(imageString)
 		if key == "play":
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameVariables().win_height), trigger=playOnPress)
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameGlobals().win_height), trigger=playOnPress)
 		if key == "continue":
 			self.initializeMenuOptions()
-			MenuAnimator(Menu._reg[1], Menu._reg[1].pos + Vector(0, -GameVariables().win_height), Menu._reg[1].pos)
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, GameVariables().win_height), trigger=continueOnPress)
+			MenuAnimator(Menu._reg[1], Menu._reg[1].pos + Vector(0, -GameGlobals().win_height), Menu._reg[1].pos)
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, GameGlobals().win_height), trigger=continueOnPress)
 			# remove the end menu
 			# Menu._reg.pop(0)
 		if key == "scoreboard":
 			# create the scoreboard menu
 			self.initializeRecordMenu()
 			# animate record menu in
-			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, GameVariables().win_height), Menu._reg[-1].pos)
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos + Vector(0, GameGlobals().win_height), Menu._reg[-1].pos)
 			# animate main menu out
-			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameVariables().win_height))
+			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameGlobals().win_height))
 		if key == "back":
 			# animate record menu out
-			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos, Menu._reg[-1].pos + Vector(0, GameVariables().win_height))
+			MenuAnimator(Menu._reg[-1], Menu._reg[-1].pos, Menu._reg[-1].pos + Vector(0, GameGlobals().win_height))
 			# animate main menu in
-			endPos = Menu._reg[0].pos + Vector(0, GameVariables().win_height)
+			endPos = Menu._reg[0].pos + Vector(0, GameGlobals().win_height)
 			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, endPos, trigger=menuPop)
 			self.updateWeaponSets()
 		if key == "exit":
@@ -286,7 +286,7 @@ class PauseMenu:
 		self.run = True
 		PauseMenu._pm = self
 	def initializePauseMenu(self, args):
-		pauseMenu = Menu(name="endMenu", pos=[GameVariables().win_width//2  - GameVariables().win_width//4, 40], size=[GameVariables().win_width // 2, 160], register=True)
+		pauseMenu = Menu(name="endMenu", pos=[GameGlobals().win_width//2  - GameGlobals().win_width//4, 40], size=[GameGlobals().win_width // 2, 160], register=True)
 		pauseMenu.insert(MENU_TEXT, text="Game paused")
 
 		if "showPoints" in args.keys() and args["showPoints"]:
@@ -306,7 +306,7 @@ class PauseMenu:
 
 		pauseMenu.insert(MENU_BUTTON, key="resume", text="resume")
 		pauseMenu.insert(MENU_BUTTON, key="toMainMenu", text="back to main menu")
-		pauseMenu.pos = Vector(GameVariables().win_width//2 - pauseMenu.size[0]//2, GameVariables().win_height//2 - pauseMenu.size[1]//2)
+		pauseMenu.pos = Vector(GameGlobals().win_width//2 - pauseMenu.size[0]//2, GameGlobals().win_height//2 - pauseMenu.size[1]//2)
 
 	def handlePauseMenu(self, event):
 		key = event.key
@@ -396,11 +396,11 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 	if fromGameParameters is None:
 		MainMenu._mm.initializeMenuOptions()
 		endPos = Menu._reg[0].pos
-		MenuAnimator(Menu._reg[0], endPos + Vector(0, GameVariables().win_height), endPos)
+		MenuAnimator(Menu._reg[0], endPos + Vector(0, GameGlobals().win_height), endPos)
 	else:
 		MainMenu._mm.initializeEndGameMenu(fromGameParameters)
 		endPos = Menu._reg[0].pos
-		MenuAnimator(Menu._reg[0], endPos + Vector(0, GameVariables().win_height), endPos)
+		MenuAnimator(Menu._reg[0], endPos + Vector(0, GameGlobals().win_height), endPos)
 
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
@@ -420,7 +420,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 		Gui._instance.draw(globals.win)
 
 		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
-		globals.fpsClock.tick(GameVariables().fps)
+		globals.fpsClock.tick(GameGlobals().fps)
 		pygame.display.update()
 	
 	clearMenu()
@@ -447,7 +447,7 @@ def pauseMenu(args, result=None):
 
 		globals.screen.blit(pygame.transform.scale(globals.win, globals.screen.get_rect().size), (0,0))
 		pygame.display.update()
-		globals.fpsClock.tick(GameVariables().fps)
+		globals.fpsClock.tick(GameGlobals().fps)
 	pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 	clearMenu()
 	return

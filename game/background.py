@@ -4,7 +4,7 @@ from random import uniform, randint, choice
 from typing import List
 from math import exp, sin
 
-from common import GameVariables, point2world, DARK_COLOR, WATER_AMP
+from common import GameVariables, point2world, DARK_COLOR, WATER_AMP, GameGlobals
 from common.vector import *
 
 from game.map_manager import MapManager
@@ -90,7 +90,7 @@ class Cloud:
         self.vel *= 0.85 * self.randomness
         self.pos += self.vel * GameVariables().dt
         
-        if self.pos.x > GameVariables().cam_pos[0] + GameVariables().win_width + 100 or self.pos.x < GameVariables().cam_pos[0] - 100 - self.cWidth:
+        if self.pos.x > GameVariables().cam_pos[0] + GameGlobals().win_width + 100 or self.pos.x < GameVariables().cam_pos[0] - 100 - self.cWidth:
             self._toRemove.append(self)
             
     def draw(self, win: pygame.Surface):
@@ -121,38 +121,38 @@ class WaterLayer:
         width = 200
         height = 10
         offset = (GameVariables().cam_pos[0])//width
-        times = GameVariables().win_width // width + 2
+        times = GameGlobals().win_width // width + 2
         for i in range(times):
             x = int(-GameVariables().cam_pos[0]) + int(int(offset) * width + i * width)
             y =  int(MapManager().get_map_height() - GameVariables().water_level - 3 - WATER_AMP - self.y_offset) - int(GameVariables().cam_pos[1])
             win.blit(self.surf, (x, y))
         
-        pygame.draw.rect(win, self.water_color[0], ((0,y + height), (GameVariables().win_width, GameVariables().water_level)))
+        pygame.draw.rect(win, self.water_color[0], ((0,y + height), (GameGlobals().win_width, GameVariables().water_level)))
 
 
 class BackGround:
     ''' manages background. clouds, mountains, water '''
-    def __init__(self, feelColor, isDark=False):
-        self.mountains = [render_mountain((180, 110), feelColor[3]), render_mountain((180, 150), feelColor[2])]
+    def __init__(self, feel_color, is_dark=False):
+        self.mountains = [render_mountain((180, 110), feel_color[3]), render_mountain((180, 150), feel_color[2])]
         colorRect = pygame.Surface((2,2))
-        pygame.draw.line(colorRect, feelColor[0], (0,0), (2,0))
-        pygame.draw.line(colorRect, feelColor[1], (0,1), (2,1))
-        self.imageSky = pygame.transform.smoothscale(colorRect, (GameVariables().win_width, GameVariables().win_height))
+        pygame.draw.line(colorRect, feel_color[0], (0,0), (2,0))
+        pygame.draw.line(colorRect, feel_color[1], (0,1), (2,1))
+        self.imageSky = pygame.transform.smoothscale(colorRect, (GameGlobals().win_width, GameGlobals().win_height))
 
-        self.backColor = feelColor[0]
-        if isDark:
+        self.backColor = feel_color[0]
+        if is_dark:
             self.backColor = DARK_COLOR
 
-        GameVariables().water_color = [tuple((feelColor[0][i] + feelColor[1][i]) // 2 for i in range(3))]
-        GameVariables().water_color.append(tuple(min(int(GameVariables().water_color[0][i] * 1.5), 255) for i in range(3)))
+        water_color = [tuple((feel_color[0][i] + feel_color[1][i]) // 2 for i in range(3))]
+        water_color.append(tuple(min(int(water_color[0][i] * 1.5), 255) for i in range(3)))
 
         self.water_layers_bottom = [
-            WaterLayer(GameVariables().water_color, 22),
+            WaterLayer(water_color, 22),
         ]
 
         self.water_layers_top = [
-            WaterLayer(GameVariables().water_color, 12),
-            WaterLayer(GameVariables().water_color, 2),
+            WaterLayer(water_color, 12),
+            WaterLayer(water_color, 2),
         ]
         self.water_rise_amount = 0
 
@@ -175,7 +175,7 @@ class BackGround:
         if len(Cloud._reg) < 8 and randint(0,10) == 1:
             pos = Vector(choice([
                 GameVariables().cam_pos[0] - Cloud.cWidth - 100,
-                GameVariables().cam_pos[0] + GameVariables().win_width + 100
+                GameVariables().cam_pos[0] + GameGlobals().win_width + 100
                 ]), randint(5, MapManager().get_map_height() - 150))
             Cloud(pos)
         for cloud in Cloud._reg: cloud.step()
@@ -203,13 +203,13 @@ class BackGround:
         width = surf.get_width()
         height = surf.get_height()
         offset = (GameVariables().cam_pos[0] / parallax) // width
-        times = GameVariables().win_width // width + 2
+        times = GameGlobals().win_width // width + 2
         for i in range(times):
             x = int(-GameVariables().cam_pos[0] / parallax) + int(int(offset) * width + i * width)
             y = (
                 int(MapManager().get_map_height() - GameVariables().initial_variables.water_level - height)
                 - int(GameVariables().cam_pos[1]) + int((MapManager().get_map_height()
-                - GameVariables().initial_variables.water_level - GameVariables().win_height 
+                - GameVariables().initial_variables.water_level - GameGlobals().win_height 
                 - int(GameVariables().cam_pos[1])) / (parallax * 1.5)) + 20 - parallax * 3
             )
             win.blit(surf, (x, y))

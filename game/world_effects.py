@@ -5,7 +5,7 @@ from random import uniform, randint, choice
 from typing import List
 
 from common.vector import *
-from common import GameVariables, Entity, sprites, SHOCK_RADIUS, point2world, ColorType
+from common import GameVariables, Entity, sprites, SHOCK_RADIUS, point2world, ColorType, GameGlobals
 
 from game.map_manager import MapManager, SKY, GRD
 from game.visual_effects import Blast, Explossion
@@ -74,7 +74,7 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 
 class Earthquake(Entity):
 	earthquake = 0
-	def __init__(self, timer = 7 * GameVariables().fps, decorative = False, strength = 1):
+	def __init__(self, timer = 7 * GameGlobals().fps, decorative = False, strength = 1):
 		GameVariables().register_non_physical(self)
 		self.timer = timer
 		self.stable = False

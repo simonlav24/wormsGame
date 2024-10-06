@@ -5,7 +5,7 @@ from math import cos, pi, sin, atan2
 from random import choice, randint
 from typing import List, Tuple, Any
 
-from common import PATH_ASSETS, feels, GameVariables, SingletonMeta, point2world, sprites, EntityPhysical
+from common import PATH_ASSETS, feels, GameVariables, SingletonMeta, point2world, sprites, EntityPhysical, GameGlobals
 from common.vector import *
 
 SKY = (0,0,0,0)
@@ -39,7 +39,7 @@ def grab_maps(paths: List[str]) -> List[str]:
 class MapManager(metaclass=SingletonMeta):
     def __init__(self) -> None:
         # default value for game map dimensions
-        self.game_map: pygame.Surface = pygame.Surface((GameVariables().win_width, GameVariables().win_height))
+        self.game_map: pygame.Surface = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height))
         self.ground_map: pygame.Surface = None
         self.ground_secondary: pygame.Surface = None
 

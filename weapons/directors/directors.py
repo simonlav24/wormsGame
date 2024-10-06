@@ -57,6 +57,8 @@ class WeaponDirector:
         if actor is not None and actor.weapon in [actor.weapon for actor in self.actors]:
             actor = None
         if actor is not None and not actor.is_done:
+            if len(self.actors) > 0:
+                self.actors[0].secondary = True
             self.actors.append(actor)
 
     def step(self) -> None:
@@ -66,6 +68,8 @@ class WeaponDirector:
             for actor in self.actors:
                 actor.on_worm_death()
         self.actors = [actor for actor in self.actors if not actor.is_done]
+        if len(self.actors) == 1:
+            self.actors[0].secondary = False
     
     def draw(self, win: pygame.Surface) -> None:
         for actor in self.actors:
@@ -96,6 +100,7 @@ class WeaponActorBase:
         self.team = team
 
         self.shooted_object: EntityPhysical = None
+        self.secondary: bool = False
 
     def step(self) -> None:
         ...
@@ -230,4 +235,17 @@ class ActorClickable(WeaponActorBase):
 
 
 class ActorWormTool(WeaponActorBase):
-    ...
+    def handle_event(self, event) -> None:
+        super().handle_event(event)
+
+        if not self.secondary:
+            if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+                self.fire()
+    
+    def can_switch_weapon(self) -> bool:
+        return True
+
+    def finalize(self):
+        super().finalize()
+        if GameVariables().game_state != GameState.PLAYER_PLAY:
+            self.is_done = True

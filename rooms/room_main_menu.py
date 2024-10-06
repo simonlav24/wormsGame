@@ -15,7 +15,7 @@ from gui.menu_gui_new import (
     MenuElementDragImage, MenuElementInput
 )
 
-from common import GameVariables, fonts, PATH_MAPS, PATH_GENERATED_MAPS
+from common import GameVariables, fonts, PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
@@ -104,7 +104,7 @@ class MainMenuRoom(Room):
 
     def initialize_main_menu(self) -> StackPanel:
         ''' create menu layout '''
-        mainMenu = StackPanel(name="menu", pos=[40, (GameVariables().win_height - 196) // 2], size=[GameVariables().win_width - 80, 196], register=True)
+        mainMenu = StackPanel(name="menu", pos=[40, (GameGlobals().win_height - 196) // 2], size=[GameGlobals().win_width - 80, 196], register=True)
         mainMenu.insert(MenuElementButton(key="play", text="play", customSize=16))
 
         optionsAndPictureMenu = StackPanel(name="options and picture", orientation=HORIZONTAL)
@@ -220,7 +220,7 @@ class MainMenuRoom(Room):
 
         # background feel menu
         feelIndex = randint(0, len(feels) - 1)
-        bgMenu = StackPanel(pos=[GameVariables().win_width - 20, GameVariables().win_height - 20], size=[20, 20], register=True)
+        bgMenu = StackPanel(pos=[GameGlobals().win_width - 20, GameGlobals().win_height - 20], size=[20, 20], register=True)
         bgMenu.insert(MenuElementUpDown(text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], showValue=False))
 
         return mainMenu

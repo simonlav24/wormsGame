@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 from math import sin, pi
 from random import uniform
 
-from common import GameVariables, sprites, point2world
+from common import GameVariables, sprites, point2world, GameGlobals
 from common.vector import *
 
 from game.visual_effects import EffectManager
@@ -41,7 +41,7 @@ def draw_girder_hint(win: pygame.Surface):
 	surf.set_alpha(100)
 	surf = pygame.transform.rotate(surf, GameVariables().girder_angle)
 	pos = pygame.mouse.get_pos()
-	pos = Vector(pos[0] / GameVariables().scale_factor , pos[1] / GameVariables().scale_factor)
+	pos = Vector(pos[0] / GameGlobals().scale_factor , pos[1] / GameGlobals().scale_factor)
 	win.blit(surf, (int(pos[0] - surf.get_width()/2), int(pos[1] - surf.get_height()/2)))
 
 
@@ -80,16 +80,16 @@ def draw_lightning(win: pygame.Surface, start: Vector, end: Vector, color = (153
 def draw_dir_indicator(win: pygame.Surface, pos: Vector):
 	''' draw direction indicator to pos at edge of screen '''
 	border = 20
-	if not (pos[0] < GameVariables().cam_pos[0] - border / 4 or pos[0] > (Vector(GameVariables().win_width, GameVariables().win_height) + GameVariables().cam_pos)[0] + border/4 or pos[1] < GameVariables().cam_pos[1] - border/4 or pos[1] > (Vector(GameVariables().win_width, GameVariables().win_height) + GameVariables().cam_pos)[1] + border/4):
+	if not (pos[0] < GameVariables().cam_pos[0] - border / 4 or pos[0] > (Vector(GameGlobals().win_width, GameGlobals().win_height) + GameVariables().cam_pos)[0] + border/4 or pos[1] < GameVariables().cam_pos[1] - border/4 or pos[1] > (Vector(GameGlobals().win_width, GameGlobals().win_height) + GameVariables().cam_pos)[1] + border/4):
 		return
 
-	cam = GameVariables().cam_pos + Vector(GameVariables().win_width//2, GameVariables().win_height//2)
+	cam = GameVariables().cam_pos + Vector(GameGlobals().win_width//2, GameGlobals().win_height//2)
 	direction = pos - cam
 	
-	intersection = tup2vec(point2world((GameVariables().win_width, GameVariables().win_height))) + pos -  Vector(GameVariables().win_width, GameVariables().win_height)
+	intersection = tup2vec(point2world((GameGlobals().win_width, GameGlobals().win_height))) + pos -  Vector(GameGlobals().win_width, GameGlobals().win_height)
 	
-	intersection[0] = min(max(intersection[0], border), GameVariables().win_width - border)
-	intersection[1] = min(max(intersection[1], border), GameVariables().win_height - border)
+	intersection[0] = min(max(intersection[0], border), GameGlobals().win_width - border)
+	intersection[1] = min(max(intersection[1], border), GameGlobals().win_height - border)
 	
 	points = [Vector(0,2), Vector(0,-2), Vector(5,0)]
 	angle = direction.getAngle()

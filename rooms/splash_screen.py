@@ -1,14 +1,14 @@
 
 import pygame
 
-from common import GameVariables
+from common import GameGlobals
 from rooms.room import Room, Rooms, SwitchRoom
 
 class SplashScreenRoom(Room):
 	def __init__(self, *args, **kwargs) -> None:
 		super().__init__(*args, **kwargs)
 		self.splashImage = pygame.image.load("assets/simeGames.png")
-		self.timer = 2 * GameVariables().fps
+		self.timer = 2 * GameGlobals().fps
 	
 	def handle_pygame_event(self, event) -> None:
 		super().handle_pygame_event(event)
@@ -30,6 +30,6 @@ class SplashScreenRoom(Room):
 		super().draw(win)
 		win.fill((11,126,193))
 		win.blit(self.splashImage, ((
-			GameVariables().win_width / 2 - self.splashImage.get_width() / 2,
-			GameVariables().win_height / 2 - self.splashImage.get_height() / 2
+			GameGlobals().win_width / 2 - self.splashImage.get_width() / 2,
+			GameGlobals().win_height / 2 - self.splashImage.get_height() / 2
 			)))

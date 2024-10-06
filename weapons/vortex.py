@@ -4,10 +4,9 @@ from random import randint
 
 import pygame
 
-from common import GameVariables, point2world
+from common import GameVariables, point2world, GameGlobals
 from common.vector import *
 
-from entities import PhysObj
 from weapons.grenades import Grenade
 
 
@@ -59,7 +58,7 @@ class Vortex():
                 direction = Vector(x,y) - self.pos
                 direction.rotate(rot)
                 getAt = point2world(self.pos + direction)
-                if getAt[0] < 0 or getAt[0] >= GameVariables().win_width or getAt[1] < 0 or getAt[1] >= GameVariables().win_height:
+                if getAt[0] < 0 or getAt[0] >= GameGlobals().win_width or getAt[1] < 0 or getAt[1] >= GameGlobals().win_height:
                     arr.append((0,0,0))
                 else:
                     pixelColor = win.get_at(getAt)

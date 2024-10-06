@@ -4,7 +4,7 @@ from random import uniform
 from typing import List, Dict, Any
 from enum import Enum
 
-from common import ColorType, fonts, GameVariables, GREY
+from common import ColorType, fonts, GameVariables, GREY, GameGlobals
 from common.vector import *
 from weapons.weapon import Weapon
 
@@ -35,7 +35,7 @@ class HealthBar:
 		self.team_health_visual = [recalc(visual, self.team_health_actual[i]) for i, visual in enumerate(self.team_health_visual)]
 	
 	def draw(self, win):
-		x = int(GameVariables().win_width - HEALTH_BAR_WIDTH - 10)
+		x = int(GameGlobals().win_width - HEALTH_BAR_WIDTH - 10)
 		y = 10
 
 		width = HEALTH_BAR_WIDTH
@@ -86,7 +86,7 @@ class Commentator:
 
 	def draw(self, win: pygame.Surface) -> None:
 		if self.current_surf is not None:
-			win.blit(self.current_surf, (int(GameVariables().win_width / 2 - self.current_surf.get_width() / 2), 5))
+			win.blit(self.current_surf, (int(GameGlobals().win_width / 2 - self.current_surf.get_width() / 2), 5))
 	
 	def render_comment(self, text_dict: List[Dict[str, Any]]) -> pygame.Surface:
 		text_surfs: List[pygame.Surface] = []
@@ -114,9 +114,9 @@ class Toast:
 		self.time = 0
 		self.mode = mode
 		if self.mode == Toast.bottom:
-			self.anchor = Vector(GameVariables().win_width / 2, GameVariables().win_height)
+			self.anchor = Vector(GameGlobals().win_width / 2, GameGlobals().win_height)
 		else:
-			self.anchor = Vector(GameVariables().win_width // 2, GameVariables().win_height // 2) - tup2vec(self.surf.get_size()) / 2
+			self.anchor = Vector(GameGlobals().win_width // 2, GameGlobals().win_height // 2) - tup2vec(self.surf.get_size()) / 2
 		self.pos = Vector()
 		self.state = 0
 		Toast.toastCount += 1

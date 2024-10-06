@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud
+from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud
 from common.constants import WHITE, GameState, RIGHT
 
 from common.vector import Vector
@@ -51,6 +51,7 @@ class DataBase:
 
 class GameVariables(metaclass=SingletonMeta):
     ''' holds common game variables to be globally accessed'''
+
     def __init__(self) -> None:
         self.initial_variables: InitialVariables = InitialVariables()
         self.physics: WorldPhysics = WorldPhysics()
@@ -64,19 +65,18 @@ class GameVariables(metaclass=SingletonMeta):
         self.damp_mult = 1.5
 
         self.time_overall = 0
-        self.fps = 30
         self.dt = 1.0
 
         self.cam_pos: Vector = Vector(0,0)
         self.cam_track: EntityPhysical = None
-        self.scale_factor = 3
-        self.scale_range = (1, 3)
+        # self.scale_factor = 3
+        # self.scale_range = (1, 3)
 
-        self.win: pygame.Surface = None
-        self.win_width = 0
-        self.win_height = 0
-        self.screen_width = 1280
-        self.screen_height = 720
+        # self.win: pygame.Surface = None
+        # self.win_width = 0
+        # self.win_height = 0
+        # self.screen_width = 1280
+        # self.screen_height = 720
 
         self.water_level = self.initial_variables.water_level
         self.water_color = (255, 255, 255)
@@ -116,6 +116,10 @@ class GameVariables(metaclass=SingletonMeta):
         # those are for laser only
         self.layers_circles = []
         self.layers_lines = []
+
+    @property
+    def fps(self):
+        return GameGlobals().fps
 
     @property
     def player(self):
@@ -291,8 +295,8 @@ def point2world(point) -> Tuple[int, int]:
 
 def mouse_pos_in_world() -> Vector:
     mouse_pos = pygame.mouse.get_pos()
-    return Vector(mouse_pos[0] / GameVariables().scale_factor + GameVariables().cam_pos[0],
-                   mouse_pos[1] / GameVariables().scale_factor + GameVariables().cam_pos[1])
+    return Vector(mouse_pos[0] / GameGlobals().scale_factor + GameVariables().cam_pos[0],
+                   mouse_pos[1] / GameGlobals().scale_factor + GameVariables().cam_pos[1])
 
 if __name__ == '__main__':
     g = GameVariables()

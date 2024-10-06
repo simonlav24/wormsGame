@@ -4,7 +4,7 @@ from typing import Any, List, Tuple
 from random import randint, uniform, choice, shuffle
 from math import exp, pi, sin, cos
 
-from common import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts, Entity, SingletonMeta, clamp, GameVariables, point2world, Sickness, GAS_COLOR
+from common import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts, Entity, SingletonMeta, clamp, GameVariables, point2world, Sickness, GAS_COLOR, GameGlobals
 from common.vector import *
 
 from game.map_manager import MapManager
@@ -225,7 +225,7 @@ class SmokeParticles(Effect):
 	def draw(self, win: pygame.Surface) -> None:
 		if len(self.particles) == 0:
 			return
-		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
+		smokeSurf = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height), pygame.SRCALPHA)
 		for particle in self.particles:
 			pygame.draw.circle(smokeSurf, particle[2], point2world(particle[0]), particle[3])
 		smokeSurf.set_alpha(100)
@@ -272,7 +272,7 @@ class GasParticles:
 	def draw(self, win: pygame.Surface) -> None:
 		if len(self.particles) == 0:
 			return
-		smokeSurf = pygame.Surface((GameVariables().win_width, GameVariables().win_height), pygame.SRCALPHA)
+		smokeSurf = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height), pygame.SRCALPHA)
 		for particle in self.particles:
 			pygame.draw.circle(smokeSurf, GAS_COLOR, point2world(particle[GAS_POS]), particle[GAS_RADIUS])
 		smokeSurf.set_alpha(100)

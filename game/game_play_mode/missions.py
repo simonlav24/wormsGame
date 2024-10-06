@@ -5,7 +5,7 @@ from math import cos, sin, pi
 
 import pygame
 
-from common import GameVariables, EntityWorm, GameState, point2world, draw_dir_indicator, draw_target, fonts, WHITE
+from common import GameVariables, EntityWorm, GameState, point2world, draw_dir_indicator, draw_target, fonts, WHITE, GameGlobals
 from common.vector import Vector, distus, vector_from_angle
 
 from game.game_play_mode.game_play_mode import GamePlayMode
@@ -249,7 +249,7 @@ class MissionsGamePlay(GamePlayMode):
         yOffset = 0
         for mission in self.worm_to_missions[current_worm]:
             surf = mission.surf
-            win.blit(surf, (GameVariables().win_width - surf.get_width() - 5, GameVariables().win_height - surf.get_height() - 5 - yOffset))
+            win.blit(surf, (GameGlobals().win_width - surf.get_width() - 5, GameGlobals().win_height - surf.get_height() - 5 - yOffset))
             yOffset += surf.get_height() + 2
         
         # draw mission indicators
