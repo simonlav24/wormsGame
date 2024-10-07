@@ -131,26 +131,16 @@ class WaterLayer:
 class BackGround:
     ''' manages background. clouds, mountains, water '''
     def __init__(self, feel_color, is_dark=False):
-        self.mountains = [render_mountain((180, 110), feel_color[3]), render_mountain((180, 150), feel_color[2])]
-        colorRect = pygame.Surface((2,2))
-        pygame.draw.line(colorRect, feel_color[0], (0,0), (2,0))
-        pygame.draw.line(colorRect, feel_color[1], (0,1), (2,1))
-        self.imageSky = pygame.transform.smoothscale(colorRect, (GameGlobals().win_width, GameGlobals().win_height))
+        
+        self.mountains = []
+        self.image_sky: pygame.Surface = None
+        self.back_color = None
 
-        self.backColor = feel_color[0]
-        if is_dark:
-            self.backColor = DARK_COLOR
+        self.water_layers_bottom = []
+        self.water_layers_top = []
 
-        water_color = calc_water_color(feel_color)
-
-        self.water_layers_bottom = [
-            WaterLayer(water_color, 12),
-        ]
-
-        self.water_layers_top = [
-            WaterLayer(water_color, 2),
-            WaterLayer(water_color, -8),
-        ]
+        self.set_feel_color(feel_color, is_dark)
+        
         self.water_rise_amount = 0
 
         self.clouds: List[Cloud] = []
@@ -159,6 +149,25 @@ class BackGround:
     def water_rise(self, amount: int) -> None:
         ''' water rise by amount '''
         self.water_rise_amount = amount
+
+    def set_feel_color(self, feel_color, is_dark: bool=False) -> None:
+        self.mountains = [render_mountain((180, 110), feel_color[3]), render_mountain((180, 150), feel_color[2])]
+        colorRect = pygame.Surface((2,2))
+        pygame.draw.line(colorRect, feel_color[0], (0,0), (2,0))
+        pygame.draw.line(colorRect, feel_color[1], (0,1), (2,1))
+        self.image_sky = pygame.transform.smoothscale(colorRect, (GameGlobals().win_width, GameGlobals().win_height))
+        self.back_color = feel_color[0]
+        if is_dark:
+            self.back_color = DARK_COLOR
+
+        water_color = calc_water_color(feel_color)
+        self.water_layers_bottom = [
+            WaterLayer(water_color, 12),
+        ]
+        self.water_layers_top = [
+            WaterLayer(water_color, 2),
+            WaterLayer(water_color, -8),
+        ]
 
     def step(self) -> None:
         self.step_clouds()
@@ -183,15 +192,16 @@ class BackGround:
         self.clouds = [cloud for cloud in self.clouds if not cloud.is_done]
     
     def draw(self, win: pygame.Surface):
-        win.fill(self.backColor)
+        win.fill(self.back_color)
         win.blit(
-            pygame.transform.scale(self.imageSky, (win.get_width(), MapManager().get_map_height())),
-            (0,0 - GameVariables().cam_pos[1]))
+            pygame.transform.scale(self.image_sky, (win.get_width(), MapManager().get_map_height())),
+            (0,0 - GameVariables().cam_pos[1])
+        )
         
         for cloud in self.clouds:
             cloud.draw(win)
-        self.drawBackGround(self.mountains[1], 4, win)
-        self.drawBackGround(self.mountains[0], 2, win)
+        self.draw_background(self.mountains[1], 4, win)
+        self.draw_background(self.mountains[0], 2, win)
         for layer in self.water_layers_bottom:
             layer.draw(win)
     
@@ -199,7 +209,7 @@ class BackGround:
         for layer in self.water_layers_top:
             layer.draw(win)
     
-    def drawBackGround(self, surf: pygame.Surface, parallax: float, win: pygame.Surface):
+    def draw_background(self, surf: pygame.Surface, parallax: float, win: pygame.Surface):
         width = surf.get_width()
         height = surf.get_height()
         offset = (GameVariables().cam_pos[0] / parallax) // width

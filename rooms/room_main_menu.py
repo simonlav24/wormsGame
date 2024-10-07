@@ -28,14 +28,16 @@ class MainMenuRoom(Room):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        self.background = BackGround(feels[0])
+        self.feel_index = randint(0, len(feels) - 1)
+
+        self.background = BackGround(feels[self.feel_index])
         self.gui = Gui()
 
         self.map_paths = grab_maps([PATH_MAPS])
         self.image_element: MenuElementDragImage = None
 
         self.main_menu = self.initialize_main_menu()
-        self.gui.menus.append(self.main_menu)
+        self.gui.insert(self.main_menu)
 
         animator = MenuAnimator(self.main_menu, self.main_menu.pos + Vector(0, GameGlobals().win_height), self.main_menu.pos)
         self.gui.animators.append(animator)
@@ -50,8 +52,9 @@ class MainMenuRoom(Room):
         self.background.step()
         self.gui.step()
 
-        gui_event, gui_values = self.gui.get_event_values()
-        self.handle_gui_events(gui_event, gui_values)
+        gui_event, gui_values = self.gui.listen()
+        if gui_event is not None:
+            self.handle_gui_events(gui_event, gui_values)
     
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
@@ -61,14 +64,26 @@ class MainMenuRoom(Room):
     def handle_gui_events(self, event, values):
         if event is None:
             return
-        if event == 'play':
-            self.gui.animators.append(MenuAnimator(self.main_menu, self.main_menu.pos, self.main_menu.pos - Vector(0, GameGlobals().win_height), trigger=self.on_play, args=[values]))
+        
+        elif event == 'play':
+            self.gui.animators.append(
+                MenuAnimator(
+                    self.main_menu,
+                    self.main_menu.pos,
+                    self.main_menu.pos - Vector(0, GameGlobals().win_height),
+                    trigger=self.on_play,
+                    args=[values],
+                    end_return=True
+                )
+            )
             # self.on_play(values)
-        if event == 'exit':
+        elif event == 'exit':
             self.switch = SwitchRoom(Rooms.EXIT, False, None)
-        if event == 'random_image':
+        
+        elif event == 'random_image':
             self.image_element.setImage(choice(self.map_paths))
-        if event == "generate":
+        
+        elif event == "generate":
             width, height = 800, 300
             noise = generate_noise(width, height)
             x = datetime.datetime.now()
@@ -80,10 +95,16 @@ class MainMenuRoom(Room):
             )
             pygame.image.save(noise, output_path)
             self.image_element.setImage(output_path)
-        if event == 'browse':
+        
+        elif event == 'browse':
             filepath = browse_file()
             if filepath:
                 self.image_element.setImage(filepath)
+        
+        elif event == 'feel_index':
+            self.feel_index = values['feel_index']
+            print(self.feel_index)
+            self.background.set_feel_color(feels[self.feel_index])
 
     def on_play(self, values):
         ''' on press play button '''
@@ -102,7 +123,9 @@ class MainMenuRoom(Room):
             sudden_death_style=SuddenDeathMode(values['sudden_death_style']),
             random_mode=RandomMode(values['random_mode']),
             map_path=values['map_path'],
-            is_recolor=values['is_recolor']
+            is_recolor=values['is_recolor'],
+            map_ratio=values['map_ratio'],
+            feel_index=values['feel_index']
         )
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
         
@@ -196,7 +219,7 @@ class MainMenuRoom(Room):
         subMap = StackPanel(orientation = HORIZONTAL, customSize = 15)
         subMap.insert(MenuElementToggle(key="is_recolor", text="recolor", value=False))
         subMap.insert(MenuElementText(text="ratio"))
-        subMap.insert(MenuElementInput(key="map_ratio", text="enter ratio", evaluatedType='int'))
+        subMap.insert(MenuElementInput(key="map_ratio", text="enter ratio", evaluatedType='int', default_value=512))
 
         mapMenu.addElement(subMap)
         optionsAndPictureMenu.addElement(mapMenu)
@@ -211,22 +234,18 @@ class MainMenuRoom(Room):
             for file in os.listdir("./assets/weaponsSets"):
                 weaponsSets.append(file.split(".")[0])
 
-        subweapons.insert(MenuElementText(text="weapons set:"))
+        subweapons.insert(MenuElementText("weapons set:"))
         subweapons.insert(MenuElementComboSwitch(name="weapon_combo", key="weapon_set", items=weaponsSets))
         mainMenu.addElement(subweapons)
 
         subMore = StackPanel(orientation=HORIZONTAL, customSize=14)
         subMore.insert(MenuElementButton(key="scoreboard", text="score board"))
+        subMore.insert(MenuElementUpDown(text="background color", key="feel_index", value=self.feel_index, values=[i for i in range(len(feels))], showValue=False, generate_event=True))
         mainMenu.addElement(subMore)
         
         subMore = StackPanel(orientation=HORIZONTAL, customSize=14)
         subMore.insert(MenuElementButton(key="exit", text="exit"))
         mainMenu.addElement(subMore)
-
-        # background feel menu
-        feelIndex = randint(0, len(feels) - 1)
-        bgMenu = StackPanel(pos=[GameGlobals().win_width - 20, GameGlobals().win_height - 20], size=[20, 20], register=True)
-        bgMenu.insert(MenuElementUpDown(text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], showValue=False))
 
         return mainMenu
 

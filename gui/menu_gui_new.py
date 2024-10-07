@@ -1,7 +1,8 @@
 
 
 from abc import ABC
-from typing import List
+from typing import List, Tuple, Any
+from enum import Enum
 
 import pygame
 
@@ -20,33 +21,31 @@ class Gui:
         self.focusElement = element
         pygame.mouse.set_cursor(cursor)
     
-    def get_event_values(self):
+    def listen(self) -> Tuple[Any, Any]:
+        if len(self.event_que) > 0:
+            event = self.event_que.pop(0)
+            return event, self.get_values()
+        return (None, None)
+
+    def notify_event(self, event):
+        self.event_que.append(event)
+
+    def get_values(self):
         ''' check for gui events '''
         event = None
         values = {}
         for menu in self.menus:
-            menu_event, menu_values = menu.get_event_values()
-            if menu_event is not None:
-                event = menu_event
+            menu_values = menu.get_values()
             values |= menu_values
-        return event, values
+        return values
 
     def handle_pygame_event(self, event):
         for menu in self.menus:
             menu.handle_pygame_event(event)
-        # if event.type == pygame.MOUSEBUTTONDOWN:
-        #     for inp in MenuElementInput._reg:
-        #         inp.mode = "fixed"
-        #     if event.button == 1:
-        #         for menu in StackPanel._reg:
-        #             if menu.event:
-        #                 menu.processInternalEvents()
-        #                 handleMenuEvents(menu.event)
-        # if event.type == pygame.KEYDOWN:
-        #     for inp in MenuElementInput._reg:
-        #         if inp.mode == "editing":
-        #             inp.processKey(event)
-        #             break
+
+    def insert(self, menu):
+        menu.set_gui(self)
+        self.menus.append(menu)
 
     def step(self):
         for menu in self.menus:
@@ -55,10 +54,6 @@ class Gui:
             animation.step()
         self.animators = [animator for animator in self.animators if not animator.is_done]
 
-        # if self.focusElement:
-            # if not self.focusElement.selected:
-                # pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                # self.focusElement = None
         self.toaster.step()
     
     def draw(self, win: pygame.Surface) -> None:
@@ -117,6 +112,7 @@ class StackPanel:
         self.menu = None
         self.customSize = customSize
         self.offset = None
+        self.gui: Gui = None
     
     def handle_pygame_event(self, event):
         for element in self.elements:
@@ -127,15 +123,17 @@ class StackPanel:
             return self.menu.getSuperPos() + self.pos
         return self.pos
     
-    def get_event_values(self):
-        event = None
+    def set_gui(self, gui: Gui):
+        self.gui = gui
+        for element in self.elements:
+            element.set_gui(gui)
+
+    def get_values(self):
         values = {}
         for element in self.elements:
-            element_event, element_values = element.get_event_values()
-            if element_event is not None:
-                event = element_event
+            element_values = element.get_values()
             values |= element_values
-        return event, values
+        return values
 
     def addElement(self, newElement):
         newElement.menu = self
@@ -187,11 +185,7 @@ class StackPanel:
     
     def update(self):
         pass
-        
-    def evaluate(self, dic):
-        for element in self.elements:
-            element.evaluate(dic)
-    
+            
     def draw(self, win: pygame.Surface) -> None:
         for element in self.elements:
             element.draw(win)
@@ -215,13 +209,17 @@ class MenuElement(ABC):
         self.surf = None
         self.tooltip = kwargs.get('tool_tip', None)
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
-        self.animation_offset = 0
+        self.highlight_value = 0.0
+        self.gui: Gui = None
+    
+    def set_gui(self, gui: Gui):
+        self.gui = gui
     
     def handle_pygame_event(self, event):
         pass
 
-    def get_event_values(self):
-        return None, {self.key: self.value}
+    def get_values(self):
+        return {self.key: self.value}
 
     def getSuperPos(self):
         return self.menu.getSuperPos()
@@ -235,13 +233,10 @@ class MenuElement(ABC):
         if text:
             self.text = text
         self.surf = fonts.pixel5.render(self.text, True, WHITE)
-    
-    def evaluate(self, dic):
-        dic[self.key] = self.value
-    
+        
     def drawRect(self, win: pygame.Surface) -> None:
         buttonPos = self.getSuperPos() + self.pos
-        color = [self.color[i] * (1 - self.animation_offset) + StackPanel._selectedColor[i] * self.animation_offset for i in range(3)]
+        color = [self.color[i] * (1 - self.highlight_value) + StackPanel._selectedColor[i] * self.highlight_value for i in range(3)]
         pygame.draw.rect(win, color, (buttonPos, self.size))
     
     def drawText(self, win: pygame.Surface) -> None:
@@ -254,18 +249,34 @@ class MenuElement(ABC):
 
     def step(self):
         pass
+
+    def selection_check(self):
+        ''' check if mouse on button '''
+        mousePos = mouseInWin()
+        buttonPos = self.getSuperPos() + self.pos
+        posInButton = mousePos - buttonPos
+        if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
+            self.selected = True
+        else:
+            self.selected = False
+
+    def highlight_check(self):
+        ''' if selected, modify highlight_value '''
+        if self.selected:
+            self.highlight_value = self.highlight_value + (1 - self.highlight_value) * 0.3
+        else:
+            self.highlight_value = self.highlight_value + (0 - self.highlight_value) * 0.3
     
     def draw(self, win: pygame.Surface) -> None:
         self.drawRect(win)
         self.drawText(win)
 
 class MenuElementText(MenuElement):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, text='text', *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.text = kwargs.get('text', 'text')
+        self.text = text
         self.renderSurf(self.text)
         self.color = StackPanel._textElementColor
-
 
 class MenuElementButton(MenuElement):
     def __init__(self, *args, **kwargs):
@@ -274,7 +285,6 @@ class MenuElementButton(MenuElement):
         self.surf = None
         self.renderSurf(self.text)
         self.type = MENU_BUTTON
-        self.mouseInButton = False
         self.cursor = pygame.SYSTEM_CURSOR_HAND
         self.event = None
     
@@ -283,44 +293,29 @@ class MenuElementButton(MenuElement):
         if self.selected:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.event = self.key
+                self.gui.notify_event(self.event)
     
-    def get_event_values(self):
-        if self.event is not None:
-            event = self.event
-            self.event = None
-            return event, {}
-        return None, {}
+    def get_values(self):
+        return {}
 
     def step(self):
-        mousePos = mouseInWin()
-        buttonPos = self.getSuperPos() + self.pos
-        posInButton = mousePos - buttonPos
-        if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
-            # if not self.mouseInButton:
-                # mouse enters button
-                # if self.tooltip:
-                    # Gui._instance.toaster.showToolTip(self)
-                # Gui._instance.showCursor(self.cursor, self)
-            self.mouseInButton = True
-            self.selected = True
-            self.animation_offset = self.animation_offset + (1 - self.animation_offset) * 0.3
-            return self
-        else:
-            self.mouseInButton = False
-            self.selected = False
-            self.animation_offset = self.animation_offset + (0 - self.animation_offset) * 0.3
+        self.selection_check()
+        self.highlight_check()
         return None
     
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
     
-class MenuElementUpDown(MenuElementButton):
+class MenuElementUpDown(MenuElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text = kwargs.get('text', "")
-        self.showValue = True
+        self.showValue = kwargs.get('showValue', False)
         self.mode = 0
-        self.renderSurf(str(self.value))
+        if self.showValue:
+            self.renderSurf(str(self.value))
+        else:
+            self.renderSurf(self.text)
         self.type = MENU_UPDOWN
         self.limitMin = kwargs.get('limitMin', False)
         self.limitMax = kwargs.get('limitMax', False)
@@ -328,15 +323,19 @@ class MenuElementUpDown(MenuElementButton):
         self.limMax = kwargs.get('limMax', 100)
         self.values = kwargs.get('values', None)
         self.stepSize = kwargs.get('stepSize', 1)
+        self.generate_event: bool = kwargs.get('generate_event', False)
     
     def handle_pygame_event(self, event):
         super().handle_pygame_event(event)
         if self.selected:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.advance()
+                if self.generate_event:
+                    self.gui.notify_event(self.key)
 
-    def get_event_values(self):
-        return None, {self.key: self.value}
+    def get_values(self):
+        event = self.key if self.generate_event else None
+        return {self.key: self.value}
 
     def advance(self):
         if self.values:
@@ -357,21 +356,15 @@ class MenuElementUpDown(MenuElementButton):
         posInButton = mousePos - buttonPos
         if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
             self.selected = True
-            self.animation_offset = self.animation_offset + (1 - self.animation_offset) * 0.3
-            # if self.tooltip:
-                # Gui._instance.toaster.showToolTip(self)
-            # Gui._instance.showCursor(pygame.SYSTEM_CURSOR_HAND, self)
-            if posInButton[1] > posInButton[0] * (self.size[1] / self.size[0]): # need replacement
+            if posInButton[1] > posInButton[0] * (self.size[1] / self.size[0]):
                 self.mode = -1
             else:
                 self.mode = 1
             if self.showValue:
                 self.renderSurf(str(self.value))
-            return self
         else:
             self.selected = False
-            self.animation_offset = self.animation_offset + (0 - self.animation_offset) * 0.3
-        return None
+        self.highlight_check()
     
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
@@ -383,13 +376,14 @@ class MenuElementUpDown(MenuElementButton):
         pygame.draw.polygon(win, rightColor, [(buttonPos[0] + self.size[0] - arrowSize, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + border), (buttonPos[0] + self.size[0] - border - 1, buttonPos[1] + arrowSize)])
         pygame.draw.polygon(win, leftColor, [(buttonPos[0] + border ,buttonPos[1] + self.size[1] - arrowSize), (buttonPos[0] + border, buttonPos[1] + self.size[1] - border - 1), (buttonPos[0] + arrowSize, buttonPos[1] + self.size[1] - border - 1)])
 
-
-class MenuElementToggle(MenuElementButton):
+class MenuElementToggle(MenuElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.type = MENU_TOGGLE
         self.border = 1
         self.cursor = pygame.SYSTEM_CURSOR_HAND
+        self.text = kwargs.get('text', "toggle")
+        self.renderSurf(self.text)
     
     def handle_pygame_event(self, event):
         super().handle_pygame_event(event)
@@ -397,8 +391,13 @@ class MenuElementToggle(MenuElementButton):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.value = not self.value
 
-    def get_event_values(self):
-        return None, {self.key: self.value}
+    def get_values(self):
+        return {self.key: self.value}
+    
+    def step(self):
+        super().step()
+        self.selection_check()
+        self.highlight_check()
 
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
@@ -407,21 +406,22 @@ class MenuElementToggle(MenuElementButton):
             pygame.draw.rect(win, StackPanel._toggleColor, ((buttonPos[0] + self.border, buttonPos[1] + self.border), (self.size[0] - 2 * self.border, self.size[1] - 2 * self.border)))
         self.drawText(win)
 
-class MenuElementComboSwitch(MenuElementButton):
+class MenuElementComboSwitch(MenuElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.surf = None
         self.currentIndex = 0
         self.type = MENU_COMBOS
         self.items = kwargs.get('items', [])
+        self.text = kwargs.get('text', 'combo')
         if self.items:
             self.setItems(self.items)
             self.setCurrentItem(self.text)
         self.forward = False
         self.mapping = {}
     
-    def get_event_values(self):
-        return None, {self.key: self.value}
+    def get_values(self):
+        return {self.key: self.value}
     
     def setItems(self, strings, mapping={}):
         self.items = []
@@ -456,7 +456,7 @@ class MenuElementComboSwitch(MenuElementButton):
         posInButton = (mousePos[0] - buttonPos[0], mousePos[1] - buttonPos[1])
         if posInButton[0] >= 0 and posInButton[0] < self.size[0] and posInButton[1] >= 0 and posInButton[1] < self.size[1]:
             self.selected = True
-            self.animation_offset = self.animation_offset + (1 - self.animation_offset) * 0.3
+            self.highlight_value = self.highlight_value + (1 - self.highlight_value) * 0.3
             # if self.tooltip: 
             #     Gui._instance.toaster.showToolTip(self)
             # Gui._instance.showCursor(pygame.SYSTEM_CURSOR_HAND, self)
@@ -467,7 +467,7 @@ class MenuElementComboSwitch(MenuElementButton):
             return self
         else:
             self.selected = False
-            self.animation_offset = self.animation_offset + (0 - self.animation_offset) * 0.3
+            self.highlight_value = self.highlight_value + (0 - self.highlight_value) * 0.3
         return None
     
     def advance(self):
@@ -502,8 +502,8 @@ class MenuElementImage(MenuElementButton):
             self.imageSurf.fill(background)
         self.imageSurf.blit(image, (0, 0), rect)
     
-    def get_event_values(self):
-        return None, {self.key: self.value}
+    def get_values(self):
+        return {self.key: self.value}
 
     def draw(self, win: pygame.Surface) -> None:
         buttonPos = self.getSuperPos() + self.pos
@@ -541,8 +541,8 @@ class MenuElementDragImage(MenuElement):
         win.blit(self.surf, buttonPos)
         pygame.draw.rect(win, StackPanel._buttonColor, (buttonPos, self.surf.get_size()), 2)
     
-    def get_event_values(self):
-        return None, {self.key: self.value}
+    def get_values(self):
+        return {self.key: self.value}
 
     def recalculateImage(self):
         self.surf.fill((0,0,0,0))
@@ -582,15 +582,22 @@ class MenuElementSurf(MenuElement):
         win.blit(self.surf, buttonPos)
         pygame.draw.rect(win, StackPanel._buttonColor, (buttonPos, self.surf.get_size()), 2)
 
-class MenuElementInput(MenuElementButton):
+class InputMode(Enum):
+    IDLE = 0
+    EDIT = 1
+
+class MenuElementInput(MenuElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mode = "fixed"
+        self.mode = InputMode.IDLE
         self.inputText = ""
         self.oldInputText = ""
         self.value = self.inputText
+        self.default_value = kwargs.get('default_value', '')
         self.type = MENU_INPUT
+        self.text = kwargs.get('text', '')
         self.surf = None
+        self.renderSurf(self.text)
         self.cursorSpeed = GameVariables().fps // 4
         self.showCursor = False
         self.timer = 0
@@ -598,29 +605,46 @@ class MenuElementInput(MenuElementButton):
         self.cursor = pygame.SYSTEM_CURSOR_IBEAM
         self.evaluatedType = kwargs.get('evaluatedType', 'str')
     
+    def handle_pygame_event(self, event):
+        super().handle_pygame_event(event)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.selected:
+                self.mode = InputMode.EDIT
+            else:
+                self.mode = InputMode.IDLE
+        
+        if event.type == pygame.KEYDOWN:
+            if self.mode == InputMode.EDIT:
+                self.processKey(event)
+
     def processKey(self, event):
-        if event.key == pygame.K_BACKSPACE:
+        if event.key == pygame.K_BACKSPACE and len(self.inputText) > 0:
             self.inputText = self.inputText[:-1]
+        elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
+            self.mode = InputMode.IDLE
         else:
             self.inputText += event.unicode
         self.value = self.inputText
     
-    def evaluate(self, dic):
-        if self.evaluatedType == 'str':
-            dic[self.key] = self.value
+    def get_values(self):
+        value = self.value
         if self.evaluatedType == 'int':
             if self.value == '':
-                return
-            dic[self.key] = int(self.value)
+                self.value = self.default_value
+            value = int(self.value)
+        return {self.key: value}
     
     def step(self):
-        if self.mode == "editing":
+        if self.mode == InputMode.EDIT:
             self.timer += 1
             if self.timer >= self.cursorSpeed:
                 self.showCursor = not self.showCursor
                 self.timer = 0
             if self.inputText != self.oldInputText:
-                self.renderSurf(self.inputText)
+                render_text = self.inputText
+                if render_text == '':
+                    render_text = self.text
+                self.surf = fonts.pixel5.render(render_text, True, WHITE)
                 self.oldInputText = self.inputText
         mousePos = mouseInWin()
         buttonPos = self.getSuperPos() + self.pos
@@ -639,7 +663,7 @@ class MenuElementInput(MenuElementButton):
         super().draw(win)
         buttonPos = self.getSuperPos() + self.pos
 
-        if self.mode == "editing" and self.showCursor:
+        if self.mode == InputMode.EDIT and self.showCursor:
             win.blit(self.cursorText, (buttonPos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), buttonPos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
 class MenuElementLoadBar(MenuElement):
@@ -680,7 +704,7 @@ class AnimatorBase:
         self.is_done = True
 
 class MenuAnimator(AnimatorBase):
-    def __init__(self, menu, posStart, posEnd, trigger=None, args=None, ease="inout"):
+    def __init__(self, menu, posStart, posEnd, trigger=None, args=None, ease="inout", end_return = False):
         super().__init__()
         self.posStart = posStart
         self.posEnd = posEnd
@@ -688,9 +712,12 @@ class MenuAnimator(AnimatorBase):
         self.fullTime = GameVariables().fps * 1
         self.trigger = trigger
         self.args = args
-        # set first positions
+        self.initial_menu_pos = menu.pos
+        self.end_return = end_return
+        
         self.menu = menu
         self.ease = ease
+        # set first positions
         menu.pos = posStart
     
     def easeIn(self, t):
@@ -721,6 +748,8 @@ class MenuAnimator(AnimatorBase):
     def finish(self):
         super().finish()
         self.menu.pos = self.posEnd
+        if self.end_return:
+            self.menu.pos = self.initial_menu_pos
         if self.trigger:
             if self.args:
                 self.trigger(*self.args)
