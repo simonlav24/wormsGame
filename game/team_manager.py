@@ -107,20 +107,19 @@ class TeamManager(metaclass=SingletonMeta):
     def draw(self, win: pygame.Surface) -> None:
         self.health_bar_hud.draw(win)
 
-        height = sum([l['surf'].get_height() for l in self.score_list])
         x = 5
-        y = win.get_height() - 25 - height
+        y = win.get_height() - 25
         for score_dict in self.score_list:
             win.blit(score_dict['surf'], (x, y))
-            y += score_dict['surf'].get_height() + 1
+            y -= score_dict['surf'].get_height() + 1
 
     def give_point_to_team(self, team: Team, worm: EntityWorm, points) -> None:
         team.points += points
 
         # update point list
         if len(self.score_list) > 0:
-            if self.score_list[-1]['worm'] == worm.name_str:
-                last_score_dict = self.score_list.pop(-1)
+            if self.score_list[0]['worm'] == worm.name_str:
+                last_score_dict = self.score_list.pop(0)
                 points += last_score_dict['points']
 
         # create surf
@@ -135,4 +134,6 @@ class TeamManager(metaclass=SingletonMeta):
             'points': points,
             'surf': surf
         }
-        self.score_list.append(score_surf)
+        self.score_list.insert(0, score_surf)
+        if len(self.score_list) > 10:
+            self.score_list.pop(-1)

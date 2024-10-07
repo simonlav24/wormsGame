@@ -862,12 +862,6 @@ def onKeyPressLeft():
 	GameVariables().player.turn(LEFT)
 
 def onKeyPressSpace():
-	# energize weapon
-	# if WeaponManager().can_shoot():
-	# 	if WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE:
-	# 		WeaponManager().energising = True
-	# 		WeaponManager().energy_level = 0
-	
 	# release worm_tool
 	if GameVariables().game_state == GameState.PLAYER_RETREAT:
 		worm_tool = GameVariables().player.get_tool()
@@ -876,39 +870,12 @@ def onKeyPressSpace():
 
 def onKeyHoldSpace():
 	...
-	# WeaponManager().energy_level += 0.05
-	# if WeaponManager().energy_level >= 1:
-	# 	WeaponManager().energy_level = 1
-	# 	WeaponManager().fire()
 
 def onKeyReleaseSpace():
 	...
-	# if WeaponManager().can_shoot(check_ammo=False):
-	# 	fire_weapon_conditions = [
-	# 		WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising,
-	# 		WeaponManager().current_weapon.style in [WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL, WeaponStyle.SPECIAL],
-	# 		WeaponManager().current_weapon.style in [WeaponStyle.PUTABLE, WeaponStyle.GUN],
-	# 	]
-	# 	if any(fire_weapon_conditions):
-	# 		WeaponManager().fire()
-	# 	WeaponManager().energising = False
 
 def onMouseButtonPressed():
 	...
-	# CLICKABLE weapon check:
-	# if (
-	# 	GameVariables().game_state == GameState.PLAYER_PLAY and
-	# 	WeaponManager().current_weapon.style == WeaponStyle.CLICKABLE and
-	# 	WeaponManager().can_shoot()
-	# ):
-	# 	WeaponManager().fire()
-	# if (
-	# 	GameVariables().game_state == GameState.PLAYER_PLAY and 
-	# 	WeaponManager().current_weapon.name in ["homing missile", "seeker"] and
-	# 	not Game._game.radial_weapon_menu
-	# ):
-	# 	mouse_pos = mouse_pos_in_world()
-	# 	GameVariables().point_target = vectorCopy(mouse_pos)
 
 def onKeyPressTab():
 	if WeaponManager().current_weapon.name == "drill missile":
@@ -1055,13 +1022,6 @@ class GameRoom(Room):
 
 	def step(self):
 		''' game step '''
-		
-		# key hold:
-		# keys = pygame.key.get_pressed()
-		# if GameVariables().player is not None and GameVariables().is_player_in_control() and GameVariables().player_can_move:
-			# fire hold
-			# if keys[pygame.K_SPACE] and GameVariables().can_player_shoot() and WeaponManager().current_weapon.style == WeaponStyle.CHARGABLE and WeaponManager().energising:
-			# 	onKeyHoldSpace()
 
 		result = stateMachine()
 		if result == 1:
@@ -1095,8 +1055,6 @@ class GameRoom(Room):
 
 		if oldSize != (GameGlobals().win_width, GameGlobals().win_height):
 			GameGlobals().win = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height))
-			GameGlobals().win_width = GameGlobals().win_width
-			GameGlobals().win_height = GameGlobals().win_height
 		
 		# handle position:
 		if GameVariables().cam_track:
@@ -1112,13 +1070,7 @@ class GameRoom(Room):
 			GameVariables().cam_pos[1] = 0
 		if GameVariables().cam_pos[1] >= MapManager().game_map.get_height() - GameGlobals().win_height:
 			GameVariables().cam_pos[1] = MapManager().game_map.get_height() - GameGlobals().win_height
-		# if GameVariables().config.option_closed_map or Game._game.darkness:
-		# 	if GameVariables().cam_pos[0] < 0:
-		# 		GameVariables().cam_pos[0] = 0
-		# 	if GameVariables().cam_pos[0] >= MapManager().game_map.get_width() - GameGlobals().win_width:
-		# 		GameVariables().cam_pos[0] = MapManager().game_map.get_width() - GameGlobals().win_width
-		
-		# ------- objects step -------
+
 
 		if Earthquake.earthquake > 0:
 			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
@@ -1139,6 +1091,7 @@ class GameRoom(Room):
 		# step time manager
 		TimeManager().step()
 		GameVariables().hud.step()
+		TeamManager().step()
 
 		# step background
 		Game._game.background.step()
@@ -1172,11 +1125,17 @@ class GameRoom(Room):
 	def draw(self, win: pygame.Surface) -> None:
 		''' draw game '''
 		super().draw(win)
+
 		if GameVariables().game_state in [GameState.RESET]:
 			return
-		# ------- draw -------
+
+		# draw background
 		Game._game.background.draw(win)
+
+		# draw map
 		MapManager().draw_land(win)
+
+		# draw objects
 		for p in GameVariables().get_physicals(): 
 			p.draw(win)
 		
@@ -1185,41 +1144,38 @@ class GameRoom(Room):
 		# draw effects
 		EffectManager().draw(win)
 
-		Game._game.background.drawSecondary(win)
+		# draw top layer of background
+		Game._game.background.draw_secondary(win)
+
 		for t in Toast._toasts:
 			t.draw(win)
 		
-		
 		# draw shooting indicator
 		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:
-			GameVariables().player.drawCursor(win)
+			GameVariables().player.draw_cursor(win)
+			# draw aim aid
 			if GameVariables().aim_aid and WeaponManager().current_weapon.style == WeaponStyle.GUN:
 				p1 = vectorCopy(GameVariables().player.pos)
 				p2 = p1 + GameVariables().player.get_shooting_direction() * 500
 				pygame.draw.line(win, (255,0,0), point2world(p1), point2world(p2))
-			# i = 0
-			# while i < 20 * WeaponManager().energy_level:
-			# 	cPos = vectorCopy(GameVariables().player.pos)
-			# 	pygame.draw.line(win, (0,0,0), point2world(cPos), point2world(cPos + GameVariables().player.get_shooting_direction() * i))
-			# 	i += 1
-		
+
+		# draw weapon indicators
+		WeaponManager().draw_weapon_hint(win)
+
+		# draw extra
 		GameVariables().draw_extra(win)
 		GameVariables().draw_layers(win)
 		
 		# draw game play mode
 		GameVariables().game_mode.draw(win)
 
-		# HUD
+		# draw HUD
 		GameVariables().hud.draw(win)
 		TimeManager().draw(win)
-
 		GameVariables().commentator.draw(win)
-		# draw weapon indicators
-		WeaponManager().draw_weapon_hint(win)
 		WeaponManager().draw(win)
 		
 		# draw health bar
-		TeamManager().step()
 		TeamManager().draw(win)
 		
 		# weapon menu:
@@ -1244,7 +1200,7 @@ class GameRoom(Room):
 		# win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
 		
 		# draw loading screen
-		if GameVariables().game_state in [GameState.RESET]:
+		if GameVariables().game_state == GameState.RESET:
 			win.fill((0,0,0))
 			pos = (GameGlobals().win_width/2 - Game._game.loadingSurf.get_width()/2, GameGlobals().win_height/2 - Game._game.loadingSurf.get_height()/2)
 			win.blit(Game._game.loadingSurf, pos)
@@ -1255,24 +1211,19 @@ class GameRoom(Room):
 			pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((Game._game.lstep/Game._game.lstepmax)*Game._game.loadingSurf.get_width(), Game._game.loadingSurf.get_height())))
 
 
-wip = '''refactoring stage:
-	still in wip:
-		pokeball damages by falling
-		collecting weapons create make the number float, not the nemae
+wip = '''
+	still in progress:
 		water rise
 		loading screen
-		optimize fire drawing for it is slowing
-		optimize laser (?)
+		win record
 		holding mjolnir
-		winning
-		darkness outside area (either close or draw black)
-		decrease rope count only in the end of the turn
-		dont decrease parachute, ropes, trampoline if not opened
-		cant release jetpack if ammo = 0
 		icicle weird behaviour on hit
 		minecraft weapons
 		surf of weapon holding on next turn
 		targets mode should remain targets every Round, not turn
+		check for worm tools to not be able to open when ammo == 0
+		add info in the pause menu: round count, score ...
+		make main menu return after animation fly off (or save a menu json and rebuild every time)
 	'''
 
 
@@ -1305,14 +1256,19 @@ def main():
 
 	done = False
 	while not done:
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				done = True
-			current_room.handle_pygame_event(event)
-		
 		try:
+			# handle events
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					done = True
+				current_room.handle_pygame_event(event)
+		
 			# step
 			current_room.step()
+
+			# draw
+			current_room.draw(GameGlobals().win)
+
 			if current_room.is_ready_to_switch():
 				# switch room
 				switch = current_room.switch
@@ -1327,9 +1283,6 @@ def main():
 						break
 					existing_room = rooms_dict[switch.next_room]
 					current_room = existing_room
-
-			# draw
-			current_room.draw(GameGlobals().win)
 		except Exception:
 			print(traceback.format_exc())
 

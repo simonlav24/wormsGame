@@ -195,7 +195,7 @@ class BackGround:
         for layer in self.water_layers_bottom:
             layer.draw(win)
     
-    def drawSecondary(self, win: pygame.Surface):
+    def draw_secondary(self, win: pygame.Surface):
         for layer in self.water_layers_top:
             layer.draw(win)
     

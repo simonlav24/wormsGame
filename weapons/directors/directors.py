@@ -252,9 +252,12 @@ class ActorWormTool(WeaponActorBase):
         if tool is not None:
             tool.release()
 
+    def abort(self) -> None:
+        pass
 
     def finalize(self):
         super().finalize()
         GameVariables().cam_track = GameVariables().player
-        if GameVariables().game_state != GameState.PLAYER_PLAY:
+        if (GameVariables().game_state != GameState.PLAYER_PLAY and
+            not self.weapon.decrease_on_turn_end):
             self.is_done = True

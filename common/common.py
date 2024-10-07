@@ -87,7 +87,7 @@ class EntityWorm(EntityPhysical):
 	def get_shooting_direction(self) -> Vector:
 		...
 	
-	def drawCursor(self, win: pygame.Surface) -> None:
+	def draw_cursor(self, win: pygame.Surface) -> None:
 		...
 
 	def get_shooting_angle(self) -> float:

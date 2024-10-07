@@ -67,7 +67,7 @@ class Worm(PhysObj):
         else:# up
             self.acc.y -= GameVariables().physics.global_gravity
     
-    def drawCursor(self, win: pygame.Surface):
+    def draw_cursor(self, win: pygame.Surface):
         shoot_vec = self.pos + self.get_shooting_direction() * 20
         pygame.draw.circle(win, (255,255,255), (int(shoot_vec.x) - int(GameVariables().cam_pos[0]), int(shoot_vec.y) - int(GameVariables().cam_pos[1])), 2)
     
@@ -298,7 +298,7 @@ class Worm(PhysObj):
             self.shoot_vel = 0
 
         # collision with worms
-        if not self.stable:
+        if not self.stable and not self.worm_tool.in_use():
             velocity = self.vel.getMag()
             if velocity > 5:
                 for worm in GameVariables().get_worms():

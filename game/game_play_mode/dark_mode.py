@@ -4,7 +4,7 @@ from typing import List
 
 import pygame
 
-from common import GameVariables
+from common import GameVariables, DARK_COLOR, LIGHT_RADIUS, point2world
 
 from game.game_play_mode.game_play_mode import GamePlayMode
 from game.team_manager import TeamManager
@@ -39,11 +39,9 @@ class DarknessGamePlay(GamePlayMode):
     
     def draw(self, win: pygame.Surface):
         super().draw(win)
-
         center = GameVariables().player.pos
         dark_mask = EffectManager().get_dark_mask(center)
-        win.blit(dark_mask, (-int(GameVariables().cam_pos[0]), -int(GameVariables().cam_pos[1])))
-
+        win.blit(dark_mask, (0,0))
 
 
 
