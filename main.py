@@ -15,7 +15,7 @@ from common.game_config import GameMode, RandomMode, SuddenDeathMode
 
 from rooms.room import Room, Rooms, SwitchRoom
 from rooms.room_main_menu import MainMenuRoom
-from rooms.room_pause import PauseRoom
+from rooms.room_pause import PauseRoom, PauseRoomInfo
 from rooms.splash_screen import SplashScreenRoom
 
 from game.game_play_mode import (
@@ -989,7 +989,11 @@ class GameRoom(Room):
 				# misc
 				if event.key == pygame.K_ESCAPE:
 					# switch to pause menu
-					self.switch = SwitchRoom(Rooms.PAUSE_MENU, True, None)
+					pause_info = PauseRoomInfo(
+						teams_score=TeamManager().get_info(),
+						round_count=GameVariables().game_round_count
+						)
+					self.switch = SwitchRoom(Rooms.PAUSE_MENU, True, pause_info)
 				if event.key == pygame.K_TAB:
 					onKeyPressTab()
 				if event.key == pygame.K_t:
@@ -1033,15 +1037,15 @@ class GameRoom(Room):
 
 		# edge map scroll
 		if pygame.mouse.get_focused():
-			mousePos = pygame.mouse.get_pos()
+			mouse_pos = pygame.mouse.get_pos()
 			scroll = Vector()
-			if mousePos[0] < EDGE_BORDER:
+			if mouse_pos[0] < EDGE_BORDER:
 				scroll.x -= MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
-			if mousePos[0] > GameGlobals().screen_width - EDGE_BORDER:
+			if mouse_pos[0] > GameGlobals().screen_width - EDGE_BORDER:
 				scroll.x += MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
-			if mousePos[1] < EDGE_BORDER:
+			if mouse_pos[1] < EDGE_BORDER:
 				scroll.y -= MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
-			if mousePos[1] > GameGlobals().screen_height - EDGE_BORDER:
+			if mouse_pos[1] > GameGlobals().screen_height - EDGE_BORDER:
 				scroll.y += MAP_SCROLL_SPEED * (2.5 - GameGlobals().scale_factor / 2)
 			if scroll != Vector():
 				GameVariables().cam_track = Camera(GameVariables().cam_pos + Vector(GameGlobals().win_width, GameGlobals().win_height)/2 + scroll)

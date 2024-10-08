@@ -1,22 +1,31 @@
 
+from dataclasses import dataclass
+from typing import List, Dict, Any, Tuple
 
 import pygame
 
 from rooms.room import Room, Rooms, SwitchRoom
 from gui.menu_gui_new import (
-    Gui, StackPanel, MenuElementText, MenuElementButton,
+    Gui, StackPanel, Text, Button, HORIZONTAL, LoadBar
 )
 
 from common import GameGlobals
 from common.vector import Vector
+
+@dataclass
+class PauseRoomInfo:
+    teams_score: Tuple[Dict[str, Any]] = ()
+    round_count: int = -1
+    
 
 class PauseRoom(Room):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.gui = Gui()
 
+        self.info: PauseRoomInfo = kwargs.get('input', None)
         pause_menu = self.initialize_pause_menu()
-        self.gui.menus.append(pause_menu)
+        self.gui.insert(pause_menu)
 
     def handle_pygame_event(self, event) -> None:
         ''' handle gui events '''
@@ -27,8 +36,9 @@ class PauseRoom(Room):
         super().step()
         self.gui.step()
 
-        gui_event, gui_values = self.gui.get_event_values()
-        self.handle_gui_events(gui_event, gui_values)
+        gui_event, gui_values = self.gui.listen()
+        if gui_event is not None:
+            self.handle_gui_events(gui_event, gui_values)
     
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
@@ -45,25 +55,26 @@ class PauseRoom(Room):
     def initialize_pause_menu(self) -> StackPanel:
         ''' create pause layout '''
         pauseMenu = StackPanel(name="endMenu", pos=[GameGlobals().win_width//2  - GameGlobals().win_width//4, 40], size=[GameGlobals().win_width // 2, 160])
-        pauseMenu.insert(MenuElementText(text="Game paused"))
+        pauseMenu.insert(Text(text="Game paused"))
+        pauseMenu.insert(Text(text=f"Round {self.info.round_count}", custom_size=15))
 
-        # if "showPoints" in args.keys() and args["showPoints"]:
-        # 	maxPoints = max([team.points for team in args["teams"]])
-        # 	if maxPoints == 0:
-        # 		maxPoints = 1
-        # 	for team in args["teams"]:
-        # 		teamScore = Menu(orientation=HORIZONTAL, customSize=15)
-        # 		teamScore.insert(MENU_TEXT, text=team.name, customSize=50)
-        # 		teamScore.insert(MENU_LOADBAR, value = team.points, color=team.color, maxValue=maxPoints)
-        # 		pauseMenu.addElement(teamScore)
+        if len(self.info.teams_score) > 0:
+            max_score = max(team['score'] for team in self.info.teams_score)
+            if max_score == 0:
+                max_score = 1
+            for team in self.info.teams_score:
+                teamScore = StackPanel(orientation=HORIZONTAL, custom_size=15)
+                teamScore.insert(Text(text=team['name'], custom_size=50))
+                teamScore.insert(LoadBar(value=team['score'], color=team['color'], max_value=max_score))
+                pauseMenu.add_element(teamScore)
 
         # if "missions" in args.keys():
         # 	pauseMenu.insert(MENU_TEXT, text="- missions -")
         # 	for mission in args["missions"]:
         # 		pauseMenu.insert(MENU_TEXT, text=mission)
 
-        pauseMenu.insert(MenuElementButton(key="resume", text="resume"))
-        pauseMenu.insert(MenuElementButton(key="to_main_menu", text="back to main menu"))
+        pauseMenu.insert(Button(key="resume", text="resume"))
+        pauseMenu.insert(Button(key="to_main_menu", text="back to main menu"))
         pauseMenu.pos = Vector(GameGlobals().win_width//2 - pauseMenu.size[0]//2, GameGlobals().win_height//2 - pauseMenu.size[1]//2)
 
         return pauseMenu

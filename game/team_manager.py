@@ -78,6 +78,18 @@ class TeamManager(metaclass=SingletonMeta):
         # score list
         self.score_list: List[Dict[str, Any]] = []
     
+    def get_info(self) -> List[Dict[str, Any]]:
+        info = []
+        for team in self.teams:
+            info.append(
+                {
+                    'name': team.name,
+                    'color': team.color,
+                    'score': team.points
+                }
+            )
+        return tuple(info)
+
     def get_by_name(self, name: str) -> Team:
         for team in self.teams:
             if team.name == name:

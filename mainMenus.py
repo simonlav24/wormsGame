@@ -38,21 +38,21 @@ class MainMenu:
 
 	def initializeEndGameMenu(self, parameters):
 		endMenu = Menu(name="endMenu", pos=[GameGlobals().win_width // 2  - GameGlobals().win_width//4, (GameGlobals().win_height - 160)//2], size=[GameGlobals().win_width // 2, 160], register=True)
-		endMenu.insert(MENU_TEXT, text="Game Over", customSize=15)
+		endMenu.insert(MENU_TEXT, text="Game Over", custom_size=15)
 		if "winner" in parameters.keys():
 			endMenu.insert(MENU_TEXT, text="team " + parameters["winner"] + " won the game!")
 		else:
 			endMenu.insert(MENU_TEXT, text="its a tie!")
 		if "mostDamage" in parameters.keys():
-			endMenu.insert(MENU_TEXT, text="most damage dealt: " + str(parameters["mostDamage"]) + " by " + parameters["damager"], customSize=15)
+			endMenu.insert(MENU_TEXT, text="most damage dealt: " + str(parameters["mostDamage"]) + " by " + parameters["damager"], custom_size=15)
 
 		maxpoints = max([parameters["teams"][i][1] for i in parameters["teams"]])
 		for team in parameters["teams"].keys():
-			teamScore = Menu(orientation=HORIZONTAL, customSize=15)
-			teamScore.insert(MENU_TEXT, text=team, customSize=50)
-			bar = teamScore.insert(MENU_LOADBAR, value = 0, color=parameters["teams"][team][0], maxValue=maxpoints)
-			endMenu.addElement(teamScore)
-			ElementAnimator(bar, 0, parameters["teams"][team][1], duration = GameGlobals().fps, timeOffset=2 * GameGlobals().fps)
+			teamScore = Menu(orientation=HORIZONTAL, custom_size=15)
+			teamScore.insert(MENU_TEXT, text=team, custom_size=50)
+			bar = teamScore.insert(MENU_LOADBAR, value = 0, color=parameters["teams"][team][0], max_value=maxpoints)
+			endMenu.add_element(teamScore)
+			ElementAnimator(bar, 0, parameters["teams"][team][1], duration = GameGlobals().fps, time_offset=2 * GameGlobals().fps)
 
 		endMenu.insert(MENU_BUTTON, key="continue", text="continue")
 	
@@ -69,15 +69,15 @@ class MainMenu:
 		mapping = {"-1":"inf"}
 
 		while weaponIndex < weaponCount:
-			sub = Menu(orientation=HORIZONTAL, customSize=16)
+			sub = Menu(orientation=HORIZONTAL, custom_size=16)
 			for j in range(6):
-				pic = MenuElementImage()
-				pic.customSize = 16
+				pic = ImageButton()
+				pic.custom_size = 16
 				bgColor = (255, 255, 255)
-				pic.setImage(weaponSprites, spriteIndex2rect(weaponIndex + indexOffset), background=bgColor)
+				pic.set_image(weaponSprites, spriteIndex2rect(weaponIndex + indexOffset), background=bgColor)
 				pic.tooltip = weapons[weaponIndex].attrib["name"]
 
-				sub.addElement(pic)
+				sub.add_element(pic)
 				amount = weapons[weaponIndex].attrib["amount"]
 				if zero:
 					amount = "0"
@@ -86,33 +86,33 @@ class MainMenu:
 				if weaponIndex >= weaponCount:
 					break
 
-			wepMenu.addElement(sub)
+			wepMenu.add_element(sub)
 
 		sub = Menu(orientation=HORIZONTAL)
 		sub.insert(MENU_TEXT, text="weapon set name:")
 		sub.insert(MENU_INPUT, key="filename", text="enter name")
 		sub.insert(MENU_BUTTON, key="saveweapons", text="save")
-		wepMenu.addElement(sub)
+		wepMenu.add_element(sub)
 
 		sub = Menu(orientation=HORIZONTAL)
 		sub.insert(MENU_BUTTON, key="back", text="back")
 		sub.insert(MENU_BUTTON, key="defaultweapons", text="default")
 		sub.insert(MENU_BUTTON, key="zeroweapons", text="zero")
-		wepMenu.addElement(sub)
+		wepMenu.add_element(sub)
 
 	def initializeMenuOptions(self):
 		mainMenu = Menu(name="menu", pos=[40, (GameGlobals().win_height - 196)//2], size=[GameGlobals().win_width - 80, 196], register=True)
-		mainMenu.insert(MENU_BUTTON, key="play", text="play", customSize=16)
+		mainMenu.insert(MENU_BUTTON, key="play", text="play", custom_size=16)
 
 		optionsAndPictureMenu = Menu(name="options and picture", orientation=HORIZONTAL)
 
 		# options vertical sub menu
 		optionsMenu = Menu(name="options")
 
-		subMode = Menu(orientation=HORIZONTAL, customSize=15)
+		subMode = Menu(orientation=HORIZONTAL, custom_size=15)
 		subMode.insert(MENU_TEXT, text="game mode")
 		subMode.insert(MENU_COMBOS, key="game_mode", text=list(GameMode)[0].value, items=[mode.value for mode in GameMode])
-		optionsMenu.addElement(subMode)
+		optionsMenu.add_element(subMode)
 
 		# toggles
 		toggles = [
@@ -127,10 +127,10 @@ class MainMenu:
 		for i in range(0, len(toggles) - 1, 2):
 			first = toggles[i]
 			second = toggles[i + 1]
-			subOpt = Menu(orientation = HORIZONTAL, customSize = 15)
+			subOpt = Menu(orientation = HORIZONTAL, custom_size = 15)
 			subOpt.insert(MENU_TOGGLE, key=first[1], text=first[0], value=first[2])
 			subOpt.insert(MENU_TOGGLE, key=second[1], text=second[0], value=second[2])
-			optionsMenu.addElement(subOpt)
+			optionsMenu.add_element(subOpt)
 
 		# counters
 		counters = [
@@ -142,48 +142,48 @@ class MainMenu:
 		for c in counters:
 			subOpt = Menu(orientation=HORIZONTAL)
 			subOpt.insert(MENU_TEXT, text=c[0])
-			subOpt.insert(MENU_UPDOWN, key=c[1], text=c[0], value=c[2], limitMax=True, limitMin=True, limMin=c[3], limMax=c[4], stepSize=c[5])		
-			optionsMenu.addElement(subOpt)
+			subOpt.insert(MENU_UPDOWN, key=c[1], text=c[0], value=c[2], limit_max=True, limit_min=True, lim_min=c[3], lim_max=c[4], step_size=c[5])		
+			optionsMenu.add_element(subOpt)
 
 		# random turns
 		subMode = Menu(orientation=HORIZONTAL)
 		subMode.insert(MENU_TEXT, text="random turns")
 		subMode.insert(MENU_COMBOS, key="random_mode", items=[mode.value for mode in RandomMode])	
-		optionsMenu.addElement(subMode)
+		optionsMenu.add_element(subMode)
 
 		# sudden death
 		subMode = Menu(orientation=HORIZONTAL)
 		subMode.insert(MENU_TEXT, text="sudden death")
-		subMode.insert(MENU_UPDOWN, key="rounds_for_sudden_death", value=16, text="16", limitMin=True, limMin=0, customSize=19)
+		subMode.insert(MENU_UPDOWN, key="rounds_for_sudden_death", value=16, text="16", limit_min=True, lim_min=0, custom_size=19)
 		subMode.insert(MENU_COMBOS, key="sudden_death_style", items=[style.value for style in SuddenDeathMode])
-		optionsMenu.addElement(subMode)
+		optionsMenu.add_element(subMode)
 
-		optionsAndPictureMenu.addElement(optionsMenu)
+		optionsAndPictureMenu.add_element(optionsMenu)
 
 		# map options vertical sub menu
 		mapMenu = Menu(name="map menu", orientation=VERTICAL)
 		MainMenu._picture = mapMenu.insert(MENU_DRAGIMAGE, key="map_path", image=choice(MainMenu._maps))
 
 		# map buttons
-		subMap = Menu(orientation = HORIZONTAL, customSize=15)
+		subMap = Menu(orientation = HORIZONTAL, custom_size=15)
 		subMap.insert(MENU_BUTTON, key="random_image", text="random")
 		subMap.insert(MENU_BUTTON, key="browse", text="browse")
 		subMap.insert(MENU_BUTTON, key="generate", text="generate")
 
-		mapMenu.addElement(subMap)
+		mapMenu.add_element(subMap)
 
 		# recolor & ratio
-		subMap = Menu(orientation = HORIZONTAL, customSize = 15)
+		subMap = Menu(orientation = HORIZONTAL, custom_size = 15)
 		subMap.insert(MENU_TOGGLE, key="is_recolor", text="recolor")
 		subMap.insert(MENU_TEXT, text="ratio")
-		subMap.insert(MENU_INPUT, key="map_ratio", text="enter ratio", evaluatedType='int')
+		subMap.insert(MENU_INPUT, key="map_ratio", text="enter ratio", eval_type='int')
 
-		mapMenu.addElement(subMap)
-		optionsAndPictureMenu.addElement(mapMenu)
-		mainMenu.addElement(optionsAndPictureMenu)
+		mapMenu.add_element(subMap)
+		optionsAndPictureMenu.add_element(mapMenu)
+		mainMenu.add_element(optionsAndPictureMenu)
 
 		# weapons setup
-		subweapons = Menu(orientation=HORIZONTAL, customSize=14)
+		subweapons = Menu(orientation=HORIZONTAL, custom_size=14)
 		subweapons.insert(MENU_BUTTON, key="weapons setup", text="weapons setup")
 		weaponsSets = ['default']
 
@@ -193,27 +193,27 @@ class MainMenu:
 
 		subweapons.insert(MENU_TEXT, text="weapons set:")
 		subweapons.insert(MENU_COMBOS, name="weapon_combo", key="weapon_set", items=weaponsSets)
-		mainMenu.addElement(subweapons)
+		mainMenu.add_element(subweapons)
 
-		subMore = Menu(orientation=HORIZONTAL, customSize=14)
+		subMore = Menu(orientation=HORIZONTAL, custom_size=14)
 		subMore.insert(MENU_BUTTON, key="scoreboard", text="score board")
-		mainMenu.addElement(subMore)
+		mainMenu.add_element(subMore)
 		
-		subMore = Menu(orientation=HORIZONTAL, customSize=14)
+		subMore = Menu(orientation=HORIZONTAL, custom_size=14)
 		subMore.insert(MENU_BUTTON, key="exit", text="exit")
-		mainMenu.addElement(subMore)
+		mainMenu.add_element(subMore)
 
 		# background feel menu
 		bgMenu = Menu(pos=[GameGlobals().win_width - 20, GameGlobals().win_height - 20], size=[20, 20], register=True)
-		bgMenu.insert(MENU_UPDOWN, text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], showValue=False)
+		bgMenu.insert(MENU_UPDOWN, text="bg", key="feel_index", value=feelIndex, values=[i for i in range(len(feels))], show_value=False)
 
 	def initializeRecordMenu(self):
 		# clear graphs
 
 		recordMenu = Menu(name="record menu", pos=[GameGlobals().win_width//2  - GameGlobals().win_width//4, (GameGlobals().win_height - 180)//2], size=[GameGlobals().win_width // 2, 180], register=True)
-		recordMenu.insert(MENU_TEXT, text="worms game records", customSize=15)
+		recordMenu.insert(MENU_TEXT, text="worms game records", custom_size=15)
 		b = recordMenu.insert(MENU_SURF)
-		recordMenu.insert(MENU_BUTTON, key="back", text="back", customSize=15)
+		recordMenu.insert(MENU_BUTTON, key="back", text="back", custom_size=15)
 	
 		readRecord = countWin()
 		if readRecord is None:
@@ -238,14 +238,14 @@ class MainMenu:
 		# print(event.key, event.value)
 		if key == "random_image":
 			path = choice(MainMenu._maps)
-			MainMenu._picture.setImage(path)
+			MainMenu._picture.set_image(path)
 		if key == "-feel":
 			BackGround._bg.feelIndex = event.value
 			BackGround._bg.recreate()
 		if key == "browse":
 			filepath = browseFile()
 			if filepath:
-				MainMenu._picture.setImage(filepath)
+				MainMenu._picture.set_image(filepath)
 		if key == "generate":
 			width, height = 800, 300
 			noise = generateNoise(width, height)
@@ -254,7 +254,7 @@ class MainMenu:
 				os.mkdir("wormsMaps/PerlinMaps")
 			imageString = "wormsMaps/PerlinMaps/perlin" + str(x.day) + str(x.month) + str(x.year % 100) + str(x.hour) + str(x.minute) + ".png"
 			pygame.image.save(noise, imageString)
-			MainMenu._picture.setImage(imageString)
+			MainMenu._picture.set_image(imageString)
 		if key == "play":
 			MenuAnimator(Menu._reg[0], Menu._reg[0].pos, Menu._reg[0].pos + Vector(0, -GameGlobals().win_height), trigger=playOnPress)
 		if key == "continue":
@@ -294,10 +294,10 @@ class PauseMenu:
 			if maxPoints == 0:
 				maxPoints = 1
 			for team in args["teams"]:
-				teamScore = Menu(orientation=HORIZONTAL, customSize=15)
-				teamScore.insert(MENU_TEXT, text=team.name, customSize=50)
-				teamScore.insert(MENU_LOADBAR, value = team.points, color=team.color, maxValue=maxPoints)
-				pauseMenu.addElement(teamScore)
+				teamScore = Menu(orientation=HORIZONTAL, custom_size=15)
+				teamScore.insert(MENU_TEXT, text=team.name, custom_size=50)
+				teamScore.insert(MENU_LOADBAR, value = team.points, color=team.color, max_value=maxPoints)
+				pauseMenu.add_element(teamScore)
 
 		if "missions" in args.keys():
 			pauseMenu.insert(MENU_TEXT, text="- missions -")
@@ -404,7 +404,7 @@ def mainMenu(fromGameParameters=None, toGameParameters=None):
 
 	while MainMenu._mm.run:
 		for event in pygame.event.get():
-			mousePos = pygame.mouse.get_pos()
+			mouse_pos = pygame.mouse.get_pos()
 			handle_pygame_events(event, MainMenu._mm.handleMainMenu)
 			if event.type == pygame.QUIT:
 				globals.exitGame()

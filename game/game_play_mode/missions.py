@@ -266,7 +266,7 @@ class Mission:
         self.completed = False
         self.readyToChange = False
         self.timer = 3 * GameVariables().fps
-        self.textSurf = None
+        self.text_surf = None
         self.surf = None
 
     def __str__(self):
@@ -374,13 +374,13 @@ class Mission:
             draw_target(win, self.target.pos)
 
     def update_display(self):
-        if not self.textSurf:
-            self.textSurf = fonts.pixel5.render(self.mission_to_string(), False, WHITE)
-            self.surf = pygame.Surface((self.textSurf.get_width() + 2, self.textSurf.get_height() + 2))
+        if not self.text_surf:
+            self.text_surf = fonts.pixel5.render(self.mission_to_string(), False, WHITE)
+            self.surf = pygame.Surface((self.text_surf.get_width() + 2, self.text_surf.get_height() + 2))
 
         # interpolate from Black to Green base on timer [0, 3 * fps]
         amount = (1 - self.timer / (3 * GameVariables().fps)) * 4
         back_color = (0, min(255 * amount, 255), 0)
 
         self.surf.fill(back_color)
-        self.surf.blit(self.textSurf, (1,1))
+        self.surf.blit(self.text_surf, (1,1))
