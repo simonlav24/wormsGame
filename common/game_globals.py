@@ -17,5 +17,12 @@ class GameGlobals(metaclass=SingletonMeta):
 
         self.fps = 30
 
+    def reset_win_scale(self):
+        ''' reset window size to initial scaled '''
+        self.scale_factor = self.scale_range[1]
+        self.win_width = int(self.screen_width / self.scale_factor)
+        self.win_height = int(self.screen_height / self.scale_factor)
+        GameGlobals().win = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height))
+
     def update_win(self, win: pygame.Surface):
         pass

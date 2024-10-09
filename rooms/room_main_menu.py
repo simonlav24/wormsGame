@@ -45,6 +45,7 @@ class MainMenuRoom(Room):
 
     def on_resume(self):
         super().on_resume()
+        GameGlobals().reset_win_scale()
         animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
         self.gui.animators.append(animator)
 

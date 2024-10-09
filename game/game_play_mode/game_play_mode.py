@@ -73,6 +73,11 @@ class GamePlayCompound(GamePlayMode):
             result |= mode.is_points_game()
         return result
     
+    def on_new_round(self):
+        super().on_new_round()
+        for mode in self.modes:
+            mode.on_new_round()
+
     def debug_print(self) -> str:
         output = ''
         for mode in self.modes:

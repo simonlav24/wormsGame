@@ -508,7 +508,6 @@ class ImageDrag(GuiElement):
                 self.mouse_last = mouse_in_win()
         if event.type == pygame.MOUSEBUTTONUP:
             self.dragging = False
-        
 
     def step(self):
         self.selection_check()

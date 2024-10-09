@@ -145,6 +145,7 @@ class BackGround:
 
         self.clouds: List[Cloud] = []
         self.clouds_remove: List[Cloud] = []
+        self.closed_world = False
 
     def water_rise(self, amount: int) -> None:
         ''' water rise by amount '''
@@ -191,6 +192,10 @@ class BackGround:
             cloud.step()
         self.clouds = [cloud for cloud in self.clouds if not cloud.is_done]
     
+    def set_closed(self, closed: bool):
+        self.closed_world = closed
+
+
     def draw(self, win: pygame.Surface):
         win.fill(self.back_color)
         win.blit(
@@ -204,6 +209,13 @@ class BackGround:
         self.draw_background(self.mountains[0], 2, win)
         for layer in self.water_layers_bottom:
             layer.draw(win)
+        
+        if self.closed_world:
+            start = tup2vec(point2world((0, 0)))
+            pygame.draw.line(win, (232, 87, 26), start, start + Vector(0, MapManager().get_map_height()))
+            start += Vector(MapManager().get_map_size()[0], 0)
+            pygame.draw.line(win, (232, 87, 26), start, start + Vector(0, MapManager().get_map_height()))
+            
     
     def draw_secondary(self, win: pygame.Surface):
         for layer in self.water_layers_top:

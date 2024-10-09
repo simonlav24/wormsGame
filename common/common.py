@@ -130,6 +130,9 @@ class GamePlayMode:
 	def on_turn_begin(self):
 		...
 	
+	def on_new_round(self):
+		...
+	
 	def on_turn_end(self):
 		...
 

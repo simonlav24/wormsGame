@@ -71,6 +71,8 @@ class WeaponManager(metaclass=SingletonMeta):
 
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
+        if weapon.style in [WeaponStyle.SPECIAL, WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL]:
+            return
         self.cool_down_list_surfaces.append(fonts.pixel5_halo.render(weapon.name, False, GameVariables().initial_variables.hud_color))
         self.cool_down_list.append(weapon)
 
@@ -112,7 +114,7 @@ class WeaponManager(metaclass=SingletonMeta):
         
         # if in cool down
         if check_cool_down:
-            if GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list:
+            if self.current_weapon in self.cool_down_list:
                 return False
         
         if check_state:
@@ -136,7 +138,7 @@ class WeaponManager(metaclass=SingletonMeta):
         self.render_weapon_count()
 
         GameVariables().weapon_hold.fill((0,0,0,0))
-        if self.can_shoot():
+        if self.can_shoot(check_state=False):
             if weapon.category in [WeaponCategory.GRENADES, WeaponCategory.GUNS, WeaponCategory.TOOLS, WeaponCategory.LEGENDARY, WeaponCategory.FIREY, WeaponCategory.BOMBS]:
                 if weapon.name in ["covid 19", "parachute", "earthquake"]:
                     return
@@ -169,27 +171,6 @@ class WeaponManager(metaclass=SingletonMeta):
         GameVariables().hud.render_weapon_count(self.current_weapon, amount, enabled=enabled)
 
 
-        # color = GameVariables().initial_variables.hud_color
-        # # if no ammo in current team
-        # ammo = TeamManager().current_team.ammo(self.current_weapon.index)
-        # if ammo == 0 or not self.can_shoot(check_state=False) or (GameVariables().config.option_cool_down and self.current_weapon in self.cool_down_list):
-        #     color = GREY
-        # weaponStr = self.current_weapon.name
-
-        # special addings
-        # if self.current_weapon == "drill missile":
-        #     weaponStr += " (drill)" if DrillMissile.mode else " (rocket)"
-        
-        # add quantity
-        # if ammo != -1:
-        #     weaponStr += " " + str(ammo)
-            
-        # # add fuse
-        # if self.current_weapon.is_fused:
-        #     weaponStr += "  delay: " + str(GameVariables().fuse_time // GameVariables().fps)
-            
-        # self.surf = fonts.pixel5_halo.render(weaponStr, False, color)
-
     def handle_event(self, event) -> bool:
         handled = False
         self.hot_keys_switch(event)
@@ -208,8 +189,6 @@ class WeaponManager(metaclass=SingletonMeta):
                 mouse_pos = mouse_pos_in_world()
                 GameVariables().point_target = vectorCopy(mouse_pos)
 
-
-        # fire handles
         return handled
 
 
@@ -282,7 +261,7 @@ class WeaponManager(metaclass=SingletonMeta):
             if i == 0:
                 win.blit(surf, (30 + 80 * i, GameGlobals().win_height - 5 - surf.get_height()))
             else:
-                space += self.cool_down_list_surfaces[i-1].get_width() + 10
+                space += self.cool_down_list_surfaces[i - 1].get_width() + 10
                 win.blit(surf, (30 + space, GameGlobals().win_height - 5 - surf.get_height()))
 
     def draw_weapon_hint(self, win: pygame.Surface) -> None:
@@ -331,11 +310,13 @@ class WeaponManager(metaclass=SingletonMeta):
 
     def fire(self, weapon: Weapon=None) -> bool:
         ''' fire weapon, return True if fired '''
-        if not self.can_shoot(check_state=True, check_ammo=False, check_cool_down=False, check_delay=True):
+        if not self.can_shoot(check_state=True, check_ammo=False, check_cool_down=True, check_delay=True):
             return False
 
         if not weapon:
             weapon = self.current_weapon
         
         self.weapon_director.add_actor(weapon, TeamManager().current_team)
+        if GameVariables().config.option_cool_down:
+            self.add_to_cool_down(weapon)
         return True

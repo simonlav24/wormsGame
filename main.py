@@ -71,6 +71,7 @@ class Game:
 		self.evaluate_config(game_config)
 		
 		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
+		self.background.set_closed(GameVariables().config.option_closed_map)
 
 		self.initiateGameVariables()
 		
@@ -614,6 +615,7 @@ def cycle_worms():
 		Game._game.game_config.rounds_for_sudden_death -= 1
 		if Game._game.game_config.rounds_for_sudden_death == 0:
 			suddenDeath()
+		GameVariables().game_mode.on_new_round()
 	
 	# update stuff
 	GameVariables().get_debries().clear()
@@ -963,14 +965,12 @@ class GameRoom(Room):
 				GameGlobals().scale_factor = GameGlobals().scale_factor
 				if GameGlobals().scale_factor >= GameGlobals().scale_range[1]:
 					GameGlobals().scale_factor = GameGlobals().scale_range[1]
-					GameGlobals().scale_factor = GameGlobals().scale_factor
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll up
 			if not Game._game.radial_weapon_menu:
 				GameGlobals().scale_factor *= 0.9
 				GameGlobals().scale_factor = GameGlobals().scale_factor
 				if GameGlobals().scale_factor <= GameGlobals().scale_range[0]:
 					GameGlobals().scale_factor = GameGlobals().scale_range[0]
-					GameGlobals().scale_factor = GameGlobals().scale_factor
 
 		# key press
 		if event.type == pygame.KEYDOWN:
@@ -1223,11 +1223,11 @@ wip = '''
 		holding mjolnir
 		icicle weird behaviour on hit
 		minecraft weapons
-		surf of weapon holding on next turn
 		targets mode should remain targets every Round, not turn
 		check for worm tools to not be able to open when ammo == 0
-		add info in the pause menu: round count, score ...
-		make main menu return after animation fly off (or save a menu json and rebuild every time)
+		weapon menu
+		team menu
+		indication of closed world
 	'''
 
 
