@@ -32,6 +32,10 @@ class PauseRoom(Room):
         super().handle_pygame_event(event)
         self.gui.handle_pygame_event(event)
 
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.on_resume()
+
     def step(self) -> None:
         super().step()
         self.gui.step()
@@ -48,9 +52,12 @@ class PauseRoom(Room):
         if event is None:
             return
         if event == 'resume':
-            self.switch = SwitchRoom(Rooms.GAME_ROOM, False, None)
+            self.on_resume()
         if event == 'to_main_menu':
-            self.switch = SwitchRoom(Rooms.MAIN_MENU, True, None)
+            self.switch = SwitchRoom(Rooms.MAIN_MENU, False, None)
+
+    def on_resume(self):
+        self.switch = SwitchRoom(Rooms.GAME_ROOM, False, None)
 
     def initialize_pause_menu(self) -> StackPanel:
         ''' create pause layout '''

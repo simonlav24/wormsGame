@@ -23,7 +23,7 @@ class Team:
         self.hat_options = data.hats
         self.hat_surf = None
     
-    def makeHat(self, index) -> None:
+    def make_hat(self, index) -> None:
         self.hat_surf = pygame.Surface((16, 16), pygame.SRCALPHA)
         self.hat_surf.blit(sprites.sprite_atlas, (0,0), (16 * (index % 8),16 * (index // 8),16,16))
         pixels = pygame.PixelArray(self.hat_surf)
@@ -32,6 +32,9 @@ class Team:
         pixels.replace((81, 81, 81), tuple(max(i - 30,0) for i in color))
         del pixels
     
+    def get_health(self):
+        return sum([worm.health for worm in self.worms])
+
     def __len__(self) -> int:
         return len(self.worms)
 
@@ -81,11 +84,15 @@ class TeamManager(metaclass=SingletonMeta):
     def get_info(self) -> List[Dict[str, Any]]:
         info = []
         for team in self.teams:
+            if GameVariables().game_mode.is_points_game():
+                score = team.points
+            else:
+                score = team.get_health()
             info.append(
                 {
                     'name': team.name,
                     'color': team.color,
-                    'score': team.points
+                    'score': score
                 }
             )
         return tuple(info)
@@ -107,12 +114,12 @@ class TeamManager(metaclass=SingletonMeta):
                 else:
                     index_choice.append(int(option))
             hat_choice = choice([hat for hat in index_choice if hat not in hats_chosen])
-            team.makeHat(hat_choice)
+            team.make_hat(hat_choice)
             hats_chosen.append(hat_choice)
 
     def step(self) -> None:
         # todo: update with worms
-        self.health_bar_hud.update_health([sum([worm.health for worm in team.worms]) for team in self.teams])
+        self.health_bar_hud.update_health([team.get_health() for team in self.teams])
         self.health_bar_hud.update_score([team.points for team in self.teams])
         self.health_bar_hud.step()
     

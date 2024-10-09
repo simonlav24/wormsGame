@@ -1287,6 +1287,8 @@ def main():
 						break
 					existing_room = rooms_dict[switch.next_room]
 					current_room = existing_room
+					current_room.on_resume()
+				
 		except Exception:
 			print(traceback.format_exc())
 

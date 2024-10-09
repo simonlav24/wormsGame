@@ -34,7 +34,7 @@ class ArenaGamePlay(GamePlayMode):
                 worm.give_point(1)
     
     def is_points_game(self) -> bool:
-        True
+        return True
                 
     
 

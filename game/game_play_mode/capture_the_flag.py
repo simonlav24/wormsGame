@@ -58,7 +58,7 @@ class CTFGamePlay(GamePlayMode):
         return 3
 
     def is_points_game(self) -> bool:
-        True
+        return True
         
 
 

@@ -266,7 +266,8 @@ class UpDown(GuiElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text = kwargs.get('text', "")
-        self.show_value = kwargs.get('show_value', False)
+        # show value = true: the value of the updown will be rendered. False: the text will be renderd
+        self.show_value = kwargs.get('show_value', True)
         self.mode = 0
         if self.show_value:
             self.render_surf(str(self.value))
@@ -465,7 +466,8 @@ class ImageDrag(GuiElement):
         self.image_path = None
         self.set_image(image)
         self.drag_dx = 0
-        self.draggable = True
+        self.dragging = False
+        self.mouse_last: Vector = None
     
     def recalculate(self):
         self.set_image(self.image_path)
@@ -497,26 +499,31 @@ class ImageDrag(GuiElement):
     def recalc_image(self):
         self.surf.fill((0,0,0,0))
         self.surf.blit(self.image_surf, (self.size[0] // 2  + self.drag_dx, 0))
-    
-    def step(self):
-        mouse_pos = mouse_in_win()
-        button_pos = self.get_super_pos() + self.pos
-        pos_in_button = (mouse_pos[0] - button_pos[0], mouse_pos[1] - button_pos[1])
-        if self.draggable:
-            if pos_in_button[0] >= 0 and pos_in_button[0] < self.size[0] and pos_in_button[1] >= 0 and pos_in_button[1] < self.size[1]:
-                if pygame.mouse.get_pressed()[0]:
-                    vel = pygame.mouse.get_rel()
-                    if abs(vel[0]) > 100:
-                        return
-                    self.drag_dx += vel[0] / GameGlobals().scale_factor
-                    if self.image_surf.get_width() < self.size[0]:
-                        return
-                    if self.drag_dx > -self.size[0] // 2:
-                        self.drag_dx = -self.size[0] // 2
-                    elif self.drag_dx < -self.image_surf.get_width() + self.size[0] // 2:
-                        self.drag_dx = -self.image_surf.get_width() + self.size[0] // 2
 
-                    self.recalc_image()
+    def handle_pygame_event(self, event):
+        super().handle_pygame_event(event)
+        if self.selected:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.dragging = True
+                self.mouse_last = mouse_in_win()
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.dragging = False
+        
+
+    def step(self):
+        self.selection_check()
+        if self.dragging:
+            mouse_pos = mouse_in_win()
+            mouse_delta = mouse_pos - self.mouse_last
+            self.mouse_last = mouse_pos
+
+            self.drag_dx += mouse_delta[0]
+            if self.drag_dx > -self.size[0] // 2:
+                self.drag_dx = -self.size[0] // 2
+            elif self.drag_dx < -self.image_surf.get_width() + self.size[0] // 2:
+                self.drag_dx = -self.image_surf.get_width() + self.size[0] // 2
+            self.recalc_image()
+            
 
 class SurfElement(GuiElement):
     def __init__(self, *args, **kwargs):

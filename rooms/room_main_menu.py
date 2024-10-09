@@ -39,7 +39,13 @@ class MainMenuRoom(Room):
         self.main_menu = self.initialize_main_menu()
         self.gui.insert(self.main_menu)
 
-        animator = MenuAnimator(self.main_menu, self.main_menu.pos + Vector(0, GameGlobals().win_height), self.main_menu.pos)
+        self.initial_menu_pos = self.main_menu.pos
+        animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
+        self.gui.animators.append(animator)
+
+    def on_resume(self):
+        super().on_resume()
+        animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
         self.gui.animators.append(animator)
 
     def handle_pygame_event(self, event) -> None:
@@ -74,7 +80,6 @@ class MainMenuRoom(Room):
                     self.main_menu.pos - Vector(0, GameGlobals().win_height),
                     trigger=self.on_play,
                     args=[values],
-                    end_return=True
                 )
             )
             # self.on_play(values)
@@ -178,7 +183,6 @@ class MainMenuRoom(Room):
             subOpt.insert(Text(text=counter['text']))
             subOpt.insert(UpDown(
                 key=counter['key'], 
-                text=counter['text'], 
                 value=counter['value'], 
                 limit_max=True,
                 limit_min=True, 
