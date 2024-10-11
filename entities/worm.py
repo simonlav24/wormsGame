@@ -159,8 +159,8 @@ class Worm(PhysObj):
         # draw holding weapon
         if self is GameVariables().player and GameVariables().game_state == GameState.PLAYER_PLAY:
             adjust_degrees = 180 if self.facing == LEFT else 0
-            weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, self.facing == LEFT), -degrees(self._shoot_angle - pi/2) * self.facing + adjust_degrees)
-            win.blit(weaponSurf, point2world(self.pos - tup2vec(weaponSurf.get_size())/2 + Vector(0, 5)))
+            weapon_surf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, self.facing == LEFT), -degrees(self._shoot_angle - pi/2) * self.facing + adjust_degrees)
+            win.blit(weapon_surf, point2world(self.pos - tup2vec(weapon_surf.get_size())/2 + Vector(0, 5)))
 
     def __str__(self):
         return self.name_str

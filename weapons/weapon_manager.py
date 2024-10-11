@@ -179,6 +179,7 @@ class WeaponManager(metaclass=SingletonMeta):
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             handled |= self.fire()
+            
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.current_weapon.style == WeaponStyle.CLICKABLE:
                 handled |= self.fire()

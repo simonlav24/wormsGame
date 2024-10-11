@@ -32,10 +32,10 @@ from weapons.vortex import VortexGrenade
 from weapons.pokeball import PokeBall
 from weapons.green_shell import GreenShell
 from weapons.guided_missile import GuidedMissile
-from weapons.fireworks import fireFireWork
+from weapons.fireworks import fire_firework
 from weapons.artifacts.mjolnir_artifact import MjolnirStrike, MjolnirFly, MjolnirThrow
 from weapons.artifacts.plant_master import PlantControl
-from weapons.artifacts.minecraft_artifact import PickAxe, MineBuild
+from weapons.artifacts.minecraft_artifact import build, mine
 
 
 weapon_funcs: Dict[str, Callable[[Any], Any]] = {}
@@ -392,7 +392,7 @@ def fire_guided_missile(*args, **kwargs) -> EntityPhysical:
 
 def fire_fireworks(*args, **kwargs) -> EntityPhysical:
     """ fire fireworks """
-    fireFireWork(**kwargs)
+    fire_firework(**kwargs)
 
 
 
@@ -530,13 +530,13 @@ def fire_air_tornado(*args, **kwargs) -> EntityPhysical:
 
 def fire_pick_axe(*args, **kwargs) -> EntityPhysical:
     """ fire pick axe """
-    return PickAxe()
+    return mine(**kwargs)
 
 
 
 def fire_build(*args, **kwargs) -> EntityPhysical:
     """ fire build """
-    return MineBuild()
+    return build(**kwargs)
 
 
 

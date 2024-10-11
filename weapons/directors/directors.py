@@ -4,8 +4,8 @@ from typing import List
 
 import pygame
 
-from common import GameVariables, EntityPhysical, mouse_pos_in_world, GameState, point2world
-from common.vector import vectorCopy
+from common import GameVariables, EntityPhysical, mouse_pos_in_world, GameState, point2world, blit_weapon_sprite, LEFT
+from common.vector import vectorCopy, Vector, tup2vec
 
 from game.team_manager import Team
 from game.time_manager import TimeManager
@@ -32,26 +32,29 @@ class WeaponDirector:
         actor = None
         weapon_func = self.weapon_funcs[weapon.name]
 
+        args = (weapon, weapon_func, team)
         if weapon.style == WeaponStyle.CHARGABLE:
-            actor = ActorChargeable(weapon, weapon_func, team)
+            actor = ActorChargeable(*args)
 
         elif weapon.style == WeaponStyle.GUN:
-            actor = ActorGun(weapon, weapon_func, team)
+            actor = ActorGun(*args)
 
         elif weapon.style == WeaponStyle.PUTABLE:
-            actor = ActorPutable(weapon, weapon_func, team)
+            actor = ActorPutable(*args)
         
         elif weapon.style == WeaponStyle.CLICKABLE:
-            actor = ActorClickable(weapon, weapon_func, team)
+            actor = ActorClickable(*args)
         
         elif weapon.style == WeaponStyle.UTILITY:
-            actor = ActorPutable(weapon, weapon_func, team)
+            actor = ActorPutable(*args)
         
         elif weapon.style == WeaponStyle.WORM_TOOL:
-            actor = ActorWormTool(weapon, weapon_func, team)
+            actor = ActorWormTool(*args)
 
         elif weapon.style == WeaponStyle.SPECIAL:
-            pass
+            if weapon.name in ['build', 'pick axe']:
+                actor = ActorMineBuild(*args)
+
 
 
         if actor is not None and actor.weapon in [actor.weapon for actor in self.actors]:
@@ -261,3 +264,62 @@ class ActorWormTool(WeaponActorBase):
         if (GameVariables().game_state != GameState.PLAYER_PLAY and
             not self.weapon.decrease_on_turn_end):
             self.is_done = True
+
+
+class ActorMineBuild(WeaponActorBase):
+    def __init__(self, weapon, weapon_func, team):
+        super().__init__(weapon, weapon_func, team)
+        self.used_locations: List[Vector] = []
+        self.initial_shooted = False
+        self.animation_offset = 0
+
+        self.surf = None
+        if weapon.name == 'pick axe':
+            self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
+            blit_weapon_sprite(self.surf, (0,0), "pick axe")
+
+    def finalize(self):
+        if self.shooted_object is not None:
+            if self.shooted_object + Vector(0, 16) in self.used_locations:
+                args_dict = {
+                    'stamp': True,
+                    'position': self.shooted_object + Vector(0, 16)
+                }
+                self.weapon_func(**args_dict)
+            if self.shooted_object + Vector(0, -16) in self.used_locations:
+                args_dict = {
+                    'stamp': True,
+                    'position': self.shooted_object
+                }
+                self.weapon_func(**args_dict)
+        
+        self.animation_offset = 90
+        self.used_locations.append(self.shooted_object)
+        self.shooted_object = None
+        super().finalize()
+
+    def handle_event(self, event) -> None:
+        super().handle_event(event)
+        if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+            if self.initial_shooted:
+                self.fire()
+            self.initial_shooted = True
+
+    def step(self):
+        super().step()
+        if self.animation_offset > 0:
+            self.animation_offset -= 5
+            self.animation_offset = max(self.animation_offset, 0)
+
+    def draw(self, win):
+        super().draw(win)
+        worm = GameVariables().player
+        position = worm.pos + worm.get_shooting_direction().normalize() * 20
+        # closest grid of 16
+        position = Vector(int(position.x / 16) * 16, int(position.y / 16) * 16)
+        pygame.draw.rect(win, (255,255,255), (point2world(position), Vector(16,16)), 1)
+
+        if self.surf is not None:
+            angle = - self.animation_offset * worm.facing
+            weapon_surf = pygame.transform.rotate(pygame.transform.flip(self.surf, worm.facing == LEFT, False), angle)
+            win.blit(weapon_surf, point2world(worm.pos - tup2vec(weapon_surf.get_size()) / 2 + Vector(worm.facing * 9, - 4 + self.animation_offset * 0.1)))

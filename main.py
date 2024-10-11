@@ -1148,9 +1148,6 @@ wip = '''
 		loading screen
 		win record
 		holding mjolnir
-		icicle weird behaviour on hit
-		minecraft weapons
-		targets mode should remain targets every Round, not turn
 		check for worm tools to not be able to open when ammo == 0
 		weapon menu
 		team menu

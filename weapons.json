@@ -682,7 +682,7 @@
     {
         "index": 72,
         "name": "pick axe",
-        "style": 1,
+        "style": 6,
         "category": 9,
         "shots": 6,
         "initial_amount": 1,
@@ -694,7 +694,7 @@
     {
         "index": 73,
         "name": "build",
-        "style": 1,
+        "style": 6,
         "category": 9,
         "shots": 6,
         "initial_amount": 1,

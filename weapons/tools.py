@@ -168,8 +168,8 @@ class Baseball:
 
 	def draw(self, win: pygame.Surface):
 		angle = -degrees(self.direction.getAngle()) + 180
-		weaponSurf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, GameVariables().player.facing == LEFT), angle)
-		win.blit(weaponSurf, point2world(GameVariables().player.pos - tup2vec(weaponSurf.get_size()) / 2 + self.direction * 16))
+		weapon_surf = pygame.transform.rotate(pygame.transform.flip(GameVariables().weapon_hold, False, GameVariables().player.facing == LEFT), angle)
+		win.blit(weapon_surf, point2world(GameVariables().player.pos - tup2vec(weapon_surf.get_size()) / 2 + self.direction * 16))
 
 
 class WormSwitcher:

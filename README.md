@@ -1,9 +1,14 @@
 # Worms Game
 
 ![Alt text](wormsShoot.png?raw=true "Worms")
-game development practice in python for educational purposes and fun.
+Game development practice in python for educational purposes and fun.
 
-**requirements**: Python3, Pygame, PySimpleGui
+### Requirements
+
+```
+pygame
+pydantic
+```
 
 # ❓ how to play
 

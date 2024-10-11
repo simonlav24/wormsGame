@@ -75,7 +75,7 @@ class FireWorkRockets:
 			blit_weapon_sprite(win, point2world(obj.pos - Vector(8,8)), "fireworks")
 
 
-def fireFireWork(**kwargs):
+def fire_firework(**kwargs):
 	# todo: refactor
 	if FireWorkRockets._fw is None:
 		FireWorkRockets()
