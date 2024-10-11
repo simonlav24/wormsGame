@@ -1,4 +1,5 @@
 
+from random import randint
 
 import pygame
 
@@ -18,7 +19,10 @@ class ArenaGamePlay(GamePlayMode):
     
     def on_game_init(self):
         self.size = Vector(10 * 16, 10)
-        self.pos = Vector(MapManager().game_map.get_width(), MapManager().game_map.get_height()) // 2 - self.size // 2
+        self.pos = Vector(
+            randint(50, MapManager().game_map.get_width() - 50),
+            randint(50, MapManager().game_map.get_height() - 50)
+        )
 
     def draw(self, win: pygame.Surface):
         super().draw(win)
@@ -32,6 +36,13 @@ class ArenaGamePlay(GamePlayMode):
             check_pos = worm.pos + Vector(0, worm.radius * 2)
             if worm.pos.x > self.pos.x and worm.pos.x < self.pos.x + self.size.x and check_pos.y > self.pos.y and check_pos.y < self.pos.y + self.size.y:
                 worm.give_point(1)
+        
+        if randint(1, 10) == 1:
+            GameVariables().commentator.comment([{'text': 'moving arena'}])
+            self.pos = Vector(
+                randint(50, MapManager().game_map.get_width() - 50),
+                randint(50, MapManager().game_map.get_height() - 50)
+            )
     
     def is_points_game(self) -> bool:
         return True

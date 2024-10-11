@@ -301,10 +301,10 @@ class WeaponManager(metaclass=SingletonMeta):
         for team in TeamManager().teams:
             chosen_weapon = WeaponManager().get_weapon(choice(legendary)).index
             team.ammo(chosen_weapon, 1)
-            if randint(0,2) >= 1:
+            if randint(0, 2) >= 1:
                 chosen_weapon = WeaponManager().get_weapon(choice(["moon gravity", "teleport", "jet pack", "aim aid", "switch worms"])).index
                 team.ammo(chosen_weapon, 1)
-            if randint(0,6) == 1:
+            if randint(0, 6) == 1:
                 chosen_weapon = WeaponManager().get_weapon(choice(["portal gun", "trampoline", "ender pearl"])).index
                 team.ammo(chosen_weapon, 3)
 

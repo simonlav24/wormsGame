@@ -80,6 +80,7 @@ class GameVariables(metaclass=SingletonMeta):
         # self.screen_height = 720
 
         self.water_level = self.initial_variables.water_level
+        self.water_rise_amount = 0
         self.water_color = (255, 255, 255)
 
         self.mega_weapon_trigger = False
@@ -174,6 +175,11 @@ class GameVariables(metaclass=SingletonMeta):
         for entity in self.database.non_physicals:
             entity.step()
     
+    def step(self):
+        if self.water_rise_amount > 0:
+            self.water_level += 1
+            self.water_rise_amount -= 1
+
     def draw_non_physicals(self, win: pygame.Surface) -> None:
         for entity in self.database.non_physicals:
             entity.draw(win)
@@ -292,6 +298,9 @@ class GameVariables(metaclass=SingletonMeta):
     
     def is_player_in_control(self) -> bool:
         return self.game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT]
+
+    def rise_water(self, amount: int) -> None:
+        self.water_rise_amount = amount
 
 
 def point2world(point) -> Tuple[int, int]:

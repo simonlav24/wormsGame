@@ -30,7 +30,9 @@ from game.game_play_mode import (
     DarknessGamePlay,
 	StatsGamePlay,
 	MissionsGamePlay,
+	SuddenDeathGamePlay,
 )
+
 from game.time_manager import TimeManager
 from game.map_manager import MapManager, SKY
 from game.background import BackGround
@@ -73,7 +75,8 @@ class Game:
 		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
 		self.background.set_closed(GameVariables().config.option_closed_map)
 
-		self.initiateGameVariables()
+		self.cheatCode = "" # cheat code
+		self.timeTravel = False
 		
 		self.mostDamage = (0, None)
 
@@ -106,11 +109,11 @@ class Game:
 		self.create_map()
 			
 		# check for sky opening for airstrikes
-		closedSkyCounter = 0
+		closed_sky_counter = 0
 		for i in range(100):
 			if MapManager().is_ground_at((randint(0, MapManager().game_map.get_width()-1), randint(0, 10))):
-				closedSkyCounter += 1
-		if closedSkyCounter > 50:
+				closed_sky_counter += 1
+		if closed_sky_counter > 50:
 			GameVariables().initial_variables.allow_air_strikes = False
 			for team in TeamManager().teams:
 				for i, _ in enumerate(team.weapon_set):
@@ -210,18 +213,6 @@ class Game:
 		else:
 			MapManager().create_map_image(self.game_config.map_path, custom_height, self.game_config.is_recolor)
 		
-	def initiateGameVariables(self):
-		self.waterRise = False # whether water rises at the end of each turn
-		self.waterRising = False # water rises in current state
-		self.deployingArtifact = False  # deploying artifacts in current state
-
-		self.cheatCode = "" # cheat code
-		self.shotCount = 0 # number of gun shots fired
-
-		self.actionMove = False
-
-		self.timeTravel = False
-
 	def evaluate_config(self, game_config: GameConfig):
 		self.game_config: GameConfig = game_config
 
@@ -248,7 +239,6 @@ class Game:
 			GameVariables().game_mode.add_mode(ArtifactsGamePlay())
 		if self.game_config.option_darkness:
 			GameVariables().game_mode.add_mode(DarknessGamePlay())
-
 
 	def handle_event(self, event) -> bool:
 		''' handle pygame event, return true if event handled '''
@@ -285,7 +275,6 @@ class Game:
 		# pygame.draw.rect(GameGlobals().win, (255,255,255), ((pos[0], pos[1] + 20), ((self.lstep / self.lstepmax)*width, height)))
 		# screen.blit(pygame.transform.scale(GameGlobals().win, screen.get_rect().size), (0,0))
 		# pygame.display.update()
-
 
 
 
@@ -600,21 +589,10 @@ def cycle_worms():
 		GameVariables().game_round_count += 1
 		new_round = True
 	
-	# rise water:
-	if Game._game.waterRise and not Game._game.waterRising:
-		Game._game.background.water_rise(20)
-		GameVariables().game_next_state = GameState.WAIT_STABLE
-		GameVariables().game_turn_count -= 1
-		Game._game.waterRising = True
-		return
-		
-	Game._game.waterRising = False
-	Game._game.deployingArtifact = False
-	
 	if new_round:
 		Game._game.game_config.rounds_for_sudden_death -= 1
 		if Game._game.game_config.rounds_for_sudden_death == 0:
-			suddenDeath()
+			sudden_death()
 		GameVariables().game_mode.on_new_round()
 	
 	# update stuff
@@ -722,23 +700,12 @@ def toast_info():
 
 
 
-def suddenDeath():
-	# todo: refactor this
-	sudden_death_modes = [Game._game.game_config.sudden_death_style]
-	if Game._game.game_config.sudden_death_style == SuddenDeathMode.ALL:
-		for mode in SuddenDeathMode:
-			sudden_death_modes.append(mode)
-
-	if SuddenDeathMode.PLAGUE in sudden_death_modes:
-		for worm in GameVariables().get_worms():
-			worm.sicken()
-			if not worm.health == 1:
-				worm.health = worm.health // 2
-	if SuddenDeathMode.FLOOD in sudden_death_modes:
-		string += " water rise!"
-		Game._game.waterRise = True
+def sudden_death():
+	# todo: fix toasts
 	text = fonts.pixel10.render("sudden death", False, (220,0,0))
 	Toast(pygame.transform.scale(text, tup2vec(text.get_size()) * 2), Toast.middle)
+	GameVariables().game_mode.add_mode(SuddenDeathGamePlay())
+
 
 def cheat_activate(code: str):
 	code = code[:-1].lower()
@@ -752,7 +719,7 @@ def cheat_activate(code: str):
 			weapon.round_delay = 0
 		Game._game.game_config.option_cool_down = False
 	elif code == "suddendeath":
-		suddenDeath()
+		sudden_death()
 	elif code == "wind":
 		GameVariables().physics.wind = uniform(-1, 1)
 	elif code == "goodbyecruelworld":
@@ -911,9 +878,10 @@ def onKeyPressTab():
 		GameVariables().airstrike_direction *= -1
  
 def onKeyPressTest():
+	''' test '''
 	# GameVariables().debug_print()
-	actors = WeaponManager().weapon_director.actors
-	print(actors)
+	# print(WeaponManager().weapon_director.actors)
+	# GameVariables().rise_water(20)
 
 def onKeyPressEnter():
 	# jump
@@ -1085,6 +1053,7 @@ class GameRoom(Room):
 
 		GameVariables().step_physicals()
 		GameVariables().step_non_physicals()
+		GameVariables().step()
 
 		# step effects
 		EffectManager().step()
@@ -1120,9 +1089,6 @@ class GameRoom(Room):
 		# menu step
 		if Game._game.radial_weapon_menu:
 			Game._game.radial_weapon_menu.step()
-
-		# reset actions
-		Game._game.actionMove = False
 
 		GameVariables().commentator.step()
 	
@@ -1217,7 +1183,7 @@ class GameRoom(Room):
 
 wip = '''
 	still in progress:
-		water rise
+		fix toasts
 		loading screen
 		win record
 		holding mjolnir
@@ -1227,7 +1193,6 @@ wip = '''
 		check for worm tools to not be able to open when ammo == 0
 		weapon menu
 		team menu
-		indication of closed world
 	'''
 
 

@@ -99,9 +99,9 @@ class WaterLayer:
     def __init__(self, water_color, y_offset: int) -> None:
         self.time = 0
         self.y_offset = y_offset
-        self.points = [Vector(i * 20, 3 + WATER_AMP + WATER_AMP * (-1)**i) for i in range(-1,12)]
-        self.speeds = [uniform(0.95, 1.05) for _ in range(-1,11)]
-        self.phase = [sin(self.time / (3 * self.speeds[i])) for i in range(-1,11)]
+        self.points = [Vector(i * 20, 3 + WATER_AMP + WATER_AMP * (-1) ** i) for i in range(-1, 12)]
+        self.speeds = [uniform(0.95, 1.05) for _ in range(-1, 11)]
+        self.phase = [sin(self.time / (3 * self.speeds[i])) for i in range(-1, 11)]
 
         self.surf = pygame.Surface((200, WATER_AMP * 2 + 6), pygame.SRCALPHA)
         self.water_color = water_color
@@ -109,11 +109,11 @@ class WaterLayer:
     def step(self) -> None:
         self.time += 1
         self.surf.fill((0,0,0,0))
-        self.points = [Vector(i * 20, 3 + WATER_AMP + self.phase[i % 10] * WATER_AMP * (-1)**i) for i in range(-1,12)]
+        self.points = [Vector(i * 20, 3 + WATER_AMP + self.phase[i % 10] * WATER_AMP * (-1) ** i) for i in range(-1, 12)]
         pygame.draw.polygon(self.surf, self.water_color[0], self.points + [(200, WATER_AMP * 2 + 6), (0, WATER_AMP * 2 + 6)])
         pygame.draw.lines(self.surf, self.water_color[1], False, self.points, 2)
         
-        self.phase = [sin(self.time / (3 * self.speeds[i])) for i in range(-1,11)]
+        self.phase = [sin(self.time / (3 * self.speeds[i])) for i in range(-1, 11)]
 
     def draw(self, win: pygame.Surface) -> None:
         width = 200
@@ -125,7 +125,7 @@ class WaterLayer:
             y =  int(MapManager().get_map_height() - GameVariables().water_level - 3 - WATER_AMP - self.y_offset) - int(GameVariables().cam_pos[1])
             win.blit(self.surf, (x, y))
         
-        pygame.draw.rect(win, self.water_color[0], ((0,y + height), (GameGlobals().win_width, GameVariables().water_level)))
+        pygame.draw.rect(win, self.water_color[0], ((0, y + height), (GameGlobals().win_width, GameVariables().water_level)))
 
 
 class BackGround:
@@ -141,15 +141,9 @@ class BackGround:
 
         self.set_feel_color(feel_color, is_dark)
         
-        self.water_rise_amount = 0
-
         self.clouds: List[Cloud] = []
         self.clouds_remove: List[Cloud] = []
         self.closed_world = False
-
-    def water_rise(self, amount: int) -> None:
-        ''' water rise by amount '''
-        self.water_rise_amount = amount
 
     def set_feel_color(self, feel_color, is_dark: bool=False) -> None:
         self.mountains = [render_mountain((180, 110), feel_color[3]), render_mountain((180, 150), feel_color[2])]
@@ -176,11 +170,7 @@ class BackGround:
             layer.step()
         for layer in self.water_layers_top:
             layer.step()
-        
-        if self.water_rise_amount > 0:
-            GameVariables().water_level += 1
-            self.water_rise_amount -= 1
-    
+            
     def step_clouds(self) -> None:
         if len(self.clouds) < 8 and randint(0,10) == 1:
             pos = Vector(choice([

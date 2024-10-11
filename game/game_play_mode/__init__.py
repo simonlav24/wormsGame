@@ -13,3 +13,4 @@ from .artifacts_mode import ArtifactsGamePlay
 from .dark_mode import DarknessGamePlay
 
 from .stats import StatsGamePlay
+from .sudden_death import SuddenDeathGamePlay
