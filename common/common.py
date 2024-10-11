@@ -187,6 +187,9 @@ class IComment(Entity):
 class IHud(Entity):
 	def render_weapon_count(self, weapon: Any, amount: int, adding: str='', enabled: bool=True):
 		...
+	
+	def add_toast(self, surf: pygame.Surface, pos: Vector=None):
+		...
 
 
 class EntityPlant(Entity):

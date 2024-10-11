@@ -41,7 +41,7 @@ from game.team_manager import TeamManager, Team
 
 from game.world_effects import boom, Earthquake
 
-from game.hud import Commentator, Toast, Hud
+from game.hud import Commentator, Hud
 from gui.radial_menu import RadialMenu, RadialButton
 
 from entities.props import PetrolCan
@@ -678,32 +678,9 @@ def weapon_menu_init():
 
 	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(GameGlobals().win_width // 2, GameGlobals().win_height // 2))
 
-def toast_info():
-	if Toast.toastCount > 0:
-		Toast._toasts[0].time = 0
-		if Toast._toasts[0].state == 2:
-			Toast._toasts[0].state = 0
-		return
-	toastWidth = 100
-	surfs = []
-	for team in TeamManager().teams:
-		name = fonts.pixel5.render(team.name, False, team.color)
-		points = fonts.pixel5.render(str(team.points), False, (0,0,0))
-		surfs.append((name, points))
-	surf = pygame.Surface((toastWidth, (surfs[0][0].get_height() + 3) * GameVariables().num_of_teams), pygame.SRCALPHA)
-	i = 0
-	for s in surfs:
-		surf.blit(s[0], (0, i))
-		surf.blit(s[1], (toastWidth - s[1].get_width(), i))
-		i += s[0].get_height() + 3
-	Toast(surf)
-
-
-
 def sudden_death():
-	# todo: fix toasts
-	text = fonts.pixel10.render("sudden death", False, (220,0,0))
-	Toast(pygame.transform.scale(text, tup2vec(text.get_size()) * 2), Toast.middle)
+	GameVariables().hud.add_toast(fonts.pixel10.render("sudden death", False, (220,0,0)))
+	Earthquake(1.5 * GameGlobals().fps, decorative=True, strength=0.25)
 	GameVariables().game_mode.add_mode(SuddenDeathGamePlay())
 
 
@@ -966,8 +943,6 @@ class GameRoom(Room):
 					onKeyPressTab()
 				if event.key == pygame.K_t:
 					onKeyPressTest()
-				if event.key == pygame.K_F1:
-					toast_info()
 				if event.key == pygame.K_F2:
 					Worm.healthMode = (Worm.healthMode + 1) % 2
 					if Worm.healthMode == 1:
@@ -1069,9 +1044,6 @@ class GameRoom(Room):
 		# step background
 		Game._game.background.step()
 
-		for t in Toast._toasts:
-			t.step()
-
 		if Game._game.timeTravel: 
 			TimeTravel._tt.step()
 		
@@ -1116,9 +1088,6 @@ class GameRoom(Room):
 
 		# draw top layer of background
 		Game._game.background.draw_secondary(win)
-
-		for t in Toast._toasts:
-			t.draw(win)
 		
 		# draw shooting indicator
 		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:
@@ -1149,13 +1118,6 @@ class GameRoom(Room):
 		TeamManager().draw(win)
 		
 		# weapon menu:
-		# move menus
-		for t in Toast._toasts:
-			if t.mode == Toast.bottom:
-				t.updateWinPos((GameGlobals().win_width/2, GameGlobals().win_height))
-			elif t.mode == Toast.middle:
-				t.updateWinPos(Vector(GameGlobals().win_width/2, GameGlobals().win_height/2) - tup2vec(t.surf.get_size())/2)
-		
 		if Game._game.radial_weapon_menu:
 			Game._game.radial_weapon_menu.draw(win)
 		
@@ -1183,7 +1145,6 @@ class GameRoom(Room):
 
 wip = '''
 	still in progress:
-		fix toasts
 		loading screen
 		win record
 		holding mjolnir

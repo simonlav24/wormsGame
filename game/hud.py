@@ -102,56 +102,6 @@ class Commentator:
 			x += s.get_width()
 		return surf
 
-class Toast:
-	_toasts: List['Toast'] = []
-	toastCount = 0
-	bottom = 0
-	middle = 1
-	
-	def __init__(self, surf, mode=0):
-		Toast._toasts.append(self)
-		self.surf = surf
-		self.time = 0
-		self.mode = mode
-		if self.mode == Toast.bottom:
-			self.anchor = Vector(GameGlobals().win_width / 2, GameGlobals().win_height)
-		else:
-			self.anchor = Vector(GameGlobals().win_width // 2, GameGlobals().win_height // 2) - tup2vec(self.surf.get_size()) / 2
-		self.pos = Vector()
-		self.state = 0
-		Toast.toastCount += 1
-		
-	def step(self):
-		if self.mode == Toast.bottom:
-			if self.state == 0:
-				self.pos.y -= 3
-				if self.pos.y < -self.surf.get_height():
-					self.state = 1
-			if self.state == 1:
-				self.time += 1
-				if self.time == GameVariables().fps * 3:
-					self.state = 2
-			if self.state == 2:
-				self.pos.y += 3
-				if self.pos.y > 0:
-					Toast._toasts.remove(self)
-					Toast.toastCount -= 1
-		elif self.mode == Toast.middle:
-			self.time += 1
-			if self.time == GameVariables().fps * 3:
-				Toast._toasts.remove(self)
-				Toast.toastCount -= 1
-			self.pos = uniform(0,2) * vectorUnitRandom()
-			
-	def draw(self, win: pygame.Surface):
-		if self.mode == Toast.bottom:
-			pygame.gfxdraw.box(win, (self.anchor + self.pos - Vector(1,1), tup2vec(self.surf.get_size()) + Vector(2,2)), (255,255,255,200))
-			win.blit(self.surf, self.anchor + self.pos)
-		
-	def updateWinPos(self, pos):
-		self.anchor[0] = pos[0]
-		self.anchor[1] = pos[1]
-
 class WindFlag:
 	''' hud widget, represents wind speed and direction '''
 	def __init__(self):
@@ -209,14 +159,34 @@ class Hud:
 	def __init__(self):
 		self.weapon_count_surf: pygame.Surface = None
 		self.wind_flag = WindFlag()
+		
+		self.toast: pygame.Surface = None
+		self.toast_pos = Vector()
+		self.timer = 0 
 	
+	def add_toast(self, surf: pygame.Surface, pos: Vector=None):
+		self.toast = surf
+		self.timer = 2 * GameGlobals().fps
+		if pos is None:
+			pos = Vector(
+				GameGlobals().win_width // 2 - surf.get_width() // 2,
+				GameGlobals().win_height // 2 - surf.get_height() // 2,
+			)
+		self.toast_pos = pos
+
 	def step(self):
 		self.wind_flag.step()
+		if self.timer > 0:
+			self.timer -= 1
+			if self.timer == 0:
+				self.toast = None
 
 	def draw(self, win: pygame.Surface):
 		# draw weapon count
 		win.blit(self.weapon_count_surf, (25, 5))
 		self.wind_flag.draw(win)
+		if self.toast is not None:
+			win.blit(self.toast, self.toast_pos)
 
 	def render_weapon_count(self, weapon: Weapon, amount: int, adding: str='', enabled: bool=True):
 		amount_str = str(amount)
