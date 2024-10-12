@@ -276,11 +276,6 @@ class Game:
 		# screen.blit(pygame.transform.scale(GameGlobals().win, screen.get_rect().size), (0,0))
 		# pygame.display.update()
 
-
-
-
-################################################################################ Objects
-
 class TimeSlow:
 	def __init__(self):
 		GameVariables().register_non_physical(self)
@@ -300,8 +295,6 @@ class TimeSlow:
 	def draw(self, win: pygame.Surface):
 		pass
 
-
-################################################################################ more functions
 
 def add_to_record(dic):
 	keys = ["time", "winner", "mostDamage", "damager", "mode", "points"]
@@ -563,8 +556,6 @@ def cycle_worms():
 
 	WeaponManager().switch_weapon(WeaponManager().current_weapon)
 
-################################################################################ Gui
-
 def weapon_menu_init():
 	# get categories
 
@@ -596,7 +587,6 @@ def sudden_death():
 	GameVariables().hud.add_toast(fonts.pixel10.render("sudden death", False, (220,0,0)))
 	Earthquake(1.5 * GameGlobals().fps, decorative=True, strength=0.25)
 	GameVariables().game_mode.add_mode(SuddenDeathGamePlay())
-
 
 def cheat_activate(code: str):
 	code = code[:-1].lower()
@@ -1065,8 +1055,8 @@ wip = '''
 		holding mjolnir
 		particle to indicate correct arena
 		better portals
+		refactor bubble
 		water rise in its own wait for stable state
-		time travel refactor
 		win screen
 		weapon screen
 		team creation screen
