@@ -136,6 +136,10 @@ class WeaponActorBase:
 			'energy': kwargs.get('energy', 0.0),
             'shooted_object': self.shooted_object
 		}
+        is_abort = GameVariables().on_fire(**(args_dict | {'weapon_func': self.weapon_func}))
+        if is_abort:
+            self.abort()
+            return None
         self.shooted_object = self.weapon_func(**args_dict)
         if self.weapon.can_fail:
             if not self.shooted_object:

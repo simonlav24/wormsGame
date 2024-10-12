@@ -77,7 +77,6 @@ class Game:
 		self.background.set_closed(GameVariables().config.option_closed_map)
 
 		self.cheatCode = "" # cheat code
-		self.timeTravel = False
 		
 		self.mostDamage = (0, None)
 
@@ -281,90 +280,6 @@ class Game:
 
 
 ################################################################################ Objects
-
-class TimeAgent:
-	def __init__(self):
-		GameVariables().register_non_physical(self)
-		self.positions = TimeTravel._tt.timeTravelPositions
-		self.facings = TimeTravel._tt.timeTravelFacings
-		self.time_counter = 0
-		self.pos = self.positions[0]
-		self.surf = TimeTravel._tt.timeTravelList["surf"]
-		self.health = TimeTravel._tt.timeTravelList["health"]
-		self.nameSurf = TimeTravel._tt.timeTravelList["name"]
-		self.weapon = TimeTravel._tt.timeTravelList["weapon"]
-		
-		self.energy = 0
-		self.stepsForEnergy = int(TimeTravel._tt.timeTravelList["energy"]/0.05)
-	
-	def step(self):
-		if len(self.positions) == 0:
-			TimeTravel._tt.timeTravelFire = True
-			WeaponManager().fire(TimeTravel._tt.timeTravelList["weapon"])
-			GameVariables().unregister_non_physical(self)
-			TimeTravel._tt.timeTravelPositions = []
-			TimeTravel._tt.timeTravelList = {}
-			return
-		self.pos = self.positions.pop(0)
-		if len(self.positions) <= self.stepsForEnergy:
-			self.energy += 0.05
-			
-		self.time_counter += 1
-	
-	def draw(self, win: pygame.Surface):
-		pygame.draw.circle(win, GameVariables().player.color, point2world(self.pos), 3+1)
-		facing = self.facings.pop(0)
-		win.blit(pygame.transform.flip(self.surf, facing == 1, False), point2world(tup2vec(self.pos) - tup2vec(self.surf.get_size()) / 2))
-		win.blit(self.nameSurf , ((int(self.pos[0]) - int(GameVariables().cam_pos[0]) - int(self.nameSurf.get_size()[0]/2)), (int(self.pos[1]) - int(GameVariables().cam_pos[1]) - 21)))
-		pygame.draw.rect(win, (220,220,220),(int(self.pos[0]) -10 -int(GameVariables().cam_pos[0]), int(self.pos[1]) -15 -int(GameVariables().cam_pos[1]), 20,3))
-		value = max(20 * self.health / Game._game.game_config.worm_initial_health, 1)
-		pygame.draw.rect(win, (0,220,0),(int(self.pos[0]) -10 -int(GameVariables().cam_pos[0]), int(self.pos[1]) -15 -int(GameVariables().cam_pos[1]), int(value),3))
-		
-		i = 0
-		while i < 20 * self.energy:
-			cPos = vectorCopy(self.pos)
-			angle = TimeTravel._tt.timeTravelList["weaponDir"].getAngle()
-			pygame.draw.line(win, (0,0,0), (int(cPos[0] - GameVariables().cam_pos[0]), int(cPos[1] - GameVariables().cam_pos[1])), ((int(cPos[0] + cos(angle) * i - GameVariables().cam_pos[0]), int(cPos[1] + sin(angle) * i - GameVariables().cam_pos[1]))))
-			i += 1
-
-class TimeTravel:
-	_tt = None
-	def __init__(self):
-		TimeTravel._tt = self
-		self.timeTravelPositions = []
-		self.timeTravelFacings = []
-		self.timeTravelList = {}
-		self.timeTravelFire = False
-	def timeTravelInitiate(self):
-		Game._game.timeTravel = True
-		self.timeTravelList = {}
-		self.timeTravelList["surf"] = GameVariables().player.surf
-		self.timeTravelList["name"] = GameVariables().player.name
-		self.timeTravelList["health"] = GameVariables().player.health
-		self.timeTravelList["initial pos"] = vectorCopy(GameVariables().player.pos)
-		self.timeTravelList["time_counter in turn"] = TimeManager().time_counter
-	def timeTravelRecord(self):
-		self.timeTravelPositions.append(GameVariables().player.pos.vec2tup())
-		self.timeTravelFacings.append(GameVariables().player.facing)
-	def timeTravelPlay(self):
-		TimeManager().time_counter = self.timeTravelList["time_counter in turn"]
-		Game._game.timeTravel = False
-		self.timeTravelList["weapon"] = WeaponManager().current_weapon
-		self.timeTravelList["weaponOrigin"] = vectorCopy(GameVariables().player.pos)
-		self.timeTravelList["energy"] = WeaponManager().energy_level
-		self.timeTravelList["weaponDir"] = GameVariables().player.get_shooting_direction()
-		GameVariables().player.health = self.timeTravelList["health"]
-		if Worm.healthMode == 1:
-			GameVariables().player.healthStr = fonts.pixel5.render(str(GameVariables().player.health), False, GameVariables().player.team.color)
-		GameVariables().player.pos = self.timeTravelList["initial pos"]
-		GameVariables().player.vel *= 0
-		TimeAgent()
-	def timeTravelReset(self):
-		self.timeTravelFire = False
-		self.timeTravelPositions = []
-		self.timeTravelList = {}
-	def step(self):
-		self.timeTravelRecord()
 
 class TimeSlow:
 	def __init__(self):
@@ -573,8 +488,6 @@ def cycle_worms():
 	GameVariables().boom_radius_mult = 1
 	GameVariables().mega_weapon_trigger = False
 	GameVariables().aim_aid = False
-	if Game._game.timeTravel:
-		TimeTravel._tt.timeTravelReset()
 
 	# release worm tool
 	worm_tool = GameVariables().player.get_tool()
@@ -862,9 +775,8 @@ def onKeyPressTab():
  
 def onKeyPressTest():
 	''' test '''
-	# GameVariables().debug_print()
+	GameVariables().debug_print()
 	# print(WeaponManager().weapon_director.actors)
-	# GameVariables().rise_water(20)
 
 def onKeyPressEnter():
 	# jump
@@ -1049,9 +961,6 @@ class GameRoom(Room):
 
 		# step background
 		Game._game.background.step()
-
-		if Game._game.timeTravel: 
-			TimeTravel._tt.step()
 		
 		# step game mode
 		GameVariables().game_mode.step()
@@ -1155,6 +1064,7 @@ wip = '''
 		win record
 		holding mjolnir
 		particle to indicate correct arena
+		better portals
 		water rise in its own wait for stable state
 		time travel refactor
 		win screen

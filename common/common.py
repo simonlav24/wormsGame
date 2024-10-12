@@ -178,6 +178,10 @@ class CycleObserver(Protocol):
 		...
 
 
+class FireObserver(Protocol):
+	def on_fire(self, **kwargs) -> bool:
+		...
+
 
 class IComment(Entity):
 	def comment(self, text_dict) -> None:

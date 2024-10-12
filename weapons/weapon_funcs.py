@@ -36,7 +36,7 @@ from weapons.fireworks import fire_firework
 from weapons.artifacts.mjolnir_artifact import MjolnirStrike, MjolnirFly, MjolnirThrow
 from weapons.artifacts.plant_master import PlantControl
 from weapons.artifacts.minecraft_artifact import build, mine
-
+from weapons.time_travel import TimeTravel
 
 weapon_funcs: Dict[str, Callable[[Any], Any]] = {}
 
@@ -436,8 +436,7 @@ def fire_switch_worms(*args, **kwargs) -> EntityPhysical:
 
 def fire_time_travel(*args, **kwargs) -> EntityPhysical:
     """ fire time travel """
-    # todo: implement
-    print('not implemented time travel')
+    TimeTravel()
     GameVariables().commentator.comment([{'text': "great scott"}])
 
 

@@ -7,7 +7,7 @@ from random import uniform
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud, calc_water_color
+from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud, calc_water_color, FireObserver
 from common.constants import WHITE, GameState, RIGHT, feels
 
 from common.vector import Vector
@@ -45,6 +45,7 @@ class DataBase:
         self.targets: List[EntityPhysical] = []
         self.plants: List[EntityPlant] = []
         self.cycle_observers: List[CycleObserver] = []
+        self.fire_observers: List[FireObserver] = []
         self.light_sources: List[EntityLightSource] = []
         self.pygame_event_listeners: List[InterfaceEventHandler] = []
         self.elecrocuted: List[EntityElectrocuted] = []
@@ -272,6 +273,12 @@ class GameVariables(metaclass=SingletonMeta):
     def unregister_cycle_observer(self, obj: CycleObserver):
         self.database.cycle_observers.remove(obj)
     
+    def register_fire_observer(self, obj: FireObserver):
+        self.database.fire_observers.append(obj)
+    
+    def unregister_fire_observer(self, obj: FireObserver):
+        self.database.fire_observers.remove(obj)
+
     def get_light_sources(self) -> List[EntityLightSource]:
         return self.database.light_sources
 
@@ -301,6 +308,12 @@ class GameVariables(metaclass=SingletonMeta):
 
     def rise_water(self, amount: int) -> None:
         self.water_rise_amount = amount
+    
+    def on_fire(self, **kwargs) -> bool:
+        result = False
+        for observer in self.database.fire_observers:
+            result |= observer.on_fire(**kwargs)
+        return result
 
 
 def point2world(point) -> Tuple[int, int]:
