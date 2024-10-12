@@ -210,7 +210,7 @@ class InterfaceEventHandler(Protocol):
 
 
 class EntityElectrocuted(EntityPhysical):
-	def electrocute(self) -> None:
+	def electrocute(self, origin: Vector) -> None:
 		...
 
 

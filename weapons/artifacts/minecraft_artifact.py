@@ -1,20 +1,18 @@
 
 from random import uniform, choice
-from typing import List
 
 import pygame
 
-from common import GameVariables, blit_weapon_sprite, point2world, LEFT, sprites
-from common.vector import vector_from_angle, vectorUnitRandom, Vector, tup2vec
+from common import GameVariables, blit_weapon_sprite, sprites
+from common.vector import vectorUnitRandom, Vector
 
 from game.map_manager import MapManager, SKY, GRD
 from game.visual_effects import Blast
 from entities import Debrie
-from weapons.artifacts.deployable_artifact import DeployableArtifact, ArtifactType
+from weapons.artifacts.deployable_artifact import DeployableArtifact
 
 
 class PickAxeArtifact(DeployableArtifact):
-
 	def set_surf(self):
 		self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "pick axe")
@@ -25,10 +23,9 @@ class PickAxeArtifact(DeployableArtifact):
 	def comment_pick(self):
 		return ("its mining time for ", "")
 		
-	
 	def step(self):
 		super().step()
-		self.angle -= self.vel.x*4
+		self.angle -= self.vel.x * 4
 
 
 def mine(**kwargs):
@@ -38,7 +35,7 @@ def mine(**kwargs):
 
 	colors = []
 	for _ in range(10):
-		sample = (position + Vector(8,8) + vectorUnitRandom() * uniform(0,8)).vec2tupint()
+		sample = (position + Vector(8, 8) + vectorUnitRandom() * uniform(0, 8)).vec2tupint()
 		if MapManager().is_on_map(sample):
 			color = MapManager().ground_map.get_at(sample)
 			if not color == SKY:
@@ -47,11 +44,11 @@ def mine(**kwargs):
 		colors = Blast._color
 
 	for _ in range(16):
-		d = Debrie(position + Vector(8,8), 4, colors, 2, False)
-		d.radius = choice([2,1])
+		d = Debrie(position + Vector(8, 8), 4, colors, 2, False)
+		d.radius = choice([2, 1])
 
-	pygame.draw.rect(MapManager().game_map, SKY, (position, Vector(16,16)))
-	pygame.draw.rect(MapManager().ground_map, SKY, (position, Vector(16,16)))
+	pygame.draw.rect(MapManager().game_map, SKY, (position, Vector(16, 16)))
+	pygame.draw.rect(MapManager().ground_map, SKY, (position, Vector(16, 16)))
 
 
 def build(**kwargs) -> Vector:

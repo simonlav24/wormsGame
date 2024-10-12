@@ -43,4 +43,4 @@ class DeployableArtifact(PhysObj):
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
 		surf = pygame.transform.rotate(self.surf, angle)
-		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
+		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size()) / 2))

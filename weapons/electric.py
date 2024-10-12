@@ -60,7 +60,7 @@ class ElectricGrenade(PhysObj):
 		
 		for electrocuted in self.electrocuted:
 			if randint(1, 100) < 5:
-				electrocuted.electrocute()
+				electrocuted.electrocute(self.pos)
 	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)

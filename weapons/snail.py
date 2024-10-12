@@ -14,7 +14,7 @@ from entities import PhysObj
 
 class Snail:
 	around = [Vector(1,0), Vector(1,-1), Vector(0,-1), Vector(-1,-1), Vector(-1,0), Vector(-1,1), Vector(0,1), Vector(1,1)]
-	def __init__(self, pos, anchor, clockwise=RIGHT):
+	def __init__(self, pos: Vector, anchor, clockwise=RIGHT):
 		GameVariables().register_non_physical(self)
 		self.pos = pos
 		self.pos.integer()
@@ -48,7 +48,7 @@ class Snail:
 		for worm in GameVariables().get_worms():
 			if distus(self.pos, worm.pos) < (3 + worm.radius) * (3 + worm.radius):
 				GameVariables().unregister_non_physical(self)
-				boom(self.pos, 30)
+				boom(self.pos, 25)
 				return
 	
 	def draw(self, win: pygame.Surface):

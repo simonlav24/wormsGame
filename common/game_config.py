@@ -32,8 +32,8 @@ class GameConfig(BaseModel):
     game_mode: GameMode = GameMode.BATTLE
     random_mode: RandomMode = RandomMode.NONE
 
-    option_cool_down: bool = False
-    option_artifacts: bool = False
+    option_cool_down: bool = True
+    option_artifacts: bool = True
     option_closed_map: bool = False
     option_forts: bool = False
     option_digging: bool = False

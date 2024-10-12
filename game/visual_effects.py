@@ -313,7 +313,7 @@ class DropLet(Effect):
 		self.pos += self.vel * GameVariables().dt
 
 		self.acc *= 0
-
+		GameVariables().game_distable()
 		if self.pos.y > MapManager().get_map_height():
 			EffectManager().unregister(self)
 

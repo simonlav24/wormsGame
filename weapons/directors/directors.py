@@ -19,7 +19,8 @@ def end_turn():
 
 def decrease(weapon: Weapon, team: Team):
     ''' decrease the weapon count of the team by -1 '''
-    team.ammo(weapon.index, -1)
+    if team.ammo(weapon.index) != 0:
+        team.ammo(weapon.index, -1)
     GameVariables().hud.render_weapon_count(weapon, team.ammo(weapon.index))
 
 class WeaponDirector:
@@ -104,6 +105,8 @@ class WeaponActorBase:
 
         self.shooted_object: EntityPhysical = None
         self.secondary: bool = False
+        if not self.can_shoot():
+            self.is_done = True
 
     def step(self) -> None:
         ...
@@ -172,8 +175,6 @@ class ActorChargeable(WeaponActorBase):
         super().__init__(weapon, weapon_func, team)
         self.energy = 0.0
         self.energizing = True
-        if not self.can_shoot():
-            self.is_done = True
 
     def handle_event(self, event) -> None:
         super().handle_event(event)
@@ -239,12 +240,20 @@ class ActorClickable(WeaponActorBase):
 
 
 class ActorWormTool(WeaponActorBase):
+    def __init__(self, weapon, weapon_func, team):
+        super().__init__(weapon, weapon_func, team)
+        self.is_done = False
+
     def handle_event(self, event) -> None:
         super().handle_event(event)
 
         if not self.secondary and GameVariables().game_state == GameState.PLAYER_PLAY:
             if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
-                self.fire()
+                tool = GameVariables().player.get_tool()
+                if tool is not None:
+                    tool.release()
+                elif self.can_shoot():
+                    self.fire()
     
     def can_switch_weapon(self) -> bool:
         return True

@@ -119,7 +119,7 @@ class SentryGun(AutonomousObject):
 		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
 		pygame.draw.line(win, self.team_color, point2world(self.pos), point2world(self.pos + vector_from_angle(self.angle) * 18))
 	
-	def electrocute(self) -> None:
+	def electrocute(self, origin: Vector) -> None:
 		self.electrified = True
 
 	def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:

@@ -55,6 +55,7 @@ from weapons.guns import Bubble # refactor
 from weapons.long_bow import LongBow
 from weapons.plants import PlantSeed
 from weapons.mine import Mine
+from weapons.artifacts.minecraft_artifact import PickAxeArtifact
 
 from weapons.misc.springs import MasterOfPuppets
 from weapons.misc.armageddon import Armageddon
@@ -695,6 +696,13 @@ def cheat_activate(code: str):
 		for weapon in WeaponManager().weapons:
 			weapon.round_delay = 0
 		Game._game.game_config.option_cool_down = False
+	elif code == "gibguns1":
+		for team in TeamManager().teams:
+			for i, _ in enumerate(team.weapon_set):
+				team.weapon_set[i] = 1
+		for weapon in WeaponManager().weapons:
+			weapon.round_delay = 0
+		Game._game.game_config.option_cool_down = False
 	elif code == "suddendeath":
 		sudden_death()
 	elif code == "wind":
@@ -733,9 +741,6 @@ def cheat_activate(code: str):
 		TeamManager().current_team.ammo(WeaponManager()["ender pearl"], 6)
 	elif code == "masterofpuppets":
 		MasterOfPuppets()
-	elif code == "artifact":
-		Game._game.trigerArtifact = True
-		GameVariables().commentator.comment([{'text': 'next turn artifact drop'}])
 	elif code == "deathtouch":
 		pos = Vector(mouse_pos)
 		closest = None
@@ -746,7 +751,8 @@ def cheat_activate(code: str):
 				closest = worm
 		if closest:
 			closest.damage(1000)
-
+	elif code == "minecraft":
+		PickAxeArtifact(mouse_pos, ArtifactType.MINECRAFT)
 
 ################################################################################ State machine
 
@@ -1148,9 +1154,13 @@ wip = '''
 		loading screen
 		win record
 		holding mjolnir
-		check for worm tools to not be able to open when ammo == 0
-		weapon menu
-		team menu
+		particle to indicate correct arena
+		water rise in its own wait for stable state
+		time travel refactor
+		win screen
+		weapon screen
+		team creation screen
+		score screen (?)
 	'''
 
 

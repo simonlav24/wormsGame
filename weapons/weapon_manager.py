@@ -92,9 +92,11 @@ class WeaponManager(metaclass=SingletonMeta):
         return (sprites.sprite_atlas, rect)
 
     def is_weapon_enabled(self, weapon: Weapon) -> bool:
-        if GameVariables().game_round_count >= weapon.round_delay:
-            return True
-        return False
+        if GameVariables().game_round_count < weapon.round_delay:
+            return False
+        if weapon in self.cool_down_list:
+            return False
+        return True
 
     def get_weapon(self, name: str) -> Weapon:
         ''' get weapon by name '''
@@ -269,6 +271,8 @@ class WeaponManager(metaclass=SingletonMeta):
         ''' draw specific weapon indicator '''
         
         if not self.current_weapon.draw_hint:
+            return
+        if not self.can_shoot(check_ammo=True, check_cool_down=True, check_delay=True, check_state=False):
             return
 
         if self.current_weapon.name in ["homing missile", "seeker"]:

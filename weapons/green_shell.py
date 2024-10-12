@@ -92,7 +92,7 @@ class GreenShell(PhysObj):
 			index = 0	
 		win.blit(sprites.sprite_atlas, point2world(self.pos - Vector(16,16)/2), ((index*16, 48), (16,16)))
 
-	def electrocute(self) -> None:
+	def electrocute(self, origin: Vector) -> None:
 		if self.speed < 3:
 			self.facing = LEFT if self.pos.x > self.pos.x else RIGHT
 			self.speed = 3

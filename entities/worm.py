@@ -265,10 +265,12 @@ class Worm(PhysObj):
         
         # check key bindings
         move_action = False
-        if (self is GameVariables().player and
+        if (
+            self is GameVariables().player and
             GameVariables().player_can_move and
             GameVariables().is_player_in_control() and
-            self.alive):
+            self.alive
+            ):
 
             # move and turn
             if not self.worm_tool.is_movement_blocking():
@@ -292,6 +294,7 @@ class Worm(PhysObj):
             else:
                 self.shoot_acc = 0
                 self.shoot_vel = 0
+            self.damp = 0.1
         else:
             self.damp = 0.2
             self.shoot_acc = 0
@@ -324,7 +327,7 @@ class Worm(PhysObj):
     def set_tool(self, tool: EntityWormTool):
         self.worm_tool.set(tool)
     
-    def electrocute(self) -> None:
-        self.damage(randint(1,8))
+    def electrocute(self, origin: Vector) -> None:
+        self.damage(randint(1, 8))
         a = lambda x : 1 if x >= 0 else -1
-        self.vel -= Vector(a(self.pos.x - self.pos.x) * uniform(1.2, 2.2), uniform(1.2, 3.2))
+        self.vel -= Vector(a(origin[0] - self.pos.x) * uniform(1.2, 2.2), uniform(1.2, 3.2))

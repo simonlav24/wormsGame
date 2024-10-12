@@ -83,7 +83,7 @@ class Raon(AutonomousObject):
 			return True
 		return False
 	
-	def electrocute(self) -> None:
+	def electrocute(self, origin: Vector) -> None:
 		self.dead = True
 	
 	def draw(self, win: pygame.Surface):
