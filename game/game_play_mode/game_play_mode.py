@@ -83,4 +83,8 @@ class GamePlayCompound(GamePlayMode):
         for mode in self.modes:
             output += mode.debug_print()
         return output
+    
+    def on_sudden_death_turn(self) -> None:
+        for mode in self.modes:
+            mode.on_sudden_death_turn()
 

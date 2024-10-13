@@ -70,20 +70,19 @@ class Game:
 		GameVariables().set_config(game_config)
 		GameVariables().commentator = Commentator()
 		GameVariables().hud = Hud()
+		GameVariables().state_machine = StateMachine()
 
 		self.evaluate_config(game_config)
 		
+		WeaponManager()
+
 		self.background = BackGround(feels[GameVariables().config.feel_index], GameVariables().config.option_darkness)
 		self.background.set_closed(GameVariables().config.option_closed_map)
 
 		self.cheatCode = "" # cheat code
-		
-		self.mostDamage = (0, None)
 
-		self.killList = []
 		self.lstep = 0
 		self.lstepmax = GameVariables().config.worms_per_team * 4
-
 		self.loadingSurf = fonts.pixel10.render("Simon's Worms Loading", False, WHITE)
 
 		self.endGameDict = None
@@ -92,6 +91,7 @@ class Game:
 		self.imageMjolnir.blit(sprites.sprite_atlas, (0,0), (100, 32, 24, 31))
 
 		self.radial_weapon_menu: RadialMenu = None
+		GameVariables().state_machine.update()
 	
 	def reset(self):
 		''' reset all game singletons '''
@@ -127,6 +127,9 @@ class Game:
 		# place worms
 		self.place_worms_random()
 		
+		# give random legendary starting weapons:
+		WeaponManager().give_extra_starting_weapons()
+
 		# place objects
 		if not self.game_config.option_digging:
 			amount = randint(2,4)
@@ -142,9 +145,6 @@ class Game:
 			amount = randint(0, 2)
 			for _ in range(amount):
 				MapManager().place_object(PlantSeed, ((0,0), (0,0), 0, PlantMode.VENUS), False)
-
-		# give random legendary starting weapons:
-		WeaponManager().give_extra_starting_weapons()
 
 		# choose starting worm
 		starting_worm = TeamManager().current_team.worms.pop(0)
@@ -182,7 +182,6 @@ class Game:
 			current_team.worms.append(Worm(place, new_worm_name, current_team))
 			TeamManager().team_choser = (TeamManager().team_choser + 1) % GameVariables().num_of_teams
 			self.lstepper()
-		GameVariables().game_state = GameVariables().game_next_state
 
 	def init_handle_game_mode(self) -> None:
 		''' on init, handle game mode parameter and variables '''
@@ -258,14 +257,6 @@ class Game:
 	def step(self):
 		pass
 	
-	def add_to_score_list(self, amount=1):
-		"""add to score list if points, list entry: (surf, name, score)"""
-		if len(self.killList) > 0 and self.killList[0][1] == GameVariables().player.name_str:
-			amount += self.killList[0][2]
-			self.killList.pop(0)
-		string = GameVariables().player.name_str + ": " + str(amount)
-		self.killList.insert(0, (fonts.pixel5_halo.render(string, False, GameVariables().initial_variables.hud_color), GameVariables().player.name_str, amount))
-
 	def lstepper(self):
 		...
 		# self.lstep += 1
@@ -369,82 +360,80 @@ def check_winners() -> bool:
 	
 	# todo: add to dict
 	# todo: save win as image
-
-	GameVariables().game_next_state = GameState.WIN
 	return True
 
-def _check_winners() -> bool:
-	end = False
-	lastTeam = None
-	count = 0
-	pointsGame = False
-	for team in TeamManager().teams:
-		if len(team.worms) == 0:
-			count += 1
-	if count == GameVariables().num_of_teams - 1:
-		# one team remains
-		end = True
-		for team in TeamManager().teams:
-			if not len(team.worms) == 0:
-				lastTeam = team
-	if count == GameVariables().num_of_teams:
-		# no team remains
-		end = True
+# def _check_winners() -> bool:
+# 	end = False
+# 	lastTeam = None
+# 	count = 0
+# 	pointsGame = False
+# 	for team in TeamManager().teams:
+# 		if len(team.worms) == 0:
+# 			count += 1
+# 	if count == GameVariables().num_of_teams - 1:
+# 		# one team remains
+# 		end = True
+# 		for team in TeamManager().teams:
+# 			if not len(team.worms) == 0:
+# 				lastTeam = team
+# 	if count == GameVariables().num_of_teams:
+# 		# no team remains
+# 		end = True
 		
-	if not end:
-		return False
-	# game end:
-	dic = {}
-	winningTeam = None
+# 	if not end:
+# 		return False
+# 	# game end:
+# 	dic = {}
+# 	winningTeam = None
 	
 	
-	# win points:
-	if pointsGame:
-		for team in TeamManager().teams:
-			print("[ |", team.name, "got", team.points, "points! | ]")
-		teamsFinals = sorted(TeamManager().teams, key = lambda x: x.points)
-		winningTeam = teamsFinals[-1]
-		print("[most points to team", winningTeam.name, "]")
-		dic["points"] = str(winningTeam.points)
-	# regular win:
-	else:
-		winningTeam = lastTeam
-		if winningTeam:
-			print("[last team standing is", winningTeam.name, "]")
+# 	# win points:
+# 	if pointsGame:
+# 		for team in TeamManager().teams:
+# 			print("[ |", team.name, "got", team.points, "points! | ]")
+# 		teamsFinals = sorted(TeamManager().teams, key = lambda x: x.points)
+# 		winningTeam = teamsFinals[-1]
+# 		print("[most points to team", winningTeam.name, "]")
+# 		dic["points"] = str(winningTeam.points)
+# 	# regular win:
+# 	else:
+# 		winningTeam = lastTeam
+# 		if winningTeam:
+# 			print("[last team standing is", winningTeam.name, "]")
 	
-	if end:
-		if winningTeam is not None:
-			print("Team", winningTeam.name, "won!")
-			dic["time"] = str(GameVariables().time_overall // GameVariables().fps)
-			dic["winner"] = winningTeam.name
-			if Game._game.mostDamage[1]:
-				dic["mostDamage"] = str(int(Game._game.mostDamage[0]))
-				dic["damager"] = Game._game.mostDamage[1]
-			add_to_record(dic)
-			if len(winningTeam.worms) > 0:
-				GameVariables().cam_track = winningTeam.worms[0]
-			GameVariables().commentator.comment([
-				{'text': 'team '},
-				{'text': winningTeam.name, 'color': winningTeam.color},
-				{'text': ' Won!'}
-			])
+# 	if end:
+# 		if winningTeam is not None:
+# 			print("Team", winningTeam.name, "won!")
+# 			dic["time"] = str(GameVariables().time_overall // GameVariables().fps)
+# 			dic["winner"] = winningTeam.name
+# 			if Game._game.mostDamage[1]:
+# 				dic["mostDamage"] = str(int(Game._game.mostDamage[0]))
+# 				dic["damager"] = Game._game.mostDamage[1]
+# 			add_to_record(dic)
+# 			if len(winningTeam.worms) > 0:
+# 				GameVariables().cam_track = winningTeam.worms[0]
+# 			GameVariables().commentator.comment([
+# 				{'text': 'team '},
+# 				{'text': winningTeam.name, 'color': winningTeam.color},
+# 				{'text': ' Won!'}
+# 			])
 
-		else:
-			GameVariables().commentator.comment([{'text': 'its a tie!'}])
-			print("Tie!")
+# 		else:
+# 			GameVariables().commentator.comment([{'text': 'its a tie!'}])
+# 			print("Tie!")
 		
-		# add teams to dic
-		dic["teams"] = {}
-		for team in TeamManager().teams:
-			dic["teams"][team.name] = [team.color, team.points]
+# 		# add teams to dic
+# 		dic["teams"] = {}
+# 		for team in TeamManager().teams:
+# 			dic["teams"][team.name] = [team.color, team.points]
 
-		Game._game.endGameDict = dic
-		GameVariables().game_next_state = GameState.WIN
+# 		Game._game.endGameDict = dic
+# 		GameVariables().state_machine.update(GameState.WIN)
 		
-		GroundScreenShoot = pygame.Surface((MapManager().ground_map.get_width(), MapManager().ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
-		GroundScreenShoot.blit(MapManager().ground_map, (0,0))
-		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
-	return end
+# 		GroundScreenShoot = pygame.Surface((MapManager().ground_map.get_width(), MapManager().ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
+# 		GroundScreenShoot.blit(MapManager().ground_map, (0,0))
+# 		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
+# 	return end
 
 def deploy_crate() -> None:
 	# deploy crate if privious turn was last turn in round
@@ -460,19 +449,14 @@ def deploy_crate() -> None:
 			w = deploy_pack(choice([HealthPack, UtilityPack, WeaponPack]))
 			GameVariables().cam_track = w
 
-def cycle_worms():
+def cycle_worms() -> GameState:
 	''' switch to next worm and set up 
 		reset special effect
 		comments about damage
 		check for winners
-		make objects that are playing in between play
-		deploy packs / artifacts
-		handle water rise if flood
-		update weapons delay (should be removed)
 		flare reduction
 		sick worms
 		chose next worm
-	
 	'''
 
 	# reset special effects:
@@ -488,7 +472,7 @@ def cycle_worms():
 		worm_tool.release()
 	
 	if check_winners():
-		return
+		return GameState.WIN
 
 	new_round = False
 	GameVariables().game_turn_count += 1
@@ -555,6 +539,7 @@ def cycle_worms():
 	GameVariables().game_mode.on_turn_begin()
 
 	WeaponManager().switch_weapon(WeaponManager().current_weapon)
+	return GameState.PLAYER_PLAY
 
 def weapon_menu_init():
 	# get categories
@@ -587,6 +572,7 @@ def sudden_death():
 	GameVariables().hud.add_toast(fonts.pixel10.render("sudden death", False, (220,0,0)))
 	Earthquake(1.5 * GameGlobals().fps, decorative=True, strength=0.25)
 	GameVariables().game_mode.add_mode(SuddenDeathGamePlay())
+	GameVariables().is_sudden_death = True
 
 def cheat_activate(code: str):
 	code = code[:-1].lower()
@@ -614,8 +600,6 @@ def cheat_activate(code: str):
 		boom(GameVariables().player.pos, 100)
 	elif code == "armageddon":
 		Armageddon()
-	elif code == "reset":
-		GameVariables().game_state, GameVariables().game_next_state = GameState.RESET, GameState.RESET
 	elif code[0:5] == "gunme" and len(code) == 6:
 		amount = int(code[5])
 		for i in range(amount):
@@ -657,57 +641,85 @@ def cheat_activate(code: str):
 	elif code == "minecraft":
 		PickAxeArtifact(mouse_pos, ArtifactType.MINECRAFT)
 
-################################################################################ State machine
 
-def stateMachine():
-	if GameVariables().game_state == GameState.RESET:
-		GameVariables().game_stable = False
-		GameVariables().game_stable_counter = False
-		
-		Game._game.create_new_game()
-		GameVariables().game_next_state = GameState.PLAYER_PLAY
-		GameVariables().game_state = GameVariables().game_next_state
-	
-	elif GameVariables().game_state == GameState.PLAYER_PLAY:		
-		GameVariables().game_next_state = GameState.PLAYER_RETREAT
-	
-	elif GameVariables().game_state == GameState.PLAYER_RETREAT:
-		
-		GameVariables().game_stable_counter = 0
-		GameVariables().game_next_state = GameState.WAIT_STABLE
-	
-	elif GameVariables().game_state in [GameState.WAIT_STABLE, GameState.AUTONOMOUS_PLAY, GameState.DEPLOYEMENT]:
-		if GameVariables().game_stable:
-			GameVariables().game_stable_counter += 1
-			if GameVariables().game_stable_counter == 10:
-				# next turn
-				GameVariables().game_stable_counter = 0
-				if GameVariables().game_state == GameState.WAIT_STABLE:
-					# wait stable ended, engage autonomous
-					GameVariables().engage_autonomous()
-					GameVariables().game_next_state = GameState.AUTONOMOUS_PLAY
-				
-				elif GameVariables().game_state == GameState.AUTONOMOUS_PLAY:
-					# autonomous turn ended, deploy crates
-					deploy_crate()
-					GameVariables().game_mode.on_deploy()
-					GameVariables().game_next_state = GameState.DEPLOYEMENT
+class StateMachine:
+	def __init__(self):
+		self.is_stable_check = False
+		self.stable_count = 0
+		self.stable_max_count = 10
+		self.next_state = GameState.RESET
 
-				elif GameVariables().game_state == GameState.DEPLOYEMENT:
-					# deployed crates, cycle worms
-					GameVariables().game_next_state = GameState.PLAYER_PLAY
-					cycle_worms()
-					TimeManager().time_reset()
-					WeaponManager().render_weapon_count()
-				
-				GameVariables().game_state = GameVariables().game_next_state
+	def step(self) -> None:
+		if self.is_stable_check:
+			self.stable_count += 1
+			if self.stable_count == self.stable_max_count:
+				self.stable_count = 0
+				self.is_stable_check = False
+				self.update()
+
+	def stable_check(self, max_count=10) -> None:
+		self.is_stable_check = True
+		self.stable_max_count = max_count
+		self.stable_count = 0
+
+	def distable(self) -> None:
+		self.stable_count = 0
+
+	def update(self, state: GameState = None) -> None:
+		''' set state to new state and handle state '''
+
+		if state is None:
+			state = self.next_state
+		GameVariables().game_state = state
 		
-	elif GameVariables().game_state == GameState.WIN:
-		GameVariables().game_stable_counter += 1
-		if GameVariables().game_stable_counter == 30 * 3:
-			return 1
-	
-	return 0
+		if state == GameState.RESET:
+			GameVariables().game_stable = False
+			
+			Game._game.create_new_game()
+			self.update(GameState.PLAYER_PLAY)
+		
+		elif state == GameState.PLAYER_PLAY:
+			self.next_state = GameState.PLAYER_RETREAT
+		
+		elif state == GameState.PLAYER_RETREAT:
+			self.next_state = GameState.WAIT_STABLE
+		
+		elif state == GameState.WAIT_STABLE:
+			self.stable_check()
+			self.next_state = GameState.AUTONOMOUS_PLAY
+		
+		elif state == GameState.AUTONOMOUS_PLAY:
+			self.stable_check()
+			GameVariables().engage_autonomous()
+			self.next_state = GameState.DEPLOYEMENT
+		
+		elif state == GameState.DEPLOYEMENT:
+			self.stable_check()
+			deploy_crate()
+			GameVariables().game_mode.on_deploy()
+			if GameVariables().is_sudden_death:
+				self.next_state = GameState.SUDDEN_DEATH_PLAY
+			else:
+				self.next_state = GameState.TURN_CYCLE
+
+		elif state == GameState.SUDDEN_DEATH_PLAY:
+			GameVariables().game_mode.on_sudden_death_turn()
+			self.stable_check()
+			self.next_state = GameState.TURN_CYCLE
+
+		elif state == GameState.TURN_CYCLE:
+			next_state = cycle_worms()
+			TimeManager().time_reset()
+			self.update(next_state)
+
+		elif state == GameState.WIN:
+			self.stable_check(3 * GameGlobals().fps)
+			self.next_state = GameState.GAME_OVER
+		
+		elif state == GameState.GAME_OVER:
+			GameVariables().game_end = True
+
+
 
 ################################################################################ Key bindings
 def onKeyPressRight():
@@ -782,7 +794,6 @@ class GameRoom(Room):
 
 		config = kwargs.get('input')
 		Game(config)
-		WeaponManager()
 
 		# refactor these
 		# self.wind_flag = WindFlag()
@@ -805,7 +816,6 @@ class GameRoom(Room):
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
 			pass
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
-			# this is the next GameVariables().game_state after placing all worms
 			if GameVariables().game_state == GameState.PLAYER_PLAY:
 				if Game._game.radial_weapon_menu is None:
 					if WeaponManager().can_switch_weapon():
@@ -878,8 +888,8 @@ class GameRoom(Room):
 	def step(self):
 		''' game step '''
 
-		result = stateMachine()
-		if result == 1:
+		GameVariables().state_machine.step()
+		if GameVariables().game_end:
 			self.switch = SwitchRoom(Rooms.MAIN_MENU, False, None)
 			return
 
@@ -973,7 +983,7 @@ class GameRoom(Room):
 		''' draw game '''
 		super().draw(win)
 
-		if GameVariables().game_state in [GameState.RESET]:
+		if GameVariables().game_state == GameState.RESET:
 			return
 
 		# draw background
@@ -1036,17 +1046,6 @@ class GameRoom(Room):
 		# debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
 		# win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
 		
-		# draw loading screen
-		if GameVariables().game_state == GameState.RESET:
-			win.fill((0,0,0))
-			pos = (GameGlobals().win_width/2 - Game._game.loadingSurf.get_width()/2, GameGlobals().win_height/2 - Game._game.loadingSurf.get_height()/2)
-			win.blit(Game._game.loadingSurf, pos)
-			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + 20))
-			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + Game._game.loadingSurf.get_height() + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + Game._game.loadingSurf.get_height() + 20))
-			pygame.draw.line(win, (255,255,255), (pos[0], pos[1] + 20), (pos[0], pos[1] + Game._game.loadingSurf.get_height() + 20))
-			pygame.draw.line(win, (255,255,255), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + 20), (pos[0] + Game._game.loadingSurf.get_width(), pos[1] + Game._game.loadingSurf.get_height() + 20))
-			pygame.draw.rect(win, (255,255,255), ((pos[0], pos[1] + 20), ((Game._game.lstep/Game._game.lstepmax)*Game._game.loadingSurf.get_width(), Game._game.loadingSurf.get_height())))
-
 
 wip = '''
 	still in progress:

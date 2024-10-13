@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import pygame
 
 from common.vector import *
-from common.constants import ColorType, Sickness, DamageType
+from common.constants import ColorType, Sickness, DamageType, GameState
 
 # paths
 PATH_ASSETS = r'./assets'
@@ -168,6 +168,9 @@ class GamePlayMode:
 	
 	def debug_print(self) -> str:
 		return ''
+	
+	def on_sudden_death_turn(self) -> None:
+		...
 
 
 class CycleObserver(Protocol):
@@ -222,6 +225,17 @@ class Camera:
 	def __init__(self, pos):
 		self.pos = pos
 		self.radius = 1
+
+
+class IStateMachine(Protocol):
+	def update(self, state: GameState = None) -> None:
+		...
+	
+	def step(self) -> None:
+		...
+	
+	def distable(self) -> None:
+		...
 
 # color utilities
 

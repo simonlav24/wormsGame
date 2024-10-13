@@ -7,7 +7,7 @@ from random import uniform
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud, calc_water_color, FireObserver
+from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud, calc_water_color, FireObserver, IStateMachine
 from common.constants import WHITE, GameState, RIGHT, feels
 
 from common.vector import Vector
@@ -71,14 +71,6 @@ class GameVariables(metaclass=SingletonMeta):
 
         self.cam_pos: Vector = Vector(0,0)
         self.cam_track: EntityPhysical = None
-        # self.scale_factor = 3
-        # self.scale_range = (1, 3)
-
-        # self.win: pygame.Surface = None
-        # self.win_width = 0
-        # self.win_height = 0
-        # self.screen_width = 1280
-        # self.screen_height = 720
 
         self.water_level = self.initial_variables.water_level
         self.water_rise_amount = 0
@@ -90,14 +82,14 @@ class GameVariables(metaclass=SingletonMeta):
         self.database = DataBase()
 
         self.game_stable = False
-        self.game_stable_counter = 0
         self.game_turn_count = 0
         self.game_round_count = 0
         self.turns_in_round = 0
         self.num_of_teams = 0
 
+        self.state_machine: IStateMachine = None
         self.game_state = GameState.RESET
-        self.game_next_state = GameState.RESET
+        self.is_sudden_death = False
         self.player_can_move = True
 
         self.game_mode: GamePlayMode = None
@@ -119,6 +111,8 @@ class GameVariables(metaclass=SingletonMeta):
         # those are for laser only
         self.layers_circles = []
         self.layers_lines = []
+
+        self.game_end = False
 
     @property
     def fps(self):
@@ -178,6 +172,7 @@ class GameVariables(metaclass=SingletonMeta):
     
     def step(self):
         if self.water_rise_amount > 0:
+            self.game_distable()
             self.water_level += 1
             self.water_rise_amount -= 1
 
@@ -208,7 +203,7 @@ class GameVariables(metaclass=SingletonMeta):
 
     def game_distable(self) -> None:
         self.game_stable = False
-        self.game_stable_counter = 0
+        self.state_machine.distable()
 
     def register_autonomous(self, object: AutonomousEntity) -> None:
         self.database.autonomous_objects.append(object)
@@ -219,8 +214,9 @@ class GameVariables(metaclass=SingletonMeta):
     def engage_autonomous(self) -> bool:
         ''' engages autonomous objects, if any engages return true '''
         any_engaged = False
-        for object in self.database.autonomous_objects:
-            any_engaged |= object.engage()
+        for obj in self.database.autonomous_objects:
+            any_engaged |= obj.engage()
+            self.cam_track = obj
         return any_engaged
 
     def get_event_handlers(self) -> List[InterfaceEventHandler]:
@@ -314,6 +310,9 @@ class GameVariables(metaclass=SingletonMeta):
         for observer in self.database.fire_observers:
             result |= observer.on_fire(**kwargs)
         return result
+    
+    def update_state(self, state: GameState = None):
+        self.state_machine.update(state)
 
 
 def point2world(point) -> Tuple[int, int]:

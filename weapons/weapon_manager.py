@@ -129,7 +129,7 @@ class WeaponManager(metaclass=SingletonMeta):
         self.weapon_director.on_turn_end()
     
     def on_turn_begin(self) -> None:
-        pass
+        self.render_weapon_count()
 
     def switch_weapon(self, weapon: Weapon):
         """ switch weapon and draw weapon sprite """

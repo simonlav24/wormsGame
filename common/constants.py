@@ -14,12 +14,15 @@ __version__ = '1.5.0'
 
 class GameState(Enum):
     RESET = 0
-    PLAYER_PLAY = 1
-    PLAYER_RETREAT = 2
-    AUTONOMOUS_PLAY = 3
-    DEPLOYEMENT = 4
-    WAIT_STABLE = 5
-    WIN = 6
+    TURN_CYCLE = 1
+    PLAYER_PLAY = 2
+    PLAYER_RETREAT = 3
+    AUTONOMOUS_PLAY = 4
+    DEPLOYEMENT = 5
+    WAIT_STABLE = 6
+    SUDDEN_DEATH_PLAY = 7
+    WIN = 8
+    GAME_OVER = 9
 
 RIGHT = 1
 LEFT = -1

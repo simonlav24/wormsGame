@@ -35,10 +35,10 @@ class TimeManager(metaclass=SingletonMeta):
 	
 	def on_timer(self):
 		if GameVariables().game_state == GameState.PLAYER_PLAY:
-			GameVariables().game_state = GameState.WAIT_STABLE
+			GameVariables().update_state(GameState.WAIT_STABLE)
 			
 		elif GameVariables().game_state == GameState.PLAYER_RETREAT:
-			GameVariables().game_state = GameVariables().game_next_state
+			GameVariables().update_state()
 			
 	def draw(self, win: pygame.Surface):
 		if self.timeSurf[0] != self.time_counter:

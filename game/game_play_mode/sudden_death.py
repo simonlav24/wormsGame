@@ -24,6 +24,6 @@ class SuddenDeathGamePlay(GamePlayMode):
             for worm in GameVariables().get_worms():
                 worm.sicken()
     
-    def on_turn_end(self):
-        if SuddenDeathMode.FLOOD in self.modes:
-            GameVariables().rise_water(20)
+    def on_sudden_death_turn(self):
+        super().on_sudden_death_turn()
+        GameVariables().rise_water(20)

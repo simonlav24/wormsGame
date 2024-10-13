@@ -13,7 +13,7 @@ from weapons.weapon import Weapon, WeaponStyle
 
 def end_turn():
     ''' switch to player_retreat state and set remaining time '''
-    GameVariables().game_state = GameVariables().game_next_state
+    GameVariables().update_state()
     if GameVariables().game_state == GameState.PLAYER_RETREAT:
         TimeManager().time_remaining_etreat()
 

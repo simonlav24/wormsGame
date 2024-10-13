@@ -205,8 +205,7 @@ class Worm(PhysObj):
 
         # if under control 
         if GameVariables().player == self:
-            GameVariables().game_next_state = GameState.PLAYER_RETREAT
-            GameVariables().game_state = GameVariables().game_next_state
+            GameVariables().update_state(GameState.PLAYER_RETREAT)
             TimeManager().time_remaining_die()
         
         GameVariables().get_electrocuted().remove(self)
