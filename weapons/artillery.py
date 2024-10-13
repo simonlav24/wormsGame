@@ -19,7 +19,7 @@ class Artillery(PhysObj):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 2
 		self.color = (128, 0, 0)
-		self.damp = 0.5
+		self.damp = 0.45
 		self.timer = 0
 		self.bombing = False
 		self.is_boom_affected = False

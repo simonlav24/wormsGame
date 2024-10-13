@@ -78,7 +78,7 @@ class PhysObj(Entity):
 					r += pi /8
 				continue
 			
-			# collission with Game._game.map_manager.game_map:
+			# collission with game map:
 			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
 				response += ppos - testPos
 				collision = True

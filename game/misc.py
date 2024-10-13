@@ -32,3 +32,23 @@ class Anim:
         if self.time == 5 * GameVariables().fps:
             GameVariables().unregister_non_physical(self)
             print("record End")
+    
+
+class TimeSlow:
+	def __init__(self):
+		GameVariables().register_non_physical(self)
+		self.time = 0
+		self.state = "slow"
+	def step(self):
+		self.time += 1
+		if self.state == "slow":
+			GameVariables().dt *= 0.9
+			if GameVariables().dt < 0.1:
+				self.state = "fast"
+		elif self.state == "fast":
+			GameVariables().dt *= 1.1
+			if GameVariables().dt > 1:
+				GameVariables().dt = 1
+				GameVariables().unregister_non_physical(self)
+	def draw(self, win: pygame.Surface):
+		pass

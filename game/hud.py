@@ -44,8 +44,10 @@ class HealthBar:
 		# draw health
 		for i, health in enumerate(self.team_health_visual):
 			pygame.draw.rect(win, (220,220,220), (x, y + i * 3, width, height))
-			value = health / self.max_health
-			pygame.draw.rect(win, self.colors[i], (x, y + i * 3, value * width, height))
+			value = (health / self.max_health) * width
+			if value > 0 and int(value) == 0:
+				value = 1
+			pygame.draw.rect(win, self.colors[i], (x, y + i * 3, value, height))
 
 		# draw points
 		max_points = sum(self.team_points)

@@ -7,7 +7,6 @@ from game.game_play_mode.game_play_mode import GamePlayMode
 
 
 class DVGGamePlay(GamePlayMode):
-    
     def on_game_init(self):
         super().on_game_init()
         
@@ -28,7 +27,6 @@ class DVGGamePlay(GamePlayMode):
                     team[i].health = initial_health + (length - 1) * (initial_health // 2)
                 else:
                     team[i].health = initial_health // 2
-        # Game._game.game_config.worm_initial_health = TeamManager().teams[0].worms[0].health
 
 
 

@@ -2,8 +2,6 @@
 
 from math import pi, cos, sin
 from random import randint, uniform, choice
-import os
-import time
 import traceback
 
 import pygame
@@ -11,7 +9,7 @@ import pygame.gfxdraw
 
 from common import *
 from common.vector import Vector
-from common.game_config import GameMode, RandomMode, SuddenDeathMode
+from common.game_config import GameMode, RandomMode
 
 from rooms.room import Room, Rooms, SwitchRoom
 from rooms.room_main_menu import MainMenuRoom
@@ -29,15 +27,15 @@ from game.game_play_mode import (
     ArtifactsGamePlay,
     DarknessGamePlay,
 	StatsGamePlay,
-	MissionsGamePlay,
-	SuddenDeathGamePlay,
+	MissionsGamePlay
 )
 
+from game.state_machine import StateMachine, sudden_death
 from game.time_manager import TimeManager
 from game.map_manager import MapManager, SKY
 from game.background import BackGround
 from game.visual_effects import FloatingText
-from game.team_manager import TeamManager, Team
+from game.team_manager import TeamManager
 
 from game.world_effects import boom, Earthquake
 
@@ -45,32 +43,27 @@ from game.hud import Commentator, Hud
 from gui.radial_menu import RadialMenu, RadialButton
 
 from entities.props import PetrolCan
-from entities.deployables import deploy_pack, HealthPack, WeaponPack, UtilityPack
+from entities.deployables import HealthPack, WeaponPack, UtilityPack
 from entities.worm import Worm
 
 from weapons.weapon_manager import WeaponManager
 from weapons.weapon import weapon_bg_color, WeaponCategory, WeaponStyle
 from weapons.missiles import DrillMissile
-from weapons.guns import Bubble # refactor
 from weapons.long_bow import LongBow
 from weapons.plants import PlantSeed
 from weapons.mine import Mine
-from weapons.artifacts.minecraft_artifact import PickAxeArtifact
 
 from weapons.misc.springs import MasterOfPuppets
 from weapons.misc.armageddon import Armageddon
 
 
 class Game:
-	_game = None
 	def __init__(self, game_config: GameConfig=None):
-		Game._game = self
-
 		self.reset()
 		GameVariables().set_config(game_config)
 		GameVariables().commentator = Commentator()
 		GameVariables().hud = Hud()
-		GameVariables().state_machine = StateMachine()
+		GameVariables().state_machine = StateMachine(self)
 
 		self.evaluate_config(game_config)
 		
@@ -102,7 +95,7 @@ class Game:
 		EffectManager.reset()
 		WeaponManager.reset()
 
-	def create_new_game(self):
+	def create_new_game(self) -> None:
 		''' initialize new game '''
 
 		# create map
@@ -150,7 +143,7 @@ class Game:
 		starting_worm = TeamManager().current_team.worms.pop(0)
 		TeamManager().current_team.worms.append(starting_worm)
 
-		if Game._game.game_config.random_mode != RandomMode.NONE:
+		if self.game_config.random_mode != RandomMode.NONE:
 			starting_worm = choice(TeamManager().current_team.worms)
 		
 		GameVariables().player = starting_worm
@@ -186,7 +179,7 @@ class Game:
 	def init_handle_game_mode(self) -> None:
 		''' on init, handle game mode parameter and variables '''
 		# digging match
-		if Game._game.game_config.option_digging:
+		if GameVariables().config.option_digging:
 			for _ in range(80):
 				mine = MapManager().place_object(Mine, None)
 				mine.damp = 0.1
@@ -260,491 +253,116 @@ class Game:
 	def lstepper(self):
 		...
 		# self.lstep += 1
-		# pos = (GameGlobals().win_width/2 - Game._game.loadingSurf.get_width()/2, GameGlobals().win_height/2 - Game._game.loadingSurf.get_height()/2)
-		# width = Game._game.loadingSurf.get_width()
-		# height = Game._game.loadingSurf.get_height()
+		# pos = (GameGlobals().win_width/2 - self.loadingSurf.get_width()/2, GameGlobals().win_height/2 - self.loadingSurf.get_height()/2)
+		# width = self.loadingSurf.get_width()
+		# height = self.loadingSurf.get_height()
 		# pygame.draw.rect(GameGlobals().win, (255,255,255), ((pos[0], pos[1] + 20), ((self.lstep / self.lstepmax)*width, height)))
 		# screen.blit(pygame.transform.scale(GameGlobals().win, screen.get_rect().size), (0,0))
 		# pygame.display.update()
 
-class TimeSlow:
-	def __init__(self):
-		GameVariables().register_non_physical(self)
-		self.time = 0
-		self.state = "slow"
-	def step(self):
-		self.time += 1
-		if self.state == "slow":
-			GameVariables().dt *= 0.9
-			if GameVariables().dt < 0.1:
-				self.state = "fast"
-		elif self.state == "fast":
-			GameVariables().dt *= 1.1
-			if GameVariables().dt > 1:
-				GameVariables().dt = 1
-				GameVariables().unregister_non_physical(self)
-	def draw(self, win: pygame.Surface):
-		pass
-
-
-def add_to_record(dic):
-	keys = ["time", "winner", "mostDamage", "damager", "mode", "points"]
-	if not os.path.exists("wormsRecord.xml"):
-		with open("wormsRecord.xml", "w+") as file:
-			file.write("<data>\n")
-			file.write("<game")
-			for key in keys:
-				if key in dic.keys():
-					file.write(" " + key + '="' + str(dic[key]) + '"')
-			file.write("/>\n</data>")
-			return
-	
-	with open("wormsRecord.xml", "r") as file:
-		contents = file.readlines()
-		index = contents.index("</data>")
-	
-	string = "<game"
-	for key in keys:
-		if key in dic.keys():
-			string += " " + key + '="' + str(dic[key]) + '"'
-	string += "/>\n"
-	contents.insert(index, string)
-	
-	with open("wormsRecord.xml", "w") as file:
-		contents = "".join(contents)
-		file.write(contents)
-
-def check_winners() -> bool:
-	game_over = False
-	last_team: Team = None
-
-	# check for last team standing
-	teams = [team for team in TeamManager().teams if len(team.worms) > 0]
-	if len(teams) == 1:
-		game_over = True
-		last_team = teams[0]
-	if len(teams) == 0:
-		game_over = True
-	
-	game_over |= GameVariables().game_mode.is_game_over()
-
-	if not game_over:
-		return False
-	
-	# game over
-	winning_team: Team = None
-	points_mode = GameVariables().game_mode.is_points_game()
-	
-	# determine winning team
-	if not points_mode:
-		winning_team = last_team
-	else:
-		if last_team is not None:
-			last_team.points += GameVariables().game_mode.win_bonus()
-		finals = sorted(TeamManager().teams, key = lambda x: x.points)
-		winning_team = finals[-1]
-	
-	# declare winner
-	if winning_team is not None:
-		print("Team", winning_team.name, "won!")
-		if len(winning_team.worms) > 0:
-			GameVariables().cam_track = winning_team.worms[0]
-		GameVariables().commentator.comment([
-			{'text': 'team '},
-			{'text': winning_team.name, 'color': winning_team.color},
-			{'text': ' Won!'}
-		])
-	else:
-		print("Tie!")
-		GameVariables().commentator.comment([{'text': 'its a tie!'}])
-	
-	# todo: add to dict
-	# todo: save win as image
-	return True
-
-# def _check_winners() -> bool:
-# 	end = False
-# 	lastTeam = None
-# 	count = 0
-# 	pointsGame = False
-# 	for team in TeamManager().teams:
-# 		if len(team.worms) == 0:
-# 			count += 1
-# 	if count == GameVariables().num_of_teams - 1:
-# 		# one team remains
-# 		end = True
-# 		for team in TeamManager().teams:
-# 			if not len(team.worms) == 0:
-# 				lastTeam = team
-# 	if count == GameVariables().num_of_teams:
-# 		# no team remains
-# 		end = True
+	def weapon_menu_init(self):
+		current_team = TeamManager().current_team
 		
-# 	if not end:
-# 		return False
-# 	# game end:
-# 	dic = {}
-# 	winningTeam = None
-	
-	
-# 	# win points:
-# 	if pointsGame:
-# 		for team in TeamManager().teams:
-# 			print("[ |", team.name, "got", team.points, "points! | ]")
-# 		teamsFinals = sorted(TeamManager().teams, key = lambda x: x.points)
-# 		winningTeam = teamsFinals[-1]
-# 		print("[most points to team", winningTeam.name, "]")
-# 		dic["points"] = str(winningTeam.points)
-# 	# regular win:
-# 	else:
-# 		winningTeam = lastTeam
-# 		if winningTeam:
-# 			print("[last team standing is", winningTeam.name, "]")
-	
-# 	if end:
-# 		if winningTeam is not None:
-# 			print("Team", winningTeam.name, "won!")
-# 			dic["time"] = str(GameVariables().time_overall // GameVariables().fps)
-# 			dic["winner"] = winningTeam.name
-# 			if Game._game.mostDamage[1]:
-# 				dic["mostDamage"] = str(int(Game._game.mostDamage[0]))
-# 				dic["damager"] = Game._game.mostDamage[1]
-# 			add_to_record(dic)
-# 			if len(winningTeam.worms) > 0:
-# 				GameVariables().cam_track = winningTeam.worms[0]
-# 			GameVariables().commentator.comment([
-# 				{'text': 'team '},
-# 				{'text': winningTeam.name, 'color': winningTeam.color},
-# 				{'text': ' Won!'}
-# 			])
+		layout = []
 
-# 		else:
-# 			GameVariables().commentator.comment([{'text': 'its a tie!'}])
-# 			print("Tie!")
-		
-# 		# add teams to dic
-# 		dic["teams"] = {}
-# 		for team in TeamManager().teams:
-# 			dic["teams"][team.name] = [team.color, team.points]
-
-# 		Game._game.endGameDict = dic
-# 		GameVariables().state_machine.update(GameState.WIN)
-		
-# 		GroundScreenShoot = pygame.Surface((MapManager().ground_map.get_width(), MapManager().ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
-# 		GroundScreenShoot.blit(MapManager().ground_map, (0,0))
-# 		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
-# 	return end
-
-def deploy_crate() -> None:
-	# deploy crate if privious turn was last turn in round
-	if ((GameVariables().game_turn_count) % (GameVariables().turns_in_round)) == (GameVariables().turns_in_round - 1):
-		comments = [
-			[{'text': 'a jewel from the heavens!'}],
-			[{'text': 'its raining crates, halelujah!'}],
-			[{'text': ' '}],
-		]
-		GameVariables().commentator.comment(choice(comments))
-
-		for _ in range(Game._game.game_config.deployed_packs):
-			w = deploy_pack(choice([HealthPack, UtilityPack, WeaponPack]))
-			GameVariables().cam_track = w
-
-def cycle_worms() -> GameState:
-	''' switch to next worm and set up 
-		reset special effect
-		comments about damage
-		check for winners
-		flare reduction
-		sick worms
-		chose next worm
-	'''
-
-	# reset special effects:
-	GameVariables().physics.global_gravity = 0.2
-	GameVariables().damage_mult = 0.8
-	GameVariables().boom_radius_mult = 1
-	GameVariables().mega_weapon_trigger = False
-	GameVariables().aim_aid = False
-
-	# release worm tool
-	worm_tool = GameVariables().player.get_tool()
-	if worm_tool is not None:
-		worm_tool.release()
-	
-	if check_winners():
-		return GameState.WIN
-
-	new_round = False
-	GameVariables().game_turn_count += 1
-	if GameVariables().game_turn_count % GameVariables().turns_in_round == 0:
-		GameVariables().game_round_count += 1
-		new_round = True
-	
-	if new_round:
-		Game._game.game_config.rounds_for_sudden_death -= 1
-		if Game._game.game_config.rounds_for_sudden_death == 0:
-			sudden_death()
-		GameVariables().game_mode.on_new_round()
-	
-	# update stuff
-	GameVariables().get_debries().clear()
-	Bubble.cought = []
-	
-	# change wind:
-	GameVariables().physics.wind = uniform(-1, 1)
-	
-	# sick:
-	for worm in GameVariables().get_worms():
-		if worm.sick != Sickness.NONE and worm.health > 5:
-			worm.damage(min(int(5 / GameVariables().damage_mult) + 1, int((worm.health - 5) / GameVariables().damage_mult) + 1), DamageType.SICK)
-		
-	# select next team
-	index = TeamManager().teams.index(TeamManager().current_team)
-	index = (index + 1) % GameVariables().num_of_teams
-	TeamManager().current_team = TeamManager().teams[index]
-	while not len(TeamManager().current_team.worms) > 0:
-		index = TeamManager().teams.index(TeamManager().current_team)
-		index = (index + 1) % GameVariables().num_of_teams
-		TeamManager().current_team = TeamManager().teams[index]
-		
-	# sort worms by health for drawing purpuses
-	GameVariables().get_physicals().sort(key = lambda worm: worm.health if worm.health else 0)
-	
-	GameVariables().on_turn_end()
-	GameVariables().game_mode.on_turn_end()
-
-	# actual worm switch:
-	switched = False
-	while not switched:
-		w = TeamManager().current_team.worms.pop(0)
-		TeamManager().current_team.worms.append(w)
-		if w.sleep:
-			w.sleep = False
-			continue
-		switched = True
-		
-	if Game._game.game_config.random_mode == RandomMode.COMPLETE: # complete random
-		TeamManager().current_team = choice(TeamManager().teams)
-		while not len(TeamManager().current_team.worms) > 0:
-			TeamManager().current_team = choice(TeamManager().teams)
-		w = choice(TeamManager().current_team.worms)
-	if Game._game.game_config.random_mode == RandomMode.IN_TEAM: # random in the current team
-		w = choice(TeamManager().current_team.worms)
-
-	GameVariables().player = w
-	GameVariables().cam_track = GameVariables().player
-	GameVariables().player_can_move = True
-
-	GameVariables().on_turn_begin()
-	GameVariables().game_mode.on_turn_begin()
-
-	WeaponManager().switch_weapon(WeaponManager().current_weapon)
-	return GameState.PLAYER_PLAY
-
-def weapon_menu_init():
-	# get categories
-
-	current_team = TeamManager().current_team
-	
-	layout = []
-
-	for category in reversed(list(WeaponCategory)):
-		weapons_in_category = WeaponManager().get_weapons_list_of_category(category)
-		weapons_in_category = [weapon for weapon in weapons_in_category if current_team.ammo(weapon.index) != 0]
-		if len(weapons_in_category) == 0:
-			continue
-		get_amount = lambda x: str(current_team.ammo(x.index)) if current_team.ammo(x.index) > 0 else ''
-		
-		sub_layout: List[RadialButton] = []
-		for weapon in reversed(weapons_in_category):
-			surf_portion = WeaponManager().get_surface_portion(weapon)
-			is_enabled = WeaponManager().is_weapon_enabled(weapon)
-			button = RadialButton(weapon, weapon.name, get_amount(weapon), weapon_bg_color[category], surf_portion, is_enabled=is_enabled)
-			sub_layout.append(button)
-
-		is_enabled = not all(not button.is_enabled for button in sub_layout)
-		main_button = RadialButton(weapons_in_category[0], '', '', weapon_bg_color[category], WeaponManager().get_surface_portion(weapons_in_category[0]), sub_layout, is_enabled=is_enabled)
-		layout.append(main_button)
-
-	Game._game.radial_weapon_menu = RadialMenu(layout, Vector(GameGlobals().win_width // 2, GameGlobals().win_height // 2))
-
-def sudden_death():
-	GameVariables().hud.add_toast(fonts.pixel10.render("sudden death", False, (220,0,0)))
-	Earthquake(1.5 * GameGlobals().fps, decorative=True, strength=0.25)
-	GameVariables().game_mode.add_mode(SuddenDeathGamePlay())
-	GameVariables().is_sudden_death = True
-
-def cheat_activate(code: str):
-	code = code[:-1].lower()
-	mouse_pos = mouse_pos_in_world()
-
-	if code == "gibguns":
-		for team in TeamManager().teams:
-			for i, _ in enumerate(team.weapon_set):
-				team.weapon_set[i] = 100
-		for weapon in WeaponManager().weapons:
-			weapon.round_delay = 0
-		Game._game.game_config.option_cool_down = False
-	elif code == "gibguns1":
-		for team in TeamManager().teams:
-			for i, _ in enumerate(team.weapon_set):
-				team.weapon_set[i] = 1
-		for weapon in WeaponManager().weapons:
-			weapon.round_delay = 0
-		Game._game.game_config.option_cool_down = False
-	elif code == "suddendeath":
-		sudden_death()
-	elif code == "wind":
-		GameVariables().physics.wind = uniform(-1, 1)
-	elif code == "goodbyecruelworld":
-		boom(GameVariables().player.pos, 100)
-	elif code == "armageddon":
-		Armageddon()
-	elif code[0:5] == "gunme" and len(code) == 6:
-		amount = int(code[5])
-		for i in range(amount):
-			WeaponPack(mouse_pos)
-	elif code[0:9] == "utilizeme" and len(code) == 10:
-		amount = int(code[9])
-		for i in range(amount):
-			UtilityPack(mouse_pos)
-	elif code == "aspirin":
-		HealthPack(mouse_pos)
-	elif code == "globalshift":
-		for worm in GameVariables().get_worms():
-			# if worm in TeamManager().current_team.worms:
-				# continue
-			worm.gravity = worm.gravity * -1
-	elif code == "petrolcan":
-		PetrolCan(mouse_pos)
-	elif code == "megaboom":
-		GameVariables().mega_weapon_trigger = True
-	elif code == "tsunami":
-		Game._game.waterRise = True
-		GameVariables().commentator.comment([{'text': "water rising!"}])
-	elif code == "comeflywithme":
-		TeamManager().current_team.ammo(WeaponManager()["jet pack"], 6)
-		TeamManager().current_team.ammo(WeaponManager()["rope"], 6)
-		TeamManager().current_team.ammo(WeaponManager()["ender pearl"], 6)
-	elif code == "masterofpuppets":
-		MasterOfPuppets()
-	elif code == "deathtouch":
-		pos = Vector(mouse_pos)
-		closest = None
-		closestDist = 100000
-		for worm in GameVariables().get_worms():
-			if dist(worm.pos, pos) < closestDist:
-				closestDist = dist(worm.pos, pos)
-				closest = worm
-		if closest:
-			closest.damage(1000)
-	elif code == "minecraft":
-		PickAxeArtifact(mouse_pos, ArtifactType.MINECRAFT)
-
-
-class StateMachine:
-	def __init__(self):
-		self.is_stable_check = False
-		self.stable_count = 0
-		self.stable_max_count = 10
-		self.next_state = GameState.RESET
-
-	def step(self) -> None:
-		if self.is_stable_check:
-			self.stable_count += 1
-			if self.stable_count == self.stable_max_count:
-				self.stable_count = 0
-				self.is_stable_check = False
-				self.update()
-
-	def stable_check(self, max_count=10) -> None:
-		self.is_stable_check = True
-		self.stable_max_count = max_count
-		self.stable_count = 0
-
-	def distable(self) -> None:
-		self.stable_count = 0
-
-	def update(self, state: GameState = None) -> None:
-		''' set state to new state and handle state '''
-
-		if state is None:
-			state = self.next_state
-		GameVariables().game_state = state
-		
-		if state == GameState.RESET:
-			GameVariables().game_stable = False
+		for category in reversed(list(WeaponCategory)):
+			weapons_in_category = WeaponManager().get_weapons_list_of_category(category)
+			weapons_in_category = [weapon for weapon in weapons_in_category if current_team.ammo(weapon.index) != 0]
+			if len(weapons_in_category) == 0:
+				continue
+			get_amount = lambda x: str(current_team.ammo(x.index)) if current_team.ammo(x.index) > 0 else ''
 			
-			Game._game.create_new_game()
-			self.update(GameState.PLAYER_PLAY)
-		
-		elif state == GameState.PLAYER_PLAY:
-			self.next_state = GameState.PLAYER_RETREAT
-		
-		elif state == GameState.PLAYER_RETREAT:
-			self.next_state = GameState.WAIT_STABLE
-		
-		elif state == GameState.WAIT_STABLE:
-			self.stable_check()
-			self.next_state = GameState.AUTONOMOUS_PLAY
-		
-		elif state == GameState.AUTONOMOUS_PLAY:
-			self.stable_check()
-			GameVariables().engage_autonomous()
-			self.next_state = GameState.DEPLOYEMENT
-		
-		elif state == GameState.DEPLOYEMENT:
-			self.stable_check()
-			deploy_crate()
-			GameVariables().game_mode.on_deploy()
-			if GameVariables().is_sudden_death:
-				self.next_state = GameState.SUDDEN_DEATH_PLAY
-			else:
-				self.next_state = GameState.TURN_CYCLE
+			sub_layout: List[RadialButton] = []
+			for weapon in reversed(weapons_in_category):
+				surf_portion = WeaponManager().get_surface_portion(weapon)
+				is_enabled = WeaponManager().is_weapon_enabled(weapon)
+				button = RadialButton(weapon, weapon.name, get_amount(weapon), weapon_bg_color[category], surf_portion, is_enabled=is_enabled)
+				sub_layout.append(button)
 
-		elif state == GameState.SUDDEN_DEATH_PLAY:
-			GameVariables().game_mode.on_sudden_death_turn()
-			self.stable_check()
-			self.next_state = GameState.TURN_CYCLE
+			is_enabled = not all(not button.is_enabled for button in sub_layout)
+			main_button = RadialButton(weapons_in_category[0], '', '', weapon_bg_color[category], WeaponManager().get_surface_portion(weapons_in_category[0]), sub_layout, is_enabled=is_enabled)
+			layout.append(main_button)
 
-		elif state == GameState.TURN_CYCLE:
-			next_state = cycle_worms()
-			TimeManager().time_reset()
-			self.update(next_state)
+		self.radial_weapon_menu = RadialMenu(layout, Vector(GameGlobals().win_width // 2, GameGlobals().win_height // 2))
 
-		elif state == GameState.WIN:
-			self.stable_check(3 * GameGlobals().fps)
-			self.next_state = GameState.GAME_OVER
-		
-		elif state == GameState.GAME_OVER:
-			GameVariables().game_end = True
+	def cheat_activate(self, code: str):
+		code = code[:-1].lower()
+		mouse_pos = mouse_pos_in_world()
 
+		if code == "gibguns":
+			for team in TeamManager().teams:
+				for i, _ in enumerate(team.weapon_set):
+					team.weapon_set[i] = 100
+			for weapon in WeaponManager().weapons:
+				weapon.round_delay = 0
+			GameVariables().config.option_cool_down = False
+		elif code == "gibguns1":
+			for team in TeamManager().teams:
+				for i, _ in enumerate(team.weapon_set):
+					team.weapon_set[i] = 1
+			for weapon in WeaponManager().weapons:
+				weapon.round_delay = 0
+			GameVariables().config.option_cool_down = False
+		elif code == "suddendeath":
+			sudden_death()
+		elif code == "wind":
+			GameVariables().physics.wind = uniform(-1, 1)
+		elif code == "goodbyecruelworld":
+			boom(GameVariables().player.pos, 100)
+		elif code == "armageddon":
+			Armageddon()
+		elif code[0:5] == "gunme" and len(code) == 6:
+			amount = int(code[5])
+			for i in range(amount):
+				WeaponPack(mouse_pos)
+		elif code[0:9] == "utilizeme" and len(code) == 10:
+			amount = int(code[9])
+			for i in range(amount):
+				UtilityPack(mouse_pos)
+		elif code == "aspirin":
+			HealthPack(mouse_pos)
+		elif code == "globalshift":
+			for worm in GameVariables().get_worms():
+				# if worm in TeamManager().current_team.worms:
+					# continue
+				worm.gravity = worm.gravity * -1
+		elif code == "petrolcan":
+			PetrolCan(mouse_pos)
+		elif code == "megaboom":
+			GameVariables().mega_weapon_trigger = True
+		elif code == "comeflywithme":
+			TeamManager().current_team.ammo(WeaponManager()["jet pack"], 6)
+			TeamManager().current_team.ammo(WeaponManager()["rope"], 6)
+			TeamManager().current_team.ammo(WeaponManager()["ender pearl"], 6)
+		elif code == "masterofpuppets":
+			MasterOfPuppets()
+		elif code == "deathtouch":
+			pos = Vector(mouse_pos)
+			closest = None
+			closestDist = 100000
+			for worm in GameVariables().get_worms():
+				if dist(worm.pos, pos) < closestDist:
+					closestDist = dist(worm.pos, pos)
+					closest = worm
+			if closest:
+				closest.damage(1000)
 
 
 ################################################################################ Key bindings
-def onKeyPressRight():
+def on_key_press_right():
 	GameVariables().player.turn(RIGHT)
 
-def onKeyPressLeft():
+def on_key_press_left():
 	GameVariables().player.turn(LEFT)
 
-def onKeyPressSpace():
+def on_key_press_space():
 	# release worm_tool
 	if GameVariables().game_state == GameState.PLAYER_RETREAT:
 		worm_tool = GameVariables().player.get_tool()
 		if worm_tool is not None:
 			worm_tool.release()
 
-def onKeyHoldSpace():
-	...
-
-def onKeyReleaseSpace():
-	...
-
-def onMouseButtonPressed():
-	...
-
-def onKeyPressTab():
+def on_key_press_tab():
 	if WeaponManager().current_weapon.name == "drill missile":
 		DrillMissile.mode = not DrillMissile.mode
 		if DrillMissile.mode:
@@ -775,12 +393,12 @@ def onKeyPressTab():
 	elif WeaponManager().current_weapon.category == WeaponCategory.AIRSTRIKE:
 		GameVariables().airstrike_direction *= -1
  
-def onKeyPressTest():
+def on_key_press_test():
 	''' test '''
 	GameVariables().debug_print()
 	# print(WeaponManager().weapon_director.actors)
 
-def onKeyPressEnter():
+def on_key_press_enter():
 	# jump
 	if GameVariables().player.stable and GameVariables().player.health > 0:
 		GameVariables().player.vel += GameVariables().player.get_shooting_direction() * JUMP_VELOCITY
@@ -793,16 +411,16 @@ class GameRoom(Room):
 		super().__init__(*args, **kwargs)
 
 		config = kwargs.get('input')
-		Game(config)
+		self.game_manager = Game(config)
 
 		# refactor these
 		# self.wind_flag = WindFlag()
-		self.damageText = (Game._game.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(Game._game.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
+		self.damageText = (self.game_manager.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(self.game_manager.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 	
 	def handle_pygame_event(self, event) -> None:
 		''' handle pygame events in game '''
 		super().handle_pygame_event(event)
-		is_handled = Game._game.handle_event(event)
+		is_handled = self.game_manager.handle_event(event)
 		if is_handled:
 			return
 		GameVariables().handle_event(event)
@@ -811,25 +429,26 @@ class GameRoom(Room):
 			return
 		# mouse click event
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: # left click (main)
-			onMouseButtonPressed()
+			pass
 
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2: # middle click (tests)
 			pass
+		
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3: # right click (secondary)
 			if GameVariables().game_state == GameState.PLAYER_PLAY:
-				if Game._game.radial_weapon_menu is None:
+				if self.game_manager.radial_weapon_menu is None:
 					if WeaponManager().can_switch_weapon():
-						weapon_menu_init()
+						self.game_manager.weapon_menu_init()
 				else:
-					Game._game.radial_weapon_menu = None
+					self.game_manager.radial_weapon_menu = None
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 4: # scroll down
-			if not Game._game.radial_weapon_menu:
+			if not self.game_manager.radial_weapon_menu:
 				GameGlobals().scale_factor *= 1.1
 				GameGlobals().scale_factor = GameGlobals().scale_factor
 				if GameGlobals().scale_factor >= GameGlobals().scale_range[1]:
 					GameGlobals().scale_factor = GameGlobals().scale_range[1]
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 5: # scroll up
-			if not Game._game.radial_weapon_menu:
+			if not self.game_manager.radial_weapon_menu:
 				GameGlobals().scale_factor *= 0.9
 				GameGlobals().scale_factor = GameGlobals().scale_factor
 				if GameGlobals().scale_factor <= GameGlobals().scale_range[0]:
@@ -840,14 +459,14 @@ class GameRoom(Room):
 			# controll worm, jump and facing
 				if GameVariables().player is not None and GameVariables().is_player_in_control():
 					if event.key == pygame.K_RETURN:
-						onKeyPressEnter()
+						on_key_press_enter()
 					if event.key == pygame.K_RIGHT:
-						onKeyPressRight()
+						on_key_press_right()
 					if event.key == pygame.K_LEFT:
-						onKeyPressLeft()
+						on_key_press_left()
 				# fire on key press
 				if event.key == pygame.K_SPACE:
-					onKeyPressSpace()
+					on_key_press_space()
 				# weapon change by keyboard
 				# misc
 				if event.key == pygame.K_ESCAPE:
@@ -858,9 +477,9 @@ class GameRoom(Room):
 						)
 					self.switch = SwitchRoom(Rooms.PAUSE_MENU, True, pause_info)
 				if event.key == pygame.K_TAB:
-					onKeyPressTab()
+					on_key_press_tab()
 				if event.key == pygame.K_t:
-					onKeyPressTest()
+					on_key_press_test()
 				if event.key == pygame.K_F2:
 					Worm.healthMode = (Worm.healthMode + 1) % 2
 					if Worm.healthMode == 1:
@@ -876,14 +495,10 @@ class GameRoom(Room):
 					if GameVariables().cam_track is None:
 						GameVariables().cam_track = GameVariables().player
 
-				Game._game.cheatCode += event.unicode
+				self.game_manager.cheatCode += event.unicode
 				if event.key == pygame.K_EQUALS:
-					cheat_activate(Game._game.cheatCode)
-					Game._game.cheatCode = ""
-		if event.type == pygame.KEYUP:
-			# fire release
-			if event.key == pygame.K_SPACE:
-				onKeyReleaseSpace()
+					self.game_manager.cheat_activate(self.game_manager.cheatCode)
+					self.game_manager.cheatCode = ""
 
 	def step(self):
 		''' game step '''
@@ -941,7 +556,7 @@ class GameRoom(Room):
 			GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
 			GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(GameVariables().time_overall * 1.8)
 		
-		Game._game.step()
+		self.game_manager.step()
 		GameVariables().game_stable = True
 
 		GameVariables().step_physicals()
@@ -960,7 +575,7 @@ class GameRoom(Room):
 		TeamManager().step()
 
 		# step background
-		Game._game.background.step()
+		self.game_manager.background.step()
 		
 		# step game mode
 		GameVariables().game_mode.step()
@@ -974,8 +589,8 @@ class GameRoom(Room):
 				break
 				
 		# menu step
-		if Game._game.radial_weapon_menu:
-			Game._game.radial_weapon_menu.step()
+		if self.game_manager.radial_weapon_menu:
+			self.game_manager.radial_weapon_menu.step()
 
 		GameVariables().commentator.step()
 	
@@ -987,7 +602,7 @@ class GameRoom(Room):
 			return
 
 		# draw background
-		Game._game.background.draw(win)
+		self.game_manager.background.draw(win)
 
 		# draw map
 		MapManager().draw_land(win)
@@ -1002,7 +617,7 @@ class GameRoom(Room):
 		EffectManager().draw(win)
 
 		# draw top layer of background
-		Game._game.background.draw_secondary(win)
+		self.game_manager.background.draw_secondary(win)
 		
 		# draw shooting indicator
 		if GameVariables().player is not None and GameVariables().game_state in [GameState.PLAYER_PLAY, GameState.PLAYER_RETREAT] and GameVariables().player.health > 0:
@@ -1033,19 +648,19 @@ class GameRoom(Room):
 		TeamManager().draw(win)
 		
 		# weapon menu:
-		if Game._game.radial_weapon_menu:
-			Game._game.radial_weapon_menu.draw(win)
+		if self.game_manager.radial_weapon_menu:
+			self.game_manager.radial_weapon_menu.draw(win)
 		
 		# debug:
-		if self.damageText[0] != Game._game.game_stats.damage_this_turn:
-			self.damageText = (Game._game.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(Game._game.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
+		if self.damageText[0] != self.game_manager.game_stats.damage_this_turn:
+			self.damageText = (self.game_manager.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(self.game_manager.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 		win.blit(self.damageText[1], ((int(5), int(GameGlobals().win_height -5 -self.damageText[1].get_height()))))
 
 		# weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
 		# debug_string = f'director: {weapon}'
 		# debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
 		# win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
-		
+
 
 wip = '''
 	still in progress:
@@ -1055,11 +670,14 @@ wip = '''
 		particle to indicate correct arena
 		better portals
 		refactor bubble
-		water rise in its own wait for stable state
 		win screen
 		weapon screen
-		team creation screen
+		team creation screen 
 		score screen (?)
+		check the debries for center of shape
+		ROPE IS NOT FUCKING RELEASING ON SPACE PRESS IN RETREAT
+		cant 'fly', 'flare' more than once, because cool down
+		when team life == 1 no indication in health bar
 	'''
 
 

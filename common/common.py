@@ -26,6 +26,9 @@ class SingletonMeta(type):
 		if cls in cls._instances.keys():
 			cls._instances.pop(cls)
 
+class ICreateGame(Protocol):
+	def create_new_game(self) -> None:
+		...
 
 class TeamData(BaseModel):
 	''' team data '''

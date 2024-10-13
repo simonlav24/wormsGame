@@ -26,11 +26,11 @@ def sample_colors(pos: Vector, radius: float, default_if_none=True) -> List[Colo
 def boom(pos, radius, debries = True, gravity = False, fire = False):
 	if not fire: radius *= GameVariables().boom_radius_mult
 	boomPos = Vector(pos[0], pos[1])
-	# sample Game._game.map_manager.ground_map colors:
+	# sample ground colors:
 	if debries:
 		colors = sample_colors(pos, radius)
 
-	# Game._game.map_manager.ground_map delete
+	# ground delete
 	if not fire:
 		Explossion(pos, radius * 1.2)
 		if radius > 25:
