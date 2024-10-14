@@ -42,7 +42,8 @@ class Debrie (PhysObj):
 		super().step()
 		self.angle -= self.vel.x * 2
 		if self.firey:
-			Blast(self.pos + vectorUnitRandom() * randint(0,4) + vector_from_angle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
+			Blast(self.pos, randint(3,6), 150)
+			# Blast(self.pos + vectorUnitRandom() * randint(0,4) + vector_from_angle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
 	
 	def on_collision(self, ppos):
 		self.firey = False

@@ -674,9 +674,7 @@ wip = '''
 		weapon screen
 		team creation screen 
 		score screen (?)
-		check the debries for center of shape
 		ROPE IS NOT FUCKING RELEASING ON SPACE PRESS IN RETREAT
-		cant 'fly', 'flare' more than once, because cool down
 		when team life == 1 no indication in health bar
 	'''
 

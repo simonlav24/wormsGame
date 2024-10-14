@@ -46,8 +46,6 @@ class WeaponManager(metaclass=SingletonMeta):
             team.weapon_set = self.basic_set.copy()
 
         self.current_weapon: Weapon = self.weapons[0]
-        # self.surf = fonts.pixel5.render(self.current_weapon.name, False, GameVariables().initial_variables.hud_color)
-        self.multipleFires = ["flame thrower", "minigun", "laser gun", "bubble gun", "razor leaf"]
         
         self.weapon_director: WeaponDirector = WeaponDirector(weapon_funcs)
 
@@ -72,6 +70,8 @@ class WeaponManager(metaclass=SingletonMeta):
     def add_to_cool_down(self, weapon: Weapon) -> None:
         ''' add weapon to list of cool downs '''
         if weapon.style in [WeaponStyle.SPECIAL, WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL]:
+            return
+        if weapon.name in ['fly', 'flare']:
             return
         self.cool_down_list_surfaces.append(fonts.pixel5_halo.render(weapon.name, False, GameVariables().initial_variables.hud_color))
         self.cool_down_list.append(weapon)
