@@ -8,11 +8,6 @@ import pygame
 from common.vector import *
 from common.constants import ColorType, Sickness, DamageType, GameState
 
-# paths
-PATH_ASSETS = r'./assets'
-PATH_MAPS = r'./assets/worms_maps'
-PATH_GENERATED_MAPS = r'./assets/worms_maps/generated_maps'
-
 class SingletonMeta(type):
 	''' singleton metaclass '''
 	_instances = {}

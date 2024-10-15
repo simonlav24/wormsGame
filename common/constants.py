@@ -12,6 +12,13 @@ ColorType = Tuple[int, int, int] | Tuple[int, int, int, int]
 
 __version__ = '1.5.0'
 
+# paths
+PATH_ASSETS = r'./assets'
+PATH_SPRITE_ATLAS = r'assets/sprites.png'
+PATH_MAPS = r'./assets/worms_maps'
+PATH_GENERATED_MAPS = r'./assets/worms_maps/generated_maps'
+PATH_WEAPON_LIST = r'weapons.json'
+
 class GameState(Enum):
     RESET = 0
     TURN_CYCLE = 1
@@ -163,7 +170,7 @@ def initialize() -> None:
     global sprites, fonts
     sprites.blood = pygame.image.load("assets/blood.png").convert_alpha()
     sprites.hole = pygame.image.load("assets/hole.png").convert_alpha()
-    sprites.sprite_atlas = pygame.image.load("assets/sprites.png").convert_alpha()
+    sprites.sprite_atlas = pygame.image.load(PATH_SPRITE_ATLAS).convert_alpha()
     
     fonts.pixel5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
     fonts.pixel10 = pygame.font.Font("fonts\pixelFont.ttf", 10)

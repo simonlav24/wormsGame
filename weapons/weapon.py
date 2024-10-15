@@ -1,9 +1,11 @@
 
+import json
 from enum import Enum
 from pydantic import BaseModel
-from typing import Dict, Callable, Any
+from typing import Dict, Callable, Any, List
 
-from common import ArtifactType, ColorType
+from common import ArtifactType, ColorType, PATH_WEAPON_LIST
+
 
 weapon_func_type = Dict[str, Callable[[Any], Any]]
 
@@ -66,3 +68,10 @@ class Weapon(BaseModel):
     def get_bg_color(self) -> ColorType:
         ''' returns weapons background color '''
         return weapon_bg_color[self.category]
+
+def read_weapons() -> List[Weapon]:
+    with open(PATH_WEAPON_LIST, 'r') as file:
+        data = json.load(file)
+        
+    weapons: List[Weapon] = [Weapon.model_validate(weapon) for weapon in data]
+    return weapons

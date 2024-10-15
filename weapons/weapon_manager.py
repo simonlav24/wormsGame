@@ -6,11 +6,11 @@ from random import randint, choice
 import pygame
 
 import common
-from common import GREY, sprites, fonts, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world, ArtifactType, GameGlobals
+from common import sprites, fonts, blit_weapon_sprite, GameVariables, GameState, draw_target, draw_girder_hint, RIGHT, point2world, SingletonMeta, mouse_pos_in_world, ArtifactType, GameGlobals
 from common.vector import *
 import common.drawing_utilities
 
-from weapons.weapon import Weapon, WeaponCategory, WeaponStyle
+from weapons.weapon import Weapon, WeaponCategory, WeaponStyle, read_weapons
 from weapons.weapon_funcs import weapon_funcs
 from weapons.directors.directors import WeaponDirector
 from game.team_manager import TeamManager
@@ -29,10 +29,7 @@ class WeaponManager(metaclass=SingletonMeta):
         self.cool_down_list_surfaces: List[pygame.Surface] = [] # weapon cool down surfaces
 
         # load weapons
-        with open('weapons.json', 'r') as file:
-            data = json.load(file)
-        
-        self.weapons: List[Weapon] = [Weapon.model_validate(weapon) for weapon in data]
+        self.weapons = read_weapons()
         
         # initialize dicts
         mapped = map(lambda x: x.name, self.weapons)

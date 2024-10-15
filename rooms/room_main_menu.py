@@ -2,6 +2,7 @@
 import os
 import datetime
 from random import choice, randint
+from typing import List
 import tkinter
 from tkinter.filedialog import askopenfile
 
@@ -12,17 +13,19 @@ from gui.menu_gui_new import (
     Gui, MenuAnimator, HORIZONTAL, VERTICAL,
     StackPanel, Text, Button,
     ComboSwitch, Toggle, UpDown,
-    ImageDrag, Input
+    ImageDrag, Input, ImageButton
 )
 
-from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals
-from common.vector import Vector
+from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals, PATH_SPRITE_ATLAS
+from common.vector import Vector, tup2vec, vectorCopy
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
 from game.background import BackGround
 from game.map_manager import grab_maps
 from game.noise_gen import generate_noise
+
+from weapons.weapon import read_weapons, ArtifactType
 
 class MainMenuRoom(Room):
     def __init__(self, *args, **kwargs):
@@ -37,7 +40,12 @@ class MainMenuRoom(Room):
         self.image_element: ImageDrag = None
 
         self.main_menu = self.initialize_main_menu()
+        self.weapon_menu: StackPanel = None
         self.gui.insert(self.main_menu)
+
+        self.menus_positions = {
+            'main_menu': vectorCopy(self.main_menu.pos),
+        }
 
         self.initial_menu_pos = self.main_menu.pos
         animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
@@ -110,8 +118,14 @@ class MainMenuRoom(Room):
         
         elif event == 'feel_index':
             self.feel_index = values['feel_index']
-            print(self.feel_index)
             self.background.set_feel_color(feels[self.feel_index])
+        
+        elif event == 'weapons setup':
+            self.on_weapon_setup()
+
+        else:
+            self.handle_weapon_events(event, values)
+        
 
     def on_play(self, values):
         ''' on press play button '''
@@ -135,7 +149,6 @@ class MainMenuRoom(Room):
             feel_index=values['feel_index']
         )
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
-        
 
     def initialize_main_menu(self) -> StackPanel:
         ''' create menu layout '''
@@ -255,9 +268,108 @@ class MainMenuRoom(Room):
 
         return mainMenu
 
+    def initialize_weapon_menu(self) -> StackPanel:
+
+        self.weapons_list = read_weapons()
+        self.weapon_up_downs: List[UpDown] = []
+
+        size = Vector(GameGlobals().win_width - 30, GameGlobals().win_height - 30)
+        pos = tup2vec(GameGlobals().win.get_size()) // 2 - size // 2
+        weapon_menu = StackPanel(orientation=VERTICAL, name="weapons", size=size, pos=pos )
+        
+        weapon_sprites = pygame.image.load(PATH_SPRITE_ATLAS)
+        index_offset = 72
+
+        mapping = {-1: "inf"}
+
+        weapon_index = 0
+        done = False
+
+        while not done:
+            sub = StackPanel (orientation=HORIZONTAL, custom_size=16)
+            for _ in range(6):
+                weapon = self.weapons_list[weapon_index]
+                if weapon.name == 'flare':
+                    done = True
+                    break
+                weapon_index += 1
+                pic = ImageButton(custom_size=16, tooltip=weapon.name)
+                bg_color = weapon.get_bg_color()
+                pic.set_image(weapon_sprites, sprite_index_to_rect(weapon.index + index_offset), background=bg_color)
+
+                sub.insert(pic)
+                combo = UpDown(key=weapon.name, limit_min=True, limit_max=True, lim_min=-1, lim_max=10, value=weapon.initial_amount, mapping=mapping)
+                self.weapon_up_downs.append({'weapon': weapon, 'element': combo})
+                sub.insert(combo)
+                if weapon_index >= len(self.weapons_list):
+                    break
+            if not done:
+                weapon_menu.insert(sub)
+
+        sub = StackPanel(orientation=HORIZONTAL)
+        sub.insert(Text(text="weapon set name:"))
+        sub.insert(Input(key="filename", text="enter name"))
+        sub.insert(Button(key="save_weapons", text="save"))
+        weapon_menu.insert(sub)
+
+        sub = StackPanel(orientation=HORIZONTAL)
+        sub.insert(Button(key="weapon_setup_to_main_menu", text="back"))
+        sub.insert(Button(key="default_weapons", text="default"))
+        sub.insert(Button(key="zero_weapons", text="zero"))
+        weapon_menu.insert(sub)
+
+        return weapon_menu
+
+    def on_weapon_setup(self):
+        if self.weapon_menu is None:
+            self.weapon_menu = self.initialize_weapon_menu()
+            self.menus_positions['weapon_menu'] = vectorCopy(self.weapon_menu.pos)
+            self.gui.insert(self.weapon_menu)
+        
+        main_menu_pos = self.menus_positions['main_menu']
+        weapon_menu_pos = self.menus_positions['weapon_menu']
+
+        main_menu_out = MenuAnimator(self.main_menu, main_menu_pos, main_menu_pos + Vector(GameGlobals().win_width, 0))
+        weapon_in = MenuAnimator(self.weapon_menu, weapon_menu_pos + Vector(-GameGlobals().win_width, 0), weapon_menu_pos)
+
+        self.gui.animators.append(main_menu_out)
+        self.gui.animators.append(weapon_in)
+
+    def handle_weapon_events(self, event, values):
+        if event is None:
+            return
+
+        elif event == 'weapon_setup_to_main_menu':
+            main_menu_pos = self.menus_positions['main_menu']
+            weapon_menu_pos = self.menus_positions['weapon_menu']
+
+            main_menu_in = MenuAnimator(self.main_menu, main_menu_pos + Vector(GameGlobals().win_width, 0), main_menu_pos)
+            weapon_out = MenuAnimator(self.weapon_menu, weapon_menu_pos, weapon_menu_pos - Vector(GameGlobals().win_width, 0))
+            self.gui.animators.append(main_menu_in)
+            self.gui.animators.append(weapon_out)
+        
+        elif event == 'save_weapons':
+            print('save weapons tbd')
+        
+        elif event == 'default_weapons':
+            for element_dict in self.weapon_up_downs:
+                initial_amount = element_dict['weapon'].initial_amount
+                element_dict['element'].update_value(initial_amount)
+        
+        elif event == 'zero_weapons':
+            for element_dict in self.weapon_up_downs:
+                element_dict['element'].update_value(0)
+        
+        
+        
+
+
 def browse_file():
-	root = tkinter.Tk()
-	root.withdraw()
-	file = askopenfile(mode ='r', filetypes =[('Image Files', '*.png')])
-	if file is not None: 
-		return file.name
+    root = tkinter.Tk()
+    root.withdraw()
+    file = askopenfile(mode ='r', filetypes =[('Image Files', '*.png')])
+    if file is not None: 
+        return file.name
+
+def sprite_index_to_rect(index):
+	return (index % 8) * 16, (index // 8) * 16, 16, 16

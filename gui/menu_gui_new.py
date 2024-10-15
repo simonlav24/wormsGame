@@ -1,7 +1,7 @@
 ''' gui module for pygame '''
 
 from abc import ABC
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Protocol
 from enum import Enum
 
 import pygame
@@ -27,6 +27,9 @@ class Gui:
 
     def notify_event(self, event):
         self.event_que.append(event)
+
+    def get_super_pos(self) -> Vector:
+        return Vector()
 
     def get_values(self):
         ''' check for gui events '''
@@ -75,6 +78,13 @@ def mouse_in_win():
     mouse = pygame.mouse.get_pos()
     return Vector(mouse[0] / GameGlobals().scale_factor, mouse[1] / GameGlobals().scale_factor)
 
+class IParent:
+    def notify_event(self, event) -> None:
+        ...
+
+    def get_super_pos(self) -> Vector:
+        ...
+
 class GuiElement(ABC):
     def __init__(self, *args, **kwargs):
         self.pos = kwargs.get('pos', Vector())
@@ -85,7 +95,7 @@ class GuiElement(ABC):
         self.selected = False
         self.key = kwargs.get('key', 'key')
         self.value = kwargs.get('value', 'value')
-        self.menu = None
+        self.parent: IParent = None
         self.surf = None
         self.tooltip = kwargs.get('tool_tip', None)
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
@@ -104,8 +114,8 @@ class GuiElement(ABC):
     def get_values(self):
         return {self.key: self.value}
 
-    def get_super_pos(self):
-        return self.menu.get_super_pos()
+    def get_super_pos(self) -> Vector:
+        return self.parent.get_super_pos()
 
     def render_surf(self, text=None):
         if text == "":
@@ -147,9 +157,13 @@ class GuiElement(ABC):
     def draw(self, win: pygame.Surface) -> None:
         self.draw_rect(win)
         self.draw_text(win)
+    
+    def notify_event(self, event) -> None:
+        self.parent.notify_event(event)
 
 class StackPanel(GuiElement):
-    def __init__(self, pos=None, size=None, name="", orientation=VERTICAL, margin=1, custom_size=None):
+    def __init__(self, pos=None, size=None, name="", orientation=VERTICAL, margin=1, custom_size=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.pos = Vector()
         if pos:
             self.pos = tup2vec(pos)
@@ -157,11 +171,10 @@ class StackPanel(GuiElement):
         if size:
             self.size = tup2vec(size)
         self.name = name
-        self.elements = []
+        self.elements: List[GuiElement] = []
         self.orientation = orientation
         self.event = None
         self.margin = margin # distance between elements
-        self.menu = None
         self.custom_size = custom_size
         self.offset = None
         self.gui: Gui = None
@@ -171,8 +184,8 @@ class StackPanel(GuiElement):
             element.handle_pygame_event(event)
 
     def get_super_pos(self):
-        if self.menu:
-            return self.menu.get_super_pos() + self.pos
+        if self.parent:
+            return self.parent.get_super_pos() + self.pos
         return self.pos
     
     def set_gui(self, gui: Gui):
@@ -187,8 +200,8 @@ class StackPanel(GuiElement):
             values |= element_values
         return values
 
-    def add_element(self, new_element):
-        new_element.menu = self
+    def add_element(self, new_element: GuiElement):
+        new_element.parent = self
         self.elements.append(new_element)
         self.recalculate()
         
@@ -225,7 +238,7 @@ class StackPanel(GuiElement):
         for element in self.elements:
             element.draw(win)
     
-    def insert(self, element):
+    def insert(self, element: GuiElement):
         self.add_element(element)
         return element
 
@@ -269,8 +282,9 @@ class UpDown(GuiElement):
         # show value = true: the value of the updown will be rendered. False: the text will be renderd
         self.show_value = kwargs.get('show_value', True)
         self.mode = 0
+        self.mapping = kwargs.get('mapping', {})
         if self.show_value:
-            self.render_surf(str(self.value))
+            self.render_surf(str(self.mapping.get(self.value, self.value)))
         else:
             self.render_surf(self.text)
         self.limit_min = kwargs.get('limit_min', False)
@@ -292,6 +306,10 @@ class UpDown(GuiElement):
     def get_values(self):
         return {self.key: self.value}
 
+    def update_value(self, value):
+        self.value = value
+        self.render_surf(str(self.mapping.get(self.value, self.value)))
+
     def advance(self):
         if self.values:
             current = self.values.index(self.value)
@@ -303,20 +321,20 @@ class UpDown(GuiElement):
             pot = self.lim_min
         if self.limit_max and pot > self.lim_max:
             pot = self.lim_max
-        self.value = pot
+        self.update_value(pot)
+        
     
     def step(self):
+        self.selection_check()
+        self.highlight_check()
         mouse_pos = mouse_in_win()
         button_pos = self.get_super_pos() + self.pos
         pos_in_button = mouse_pos - button_pos
-        if pos_in_button[0] >= 0 and pos_in_button[0] < self.size[0] and pos_in_button[1] >= 0 and pos_in_button[1] < self.size[1]:
-            self.selected = True
+        if self.selected:
             if pos_in_button[1] > pos_in_button[0] * (self.size[1] / self.size[0]):
                 self.mode = -1
             else:
                 self.mode = 1
-            if self.show_value:
-                self.render_surf(str(self.value))
         else:
             self.selected = False
         self.highlight_check()
@@ -368,10 +386,9 @@ class ComboSwitch(GuiElement):
         self.items = kwargs.get('items', [])
         self.text = kwargs.get('text', 'combo')
         if self.items:
-            self.set_items(self.items)
+            self.set_items(self.items, kwargs.get('mapping', None))
             self.set_current_item(self.text)
         self.forward = False
-        self.mapping = {}
     
     def get_values(self):
         return {self.key: self.value}
@@ -522,7 +539,6 @@ class ImageDrag(GuiElement):
             elif self.drag_dx < -self.image_surf.get_width() + self.size[0] // 2:
                 self.drag_dx = -self.image_surf.get_width() + self.size[0] // 2
             self.recalc_image()
-            
 
 class SurfElement(GuiElement):
     def __init__(self, *args, **kwargs):
