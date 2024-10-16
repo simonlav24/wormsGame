@@ -404,6 +404,10 @@ class ComboSwitch(GuiElement):
             self.items.append((string, surf))
         self.value = self.items[self.current_index][0]
     
+    def update_items(self, values: List[Any]) -> None:
+        self.set_items(values)
+        self.set_current_item(values[0])
+
     def handle_pygame_event(self, event):
         super().handle_pygame_event(event)
         if self.selected:

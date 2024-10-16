@@ -10,7 +10,7 @@ from common import sprites, fonts, blit_weapon_sprite, GameVariables, GameState,
 from common.vector import *
 import common.drawing_utilities
 
-from weapons.weapon import Weapon, WeaponCategory, WeaponStyle, read_weapons
+from weapons.weapon import Weapon, WeaponCategory, WeaponStyle, read_weapons, read_weapon_set
 from weapons.weapon_funcs import weapon_funcs
 from weapons.directors.directors import WeaponDirector
 from game.team_manager import TeamManager
@@ -36,26 +36,25 @@ class WeaponManager(metaclass=SingletonMeta):
         self.weapon_dict: Dict[str, Weapon] = {key: value for key, value in zip(list(mapped), self.weapons)}
         common.drawing_utilities.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
 
-        # basic set for teams 
-        self.basic_set: List[int] = [weapon.initial_amount if weapon.artifact == ArtifactType.NONE else 0 for weapon in self.weapons]
-        
-        for team in TeamManager().teams:
-            team.weapon_set = self.basic_set.copy()
+        self.prepare_weapons_for_teams()
 
         self.current_weapon: Weapon = self.weapons[0]
-        
         self.weapon_director: WeaponDirector = WeaponDirector(weapon_funcs)
 
-        # read weapon set if exits and adjust basic set
-        # if game_manager.game_config.weapon_set is not None:
-        #     # zero out basic set
-        #     self.basic_set = [0 for i in self.basic_set]
+    def prepare_weapons_for_teams(self) -> None:
+        # default set
+        current_set: List[int] = [weapon.initial_amount if weapon.artifact == ArtifactType.NONE else 0 for weapon in self.weapons]
+        weapon_set_name = GameVariables().config.weapon_set
 
-        #     weaponSet = ET.parse('./assets/weaponsSets/' + game_manager.game_config.weapon_set + '.xml').getroot()
-        #     for weapon in weaponSet:
-        #         name = weapon.attrib["name"]
-        #         amount = int(weapon.attrib["amount"])
-        #         self.basic_set[self.weaponDict[name]] = amount
+        weapon_set = read_weapon_set(weapon_set_name)
+        if weapon_set is not None:
+            for weapon_index, amount in weapon_set.items():
+                if weapon_index == 'name':
+                    continue
+                current_set[int(weapon_index)] = amount
+
+        for team in TeamManager().teams:
+            team.weapon_set = current_set.copy()
 
     def __getitem__(self, item: str) -> int:
         ''' return index of weapon by string '''

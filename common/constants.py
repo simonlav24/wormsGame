@@ -18,6 +18,7 @@ PATH_SPRITE_ATLAS = r'assets/sprites.png'
 PATH_MAPS = r'./assets/worms_maps'
 PATH_GENERATED_MAPS = r'./assets/worms_maps/generated_maps'
 PATH_WEAPON_LIST = r'weapons.json'
+PATH_WEAPON_SETS = r'./assets/weapon_sets'
 
 class GameState(Enum):
     RESET = 0

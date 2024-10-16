@@ -25,7 +25,7 @@ from game.background import BackGround
 from game.map_manager import grab_maps
 from game.noise_gen import generate_noise
 
-from weapons.weapon import read_weapons, ArtifactType
+from weapons.weapon import read_weapons, save_weapon_set, read_weapon_sets
 
 class MainMenuRoom(Room):
     def __init__(self, *args, **kwargs):
@@ -38,6 +38,10 @@ class MainMenuRoom(Room):
 
         self.map_paths = grab_maps([PATH_MAPS])
         self.image_element: ImageDrag = None
+
+        self.weapon_sets_list = None
+        self.weapon_set_combo: ComboSwitch = None
+        self.update_weapon_sets()
 
         self.main_menu = self.initialize_main_menu()
         self.weapon_menu: StackPanel = None
@@ -146,24 +150,25 @@ class MainMenuRoom(Room):
             map_path=values['map_path'],
             is_recolor=values['is_recolor'],
             map_ratio=values['map_ratio'],
-            feel_index=values['feel_index']
+            feel_index=values['feel_index'],
+            weapon_set=values['weapon_set'],
         )
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
 
     def initialize_main_menu(self) -> StackPanel:
         ''' create menu layout '''
-        mainMenu = StackPanel(name="menu", pos=[40, (GameGlobals().win_height - 196) // 2], size=[GameGlobals().win_width - 80, 196] )
-        mainMenu.insert(Button(key="play", text="play", custom_size=16))
+        main_menu = StackPanel(name="menu", pos=[40, (GameGlobals().win_height - 196) // 2], size=[GameGlobals().win_width - 80, 196] )
+        main_menu.insert(Button(key="play", text="play", custom_size=16))
 
-        optionsAndPictureMenu = StackPanel(name="options and picture", orientation=HORIZONTAL)
+        options_and_picture_menu = StackPanel(name="options and picture", orientation=HORIZONTAL)
 
         # options vertical sub menu
-        optionsMenu = StackPanel(name="options")
+        options_menu = StackPanel(name="options")
 
-        subMode = StackPanel(orientation=HORIZONTAL, custom_size=15)
-        subMode.insert(Text(text="game mode"))
-        subMode.insert(ComboSwitch(key="game_mode", text=list(GameMode)[0].value, items=[mode.value for mode in GameMode]))
-        optionsMenu.add_element(subMode)
+        sub_mode = StackPanel(orientation=HORIZONTAL, custom_size=15)
+        sub_mode.insert(Text(text="game mode"))
+        sub_mode.insert(ComboSwitch(key="game_mode", text=list(GameMode)[0].value, items=[mode.value for mode in GameMode]))
+        options_menu.add_element(sub_mode)
 
         config = GameConfig()
 
@@ -180,10 +185,10 @@ class MainMenuRoom(Room):
         for i in range(0, len(toggles) - 1, 2):
             first = toggles[i]
             second = toggles[i + 1]
-            subOpt = StackPanel(orientation = HORIZONTAL, custom_size = 15)
-            subOpt.insert(Toggle(key=first[1], text=first[0], value=first[2]))
-            subOpt.insert(Toggle(key=second[1], text=second[0], value=second[2]))
-            optionsMenu.add_element(subOpt)
+            sub_opt = StackPanel(orientation = HORIZONTAL, custom_size = 15)
+            sub_opt.insert(Toggle(key=first[1], text=first[0], value=first[2]))
+            sub_opt.insert(Toggle(key=second[1], text=second[0], value=second[2]))
+            options_menu.add_element(sub_opt)
 
         # counters
         counters = [
@@ -193,9 +198,9 @@ class MainMenuRoom(Room):
         ]
 
         for counter in counters:
-            subOpt = StackPanel(orientation=HORIZONTAL)
-            subOpt.insert(Text(text=counter['text']))
-            subOpt.insert(UpDown(
+            sub_opt = StackPanel(orientation=HORIZONTAL)
+            sub_opt.insert(Text(text=counter['text']))
+            sub_opt.insert(UpDown(
                 key=counter['key'], 
                 value=counter['value'], 
                 limit_max=True,
@@ -204,69 +209,76 @@ class MainMenuRoom(Room):
                 lim_max=counter['lim_max'],
                 step_size=counter['step_size']
             ))
-            optionsMenu.add_element(subOpt)
+            options_menu.add_element(sub_opt)
 
         # random turns
-        subMode = StackPanel(orientation=HORIZONTAL)
-        subMode.insert(Text(text="random turns"))
-        subMode.insert(ComboSwitch(key="random_mode", items=[mode.value for mode in RandomMode]))
-        optionsMenu.add_element(subMode)
+        sub_mode = StackPanel(orientation=HORIZONTAL)
+        sub_mode.insert(Text(text="random turns"))
+        sub_mode.insert(ComboSwitch(key="random_mode", items=[mode.value for mode in RandomMode]))
+        options_menu.add_element(sub_mode)
 
         # sudden death
-        subMode = StackPanel(orientation=HORIZONTAL)
-        subMode.insert(Text(text="sudden death"))
-        subMode.insert(UpDown(key="rounds_for_sudden_death", value=16, text="16", limit_min=True, lim_min=0, custom_size=19))
-        subMode.insert(ComboSwitch(key="sudden_death_style", items=[style.value for style in SuddenDeathMode]))
-        optionsMenu.add_element(subMode)
+        sub_mode = StackPanel(orientation=HORIZONTAL)
+        sub_mode.insert(Text(text="sudden death"))
+        sub_mode.insert(UpDown(key="rounds_for_sudden_death", value=16, text="16", limit_min=True, lim_min=0, custom_size=19))
+        sub_mode.insert(ComboSwitch(key="sudden_death_style", items=[style.value for style in SuddenDeathMode]))
+        options_menu.add_element(sub_mode)
 
-        optionsAndPictureMenu.add_element(optionsMenu)
+        options_and_picture_menu.add_element(options_menu)
 
         # map options vertical sub menu
-        mapMenu = StackPanel(name="map menu", orientation=VERTICAL)
+        map_menu = StackPanel(name="map menu", orientation=VERTICAL)
         self.image_element = ImageDrag(key="map_path", image=choice(self.map_paths))
-        mapMenu.insert(self.image_element)
+        map_menu.insert(self.image_element)
 
         # map buttons
-        subMap = StackPanel(orientation = HORIZONTAL, custom_size=15)
-        subMap.insert(Button(key="random_image", text="random"))
-        subMap.insert(Button(key="browse", text="browse"))
-        subMap.insert(Button(key="generate", text="generate"))
+        sub_map = StackPanel(orientation = HORIZONTAL, custom_size=15)
+        sub_map.insert(Button(key="random_image", text="random"))
+        sub_map.insert(Button(key="browse", text="browse"))
+        sub_map.insert(Button(key="generate", text="generate"))
 
-        mapMenu.add_element(subMap)
+        map_menu.add_element(sub_map)
 
         # recolor & ratio
-        subMap = StackPanel(orientation = HORIZONTAL, custom_size = 15)
-        subMap.insert(Toggle(key="is_recolor", text="recolor", value=False))
-        subMap.insert(Text(text="ratio"))
-        subMap.insert(Input(key="map_ratio", text="enter ratio", eval_type='int', default_value=512))
+        sub_map = StackPanel(orientation = HORIZONTAL, custom_size = 15)
+        sub_map.insert(Toggle(key="is_recolor", text="recolor", value=False))
+        sub_map.insert(Text(text="ratio"))
+        sub_map.insert(Input(key="map_ratio", text="enter ratio", eval_type='int', default_value=512))
 
-        mapMenu.add_element(subMap)
-        optionsAndPictureMenu.add_element(mapMenu)
-        mainMenu.add_element(optionsAndPictureMenu)
+        map_menu.add_element(sub_map)
+        options_and_picture_menu.add_element(map_menu)
+        main_menu.add_element(options_and_picture_menu)
 
         # weapons setup
-        subweapons = StackPanel(orientation=HORIZONTAL, custom_size=14)
-        subweapons.insert(Button(key="weapons setup", text="weapons setup"))
-        weaponsSets = ['default']
+        sub_weapons = StackPanel(orientation=HORIZONTAL, custom_size=14)
+        sub_weapons.insert(Button(key="weapons setup", text="weapons setup"))
 
-        if os.path.exists("./assets/weaponsSets"):
-            for file in os.listdir("./assets/weaponsSets"):
-                weaponsSets.append(file.split(".")[0])
+        sub_weapons.insert(Text("weapons set:"))
+        self.weapon_set_combo = ComboSwitch(name="weapon_combo", key="weapon_set")
+        sub_weapons.insert(self.weapon_set_combo)
+        self.update_weapon_sets()
+        main_menu.add_element(sub_weapons)
 
-        subweapons.insert(Text("weapons set:"))
-        subweapons.insert(ComboSwitch(name="weapon_combo", key="weapon_set", items=weaponsSets))
-        mainMenu.add_element(subweapons)
-
-        subMore = StackPanel(orientation=HORIZONTAL, custom_size=14)
-        subMore.insert(Button(key="scoreboard", text="score board"))
-        subMore.insert(UpDown(text="background color", key="feel_index", value=self.feel_index, values=[i for i in range(len(feels))], show_value=False, generate_event=True))
-        mainMenu.add_element(subMore)
+        sub_more = StackPanel(orientation=HORIZONTAL, custom_size=14)
+        sub_more.insert(Button(key="scoreboard", text="score board"))
+        sub_more.insert(UpDown(text="background color", key="feel_index", value=self.feel_index, values=[i for i in range(len(feels))], show_value=False, generate_event=True))
+        main_menu.add_element(sub_more)
         
-        subMore = StackPanel(orientation=HORIZONTAL, custom_size=14)
-        subMore.insert(Button(key="exit", text="exit"))
-        mainMenu.add_element(subMore)
+        sub_more = StackPanel(orientation=HORIZONTAL, custom_size=14)
+        sub_more.insert(Button(key="exit", text="exit"))
+        main_menu.add_element(sub_more)
 
-        return mainMenu
+        return main_menu
+
+    def update_weapon_sets(self) -> None:
+        self.weapon_sets_list = read_weapon_sets()
+        if self.weapon_set_combo is None:
+            return
+        
+        weapon_sets_names = [dictionary['name'] for dictionary in self.weapon_sets_list]
+        weapon_sets_names.insert(0, 'default')
+
+        self.weapon_set_combo.update_items(weapon_sets_names)
 
     def initialize_weapon_menu(self) -> StackPanel:
 
@@ -308,7 +320,7 @@ class MainMenuRoom(Room):
 
         sub = StackPanel(orientation=HORIZONTAL)
         sub.insert(Text(text="weapon set name:"))
-        sub.insert(Input(key="filename", text="enter name"))
+        sub.insert(Input(key="file_name", text="enter name"))
         sub.insert(Button(key="save_weapons", text="save"))
         weapon_menu.insert(sub)
 
@@ -347,9 +359,13 @@ class MainMenuRoom(Room):
             weapon_out = MenuAnimator(self.weapon_menu, weapon_menu_pos, weapon_menu_pos - Vector(GameGlobals().win_width, 0))
             self.gui.animators.append(main_menu_in)
             self.gui.animators.append(weapon_out)
+            self.update_weapon_sets()
         
         elif event == 'save_weapons':
-            print('save weapons tbd')
+            weapon_dict = {'name': values['file_name']}
+            for element_dict in self.weapon_up_downs:
+                weapon_dict[element_dict['weapon'].index] = element_dict['element'].value
+            save_weapon_set(weapon_dict, values['file_name'])
         
         elif event == 'default_weapons':
             for element_dict in self.weapon_up_downs:
@@ -359,7 +375,6 @@ class MainMenuRoom(Room):
         elif event == 'zero_weapons':
             for element_dict in self.weapon_up_downs:
                 element_dict['element'].update_value(0)
-        
         
         
 

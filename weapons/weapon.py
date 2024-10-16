@@ -1,12 +1,13 @@
 
+import os
 import json
 from enum import Enum
 from pydantic import BaseModel
 from typing import Dict, Callable, Any, List
 
-from common import ArtifactType, ColorType, PATH_WEAPON_LIST
+from common import ArtifactType, ColorType, PATH_WEAPON_LIST, PATH_WEAPON_SETS
 
-
+weapon_set_type = Dict[int, int]
 weapon_func_type = Dict[str, Callable[[Any], Any]]
 
 class WeaponStyle(Enum):
@@ -69,9 +70,37 @@ class Weapon(BaseModel):
         ''' returns weapons background color '''
         return weapon_bg_color[self.category]
 
+
 def read_weapons() -> List[Weapon]:
+    ''' reads weapons from weapon-list file and returns list '''
     with open(PATH_WEAPON_LIST, 'r') as file:
         data = json.load(file)
         
     weapons: List[Weapon] = [Weapon.model_validate(weapon) for weapon in data]
     return weapons
+
+
+def save_weapon_set(weapon_set: weapon_set_type, name: str) -> None:
+    ''' save weapon set to file '''
+    with open(os.path.join(PATH_WEAPON_SETS, f'{name}.json'), 'w+') as file: 
+        json.dump(weapon_set, file)
+
+
+def read_weapon_sets() -> List[weapon_set_type]:
+    ''' read all saved weapon sets and returns a list '''
+    output = []
+    for weapon_set in os.listdir(PATH_WEAPON_SETS):
+        if not weapon_set.endswith('json'):
+            continue
+        with open(os.path.join(PATH_WEAPON_SETS, weapon_set), 'r') as file:
+            data = json.load(file)
+            output.append(data)
+    return output
+
+def read_weapon_set(name: str) -> weapon_set_type:
+    path = os.path.join(PATH_WEAPON_SETS, f'{name}.json')
+    if not os.path.exists(path):
+        return None
+    with open(path, 'r') as file:
+        data = json.load(file)
+    return data
