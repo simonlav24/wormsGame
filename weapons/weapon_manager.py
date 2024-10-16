@@ -1,6 +1,5 @@
 
-import json
-from typing import List, Dict, Tuple, Callable, Any
+from typing import List, Dict, Tuple
 from random import randint, choice
 
 import pygame
@@ -14,7 +13,6 @@ from weapons.weapon import Weapon, WeaponCategory, WeaponStyle, read_weapons, re
 from weapons.weapon_funcs import weapon_funcs
 from weapons.directors.directors import WeaponDirector
 from game.team_manager import TeamManager
-from game.time_manager import TimeManager
 from weapons.earth_spike import calc_earth_spike_pos
 from weapons.tools import draw_trampoline_hint
 
@@ -321,3 +319,4 @@ class WeaponManager(metaclass=SingletonMeta):
         if GameVariables().config.option_cool_down:
             self.add_to_cool_down(weapon)
         return True
+    

@@ -366,6 +366,7 @@ class MainMenuRoom(Room):
             for element_dict in self.weapon_up_downs:
                 weapon_dict[element_dict['weapon'].index] = element_dict['element'].value
             save_weapon_set(weapon_dict, values['file_name'])
+            self.gui.toast(f'saved {values["file_name"]}')
         
         elif event == 'default_weapons':
             for element_dict in self.weapon_up_downs:
@@ -375,8 +376,6 @@ class MainMenuRoom(Room):
         elif event == 'zero_weapons':
             for element_dict in self.weapon_up_downs:
                 element_dict['element'].update_value(0)
-        
-        
 
 
 def browse_file():

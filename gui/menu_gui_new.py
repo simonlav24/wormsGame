@@ -1,7 +1,7 @@
 ''' gui module for pygame '''
 
 from abc import ABC
-from typing import List, Tuple, Any, Protocol
+from typing import List, Tuple, Any
 from enum import Enum
 
 import pygame
@@ -9,16 +9,55 @@ import pygame
 from common import GameVariables, fonts, GameGlobals
 from common.vector import Vector, tup2vec
 
+HORIZONTAL = 0
+VERTICAL = 1
+
+WHITE = (255,255,255,255)
+BLACK = (0,0,0,255)
+
+BUTTON_COLOR = (82,65,60)
+TEXT_ELEMENT_COLOR = (62,45,40)
+TOGGLE_COLOR = (0,255,0)
+SELECTED_COLOR = (0,180,0)
+SUB_BUTTON_COLOR = (182,165,160)
+SUB_SELECTED_COLOR = (255,255,255)
+HALF_TIME = int(GameGlobals().fps * 0.5)
+
+def mouse_in_win() -> Vector:
+    ''' gets mouse position in window '''
+    mouse = pygame.mouse.get_pos()
+    return Vector(mouse[0] / GameGlobals().scale_factor, mouse[1] / GameGlobals().scale_factor)
+
+
+class ToastState(Enum):
+    NONE = 0
+    UP = 1
+    SHOW = 2
+    DOWN = 3
+
+
 class Gui:
     def __init__(self):
-        self.toaster = Toaster()
         self.menus: List[StackPanel] = []
         self.animators: List[AnimatorBase] = []
         self.event_que = []
+        self.toast_surf: pygame.Surface = None
+        self.toast_timer = 0
+        self.toast_state = ToastState.NONE
+        self.toast_pos = Vector()
     
     def show_cursor(self, cursor, element):
         pygame.mouse.set_cursor(cursor)
     
+    def toast(self, text: str) -> None:
+        self.toast_surf = fonts.pixel5_halo.render(text, False, WHITE)
+        self.toast_timer = 2 * GameGlobals().fps
+        self.toast_state = ToastState.UP
+        self.toast_pos = Vector(
+            GameGlobals().win_width // 2 - self.toast_surf.get_width() // 2,
+            GameGlobals().win_height + self.toast_surf.get_height()
+        )
+
     def listen(self) -> Tuple[Any, Any]:
         if len(self.event_que) > 0:
             event = self.event_que.pop(0)
@@ -53,30 +92,27 @@ class Gui:
         for animation in self.animators:
             animation.step()
         self.animators = [animator for animator in self.animators if not animator.is_done]
-
-        self.toaster.step()
+        
+        if self.toast_surf is not None:
+            if self.toast_state == ToastState.UP:
+                self.toast_pos[1] -= 2
+                if self.toast_pos[1] < GameGlobals().win_height - self.toast_surf.get_height() - 5:
+                    self.toast_state = ToastState.SHOW
+            elif self.toast_state == ToastState.SHOW:
+                self.toast_timer -= 1
+                if self.toast_timer <= 0:
+                    self.toast_state = ToastState.DOWN
+            elif self.toast_state == ToastState.DOWN:
+                self.toast_pos[1] += 2
+                if self.toast_pos[1] > GameGlobals().win_height:
+                    self.toast_state = ToastState.NONE
+                    self.toast_surf = None
     
     def draw(self, win: pygame.Surface) -> None:
         for menu in self.menus:
             menu.draw(win)
-        self.toaster.draw(win)
-
-HORIZONTAL = 0
-VERTICAL = 1
-
-WHITE = (255,255,255,255)
-BLACK = (0,0,0,255)
-
-BUTTON_COLOR = (82,65,60)
-TEXT_ELEMENT_COLOR = (62,45,40)
-TOGGLE_COLOR = (0,255,0)
-SELECTED_COLOR = (0,180,0)
-SUB_BUTTON_COLOR = (182,165,160)
-SUB_SELECTED_COLOR = (255,255,255)
-
-def mouse_in_win():
-    mouse = pygame.mouse.get_pos()
-    return Vector(mouse[0] / GameGlobals().scale_factor, mouse[1] / GameGlobals().scale_factor)
+        if self.toast_surf is not None:
+            win.blit(self.toast_surf, self.toast_pos)
 
 class IParent:
     def notify_event(self, event) -> None:
@@ -743,65 +779,3 @@ class ElementAnimator:
             self.element.value = self.end
             self.is_done = True
 
-class Toaster:
-    def __init__(self):
-        self.toast_surf = None
-        self.timer = 0
-        self.toase_state = "none"
-        self.toast_pos = Vector(0,0)
-
-        self.tooltip_surf = None
-        self.tooltip_element = None
-    
-    def show_tooltip(self, element):
-        text_surf = fonts.pixel5.render(element.tooltip, True, (255,255,255), (0,0,0))
-        self.tooltip_surf = pygame.Surface((text_surf.get_width() + 2, text_surf.get_height() + 2))
-        self.tooltip_surf.fill((0,0,0))
-        self.tooltip_surf.blit(text_surf, (1,1))
-        self.tooltip_element = element
-    
-    def hide_tool_tip(self):
-        self.tooltip_surf = None
-    
-    def toast(self, text):
-        text_surf = fonts.pixel5.render(text, True, (255,255,255), (0,0,0))
-        self.toast_surf = pygame.Surface((text_surf.get_width() + 2, text_surf.get_height() + 2))
-        self.toast_surf.fill((0,0,0))
-        self.toast_surf.blit(text_surf, (1,1))
-
-        self.toast_pos = Vector(win.get_width() // 2 - self.toast_surf.get_width() // 2, win.get_height())
-        self.toase_state = "opening"
-    
-    def step(self):
-        # toast
-        if self.toase_state == "opening":
-            self.toast_pos.y -= 1
-            if self.toast_pos.y <= win.get_height() - 10 - self.toast_surf.get_height():
-                self.toase_state = "showing"
-                self.timer = 0
-        elif self.toase_state == "showing":
-            self.timer += 1
-            if self.timer >= GameVariables().fps * 2:
-                self.toase_state = "closing"
-        elif self.toase_state == "closing":
-            self.toast_pos.y += 1
-            if self.toast_pos.y >= win.get_height():
-                self.toase_state = "none"
-                self.toast_surf = None
-                self.timer = 0
-
-        # tooltip
-        if self.tooltip_element:
-            if not self.tooltip_element.selected:
-                self.hide_tool_tip()
-                self.tooltip_element = None
-    
-    def draw(self, win: pygame.Surface) -> None:
-        # toast
-        if self.toast_surf:
-            win.blit(self.toast_surf, self.toast_pos)
-
-        # tooltip
-        if self.tooltip_surf:
-            mouse_pos = mouse_in_win()
-            win.blit(self.tooltip_surf, mouse_pos + Vector(5,5))
