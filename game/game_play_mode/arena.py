@@ -1,5 +1,5 @@
 
-from random import randint
+from random import randint, uniform
 
 import pygame
 
@@ -8,7 +8,7 @@ from common.vector import Vector
 
 from game.game_play_mode.game_play_mode import GamePlayMode
 from game.map_manager import MapManager, GRD
-from game.team_manager import TeamManager
+from game.visual_effects import EffectManager
 
 
 class ArenaGamePlay(GamePlayMode):
@@ -23,6 +23,12 @@ class ArenaGamePlay(GamePlayMode):
             randint(50, MapManager().game_map.get_width() - 50),
             randint(50, MapManager().game_map.get_height() - 50)
         )
+
+    def step(self):
+        super().step()
+        if randint(0, 30) == 1:
+            pos = Vector(self.pos[0] + uniform(0, 1) * self.size[0], self.pos[1])
+            EffectManager().create_particle(pos, Vector(uniform(-1,1), -2), (255,255,255))
 
     def draw(self, win: pygame.Surface):
         super().draw(win)

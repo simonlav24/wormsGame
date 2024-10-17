@@ -666,13 +666,11 @@ class GameRoom(Room):
 wip = '''
 	still in progress:
 		loading screen
-		win record
 		holding mjolnir
-		particle to indicate correct arena
+		particles to indicate correct arena
 		better portals
 		refactor bubble
 		team creation screen 
-		score screen (?)
 	'''
 
 

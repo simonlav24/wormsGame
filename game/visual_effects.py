@@ -1,13 +1,18 @@
 
-import pygame
 from typing import Any, List, Tuple
 from random import randint, uniform, choice, shuffle
 from math import exp, pi, sin, cos
+
+import pygame
+import pygame.gfxdraw
 
 from common import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts, Entity, SingletonMeta, clamp, GameVariables, point2world, Sickness, GAS_COLOR, GameGlobals
 from common.vector import *
 
 from game.map_manager import MapManager
+
+# particle: pos, vel, color, life
+ParticleType = Tuple[Vector, Vector, ColorType, int]
 
 class Effect(Entity):
 	''' visual effects '''
@@ -27,6 +32,7 @@ class EffectManager(metaclass=SingletonMeta):
 
 		self.smoke_particles = SmokeParticles()
 		self.gas_particles = GasParticles()
+		self.particles: List[ParticleType] = []
 	
 	def register(self, effect: Effect) -> None:
 		self.effects_in_play.append(effect)
@@ -51,10 +57,22 @@ class EffectManager(metaclass=SingletonMeta):
 			self.effects_in_play.remove(effect)
 		self.effects_to_remove.clear()
 
+		for particle in self.particles:
+			acc = Vector(GameVariables().physics.wind * 0.05, GameVariables().physics.global_gravity * 0.5)
+			particle[1] = particle[1] + acc
+			particle[0] = particle[0] + particle[1] * 0.5
+			particle[3] -= 1
+		self.particles = [particle for particle in self.particles if particle[3] > 0]
+
 		self.smoke_particles.step()
 		self.gas_particles.step()
 	
 	def draw(self, win: pygame.Surface):
+		for particle in self.particles:
+			radius = min(int(particle[3] * 2 / GameGlobals().fps), 2)
+			pos = point2world(particle[0])
+			pygame.gfxdraw.filled_circle(win, pos[0], pos[1], radius, (*particle[2], 100))
+
 		for effect in self.effects_in_play:
 			effect.draw(win)
 
@@ -87,6 +105,11 @@ class EffectManager(metaclass=SingletonMeta):
 
 	def add_gas(self, pos: Vector, vel: Vector=None, sickness: Sickness=Sickness.SICK):
 		self.gas_particles.add_gas(pos, vel, sickness)
+
+	def create_particle(self, pos: Vector, vel: Vector, color: Vector):
+		life = randint(GameGlobals().fps, 2 * GameGlobals().fps)
+		particle = [pos, vel, color, life]
+		self.particles.append(particle)
 
 class Blast(Effect):
 	''' firey effect, emmited by explossions, jetpack etc '''

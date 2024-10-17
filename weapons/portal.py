@@ -1,12 +1,14 @@
 
 from math import degrees, sin, cos, pi
+from random import randint, uniform, choice
 
 import pygame
 
 from common.vector import *
-from common import GameVariables, point2world, sprites
+from common import GameVariables, point2world, sprites, darken
 
 from game.map_manager import MapManager, GRD
+from game.visual_effects import EffectManager
 
 RADIUS_OF_CONTACT = 8
 RADIUS_OF_RELEASE = 10
@@ -16,21 +18,28 @@ class Portal:
 		GameVariables().register_non_physical(self)
 		GameVariables().register_cycle_observer(self)
 		self.direction = direction
-		self.dirNeg = direction * -1
+		self.dir_neg = direction * -1
 		self.pos = pos - direction * 5
-		self.holdPos = pos
+		self.hold_pos = pos
 		self.brother: Portal | None = None
-		width, height = 32, 16
+	
+		width, height = 8, 20
 		
-		surf = pygame.Surface((width, height), pygame.SRCALPHA)
+		self.color = (105, 255, 249) if first else (255, 194, 63)
+		self.points = []
+		angle = self.direction.getAngle()
+		amount = 25
+		for i in range(amount):
+			t = (i / amount) * 2 * pi
+			point = Vector(cos(t), sin(t))
+			point[0] *= width / 2
+			point[1] *= height / 2
+			point.rotate(angle)
+			point += self.pos
+			self.points.append(point)
+		self.points_translate = [vectorUnitRandom() for i in range(amount)]
 
-		if first:
-			surf.blit(sprites.sprite_atlas, (0,0), (32, 128, width, height))
-		else:
-			surf.blit(sprites.sprite_atlas, (0,0), (0, 128, width, height))
-			
-		self.surf = pygame.transform.rotate(surf, 90 - degrees(self.direction.getAngle()))
-		
+
 		self.stable = True
 		self.is_boom_affected = False
 		self.health = 0
@@ -39,29 +48,29 @@ class Portal:
 	
 	def step(self):
 		# check if self on map
-		if not MapManager().game_map.get_at(self.holdPos.vec2tupint()) == GRD:
+		if not MapManager().game_map.get_at(self.hold_pos.vec2tupint()) == GRD:
 			self.remove_from_game()
 			if self.brother:
 				self.brother.remove_from_game()
 			return
 
 		if self.brother:
-			Bro = (self.pos - GameVariables().player.pos)
+			bro = (self.pos - GameVariables().player.pos)
 			angle = self.direction.getAngle() - (self.pos - GameVariables().player.pos).getAngle()
-			broAngle = self.brother.dirNeg.getAngle()
+			broAngle = self.brother.dir_neg.getAngle()
 			finalAngle = broAngle + angle
-			Bro.setAngle(finalAngle)
-			self.posBro = self.brother.pos - Bro
+			bro.setAngle(finalAngle)
+			self.posBro = self.brother.pos - bro
 			
 		if self.brother:
 			for obj in GameVariables().get_physicals():
 				if distus(obj.pos, self.pos) <= RADIUS_OF_CONTACT * RADIUS_OF_CONTACT:
-					Bro = (self.pos - obj.pos)
+					bro = (self.pos - obj.pos)
 					angle = self.direction.getAngle() - (self.pos - obj.pos).getAngle()
-					broAngle = self.brother.dirNeg.getAngle()
+					broAngle = self.brother.dir_neg.getAngle()
 					finalAngle = broAngle + angle
-					Bro.setAngle(finalAngle)
-					obj.pos = self.brother.pos - Bro
+					bro.setAngle(finalAngle)
+					obj.pos = self.brother.pos - bro
 					
 					posT = self.brother.pos - obj.pos
 					posT.normalize()
@@ -70,13 +79,33 @@ class Portal:
 					angle = self.direction.getAngle() - obj.vel.getAngle()
 					finalAngle = broAngle + angle
 					obj.vel.setAngle(finalAngle)
-	
+
+					for i in range(randint(4, 8)):
+						EffectManager().create_particle(self.brother.pos, obj.vel + vectorUnitRandom() * 0.5, self.brother.color)
+		
+		if randint(0, 30) == 1:
+			point = choice(self.points)
+			EffectManager().create_particle(point, Vector(uniform(-1,1), -2), self.color)
+
+
+	def on_turn_begin(self):
+		pass
+
 	def on_turn_end(self):
 		if self.brother is None:
 			self.remove_from_game()
 
+	def transform(self, vec: Vector) -> Vector:
+		time = GameVariables().time_overall * 0.1
+		x = vec[0] + 0.5 * sin(0.5 * vec[1] - time)
+		y = vec[1] + 0.5 * sin(0.5 * vec[0] - time)
+		return Vector(x, y)
+
 	def draw(self, win: pygame.Surface):
-		win.blit(self.surf, point2world(self.pos - tup2vec(self.surf.get_size())/2))
+
+		points = [point2world(self.transform(p)) for p in self.points]
+		pygame.draw.polygon(win, darken(self.color), points)
+		pygame.draw.lines(win, self.color, True, points, 1)
 
 	def remove_from_game(self):
 		GameVariables().unregister_non_physical(self)

@@ -64,7 +64,6 @@ class MainMenuRoom(Room):
         GameGlobals().reset_win_scale()
 
         record = kwargs.get('input', None)
-        record = test_record()
         
         # todo: win menu
         if record is not None:
