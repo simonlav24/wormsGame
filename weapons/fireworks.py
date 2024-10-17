@@ -11,14 +11,13 @@ from game.visual_effects import Blast, FireWork
 
 
 class FireWorkRockets:
-	_fw = None
 	def __init__(self):
 		GameVariables().register_non_physical(self)
-		FireWorkRockets._fw = self
 		self.objects = []
 		self.state = "tag"
 		self.timer = 0
 		self.picked = 0
+		self.pos = None
 	
 	def step(self):
 		if self.state == "thrusting":
@@ -36,7 +35,6 @@ class FireWorkRockets:
 	
 	def done(self):
 		GameVariables().unregister_non_physical(self)
-		FireWorkRockets._fw = None
 	
 	def fire(self):
 		"""return true if fired"""
@@ -75,10 +73,10 @@ class FireWorkRockets:
 			blit_weapon_sprite(win, point2world(obj.pos - Vector(8,8)), "fireworks")
 
 
-def fire_firework(**kwargs):
-	# todo: refactor
-	if FireWorkRockets._fw is None:
-		FireWorkRockets()
-		return
-
-	FireWorkRockets._fw.fire()
+def fire_firework(*args, **kwargs):
+	obj = kwargs.get('shooted_object', None)
+	if obj is None:
+		obj = FireWorkRockets()
+		return obj
+	obj.fire()
+	return obj

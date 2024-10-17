@@ -77,7 +77,11 @@ class EarthSpike:
 				pixels.replace(i, GRD)
 			del pixels
 			MapManager().game_map.blit(surf, rectPos)
+			self.remove_from_game()
 		self.timer += 1
 	
+	def remove_from_game(self) -> None:
+		GameVariables().unregister_non_physical(self)
+
 	def draw(self, win: pygame.Surface):
 		pass

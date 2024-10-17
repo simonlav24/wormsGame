@@ -212,8 +212,8 @@ class Game:
 			self.game_config.feel_index = randint(0, len(feels) - 1)
 
 		GameVariables().game_mode = GamePlayCompound()
-		self.game_stats = StatsGamePlay()
-		GameVariables().game_mode.add_mode(self.game_stats)
+		GameVariables().stats = StatsGamePlay()
+		GameVariables().game_mode.add_mode(GameVariables().stats)
 
 		game_mode_map = {
 			GameMode.TERMINATOR: TerminatorGamePlay(),
@@ -222,7 +222,7 @@ class Game:
 			GameMode.DAVID_AND_GOLIATH: DVGGamePlay(),
 			GameMode.CAPTURE_THE_FLAG: CTFGamePlay(),
 			GameMode.ARENA: ArenaGamePlay(),
-			GameMode.MISSIONS: MissionsGamePlay(self.game_stats),
+			GameMode.MISSIONS: MissionsGamePlay(GameVariables().stats),
 		}
 
 		GameVariables().game_mode.add_mode(game_mode_map.get(self.game_config.game_mode))
@@ -414,8 +414,8 @@ class GameRoom(Room):
 		self.game_manager = Game(config)
 
 		# refactor these
-		# self.wind_flag = WindFlag()
-		self.damageText = (self.game_manager.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(self.game_manager.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
+		damage_this_turn = GameVariables().stats.get_stats()['damage_this_turn']
+		self.damageText = (damage_this_turn, fonts.pixel5_halo.render(str(int(damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 	
 	def handle_pygame_event(self, event) -> None:
 		''' handle pygame events in game '''
@@ -505,7 +505,7 @@ class GameRoom(Room):
 
 		GameVariables().state_machine.step()
 		if GameVariables().game_end:
-			self.switch = SwitchRoom(Rooms.MAIN_MENU, False, None)
+			self.switch = SwitchRoom(Rooms.MAIN_MENU, False, GameVariables().game_record)
 			return
 
 		if GameVariables().game_state in [GameState.RESET]:
@@ -652,8 +652,9 @@ class GameRoom(Room):
 			self.game_manager.radial_weapon_menu.draw(win)
 		
 		# debug:
-		if self.damageText[0] != self.game_manager.game_stats.damage_this_turn:
-			self.damageText = (self.game_manager.game_stats.damage_this_turn, fonts.pixel5_halo.render(str(int(self.game_manager.game_stats.damage_this_turn)), False, GameVariables().initial_variables.hud_color))
+		damage_this_turn = GameVariables().stats.get_stats()['damage_this_turn']
+		if self.damageText[0] != damage_this_turn:
+			self.damageText = (damage_this_turn, fonts.pixel5_halo.render(str(int(damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 		win.blit(self.damageText[1], ((int(5), int(GameGlobals().win_height -5 -self.damageText[1].get_height()))))
 
 		# weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
@@ -670,12 +671,8 @@ wip = '''
 		particle to indicate correct arena
 		better portals
 		refactor bubble
-		win screen
-		weapon screen
 		team creation screen 
 		score screen (?)
-		ROPE IS NOT FUCKING RELEASING ON SPACE PRESS IN RETREAT
-		when team life == 1 no indication in health bar
 	'''
 
 
@@ -735,7 +732,7 @@ def main():
 						break
 					existing_room = rooms_dict[switch.next_room]
 					current_room = existing_room
-					current_room.on_resume()
+					current_room.on_resume(input=switch.room_input)
 				
 		except Exception:
 			print(traceback.format_exc())

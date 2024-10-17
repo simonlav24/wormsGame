@@ -224,9 +224,7 @@ def fire_venus_fly_trap(*args, **kwargs) -> EntityPhysical:
 def fire_covid_19(*args, **kwargs) -> EntityPhysical:
     """ fire covid 19 """
     obj = Covid19(kwargs.get('pos'), GameVariables().player.get_team_data().team_name)
-    # todo: refactor this
-    for worm in GameVariables().player.team.worms:
-        obj.bitten.append(worm)
+    return obj
 
 
 
@@ -246,7 +244,7 @@ def fire_rope(*args, **kwargs) -> bool:
     """ fire rope """
     direction: Vector = kwargs.get('direction')
     angle = direction.getAngle()
-    # todo: refactor
+    
     if GameVariables().player.get_tool() is not None:
         GameVariables().player.get_tool().release()
         return False
@@ -258,7 +256,6 @@ def fire_rope(*args, **kwargs) -> bool:
 
 def fire_parachute(*args, **kwargs) -> bool:
     """ fire parachute """
-    # todo: refactor
     if GameVariables().player.vel.y > 1:
         GameVariables().player.set_tool(Parachute(GameVariables().player))
     return GameVariables().player.get_tool() is not None
@@ -390,12 +387,6 @@ def fire_guided_missile(*args, **kwargs) -> EntityPhysical:
 
 
 
-def fire_fireworks(*args, **kwargs) -> EntityPhysical:
-    """ fire fireworks """
-    fire_firework(**kwargs)
-
-
-
 def fire_moon_gravity(*args, **kwargs) -> EntityPhysical:
     """ fire moon gravity """
     GameVariables().physics.global_gravity = 0.1
@@ -414,7 +405,6 @@ def fire_double_damage(*args, **kwargs) -> EntityPhysical:
 
 def fire_aim_aid(*args, **kwargs) -> EntityPhysical:
     """ fire aim aid """
-    # todo: implement
     GameVariables().aim_aid = True
     GameVariables().commentator.comment([{'text': "snipe em'"}])
 
@@ -428,7 +418,6 @@ def fire_teleport(*args, **kwargs) -> EntityPhysical:
 
 def fire_switch_worms(*args, **kwargs) -> EntityPhysical:
     """ fire switch worms """
-    # todo: implement
     WormSwitcher()
     GameVariables().commentator.comment([{'text': "the ol' switcheroo"}])
 
@@ -592,7 +581,7 @@ weapon_funcs['electro boom'] = fire_electro_boom
 weapon_funcs['pokeball'] = fire_pokeball
 weapon_funcs['green shell'] = fire_green_shell
 weapon_funcs['guided missile'] = fire_guided_missile
-weapon_funcs['fireworks'] = fire_fireworks
+weapon_funcs['fireworks'] = fire_firework
 weapon_funcs['moon gravity'] = fire_moon_gravity
 weapon_funcs['double damage'] = fire_double_damage
 weapon_funcs['aim aid'] = fire_aim_aid

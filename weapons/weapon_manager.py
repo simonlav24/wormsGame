@@ -286,7 +286,7 @@ class WeaponManager(metaclass=SingletonMeta):
             flip = False if GameVariables().airstrike_direction == RIGHT else True
             win.blit(pygame.transform.flip(sprites.air_strike_indicator, flip, False), point2world(mouse - tup2vec(sprites.air_strike_indicator.get_size())/2))
         
-        if self.current_weapon.name == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY] and TeamManager().current_team.ammo(self["earth spike"]) != 0:
+        if self.current_weapon.name == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY]:
             spikeTarget = calc_earth_spike_pos()
             if spikeTarget:
                 draw_target(win, spikeTarget)

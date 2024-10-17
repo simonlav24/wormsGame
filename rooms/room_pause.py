@@ -34,7 +34,7 @@ class PauseRoom(Room):
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.on_resume()
+                self.on_continue()
 
     def step(self) -> None:
         super().step()
@@ -52,16 +52,16 @@ class PauseRoom(Room):
         if event is None:
             return
         if event == 'resume':
-            self.on_resume()
+            self.on_continue()
         if event == 'to_main_menu':
             self.switch = SwitchRoom(Rooms.MAIN_MENU, False, None)
 
-    def on_resume(self):
+    def on_continue(self):
         self.switch = SwitchRoom(Rooms.GAME_ROOM, False, None)
 
     def initialize_pause_menu(self) -> StackPanel:
         ''' create pause layout '''
-        pauseMenu = StackPanel(name="endMenu", pos=[GameGlobals().win_width//2  - GameGlobals().win_width//4, 40], size=[GameGlobals().win_width // 2, 160])
+        pauseMenu = StackPanel(name="end_menu", pos=[GameGlobals().win_width//2  - GameGlobals().win_width//4, 40], size=[GameGlobals().win_width // 2, 160])
         pauseMenu.insert(Text(text="Game paused"))
         pauseMenu.insert(Text(text=f"Round {self.info.round_count}", custom_size=15))
 
@@ -70,10 +70,10 @@ class PauseRoom(Room):
             if max_score == 0:
                 max_score = 1
             for team in self.info.teams_score:
-                teamScore = StackPanel(orientation=HORIZONTAL, custom_size=15)
-                teamScore.insert(Text(text=team['name'], custom_size=50))
-                teamScore.insert(LoadBar(value=team['score'], color=team['color'], max_value=max_score))
-                pauseMenu.add_element(teamScore)
+                team_score = StackPanel(orientation=HORIZONTAL, custom_size=15)
+                team_score.insert(Text(text=team['name'], custom_size=50))
+                team_score.insert(LoadBar(value=team['score'], color=team['color'], max_value=max_score))
+                pauseMenu.add_element(team_score)
 
         # if "missions" in args.keys():
         # 	pauseMenu.insert(MENU_TEXT, text="- missions -")

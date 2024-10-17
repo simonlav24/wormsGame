@@ -5,10 +5,10 @@ import pygame
 from common import GameVariables, point2world, sprites, Sickness
 from common.vector import *
 
-from weapons.missiles import Seeker
+from weapons.missiles import SeekerBase
 
 
-class Covid19(Seeker):
+class Covid19(SeekerBase):
 	def __init__(self, pos: Vector, immune_team_name: str):
 		super().__init__(pos, Vector(), 5)
 		self.timer = 12 * GameVariables().fps
@@ -17,14 +17,15 @@ class Covid19(Seeker):
 		self.chum = None
 		self.unreachable = []
 		self.bitten = []
-		self.immune_team_name = immune_team_name
+		for worm in GameVariables().get_worms():
+			if worm.get_team_data().team_name == immune_team_name:
+				self.bitten.append(worm)
 	
-	def secondaryStep(self):
+	def step(self):
+		super().step()
 		# find target
 		closest = 800
 		for worm in GameVariables().get_worms():
-			if worm.get_team_data().team_name == self.immune_team_name:
-				continue
 			if worm in self.bitten or worm in self.unreachable:
 				continue
 			distance = dist(worm.pos, self.pos)

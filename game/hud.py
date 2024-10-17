@@ -33,7 +33,7 @@ class HealthBar:
 	def step(self):
 		recalc = lambda current, target: current + (target - current) * 0.1
 		self.team_health_visual = [recalc(visual, self.team_health_actual[i]) for i, visual in enumerate(self.team_health_visual)]
-	
+
 	def draw(self, win):
 		x = int(GameGlobals().win_width - HEALTH_BAR_WIDTH - 10)
 		y = 10

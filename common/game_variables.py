@@ -7,7 +7,7 @@ from random import uniform
 import pygame
 
 from common.game_config import GameConfig
-from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud, calc_water_color, FireObserver, IStateMachine
+from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical, EntityWorm, AutonomousEntity, GamePlayMode, IComment, EntityPlant, CycleObserver, EntityLightSource, InterfaceEventHandler, EntityElectrocuted, IHud, calc_water_color, FireObserver, IStateMachine, IStats, GameRecord
 from common.constants import WHITE, GameState, RIGHT, feels
 
 from common.vector import Vector
@@ -80,6 +80,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.fuse_time = 2 * self.fps
 
         self.database = DataBase()
+        self.stats: IStats = None
 
         self.game_stable = False
         self.game_turn_count = 0
@@ -113,6 +114,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.layers_lines = []
 
         self.game_end = False
+        self.game_record: GameRecord = None
 
     @property
     def fps(self):
@@ -288,9 +290,12 @@ class GameVariables(metaclass=SingletonMeta):
         
         output += '\n# physicals:\n'
         for i in self.database.physicals:
-            output += f'\t{i}\n'
+            output += f'\t{i} (stable={i.stable})\n'
 
         output += self.game_mode.debug_print()
+
+        output += f'{self.game_state=}\n'
+
 
         with open('debug.txt', 'w+') as file:
             file.write(output)

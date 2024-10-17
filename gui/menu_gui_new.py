@@ -684,7 +684,6 @@ class LoadBar(GuiElement):
         button_pos = self.get_super_pos() + self.pos
         # calculate size
         if self.max_value == 0:
-            print("division by zero error")
             return
         size = Vector(self.size[0] * (self.value / self.max_value), self.size[1])
 

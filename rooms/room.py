@@ -34,7 +34,7 @@ class Room:
     def draw(self, win: pygame.Surface) -> None:
         ...
 
-    def on_resume(self) -> None:
+    def on_resume(self, *args, **kwargs) -> None:
         ...
 
     def is_ready_to_switch(self) -> bool:

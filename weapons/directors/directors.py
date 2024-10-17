@@ -11,6 +11,8 @@ from game.team_manager import Team
 from game.time_manager import TimeManager
 from weapons.weapon import Weapon, WeaponStyle
 
+weapons_no_track = ['fireworks']
+
 def end_turn():
     ''' switch to player_retreat state and set remaining time '''
     GameVariables().update_state()
@@ -149,7 +151,6 @@ class WeaponActorBase:
             else:
                 self.shooted_object = None
         
-
         self.shots -= 1
         self.finalize()
         return self.shooted_object
@@ -159,7 +160,8 @@ class WeaponActorBase:
             decrease(self.weapon, self.team)
     
     def finalize(self):
-        if self.shooted_object is not None:
+        if (self.shooted_object is not None and
+            not self.weapon.name in weapons_no_track):
             GameVariables().cam_track = self.shooted_object
 
         if self.shots == 0:

@@ -13,10 +13,11 @@ from gui.menu_gui_new import (
     Gui, MenuAnimator, HORIZONTAL, VERTICAL,
     StackPanel, Text, Button,
     ComboSwitch, Toggle, UpDown,
-    ImageDrag, Input, ImageButton
+    ImageDrag, Input, ImageButton,
+    LoadBar, ElementAnimator
 )
 
-from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals, PATH_SPRITE_ATLAS
+from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals, PATH_SPRITE_ATLAS, GameRecord
 from common.vector import Vector, tup2vec, vectorCopy
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
@@ -45,6 +46,8 @@ class MainMenuRoom(Room):
 
         self.main_menu = self.initialize_main_menu()
         self.weapon_menu: StackPanel = None
+        self.win_menu: StackPanel = None
+        
         self.gui.insert(self.main_menu)
 
         self.menus_positions = {
@@ -52,12 +55,27 @@ class MainMenuRoom(Room):
         }
 
         self.initial_menu_pos = self.main_menu.pos
-        animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
-        self.gui.animators.append(animator)
+        self.on_resume()
+        # animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
+        # self.gui.animators.append(animator)
 
-    def on_resume(self):
-        super().on_resume()
+    def on_resume(self, *args, **kwargs):
+        super().on_resume(*args, **kwargs)
         GameGlobals().reset_win_scale()
+
+        record = kwargs.get('input', None)
+        record = test_record()
+        
+        # todo: win menu
+        if record is not None:
+            self.win_menu = self.initialize_win_menu(record)
+            self.menus_positions['win_menu'] = vectorCopy(self.win_menu.pos)
+            self.gui.insert(self.win_menu)
+            animator = MenuAnimator(self.win_menu, self.menus_positions['win_menu'] + Vector(0, GameGlobals().win_height), self.menus_positions['win_menu'])
+            self.gui.animators.append(animator)
+            self.main_menu.pos = self.menus_positions['main_menu'] + Vector(0, GameGlobals().win_height)
+            return
+
         animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
         self.gui.animators.append(animator)
 
@@ -127,10 +145,12 @@ class MainMenuRoom(Room):
         elif event == 'weapons setup':
             self.on_weapon_setup()
 
-        else:
-            self.handle_weapon_events(event, values)
-        
+        elif self.handle_weapon_events(event, values):
+            pass
 
+        elif self.handle_win_events(event, values):
+            pass
+            
     def on_play(self, values):
         ''' on press play button '''
         config = GameConfig(
@@ -347,9 +367,9 @@ class MainMenuRoom(Room):
         self.gui.animators.append(main_menu_out)
         self.gui.animators.append(weapon_in)
 
-    def handle_weapon_events(self, event, values):
+    def handle_weapon_events(self, event, values) -> bool:
         if event is None:
-            return
+            return False
 
         elif event == 'weapon_setup_to_main_menu':
             main_menu_pos = self.menus_positions['main_menu']
@@ -377,6 +397,43 @@ class MainMenuRoom(Room):
             for element_dict in self.weapon_up_downs:
                 element_dict['element'].update_value(0)
 
+        else:
+            return False
+        return True
+
+    def initialize_win_menu(self, record: GameRecord) -> StackPanel:
+        end_menu = StackPanel(name="end_menu", pos=[GameGlobals().win_width // 2  - GameGlobals().win_width//4, (GameGlobals().win_height - 160)//2], size=[GameGlobals().win_width // 2, 160])
+        end_menu.insert(Text(text="Game Over", custom_size=15))
+        if record.winning_team != '':
+            end_menu.insert(Text(text=f'team {record.winning_team} won the game!'))
+        else:
+            end_menu.insert(Text(text="its a tie!"))
+
+        end_menu.insert(Text(text=f'most damage dealt: {record.most_damage} by {record.damager}', custom_size=15))
+        
+        max_points = max([team[2] for team in record.points])
+        for team_name, team_color, team_score in record.points:
+            score_stack = StackPanel(orientation=HORIZONTAL, custom_size=15)
+            score_stack.insert(Text(text=team_name, custom_size=50))
+            bar = score_stack.insert(LoadBar(value = 0, color=team_color, max_value=max_points))
+            end_menu.add_element(score_stack)
+            bar_animator = ElementAnimator(bar, 0, team_score, duration = GameGlobals().fps, time_offset=1 * GameGlobals().fps)
+            self.gui.animators.append(bar_animator)
+
+        end_menu.insert(Button(key="win_menu_to_main_menu", text="continue"))
+
+        return end_menu
+
+    def handle_win_events(self, event, values) -> bool:
+        if event == 'win_menu_to_main_menu':
+            main_menu_pos = self.menus_positions['main_menu']
+            win_menu_pos = self.menus_positions['win_menu']
+
+            main_menu_in = MenuAnimator(self.main_menu, main_menu_pos + Vector(GameGlobals().win_width, 0), main_menu_pos)
+            win_menu_out = MenuAnimator(self.win_menu, win_menu_pos, win_menu_pos - Vector(GameGlobals().win_width, 0))
+            self.gui.animators.append(main_menu_in)
+            self.gui.animators.append(win_menu_out)
+
 
 def browse_file():
     root = tkinter.Tk()
@@ -387,3 +444,13 @@ def browse_file():
 
 def sprite_index_to_rect(index):
 	return (index % 8) * 16, (index // 8) * 16, 16, 16
+
+def test_record() -> GameRecord:
+    return GameRecord(
+            winning_team='mo',
+            game_mode='journey',
+            time=1290,
+            most_damage=156,
+            damager='ron',
+            points=[('row', (255,0,0), 10), ('your', (255,255,0), 11), ('boat', (255,0,255), 5)],
+    )

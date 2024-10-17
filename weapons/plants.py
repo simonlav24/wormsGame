@@ -140,7 +140,7 @@ class Venus:
 						# 	continue
 						worm.damage(100, damage_type=DamageType.PLANT, kill=True)
 						name = worm.name_str
-						color = worm.team.color # todo
+						color = worm.get_team_data().color
 						comments = [
 							[{'text': 'yummy'}],
 							[{'text': name, 'color': color}, {'text': ' was delicious'}],

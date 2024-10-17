@@ -14,6 +14,13 @@ class StatsGamePlay(GamePlayMode):
         self.most_damage: int = -1
         self.most_damage_worm: EntityWorm = None
 
+    def get_stats(self):
+        return {
+            'damage_this_turn': self.damage_this_turn,
+            'most_damage': self.most_damage,
+            'most_damage_worm': self.most_damage_worm,
+        }
+
     def on_worm_damage(self, worm: EntityWorm, damage: int):
         if worm.get_team_data().team_name == GameVariables().player.get_team_data().team_name:
             return

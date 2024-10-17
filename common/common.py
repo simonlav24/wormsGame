@@ -1,12 +1,13 @@
 
 ''' common interfaces, definitions and utilities '''
 
-from typing import Protocol, List, Any
+from typing import Protocol, List, Any, Tuple
 from pydantic import BaseModel
 import pygame
 
 from common.vector import *
 from common.constants import ColorType, Sickness, DamageType, GameState
+from common.game_config import GameMode
 
 class SingletonMeta(type):
 	''' singleton metaclass '''
@@ -20,6 +21,7 @@ class SingletonMeta(type):
 	def reset(cls):
 		if cls in cls._instances.keys():
 			cls._instances.pop(cls)
+
 
 class ICreateGame(Protocol):
 	def create_new_game(self) -> None:
@@ -234,6 +236,22 @@ class IStateMachine(Protocol):
 	
 	def distable(self) -> None:
 		...
+
+
+class IStats(Protocol):
+	def get_stats(self) -> Any:
+		...
+
+
+class GameRecord(BaseModel):
+    ''' game record '''
+    winning_team: str
+    game_mode: str
+    time: int
+    most_damage: int
+    damager: str
+    points: List[Tuple[str, ColorType, int]]
+
 
 # color utilities
 

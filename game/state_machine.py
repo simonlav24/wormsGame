@@ -1,43 +1,35 @@
 import os
+import json
 from random import choice, uniform
 
-from common import GameVariables, GameGlobals, GameState, fonts, Sickness, DamageType, RandomMode, ICreateGame
+import pygame
+
+from common import GameVariables, GameGlobals, GameState, fonts, Sickness, DamageType, RandomMode, ICreateGame, GameRecord, PATH_GAME_RECORD
 
 from game.game_play_mode import SuddenDeathGamePlay
 from game.team_manager import Team, TeamManager
 from game.time_manager import TimeManager
+from game.map_manager import MapManager
 from weapons.weapon_manager import WeaponManager
 from game.world_effects import Earthquake
 from entities.deployables import deploy_pack, HealthPack, WeaponPack, UtilityPack
 
 from weapons.bubble import Bubble
 
-def add_to_record(dic):
-    keys = ["time", "winner", "mostDamage", "damager", "mode", "points"]
-    if not os.path.exists("wormsRecord.xml"):
-        with open("wormsRecord.xml", "w+") as file:
-            file.write("<data>\n")
-            file.write("<game")
-            for key in keys:
-                if key in dic.keys():
-                    file.write(" " + key + '="' + str(dic[key]) + '"')
-            file.write("/>\n</data>")
-            return
-    
-    with open("wormsRecord.xml", "r") as file:
-        contents = file.readlines()
-        index = contents.index("</data>")
-    
-    string = "<game"
-    for key in keys:
-        if key in dic.keys():
-            string += " " + key + '="' + str(dic[key]) + '"'
-    string += "/>\n"
-    contents.insert(index, string)
-    
-    with open("wormsRecord.xml", "w") as file:
-        contents = "".join(contents)
-        file.write(contents)
+
+def add_to_record():
+    record = GameVariables().game_record
+
+    try:
+        with open(PATH_GAME_RECORD, 'r') as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        data = []
+
+    data.append(record.model_dump())
+
+    with open(PATH_GAME_RECORD, 'w+') as file:
+        json.dump(data, file, indent=4)
 
 def check_winners() -> bool:
     game_over = False
@@ -83,83 +75,28 @@ def check_winners() -> bool:
         print("Tie!")
         GameVariables().commentator.comment([{'text': 'its a tie!'}])
     
-    # todo: add to dict
-    # todo: save win as image
+    # create record
+    stats = GameVariables().stats.get_stats()
+    info = TeamManager().get_info()
+    points = tuple((i['name'], i['color'], i['score']) for i in info)
+
+    damager = '' if stats['most_damage_worm'] is None else stats['most_damage_worm'].name_str
+    winning_team = '' if winning_team is None else winning_team.name
+
+    GameVariables().game_record = GameRecord(
+        winning_team=winning_team,
+        game_mode=GameVariables().config.game_mode.value,
+        time=GameVariables().time_overall // GameGlobals().fps,
+        most_damage=stats['most_damage'],
+        damager=damager,
+        points=points
+    )
+    add_to_record()
+
+    ground_screen = pygame.Surface((MapManager().ground_map.get_width(), MapManager().ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
+    ground_screen.blit(MapManager().ground_map, (0,0))
+    pygame.image.save(ground_screen, "last_worms_ground.png")
     return True
-
-# def _check_winners() -> bool:
-# 	end = False
-# 	lastTeam = None
-# 	count = 0
-# 	pointsGame = False
-# 	for team in TeamManager().teams:
-# 		if len(team.worms) == 0:
-# 			count += 1
-# 	if count == GameVariables().num_of_teams - 1:
-# 		# one team remains
-# 		end = True
-# 		for team in TeamManager().teams:
-# 			if not len(team.worms) == 0:
-# 				lastTeam = team
-# 	if count == GameVariables().num_of_teams:
-# 		# no team remains
-# 		end = True
-        
-# 	if not end:
-# 		return False
-# 	# game end:
-# 	dic = {}
-# 	winningTeam = None
-    
-    
-# 	# win points:
-# 	if pointsGame:
-# 		for team in TeamManager().teams:
-# 			print("[ |", team.name, "got", team.points, "points! | ]")
-# 		teamsFinals = sorted(TeamManager().teams, key = lambda x: x.points)
-# 		winningTeam = teamsFinals[-1]
-# 		print("[most points to team", winningTeam.name, "]")
-# 		dic["points"] = str(winningTeam.points)
-# 	# regular win:
-# 	else:
-# 		winningTeam = lastTeam
-# 		if winningTeam:
-# 			print("[last team standing is", winningTeam.name, "]")
-    
-# 	if end:
-# 		if winningTeam is not None:
-# 			print("Team", winningTeam.name, "won!")
-# 			dic["time"] = str(GameVariables().time_overall // GameVariables().fps)
-# 			dic["winner"] = winningTeam.name
-# 			if Game._game.mostDamage[1]:
-# 				dic["mostDamage"] = str(int(Game._game.mostDamage[0]))
-# 				dic["damager"] = Game._game.mostDamage[1]
-# 			add_to_record(dic)
-# 			if len(winningTeam.worms) > 0:
-# 				GameVariables().cam_track = winningTeam.worms[0]
-# 			GameVariables().commentator.comment([
-# 				{'text': 'team '},
-# 				{'text': winningTeam.name, 'color': winningTeam.color},
-# 				{'text': ' Won!'}
-# 			])
-
-# 		else:
-# 			GameVariables().commentator.comment([{'text': 'its a tie!'}])
-# 			print("Tie!")
-        
-# 		# add teams to dic
-# 		dic["teams"] = {}
-# 		for team in TeamManager().teams:
-# 			dic["teams"][team.name] = [team.color, team.points]
-
-# 		Game._game.endGameDict = dic
-# 		GameVariables().state_machine.update(GameState.WIN)
-        
-# 		GroundScreenShoot = pygame.Surface((MapManager().ground_map.get_width(), MapManager().ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
-# 		GroundScreenShoot.blit(MapManager().ground_map, (0,0))
-# 		pygame.image.save(GroundScreenShoot, "lastWormsGround.png")
-# 	return end
-
 
 def deploy_crate() -> None:
     # deploy crate if privious turn was last turn in round
