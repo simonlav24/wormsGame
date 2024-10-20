@@ -22,6 +22,7 @@ PATH_WEAPON_SETS = r'./assets/weapon_sets'
 PATH_GAME_RECORD = r'./game_record.json'
 PATH_TEAMS_LIST = r'./assets/teams.json'
 PATH_WEAPON_SET = r'./assets/weapon_sets/__name__.json'
+PATH_FONT = r'./assets/pixelFont.ttf'
 
 class GameState(Enum):
     RESET = 0
@@ -176,8 +177,8 @@ def initialize() -> None:
     sprites.hole = pygame.image.load("assets/hole.png").convert_alpha()
     sprites.sprite_atlas = pygame.image.load(PATH_SPRITE_ATLAS).convert_alpha()
     
-    fonts.pixel5 = pygame.font.Font("fonts\pixelFont.ttf", 5)
-    fonts.pixel10 = pygame.font.Font("fonts\pixelFont.ttf", 10)
+    fonts.pixel5 = pygame.font.Font(PATH_FONT, 5)
+    fonts.pixel10 = pygame.font.Font(PATH_FONT, 10)
     fonts.pixel5_halo = HaloFont(fonts.pixel5)
 
     sprites.air_strike_indicator = fonts.pixel10.render(">>>", False, BLACK)
