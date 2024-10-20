@@ -1,0 +1,706 @@
+[
+    {
+        "index": 0,
+        "name": "missile",
+        "style": 0,
+        "category": 0,
+        "initial_amount": -1,
+        "is_fused": false
+    },
+    {
+        "index": 1,
+        "name": "gravity missile",
+        "style": 0,
+        "category": 0,
+        "initial_amount": 5,
+        "is_fused": false
+    },
+    {
+        "index": 2,
+        "name": "drill missile",
+        "style": 0,
+        "category": 0,
+        "initial_amount": 2,
+        "is_fused": false
+    },
+    {
+        "index": 3,
+        "name": "homing missile",
+        "style": 0,
+        "category": 0,
+        "initial_amount": 2,
+        "is_fused": false,
+        "draw_hint": true
+    },
+    {
+        "index": 4,
+        "name": "seeker",
+        "style": 0,
+        "category": 0,
+        "initial_amount": 1,
+        "is_fused": false,
+        "draw_hint": true
+    },
+    {
+        "index": 5,
+        "name": "grenade",
+        "style": 0,
+        "category": 1,
+        "initial_amount": 5,
+        "is_fused": true
+    },
+    {
+        "index": 6,
+        "name": "cluster grenade",
+        "style": 0,
+        "category": 1,
+        "initial_amount": 3,
+        "is_fused": true
+    },
+    {
+        "index": 7,
+        "name": "sticky bomb",
+        "style": 0,
+        "category": 1,
+        "initial_amount": 3,
+        "is_fused": true
+    },
+    {
+        "index": 8,
+        "name": "gas grenade",
+        "style": 0,
+        "category": 1,
+        "initial_amount": 5,
+        "is_fused": true
+    },
+    {
+        "index": 9,
+        "name": "electric grenade",
+        "style": 0,
+        "category": 1,
+        "initial_amount": 3,
+        "is_fused": true
+    },
+    {
+        "index": 10,
+        "name": "raon launcher",
+        "style": 0,
+        "category": 1,
+        "initial_amount": 2,
+        "is_fused": false
+    },
+    {
+        "index": 11,
+        "name": "shotgun",
+        "style": 1,
+        "category": 2,
+        "initial_amount": 5,
+        "shots": 3,
+        "is_fused": false
+    },
+    {
+        "index": 12,
+        "name": "long bow",
+        "style": 1,
+        "category": 2,
+        "shots": 3,
+        "initial_amount": 3,
+        "is_fused": false
+    },
+    {
+        "index": 13,
+        "name": "minigun",
+        "style": 1,
+        "category": 2,
+        "shots": 20,
+        "burst": true,
+        "initial_amount": 5,
+        "is_fused": false
+    },
+    {
+        "index": 14,
+        "name": "gamma gun",
+        "style": 1,
+        "category": 2,
+        "shots": 2,
+        "initial_amount": 3,
+        "is_fused": false
+    },
+    {
+        "index": 15,
+        "name": "spear",
+        "style": 0,
+        "category": 2,
+        "shots": 2,
+        "initial_amount": 2,
+        "is_fused": false
+    },
+    {
+        "index": 16,
+        "name": "laser gun",
+        "style": 1,
+        "shots": 70,
+        "burst": true,
+        "category": 2,
+        "initial_amount": 3,
+        "is_fused": false
+    },
+    {
+        "index": 17,
+        "name": "bubble gun",
+        "style": 1,
+        "category": 2,
+        "shots": 10,
+        "burst": true,
+        "initial_amount": 1,
+        "is_fused": false,
+        "round_delay": 2,
+        "artifact": 0
+    },
+    {
+        "index": 18,
+        "name": "petrol bomb",
+        "style": 0,
+        "category": 3,
+        "initial_amount": 5,
+        "is_fused": false
+    },
+    {
+        "index": 19,
+        "name": "flame thrower",
+        "style": 1,
+        "shots": 70,
+        "burst": true,
+        "category": 3,
+        "initial_amount": 5,
+        "is_fused": false
+    },
+    {
+        "index": 20,
+        "name": "TNT",
+        "style": 2,
+        "category": 4,
+        "initial_amount": 1,
+        "is_fused": false
+    },
+    {
+        "index": 21,
+        "name": "mine",
+        "style": 2,
+        "category": 4,
+        "initial_amount": 5,
+        "is_fused": false
+    },
+    {
+        "index": 22,
+        "name": "acid bottle",
+        "style": 0,
+        "category": 4,
+        "initial_amount": 1,
+        "is_fused": false
+    },
+    {
+        "index": 23,
+        "name": "sheep",
+        "style": 2,
+        "category": 4,
+        "initial_amount": 1,
+        "is_fused": false
+    },
+    {
+        "index": 24,
+        "name": "snail",
+        "style": 0,
+        "category": 4,
+        "initial_amount": 2,
+        "is_fused": false
+    },
+    {
+        "index": 25,
+        "name": "venus fly trap",
+        "style": 0,
+        "category": 4,
+        "initial_amount": 1,
+        "is_fused": false
+    },
+    {
+        "index": 26,
+        "name": "covid 19",
+        "style": 2,
+        "category": 4,
+        "initial_amount": 0,
+        "is_fused": false
+    },
+    {
+        "index": 27,
+        "name": "baseball",
+        "style": 2,
+        "category": 5,
+        "initial_amount": 3,
+        "is_fused": false
+    },
+    {
+        "index": 28,
+        "name": "girder",
+        "style": 3,
+        "category": 5,
+        "initial_amount": -1,
+        "is_fused": false,
+        "draw_hint": true
+    },
+    {
+        "index": 29,
+        "name": "rope",
+        "style": 5,
+        "shots": -1,
+        "category": 5,
+        "initial_amount": 3,
+        "decrease_on_turn_end": true,
+        "turn_ending": false,
+        "decrease": false,
+        "is_fused": false,
+        "can_fail": true
+    },
+    {
+        "index": 30,
+        "name": "parachute",
+        "style": 5,
+        "category": 5,
+        "turn_ending": false,
+        "initial_amount": 3,
+        "is_fused": false,
+        "can_fail": true
+    },
+    {
+        "index": 31,
+        "name": "sentry turret",
+        "style": 2,
+        "category": 5,
+        "initial_amount": 0,
+        "is_fused": false
+    },
+    {
+        "index": 32,
+        "name": "portal gun",
+        "style": 1,
+        "shots": 2,
+        "turn_ending": false,
+        "category": 5,
+        "initial_amount": 0,
+        "is_fused": false
+    },
+    {
+        "index": 33,
+        "name": "ender pearl",
+        "turn_ending": false,
+        "style": 0,
+        "category": 5,
+        "initial_amount": 0,
+        "is_fused": false
+    },
+    {
+        "index": 34,
+        "name": "trampoline",
+        "style": 2,
+        "category": 5,
+        "turn_ending": false,
+        "initial_amount": 0,
+        "is_fused": false,
+        "draw_hint": true,
+        "can_fail": true
+    },
+    {
+        "index": 35,
+        "name": "airstrike",
+        "style": 3,
+        "category": 6,
+        "initial_amount": 1,
+        "is_fused": false,
+        "round_delay": 8,
+        "artifact": 0,
+        "draw_hint": true
+    },
+    {
+        "index": 36,
+        "name": "napalm strike",
+        "style": 3,
+        "category": 6,
+        "initial_amount": 1,
+        "is_fused": false,
+        "round_delay": 8,
+        "artifact": 0,
+        "draw_hint": true
+    },
+    {
+        "index": 37,
+        "name": "mine strike",
+        "style": 3,
+        "category": 6,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0,
+        "draw_hint": true
+    },
+    {
+        "index": 38,
+        "name": "artillery assist",
+        "style": 0,
+        "category": 6,
+        "initial_amount": 1,
+        "is_fused": false
+    },
+    {
+        "index": 39,
+        "name": "chum bucket",
+        "style": 0,
+        "category": 6,
+        "initial_amount": 1,
+        "is_fused": false
+    },
+    {
+        "index": 40,
+        "name": "holy grenade",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": true,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 41,
+        "name": "banana",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": true,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 42,
+        "name": "earthquake",
+        "style": 2,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 43,
+        "name": "gemino mine",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 44,
+        "name": "bee hive",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 45,
+        "name": "vortex grenade",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": true,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 46,
+        "name": "chilli pepper",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 47,
+        "name": "raging bull",
+        "style": 2,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 48,
+        "name": "electro boom",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": true,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 49,
+        "name": "pokeball",
+        "style": 0,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": true,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 50,
+        "name": "green shell",
+        "style": 2,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 51,
+        "name": "guided missile",
+        "style": 2,
+        "category": 7,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 52,
+        "name": "fireworks",
+        "style": 2,
+        "category": 7,
+        "shots": 5,
+        "initial_amount": 0,
+        "is_fused": false,
+        "round_delay": 1,
+        "artifact": 0
+    },
+    {
+        "index": 53,
+        "name": "moon gravity",
+        "style": 4,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false,
+        "turn_ending": false
+    },
+    {
+        "index": 54,
+        "name": "double damage",
+        "style": 4,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false,
+        "turn_ending": false
+    },
+    {
+        "index": 55,
+        "name": "aim aid",
+        "style": 4,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false,
+        "turn_ending": false
+    },
+    {
+        "index": 56,
+        "name": "teleport",
+        "style": 3,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false
+    },
+    {
+        "index": 57,
+        "name": "switch worms",
+        "style": 4,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false,
+        "turn_ending": false
+    },
+    {
+        "index": 58,
+        "name": "time travel",
+        "style": 4,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false,
+        "turn_ending": false
+    },
+    {
+        "index": 59,
+        "name": "jet pack",
+        "style": 5,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false,
+        "turn_ending": false
+    },
+    {
+        "index": 60,
+        "name": "flare",
+        "style": 0,
+        "category": 8,
+        "initial_amount": 0,
+        "is_fused": false,
+        "turn_ending": false
+    },
+    {
+        "index": 61,
+        "name": "mjolnir strike",
+        "style": 2,
+        "category": 9,
+        "initial_amount": -1,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 1
+    },
+    {
+        "index": 62,
+        "name": "mjolnir throw",
+        "style": 0,
+        "category": 9,
+        "initial_amount": -1,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 1
+    },
+    {
+        "index": 63,
+        "name": "fly",
+        "style": 0,
+        "category": 9,
+        "initial_amount": 3,
+        "is_fused": false,
+        "turn_ending": false,
+        "round_delay": 0,
+        "artifact": 1
+    },
+    {
+        "index": 64,
+        "name": "control plants",
+        "style": 2,
+        "category": 9,
+        "initial_amount": -1,
+        "is_fused": false,
+        "turn_ending": false,
+        "round_delay": 0,
+        "artifact": 2
+    },
+    {
+        "index": 65,
+        "name": "magic bean",
+        "style": 0,
+        "category": 9,
+        "initial_amount": 1,
+        "turn_ending": false,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 2
+    },
+    {
+        "index": 66,
+        "name": "mine plant",
+        "style": 0,
+        "category": 9,
+        "initial_amount": -1,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 2
+    },
+    {
+        "index": 67,
+        "name": "razor leaf",
+        "burst": true,
+        "shots": 50,
+        "style": 1,
+        "category": 9,
+        "initial_amount": -1,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 2
+    },
+    {
+        "index": 68,
+        "name": "icicle",
+        "style": 1,
+        "category": 9,
+        "initial_amount": -1,
+        "shots": 3,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 3
+    },
+    {
+        "index": 69,
+        "name": "earth spike",
+        "style": 1,
+        "category": 9,
+        "initial_amount": -1,
+        "shots": 2,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 3,
+        "draw_hint": true
+    },
+    {
+        "index": 70,
+        "name": "fire ball",
+        "style": 1,
+        "category": 9,
+        "initial_amount": -1,
+        "shots": 3,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 3
+    },
+    {
+        "index": 71,
+        "name": "air tornado",
+        "style": 2,
+        "category": 9,
+        "initial_amount": -1,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 3
+    },
+    {
+        "index": 72,
+        "name": "pick axe",
+        "style": 6,
+        "category": 9,
+        "shots": 6,
+        "initial_amount": 1,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 4,
+        "turn_ending":false
+    },
+    {
+        "index": 73,
+        "name": "build",
+        "style": 6,
+        "category": 9,
+        "shots": 6,
+        "initial_amount": 1,
+        "is_fused": false,
+        "round_delay": 0,
+        "artifact": 4,
+        "turn_ending":false
+    }
+]

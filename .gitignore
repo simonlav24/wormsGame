@@ -12,4 +12,5 @@
 /springsBranch.py
 /wormsLauncherOld.py
 /wormsWinCounter.py
-/assets/weaponsSets
+/assets/worms_maps/wormsMaps
+/assets/weapon_sets/*.json

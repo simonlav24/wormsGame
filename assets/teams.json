@@ -1,0 +1,78 @@
+[
+    {
+        "team_name": "yellow",
+        "color": [
+            255,
+            255,
+            0
+        ],
+        "names": [
+            "colan",
+            "GT",
+            "jettets",
+            "chevan",
+            "jonie",
+            "murph",
+            "silvia",
+            "flur"
+        ],
+        "hats": "3-15"
+    },
+    {
+        "team_name": "blue",
+        "color": [
+            0,
+            0,
+            255
+        ],
+        "names": [
+            "red lion",
+            "commercial",
+            "swan",
+            "brewers",
+            "fred",
+            "sparrow",
+            "eithan",
+            "reed"
+        ],
+        "hats": "3-14"
+    },
+    {
+        "team_name": "red",
+        "color": [
+            255,
+            0,
+            0
+        ],
+        "names": [
+            "fix delux r",
+            "vamp b",
+            "birdie",
+            "lordie",
+            "pinkie",
+            "katie",
+            "angie",
+            "miya"
+        ],
+        "hats": "3-15"
+    },
+    {
+        "team_name": "green",
+        "color": [
+            0,
+            255,
+            0
+        ],
+        "names": [
+            "blair",
+            "major",
+            "thatcher",
+            "chellenge",
+            "george",
+            "mark",
+            "mercury",
+            "philip"
+        ],
+        "hats": "3-14"
+    }
+]

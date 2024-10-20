@@ -3,9 +3,12 @@
 ![Alt text](wormsShoot.png?raw=true "Worms")
 Game development practice in python for educational purposes and fun.
 
-This game was developed during my first year of studying computer science, in the early stages of learning Python, so it isn't very clean and lacks an object-oriented design.
+### Requirements
 
-**requirements**: Python3, Pygame, PySimpleGui
+```
+pygame
+pydantic
+```
 
 # ❓ how to play
 
@@ -27,7 +30,7 @@ This game was developed during my first year of studying computer science, in th
 
 - **MISSILE** - shoot a missile, wind sensitive.
 - **GRAVITY MISSILE** - shoot a missile. worms hit by gravity missile will change their gravity orientation. wind sensitive.
-- **BUNKER BUSTER** - shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
+- **DRILL MISSILE** - shoot a missile that drills through the terrain and explodes when reaches air. press tab to switch from "rocket" mode to "drill" mode
 - **HOMING MISSILE** - mouse click to select target and shoot.
 - **SEEKER** - target seeking missile.
 
@@ -36,7 +39,7 @@ This game was developed during my first year of studying computer science, in th
 ![](/assets/anims/grenade.gif)
 
 - **GRENADE** - throw a grenade. all grenades delay time can be changed by pressing tab.
-- **MORTAR** - throw a mortar grenade. release cluster on explosion.
+- **CLUSTER GRENADE** - throw a grenade. release cluster on explosion.
 - **STICKY BOMB** - a sticky grenade.
 - **GAS GRENADE** - emit a toxic gas before exploding.
 - **ELECTRIC GRENADE** - electrifying grenade
