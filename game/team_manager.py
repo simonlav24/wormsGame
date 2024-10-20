@@ -5,7 +5,7 @@ from random import choice, shuffle
 
 import pygame
 
-from common import desaturate, GameVariables, sprites, SingletonMeta, TeamData, EntityWorm, fonts
+from common import desaturate, GameVariables, sprites, SingletonMeta, TeamData, EntityWorm, fonts, PATH_TEAMS_LIST
 from game.hud import HealthBar
 
 
@@ -56,7 +56,7 @@ class Team:
 class TeamManager(metaclass=SingletonMeta):
     def __init__(self):
 
-        with open('teams.json', 'r') as file:
+        with open(PATH_TEAMS_LIST, 'r') as file:
             teams = json.load(file)
         data_list = [TeamData.model_validate(data) for data in teams]
         self.teams: List[Team] = [Team(data) for data in data_list]

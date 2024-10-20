@@ -300,9 +300,6 @@ class Game:
 			for team in TeamManager().teams:
 				for i, _ in enumerate(team.weapon_set):
 					team.weapon_set[i] = 1
-			for weapon in WeaponManager().weapons:
-				weapon.round_delay = 0
-			GameVariables().config.option_cool_down = False
 		elif code == "suddendeath":
 			sudden_death()
 		elif code == "wind":
@@ -657,17 +654,10 @@ class GameRoom(Room):
 			self.damageText = (damage_this_turn, fonts.pixel5_halo.render(str(int(damage_this_turn)), False, GameVariables().initial_variables.hud_color))
 		win.blit(self.damageText[1], ((int(5), int(GameGlobals().win_height -5 -self.damageText[1].get_height()))))
 
-		# weapon = None if WeaponManager().current_director is None else WeaponManager().current_director.weapon.name
-		# debug_string = f'director: {weapon}'
-		# debug_text = fonts.pixel5_halo.render(debug_string, False, GameVariables().initial_variables.hud_color)
-		# win.blit(debug_text, (win.get_width() - debug_text.get_width(), win.get_height() - debug_text.get_height()))
-
-
 wip = '''
 	still in progress:
 		loading screen
 		holding mjolnir
-		particles to indicate correct arena
 		better portals
 		refactor bubble
 		team creation screen 

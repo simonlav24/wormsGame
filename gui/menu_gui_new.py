@@ -323,8 +323,6 @@ class UpDown(GuiElement):
             self.render_surf(str(self.mapping.get(self.value, self.value)))
         else:
             self.render_surf(self.text)
-        self.limit_min = kwargs.get('limit_min', False)
-        self.limit_max = kwargs.get('limit_max', False)
         self.lim_min = kwargs.get('lim_min', 0)
         self.lim_max = kwargs.get('lim_max', 100)
         self.values = kwargs.get('values', None)
@@ -353,9 +351,9 @@ class UpDown(GuiElement):
             self.value = self.values[current]
             return
         pot = self.value + self.mode * self.step_size
-        if self.limit_min and pot < self.lim_min:
+        if pot < self.lim_min:
             pot = self.lim_min
-        if self.limit_max and pot > self.lim_max:
+        if pot > self.lim_max:
             pot = self.lim_max
         self.update_value(pot)
         

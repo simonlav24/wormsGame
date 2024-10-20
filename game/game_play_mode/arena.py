@@ -9,7 +9,7 @@ from common.vector import Vector
 from game.game_play_mode.game_play_mode import GamePlayMode
 from game.map_manager import MapManager, GRD
 from game.visual_effects import EffectManager
-
+from game.world_effects import Earthquake
 
 class ArenaGamePlay(GamePlayMode):
     def __init__(self):
@@ -45,6 +45,7 @@ class ArenaGamePlay(GamePlayMode):
         
         if randint(1, 10) == 1:
             GameVariables().commentator.comment([{'text': 'moving arena'}])
+            Earthquake(3 * GameVariables().fps, True)
             self.pos = Vector(
                 randint(50, MapManager().game_map.get_width() - 50),
                 randint(50, MapManager().game_map.get_height() - 50)
@@ -56,7 +57,7 @@ class ArenaGamePlay(GamePlayMode):
     
 
         
-
+ 
 
 
 

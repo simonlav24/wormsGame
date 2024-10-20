@@ -9,6 +9,7 @@ from tkinter.filedialog import askopenfile
 import pygame
 
 from rooms.room import Room, Rooms, SwitchRoom
+from rooms.menu_weapon_setup import WeaponMenu
 from gui.menu_gui_new import (
     Gui, MenuAnimator, HORIZONTAL, VERTICAL,
     StackPanel, Text, Button,
@@ -40,12 +41,12 @@ class MainMenuRoom(Room):
         self.map_paths = grab_maps([PATH_MAPS])
         self.image_element: ImageDrag = None
 
-        self.weapon_sets_list = None
+        # self.weapon_sets_list = None
         self.weapon_set_combo: ComboSwitch = None
         self.update_weapon_sets()
 
         self.main_menu = self.initialize_main_menu()
-        self.weapon_menu: StackPanel = None
+        self.weapon_menu = WeaponMenu(self.gui)
         self.win_menu: StackPanel = None
         
         self.gui.insert(self.main_menu)
@@ -144,7 +145,17 @@ class MainMenuRoom(Room):
         elif event == 'weapons setup':
             self.on_weapon_setup()
 
-        elif self.handle_weapon_events(event, values):
+        elif event == 'weapon_setup_to_main_menu':
+            main_menu_pos = self.menus_positions['main_menu']
+            weapon_menu_pos = self.menus_positions['weapon_menu']
+
+            main_menu_in = MenuAnimator(self.main_menu, main_menu_pos + Vector(GameGlobals().win_width, 0), main_menu_pos)
+            weapon_out = MenuAnimator(self.weapon_menu.get_menu(), weapon_menu_pos, weapon_menu_pos - Vector(GameGlobals().win_width, 0))
+            self.gui.animators.append(main_menu_in)
+            self.gui.animators.append(weapon_out)
+            self.update_weapon_sets()
+
+        elif self.weapon_menu.handle_weapon_events(event, values):
             pass
 
         elif self.handle_win_events(event, values):
@@ -222,8 +233,6 @@ class MainMenuRoom(Room):
             sub_opt.insert(UpDown(
                 key=counter['key'], 
                 value=counter['value'], 
-                limit_max=True,
-                limit_min=True, 
                 lim_min=counter['lim_min'], 
                 lim_max=counter['lim_max'],
                 step_size=counter['step_size']
@@ -239,7 +248,7 @@ class MainMenuRoom(Room):
         # sudden death
         sub_mode = StackPanel(orientation=HORIZONTAL)
         sub_mode.insert(Text(text="sudden death"))
-        sub_mode.insert(UpDown(key="rounds_for_sudden_death", value=16, text="16", limit_min=True, lim_min=0, custom_size=19))
+        sub_mode.insert(UpDown(key="rounds_for_sudden_death", value=16, text="16", lim_min=0, custom_size=19))
         sub_mode.insert(ComboSwitch(key="sudden_death_style", items=[style.value for style in SuddenDeathMode]))
         options_menu.add_element(sub_mode)
 
@@ -299,106 +308,24 @@ class MainMenuRoom(Room):
 
         self.weapon_set_combo.update_items(weapon_sets_names)
 
-    def initialize_weapon_menu(self) -> StackPanel:
-
-        self.weapons_list = read_weapons()
-        self.weapon_up_downs: List[UpDown] = []
-
-        size = Vector(GameGlobals().win_width - 30, GameGlobals().win_height - 30)
-        pos = tup2vec(GameGlobals().win.get_size()) // 2 - size // 2
-        weapon_menu = StackPanel(orientation=VERTICAL, name="weapons", size=size, pos=pos )
-        
-        weapon_sprites = pygame.image.load(PATH_SPRITE_ATLAS)
-        index_offset = 72
-
-        mapping = {-1: "inf"}
-
-        weapon_index = 0
-        done = False
-
-        while not done:
-            sub = StackPanel (orientation=HORIZONTAL, custom_size=16)
-            for _ in range(6):
-                weapon = self.weapons_list[weapon_index]
-                if weapon.name == 'flare':
-                    done = True
-                    break
-                weapon_index += 1
-                pic = ImageButton(custom_size=16, tooltip=weapon.name)
-                bg_color = weapon.get_bg_color()
-                pic.set_image(weapon_sprites, sprite_index_to_rect(weapon.index + index_offset), background=bg_color)
-
-                sub.insert(pic)
-                combo = UpDown(key=weapon.name, limit_min=True, limit_max=True, lim_min=-1, lim_max=10, value=weapon.initial_amount, mapping=mapping)
-                self.weapon_up_downs.append({'weapon': weapon, 'element': combo})
-                sub.insert(combo)
-                if weapon_index >= len(self.weapons_list):
-                    break
-            if not done:
-                weapon_menu.insert(sub)
-
-        sub = StackPanel(orientation=HORIZONTAL)
-        sub.insert(Text(text="weapon set name:"))
-        sub.insert(Input(key="file_name", text="enter name"))
-        sub.insert(Button(key="save_weapons", text="save"))
-        weapon_menu.insert(sub)
-
-        sub = StackPanel(orientation=HORIZONTAL)
-        sub.insert(Button(key="weapon_setup_to_main_menu", text="back"))
-        sub.insert(Button(key="default_weapons", text="default"))
-        sub.insert(Button(key="zero_weapons", text="zero"))
-        weapon_menu.insert(sub)
-
-        return weapon_menu
-
     def on_weapon_setup(self):
-        if self.weapon_menu is None:
-            self.weapon_menu = self.initialize_weapon_menu()
-            self.menus_positions['weapon_menu'] = vectorCopy(self.weapon_menu.pos)
-            self.gui.insert(self.weapon_menu)
+        weapon_menu = self.weapon_menu.get_menu()
+        if weapon_menu is None:
+            self.weapon_menu.initialize_weapon_menu()
+
+            self.menus_positions['weapon_menu'] = vectorCopy(self.weapon_menu.get_menu().pos)
+            self.gui.insert(self.weapon_menu.get_menu())
         
         main_menu_pos = self.menus_positions['main_menu']
         weapon_menu_pos = self.menus_positions['weapon_menu']
 
         main_menu_out = MenuAnimator(self.main_menu, main_menu_pos, main_menu_pos + Vector(GameGlobals().win_width, 0))
-        weapon_in = MenuAnimator(self.weapon_menu, weapon_menu_pos + Vector(-GameGlobals().win_width, 0), weapon_menu_pos)
+        weapon_in = MenuAnimator(self.weapon_menu.get_menu(), weapon_menu_pos + Vector(-GameGlobals().win_width, 0), weapon_menu_pos)
 
         self.gui.animators.append(main_menu_out)
         self.gui.animators.append(weapon_in)
 
-    def handle_weapon_events(self, event, values) -> bool:
-        if event is None:
-            return False
 
-        elif event == 'weapon_setup_to_main_menu':
-            main_menu_pos = self.menus_positions['main_menu']
-            weapon_menu_pos = self.menus_positions['weapon_menu']
-
-            main_menu_in = MenuAnimator(self.main_menu, main_menu_pos + Vector(GameGlobals().win_width, 0), main_menu_pos)
-            weapon_out = MenuAnimator(self.weapon_menu, weapon_menu_pos, weapon_menu_pos - Vector(GameGlobals().win_width, 0))
-            self.gui.animators.append(main_menu_in)
-            self.gui.animators.append(weapon_out)
-            self.update_weapon_sets()
-        
-        elif event == 'save_weapons':
-            weapon_dict = {'name': values['file_name']}
-            for element_dict in self.weapon_up_downs:
-                weapon_dict[element_dict['weapon'].index] = element_dict['element'].value
-            save_weapon_set(weapon_dict, values['file_name'])
-            self.gui.toast(f'saved {values["file_name"]}')
-        
-        elif event == 'default_weapons':
-            for element_dict in self.weapon_up_downs:
-                initial_amount = element_dict['weapon'].initial_amount
-                element_dict['element'].update_value(initial_amount)
-        
-        elif event == 'zero_weapons':
-            for element_dict in self.weapon_up_downs:
-                element_dict['element'].update_value(0)
-
-        else:
-            return False
-        return True
 
     def initialize_win_menu(self, record: GameRecord) -> StackPanel:
         end_menu = StackPanel(name="end_menu", pos=[GameGlobals().win_width // 2  - GameGlobals().win_width//4, (GameGlobals().win_height - 160)//2], size=[GameGlobals().win_width // 2, 160])
@@ -440,9 +367,6 @@ def browse_file():
     file = askopenfile(mode ='r', filetypes =[('Image Files', '*.png')])
     if file is not None: 
         return file.name
-
-def sprite_index_to_rect(index):
-	return (index % 8) * 16, (index // 8) * 16, 16, 16
 
 def test_record() -> GameRecord:
     return GameRecord(

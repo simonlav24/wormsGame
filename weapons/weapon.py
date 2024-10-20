@@ -5,7 +5,7 @@ from enum import Enum
 from pydantic import BaseModel
 from typing import Dict, Callable, Any, List
 
-from common import ArtifactType, ColorType, PATH_WEAPON_LIST, PATH_WEAPON_SETS
+from common import ArtifactType, ColorType, PATH_WEAPON_LIST, PATH_WEAPON_SETS, PATH_WEAPON_SET
 
 weapon_set_type = Dict[int, int]
 weapon_func_type = Dict[str, Callable[[Any], Any]]
@@ -82,7 +82,7 @@ def read_weapons() -> List[Weapon]:
 
 def save_weapon_set(weapon_set: weapon_set_type, name: str) -> None:
     ''' save weapon set to file '''
-    with open(os.path.join(PATH_WEAPON_SETS, f'{name}.json'), 'w+') as file: 
+    with open(os.path.join(PATH_WEAPON_SET.replace('__name__', name)), 'w+') as file: 
         json.dump(weapon_set, file)
 
 
@@ -98,7 +98,7 @@ def read_weapon_sets() -> List[weapon_set_type]:
     return output
 
 def read_weapon_set(name: str) -> weapon_set_type:
-    path = os.path.join(PATH_WEAPON_SETS, f'{name}.json')
+    path = os.path.join(PATH_WEAPON_SET.replace('__name__', name))
     if not os.path.exists(path):
         return None
     with open(path, 'r') as file:

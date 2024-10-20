@@ -266,33 +266,31 @@ class WeaponManager(metaclass=SingletonMeta):
         
         if not self.current_weapon.draw_hint:
             return
-        if not self.can_shoot(check_ammo=True, check_cool_down=True, check_delay=True, check_state=False):
-            return
+        can_shoot_ammo_cool_down_delay = self.can_shoot(check_ammo=True, check_cool_down=True, check_delay=True, check_state=False)
+        can_shoot_state = self.can_shoot(check_ammo=False, check_cool_down=False, check_delay=False, check_state=True)
 
-        if self.current_weapon.name in ["homing missile", "seeker"]:
+        if self.current_weapon.name in ["homing missile", "seeker"] and can_shoot_ammo_cool_down_delay:
             draw_target(win, GameVariables().point_target)
         
-        if not GameVariables().game_state == GameState.PLAYER_PLAY:
-            return
-
-        if self.current_weapon.name == "girder":
+        elif self.current_weapon.name == "girder" and can_shoot_state:
             draw_girder_hint(win)
     
-        if self.current_weapon.name == "trampoline":
+        elif self.current_weapon.name == "trampoline" and can_shoot_state:
             draw_trampoline_hint(win)
         
-        if self.current_weapon.category == WeaponCategory.AIRSTRIKE:
+        elif self.current_weapon.category == WeaponCategory.AIRSTRIKE and can_shoot_state:
             mouse = mouse_pos_in_world()
             flip = False if GameVariables().airstrike_direction == RIGHT else True
             win.blit(pygame.transform.flip(sprites.air_strike_indicator, flip, False), point2world(mouse - tup2vec(sprites.air_strike_indicator.get_size())/2))
         
-        if self.current_weapon.name == "earth spike" and GameVariables().game_state in [GameState.PLAYER_PLAY]:
+        elif self.current_weapon.name == "earth spike" and can_shoot_state:
             spikeTarget = calc_earth_spike_pos()
             if spikeTarget:
                 draw_target(win, spikeTarget)
 
     def give_extra_starting_weapons(self) -> None:
         ''' give teams starting legendary weapons, utilities and tools '''
+        
         legendary = ["holy grenade", "gemino mine", "bee hive", "electro boom", "pokeball", "green shell", "guided missile", "fireworks"]
         if GameVariables().initial_variables.allow_air_strikes:
             legendary.append("mine strike")

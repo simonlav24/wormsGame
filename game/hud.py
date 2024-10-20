@@ -13,8 +13,6 @@ HEALTH_BAR_HEIGHT = 2
 
 class HealthBar:
 	''' team health bar calculations and drawing '''
-	# drawBar = True
-	# drawPoints = True
 	def __init__(self, amount_of_teams: int, initial_health_per_player: int, players_in_team: int, colors: List[ColorType]):
 		self.max_health = players_in_team * initial_health_per_player
 		self.team_health_visual = [self.max_health] * amount_of_teams
@@ -22,19 +20,19 @@ class HealthBar:
 		self.team_points = [0] * amount_of_teams
 		self.colors = colors
 	
-	def update_health(self, health_list: List[int]):
+	def update_health(self, health_list: List[int]) -> None:
 		''' update '''
 		self.team_health_actual = health_list
 
-	def update_score(self, point_list: List[int]):
+	def update_score(self, point_list: List[int]) -> None:
 		''' update '''
 		self.team_points = point_list
 	
-	def step(self):
-		recalc = lambda current, target: current + (target - current) * 0.1
-		self.team_health_visual = [recalc(visual, self.team_health_actual[i]) for i, visual in enumerate(self.team_health_visual)]
-
-	def draw(self, win):
+	def step(self) -> None:
+		for i, _ in enumerate(self.team_health_visual):
+			self.team_health_visual[i] = int(self.team_health_visual[i] + (self.team_health_actual[i] - self.team_health_visual[i]) * 0.1)
+	
+	def draw(self, win: pygame.Surface) -> None:
 		x = int(GameGlobals().win_width - HEALTH_BAR_WIDTH - 10)
 		y = 10
 
@@ -111,7 +109,7 @@ class WindFlag:
 		self.acc = [Vector() for _ in range(len(self.vertices))]
 		self.vel = [Vector() for _ in range(len(self.vertices))]
 	
-	def step(self):
+	def step(self) -> None:
 		for _ in range(3):
 			# calculate acc
 			for i in range(len(self.vertices)):
@@ -145,7 +143,7 @@ class WindFlag:
 				# calculate pos
 				self.vertices[i] += self.vel[i]
 				
-	def draw(self, win: pygame.Surface):
+	def draw(self, win: pygame.Surface) -> None:
 		it = 0
 		rad = 6
 		pos = Vector(25, 18)
@@ -166,7 +164,7 @@ class Hud:
 		self.toast_pos = Vector()
 		self.timer = 0 
 	
-	def add_toast(self, surf: pygame.Surface, pos: Vector=None):
+	def add_toast(self, surf: pygame.Surface, pos: Vector=None) -> None:
 		self.toast = surf
 		self.timer = 2 * GameGlobals().fps
 		if pos is None:
@@ -176,21 +174,21 @@ class Hud:
 			)
 		self.toast_pos = pos
 
-	def step(self):
+	def step(self) -> None:
 		self.wind_flag.step()
 		if self.timer > 0:
 			self.timer -= 1
 			if self.timer == 0:
 				self.toast = None
 
-	def draw(self, win: pygame.Surface):
+	def draw(self, win: pygame.Surface) -> None:
 		# draw weapon count
 		win.blit(self.weapon_count_surf, (25, 5))
 		self.wind_flag.draw(win)
 		if self.toast is not None:
 			win.blit(self.toast, self.toast_pos)
 
-	def render_weapon_count(self, weapon: Weapon, amount: int, adding: str='', enabled: bool=True):
+	def render_weapon_count(self, weapon: Weapon, amount: int, adding: str='', enabled: bool=True) -> None:
 		amount_str = str(amount)
 		if amount == -1:
 			amount_str = ''
