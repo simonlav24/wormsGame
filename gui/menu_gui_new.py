@@ -114,12 +114,14 @@ class Gui:
         if self.toast_surf is not None:
             win.blit(self.toast_surf, self.toast_pos)
 
+
 class IParent:
     def notify_event(self, event) -> None:
         ...
 
     def get_super_pos(self) -> Vector:
         ...
+
 
 class GuiElement(ABC):
     def __init__(self, *args, **kwargs):
@@ -196,6 +198,7 @@ class GuiElement(ABC):
     
     def notify_event(self, event) -> None:
         self.parent.notify_event(event)
+
 
 class StackPanel(GuiElement):
     def __init__(self, pos=None, size=None, name="", orientation=VERTICAL, margin=1, custom_size=None, *args, **kwargs):
@@ -278,12 +281,14 @@ class StackPanel(GuiElement):
         self.add_element(element)
         return element
 
+
 class Text(GuiElement):
     def __init__(self, text='text', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text = text
         self.render_surf(self.text)
         self.color = TEXT_ELEMENT_COLOR
+
 
 class Button(GuiElement):
     def __init__(self, *args, **kwargs):
@@ -311,6 +316,7 @@ class Button(GuiElement):
     def draw(self, win: pygame.Surface) -> None:
         super().draw(win)
     
+
 class UpDown(GuiElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -383,6 +389,7 @@ class UpDown(GuiElement):
         pygame.draw.polygon(win, right_color, [(button_pos[0] + self.size[0] - arrow_size, button_pos[1] + border), (button_pos[0] + self.size[0] - border - 1, button_pos[1] + border), (button_pos[0] + self.size[0] - border - 1, button_pos[1] + arrow_size)])
         pygame.draw.polygon(win, left_color, [(button_pos[0] + border ,button_pos[1] + self.size[1] - arrow_size), (button_pos[0] + border, button_pos[1] + self.size[1] - border - 1), (button_pos[0] + arrow_size, button_pos[1] + self.size[1] - border - 1)])
 
+
 class Toggle(GuiElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -411,6 +418,7 @@ class Toggle(GuiElement):
         if self.value:
             pygame.draw.rect(win, TOGGLE_COLOR, ((button_pos[0] + self.border, button_pos[1] + self.border), (self.size[0] - 2 * self.border, self.size[1] - 2 * self.border)))
         self.draw_text(win)
+
 
 class ComboSwitch(GuiElement):
     def __init__(self, *args, **kwargs):
@@ -494,6 +502,7 @@ class ComboSwitch(GuiElement):
         pygame.draw.polygon(win, right_color, [button_pos + i for i in polygon_right])
         pygame.draw.polygon(win, left_color, [button_pos + i for i in polygon_left])
 
+
 class ImageButton(Button):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -512,6 +521,7 @@ class ImageButton(Button):
     def draw(self, win: pygame.Surface) -> None:
         button_pos = self.get_super_pos() + self.pos
         win.blit(self.image_surf, (button_pos[0], button_pos[1]))
+
 
 class ImageDrag(GuiElement):
     def __init__(self, *args, **kwargs):
@@ -566,7 +576,8 @@ class ImageDrag(GuiElement):
 
     def step(self):
         self.selection_check()
-        if self.dragging:
+        if self.dragging and not self.image_surf.get_width() < self.size[0]:
+
             mouse_pos = mouse_in_win()
             mouse_delta = mouse_pos - self.mouse_last
             self.mouse_last = mouse_pos
@@ -577,6 +588,7 @@ class ImageDrag(GuiElement):
             elif self.drag_dx < -self.image_surf.get_width() + self.size[0] // 2:
                 self.drag_dx = -self.image_surf.get_width() + self.size[0] // 2
             self.recalc_image()
+
 
 class SurfElement(GuiElement):
     def __init__(self, *args, **kwargs):
@@ -591,9 +603,11 @@ class SurfElement(GuiElement):
         win.blit(self.surf, button_pos)
         pygame.draw.rect(win, BUTTON_COLOR, (button_pos, self.surf.get_size()), 2)
 
+
 class InputMode(Enum):
     IDLE = 0
     EDIT = 1
+
 
 class Input(GuiElement):
     def __init__(self, *args, **kwargs):
@@ -669,6 +683,7 @@ class Input(GuiElement):
         if self.mode == InputMode.EDIT and self.show_cursor:
             win.blit(self.cursor_surf, (button_pos[0] + self.size[0]/2 - self.surf.get_width()/2 + self.surf.get_width(), button_pos[1] + self.size[1]/2 - self.surf.get_height()/2))
 
+
 class LoadBar(GuiElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -694,6 +709,7 @@ class LoadBar(GuiElement):
             pygame.draw.rect(win, TEXT_ELEMENT_COLOR, (button_pos + Vector(self.size[0] - size[0], 0), size), 2)
             pygame.draw.rect(win, self.bar_color, (button_pos + Vector(self.size[0] - size[0] + 2, 2), size - Vector(4,4)))
 
+
 class AnimatorBase:
     def __init__(self) -> None:
         self.is_done = False
@@ -703,6 +719,7 @@ class AnimatorBase:
 
     def finish(self) -> None:
         self.is_done = True
+
 
 class MenuAnimator(AnimatorBase):
     def __init__(self, menu, pos_start, pos_end, trigger=None, args=None, ease="inout", end_return = False):
@@ -755,6 +772,7 @@ class MenuAnimator(AnimatorBase):
                 self.trigger(*self.args)
             else:
                 self.trigger()
+
 
 class ElementAnimator:
     def __init__(self, element, start, end, duration = -1, time_offset=0):

@@ -2,7 +2,6 @@
 import os
 import datetime
 from random import choice, randint
-from typing import List
 import tkinter
 from tkinter.filedialog import askopenfile
 
@@ -10,16 +9,17 @@ import pygame
 
 from rooms.room import Room, Rooms, SwitchRoom
 from rooms.menu_weapon_setup import WeaponMenu
+from rooms.menu_teams_setup import TeamsMenu
 from gui.menu_gui_new import (
     Gui, MenuAnimator, HORIZONTAL, VERTICAL,
     StackPanel, Text, Button,
     ComboSwitch, Toggle, UpDown,
-    ImageDrag, Input, ImageButton,
+    ImageDrag, Input,
     LoadBar, ElementAnimator
 )
 
-from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals, PATH_SPRITE_ATLAS, GameRecord
-from common.vector import Vector, tup2vec, vectorCopy
+from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals, GameRecord
+from common.vector import Vector, vectorCopy
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
@@ -27,7 +27,7 @@ from game.background import BackGround
 from game.map_manager import grab_maps
 from game.noise_gen import generate_noise
 
-from weapons.weapon import read_weapons, save_weapon_set, read_weapon_sets
+from weapons.weapon import read_weapon_sets
 
 class MainMenuRoom(Room):
     def __init__(self, *args, **kwargs):
@@ -47,6 +47,7 @@ class MainMenuRoom(Room):
 
         self.main_menu = self.initialize_main_menu()
         self.weapon_menu = WeaponMenu(self.gui)
+        self.teams_menu = TeamsMenu(self.gui)
         self.win_menu: StackPanel = None
         
         self.gui.insert(self.main_menu)
@@ -114,6 +115,7 @@ class MainMenuRoom(Room):
                 )
             )
             # self.on_play(values)
+        
         elif event == 'exit':
             self.switch = SwitchRoom(Rooms.EXIT, False, None)
         
@@ -155,7 +157,10 @@ class MainMenuRoom(Room):
             self.gui.animators.append(weapon_out)
             self.update_weapon_sets()
 
-        elif self.weapon_menu.handle_weapon_events(event, values):
+        elif event == 'teams setup':
+            self.on_team_setup()
+
+        elif self.weapon_menu.handle_events(event, values):
             pass
 
         elif self.handle_win_events(event, values):
@@ -288,7 +293,7 @@ class MainMenuRoom(Room):
         main_menu.add_element(sub_weapons)
 
         sub_more = StackPanel(orientation=HORIZONTAL, custom_size=14)
-        sub_more.insert(Button(key="scoreboard", text="score board"))
+        sub_more.insert(Button(key="teams setup", text="teams setup"))
         sub_more.insert(UpDown(text="background color", key="feel_index", value=self.feel_index, values=[i for i in range(len(feels))], show_value=False, generate_event=True))
         main_menu.add_element(sub_more)
         
@@ -309,9 +314,9 @@ class MainMenuRoom(Room):
         self.weapon_set_combo.update_items(weapon_sets_names)
 
     def on_weapon_setup(self):
-        weapon_menu = self.weapon_menu.get_menu()
-        if weapon_menu is None:
-            self.weapon_menu.initialize_weapon_menu()
+        menu = self.weapon_menu.get_menu()
+        if menu is None:
+            self.weapon_menu.initialize_menu()
 
             self.menus_positions['weapon_menu'] = vectorCopy(self.weapon_menu.get_menu().pos)
             self.gui.insert(self.weapon_menu.get_menu())
@@ -325,7 +330,22 @@ class MainMenuRoom(Room):
         self.gui.animators.append(main_menu_out)
         self.gui.animators.append(weapon_in)
 
+    def on_team_setup(self):
+        menu = self.teams_menu.get_menu()
+        if menu is None:
+            self.teams_menu.initialize_menu()
 
+            self.menus_positions['teams_menu'] = vectorCopy(self.teams_menu.get_menu().pos)
+            self.gui.insert(self.teams_menu.get_menu())
+        
+        main_menu_pos = self.menus_positions['main_menu']
+        teams_menu_pos = self.menus_positions['teams_menu']
+
+        main_menu_out = MenuAnimator(self.main_menu, main_menu_pos, main_menu_pos + Vector(GameGlobals().win_width, 0))
+        weapon_in = MenuAnimator(self.teams_menu.get_menu(), teams_menu_pos + Vector(-GameGlobals().win_width, 0), teams_menu_pos)
+
+        self.gui.animators.append(main_menu_out)
+        self.gui.animators.append(weapon_in)
 
     def initialize_win_menu(self, record: GameRecord) -> StackPanel:
         end_menu = StackPanel(name="end_menu", pos=[GameGlobals().win_width // 2  - GameGlobals().win_width//4, (GameGlobals().win_height - 160)//2], size=[GameGlobals().win_width // 2, 160])

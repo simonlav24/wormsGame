@@ -8,6 +8,8 @@ import pygame
 from common.vector import *
 from common.constants import ColorType, Sickness, DamageType, GameState
 from common.game_config import GameMode
+from common.team_data import TeamData
+
 
 class SingletonMeta(type):
 	''' singleton metaclass '''
@@ -26,13 +28,6 @@ class SingletonMeta(type):
 class ICreateGame(Protocol):
 	def create_new_game(self) -> None:
 		...
-
-class TeamData(BaseModel):
-	''' team data '''
-	team_name: str
-	color: ColorType
-	names: List[str]
-	hats: str
 
 
 class Entity(Protocol):
