@@ -5,6 +5,7 @@ from common import SingletonMeta
 class GameGlobals(metaclass=SingletonMeta):
     def __init__(self):
         
+        self.screen: pygame.Surface = None
         self.win: pygame.Surface = None
         self.win_width = 0
         self.win_height = 0

@@ -8,7 +8,6 @@ from common.vector import *
 
 from game.map_manager import MapManager, GRD
 from entities import PhysObj
-from entities.shooting_target import ShootingTarget
 
 
 class Spear(PhysObj):

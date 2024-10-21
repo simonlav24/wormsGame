@@ -4,11 +4,10 @@ from math import sin
 
 from common import GameVariables
 from common.vector import *
-from entities import PhysObj, Debrie
-from game.visual_effects import FireBlast, SmokeParticles, EffectManager
+from entities import PhysObj
+from game.visual_effects import FireBlast, EffectManager
 from game.world_effects import boom
 
-from game.map_manager import MapManager
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):

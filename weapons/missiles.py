@@ -240,9 +240,9 @@ class SeekerBase:
 			for i in range(20):
 				direction = vector_from_angle((i / 20) * 2 * pi)
 				for j in range(visibility):
-					testPos = self.pos + direction * j
-					if MapManager().is_ground_at(testPos.integer()):
-						self.avoid.append(testPos)
+					test_pos = self.pos + direction * j
+					if MapManager().is_ground_at(test_pos.integer()):
+						self.avoid.append(test_pos)
 		else:
 			if MapManager().is_ground_at(self.pos):
 				self.hitResponse()

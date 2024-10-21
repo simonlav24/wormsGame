@@ -10,7 +10,7 @@ from common import GameVariables, point2world, ColorType, sprites, EntityWorm, D
 from common.vector import *
 
 from game.world_effects import boom
-from weapons.guns import fireMiniGun
+from weapons.guns import fire_minigun
 from weapons.autonomous_object import AutonomousObject
 
 
@@ -52,7 +52,7 @@ class SentryGun(AutonomousObject):
 		return super().engage()
 	
 	def shoot(self, direction) -> None:
-		fireMiniGun(pos=self.pos, direction=direction)
+		fire_minigun(pos=self.pos, direction=direction)
 
 	def step(self):
 		super().step()

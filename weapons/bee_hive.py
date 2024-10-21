@@ -58,14 +58,14 @@ class Bee:
 			self.unreachable = []
 		
 		if self.lifespan < 300:
-			closestDist = 100
+			closest_dist = 100
 			for worm in GameVariables().get_worms():
 				if worm in self.unreachable:
 					continue
 				distance = dist(self.pos, worm.pos)
-				if distance < 50 and distance < closestDist:
+				if distance < 50 and distance < closest_dist:
 					self.target = worm
-					closestDist = distance
+					closest_dist = distance
 			if self.target:
 				if dist(self.pos, self.target.pos) > 50 or self.target.health <= 0:
 					self.target = None

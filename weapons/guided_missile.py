@@ -7,7 +7,8 @@ from random import uniform, randint
 from common import blit_weapon_sprite, GameVariables, point2world, GameState
 from common.vector import *
 
-from entities import PhysObj, Fire
+from entities import PhysObj
+from entities.fire import Fire
 from game.world_effects import boom
 from game.visual_effects import Blast
 from game.map_manager import MapManager, GRD
@@ -43,8 +44,8 @@ class GuidedMissile(PhysObj):
 		r = angle - pi
 		collision = False
 		while r < angle + pi:#+ pi/2:
-			testPos = Vector((self.radius) * cos(r) + self.pos.x, (self.radius) * sin(r) + self.pos.y)
-			if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+			test_pos = Vector((self.radius) * cos(r) + self.pos.x, (self.radius) * sin(r) + self.pos.y)
+			if test_pos.x >= MapManager().game_map.get_width() or test_pos.y >= MapManager().game_map.get_height() - GameVariables().water_level or test_pos.x < 0:
 				if GameVariables().config.option_closed_map:
 					collision = True
 					r += pi /8
@@ -52,11 +53,11 @@ class GuidedMissile(PhysObj):
 				else:
 					r += pi /8
 					continue
-			if testPos.y < 0:
+			if test_pos.y < 0:
 				r += pi /8
 				continue
 			
-			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
+			if MapManager().game_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
 				collision = True
 			
 			r += pi /8

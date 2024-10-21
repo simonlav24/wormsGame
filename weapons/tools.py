@@ -146,10 +146,10 @@ class Baseball:
 		hitted = []
 		for t in range(5, 25):
 			testPositions = []
-			testPos = GameVariables().player.pos + self.direction * t
-			testPositions.append(testPos)
-			testPositions.append(testPos + normalize(self.direction).getNormal() * 3)
-			testPositions.append(testPos - normalize(self.direction).getNormal() * 3)
+			test_pos = GameVariables().player.pos + self.direction * t
+			testPositions.append(test_pos)
+			testPositions.append(test_pos + normalize(self.direction).getNormal() * 3)
+			testPositions.append(test_pos - normalize(self.direction).getNormal() * 3)
 			
 			for worm in GameVariables().get_worms():
 				for point in testPositions:

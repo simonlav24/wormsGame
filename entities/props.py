@@ -5,7 +5,8 @@ from math import sin, pi
 from common import GameVariables, sprites, point2world, DamageType
 from common.vector import *
 from game.map_manager import MapManager, SKY_COL, GRD_COL
-from entities import PhysObj, Fire
+from entities import PhysObj
+from entities.fire import Fire
 from game.world_effects import boom
 
 

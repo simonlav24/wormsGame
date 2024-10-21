@@ -79,13 +79,13 @@ class SnailShell(PhysObj):
 		finalAnchor = None
 
 		for t in range(50):
-			testPos = self.pos + normalize(self.vel) * t
-			testPos.integer()
-			if MapManager().is_ground_at(testPos):
-				finalAnchor = testPos
+			test_pos = self.pos + normalize(self.vel) * t
+			test_pos.integer()
+			if MapManager().is_ground_at(test_pos):
+				finalAnchor = test_pos
 				break
 			else:
-				finalPos = testPos
+				finalPos = test_pos
 
 		if not finalAnchor:
 			print("shell error")

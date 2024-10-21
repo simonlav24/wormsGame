@@ -166,6 +166,7 @@ class Fonts:
     pixel5: pygame.font.Font = None
     pixel5_halo: pygame.font.Font = None
     pixel10: pygame.font.Font = None
+    pixel10_halo: pygame.font.Font = None
 
 sprites = Sprites()
 fonts = Fonts()
@@ -180,6 +181,7 @@ def initialize() -> None:
     fonts.pixel5 = pygame.font.Font(PATH_FONT, 5)
     fonts.pixel10 = pygame.font.Font(PATH_FONT, 10)
     fonts.pixel5_halo = HaloFont(fonts.pixel5)
+    fonts.pixel10_halo = HaloFont(fonts.pixel10)
 
     sprites.air_strike_indicator = fonts.pixel10.render(">>>", False, BLACK)
 
