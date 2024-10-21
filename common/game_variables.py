@@ -217,8 +217,9 @@ class GameVariables(metaclass=SingletonMeta):
         ''' engages autonomous objects, if any engages return true '''
         any_engaged = False
         for obj in self.database.autonomous_objects:
-            any_engaged |= obj.engage()
-            self.cam_track = obj
+            if obj.can_engage():
+                any_engaged |= obj.engage()
+                self.cam_track = obj
         return any_engaged
 
     def get_event_handlers(self) -> List[InterfaceEventHandler]:

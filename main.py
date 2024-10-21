@@ -20,7 +20,7 @@ wip = '''
 	still in progress:
 		holding mjolnir
 		refactor bubble
-		team creation screen 
+		team creation screen
 	'''
 
 def main():

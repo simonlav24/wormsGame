@@ -36,16 +36,19 @@ class SentryGun(AutonomousObject):
 		self.timer = 20
 		self.times_fired = randint(5,7) # turns to fire untill dead
 		self.angle = 0
-		self.angle2for = uniform(0, 2*pi)
+		self.angle2for = uniform(0, 2 * pi)
 		self.surf = pygame.Surface((17, 26), pygame.SRCALPHA)
-		self.surf.blit(sprites.sprite_atlas, (0,0), (80, 32, 17, 26))
+		self.surf.blit(sprites.sprite_atlas, (0, 0), (80, 32, 17, 26))
 		self.electrified = False
-		pygame.draw.circle(self.surf, self.team_color, tup2vec(self.surf.get_size())//2, 2)
+		pygame.draw.circle(self.surf, self.team_color, tup2vec(self.surf.get_size()) // 2, 2)
 		self.inner_state = SentryState.IDLE
 	
 	def remove_from_game(self) -> None:
 		super().remove_from_game()
 		GameVariables().get_electrocuted().remove(self)
+
+	def can_engage(self) -> bool:
+		return self.check_for_target()
 
 	def engage(self) -> bool:
 		self.inner_state = SentryState.SEARCHING
@@ -54,23 +57,27 @@ class SentryGun(AutonomousObject):
 	def shoot(self, direction) -> None:
 		fire_minigun(pos=self.pos, direction=direction)
 
-	def step(self):
+	def check_for_target(self) -> bool:
+		close_worms = []
+		for worm in GameVariables().get_worms():
+			if worm.get_team_data().team_name == self.team_name:
+				continue
+			distance = distus(worm.pos, self.pos)
+			if distance < 10000:
+				close_worms.append((worm, distance))
+		if len(close_worms) > 0:
+			close_worms.sort(key = lambda elem: elem[1])
+			self.target = close_worms[0][0]
+		else:
+			self.target = None
+		return self.target is not None
+
+	def step(self) -> None:
 		super().step()
 
 		if self.inner_state == SentryState.SEARCHING:
-			close_worms = []
-			for worm in GameVariables().get_worms():
-				if worm.get_team_data().team_name == self.team_name:
-					continue
-				distance = distus(worm.pos, self.pos)
-				if distance < 10000:
-					close_worms.append((worm, distance))
-			if len(close_worms) > 0:
-				close_worms.sort(key = lambda elem: elem[1])
-				self.target = close_worms[0][0]
+			if self.check_for_target():
 				self.inner_state = SentryState.FIRING
-			else:
-				self.target = None
 
 		elif self.inner_state == SentryState.FIRING:
 			if not self.target:

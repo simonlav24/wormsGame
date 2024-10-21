@@ -30,6 +30,9 @@ class Raon(AutonomousObject):
 		self.timer = 10
 		self.facing = RIGHT
 	
+	def can_engage(self) -> bool:
+		return self.target is not None
+
 	def engage(self) -> bool:
 		self.inner_state = RaonState.ADVANCING
 		self.timer = 20
@@ -44,16 +47,7 @@ class Raon(AutonomousObject):
 				self.inner_state = RaonState.IDLE
 
 		elif self.inner_state == RaonState.IDLE:
-			close_worms = []
-			for worm in GameVariables().get_worms():
-				distance = distus(worm.pos, self.pos)
-				if distance < 10000:
-					close_worms.append((worm, distance))
-			if len(close_worms) > 0:
-				close_worms.sort(key = lambda elem: elem[1])
-				self.target = close_worms[0][0]
-			else:
-				self.target = None
+			self.check_for_target()
 			if self.target:
 				self.facing = RIGHT if self.target.pos.x > self.pos.x else LEFT
 
@@ -69,6 +63,19 @@ class Raon(AutonomousObject):
 		if self.proximity() and not self.inner_state == RaonState.FUSING:
 			self.dead = True
 	
+	def check_for_target(self) -> bool:
+		close_worms = []
+		for worm in GameVariables().get_worms():
+			distance = distus(worm.pos, self.pos)
+			if distance < 10000:
+				close_worms.append((worm, distance))
+		if len(close_worms) > 0:
+			close_worms.sort(key = lambda elem: elem[1])
+			self.target = close_worms[0][0]
+		else:
+			self.target = None
+		return self.target is not None
+
 	def death_response(self):
 		boom(self.pos, 25)
 	
