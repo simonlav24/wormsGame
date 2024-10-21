@@ -702,5 +702,13 @@
         "round_delay": 0,
         "artifact": 4,
         "turn_ending":false
+    },
+    {
+        "index": 74,
+        "name": "paintball",
+        "style": 1,
+        "category": 5,
+        "shots": 3,
+        "initial_amount": 10
     }
 ]

@@ -194,21 +194,21 @@ class MapManager(metaclass=SingletonMeta):
     def check_free_pos(self, radius, pos: Vector, worm_col = False) -> bool:
         r = 0
         while r < 2 * pi:
-            testPos = Vector(radius * cos(r) + pos.x, radius * sin(r) + pos.y)
-            if testPos.x >= self.game_map.get_width() or testPos.y >= self.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+            test_pos = Vector(radius * cos(r) + pos.x, radius * sin(r) + pos.y)
+            if test_pos.x >= self.game_map.get_width() or test_pos.y >= self.game_map.get_height() - GameVariables().water_level or test_pos.x < 0:
                 if GameVariables().config.option_closed_map:
                     return False
                 else:
                     r += pi /8
                     continue
-            if testPos.y < 0:
-                if self.game_map.get_at((int(testPos.x), 0)) == GRD:
+            if test_pos.y < 0:
+                if self.game_map.get_at((int(test_pos.x), 0)) == GRD:
                     return False
                 else:
                     r += pi /8
                     continue
             
-            getAt = testPos.vec2tupint()
+            getAt = test_pos.vec2tupint()
             if self.game_map.get_at(getAt) == GRD:
                 return False
             if self.objects_col_map.get_at(getAt) != (0,0,0):
@@ -222,7 +222,7 @@ class MapManager(metaclass=SingletonMeta):
     def is_on_map(self, vec: Vector) -> bool:
         return not (vec[0] < 0 or vec[0] >= self.game_map.get_width() or vec[1] < 0 or vec[1] >= self.game_map.get_height())
 
-    def stain(self, pos: Vector, surf: pygame.Surface, size: Tuple[int], alphaMore: bool) -> None:
+    def stain(self, pos: Vector, surf: pygame.Surface, size: Tuple[int], alphaMore: bool=False) -> None:
         rotated = pygame.transform.rotate(pygame.transform.scale(surf, size), randint(0, 360))
         if alphaMore:
             rotated.set_alpha(randint(100,180))
@@ -256,25 +256,25 @@ class MapManager(metaclass=SingletonMeta):
         angle = atan2(vel.y, vel.x)
         r = angle - pi
         while r < angle + pi:
-            testPos = Vector((radius) * cos(r) + pos.x, (radius) * sin(r) + pos.y)
-            if testPos.x >= self.game_map.get_width() or testPos.y >= self.game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+            test_pos = Vector((radius) * cos(r) + pos.x, (radius) * sin(r) + pos.y)
+            if test_pos.x >= self.game_map.get_width() or test_pos.y >= self.game_map.get_height() - GameVariables().water_level or test_pos.x < 0:
                 if GameVariables().config.option_closed_map:
-                    response += pos - testPos
+                    response += pos - test_pos
                     r += pi /8
                     continue
                 else:
                     r += pi /8
                     continue
-            if testPos.y < 0:
+            if test_pos.y < 0:
                 r += pi /8
                 continue
             
-            if self.game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-                response += pos - testPos
-            if wormCollision and self.worm_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-                response += pos - testPos
-            if extraCollision and self.objects_col_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-                response += pos - testPos
+            if self.game_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
+                response += pos - test_pos
+            if wormCollision and self.worm_col_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
+                response += pos - test_pos
+            if extraCollision and self.objects_col_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
+                response += pos - test_pos
             
             r += pi /8
         return response

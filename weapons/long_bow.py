@@ -42,10 +42,10 @@ class LongBow:
             iterations = 15
             for t in range(iterations):
                 value = t/iterations
-                testPos = (self.pos * value) + (ppos * (1-value))
+                test_pos = (self.pos * value) + (ppos * (1-value))
                 # check cans collision:
                 for can in GameVariables().get_exploding_props():
-                    if dist(testPos, can.pos) < can.radius + 1:
+                    if dist(test_pos, can.pos) < can.radius + 1:
                         can.damage(10)
                         self.destroy()
                         return
@@ -53,19 +53,19 @@ class LongBow:
                 for worm in GameVariables().get_worms():
                     if worm == self.ignore:
                         continue
-                    if dist(testPos, worm.pos) < worm.radius + 1:
+                    if dist(test_pos, worm.pos) < worm.radius + 1:
                         self.worm_collision(worm)
                         return
                 # check target collision:
                 for target in GameVariables().get_targets():
-                    if dist(testPos, target.pos) < target.radius:
+                    if dist(test_pos, target.pos) < target.radius:
                         target.explode()
                         self.destroy()
                         return
                 # check MapManager().game_map collision
-                if MapManager().is_on_map(testPos.vec2tupint()):
-                    if MapManager().is_ground_at(testPos.vec2tupint()):
-                        self.stuck = vectorCopy(testPos)
+                if MapManager().is_on_map(test_pos.vec2tupint()):
+                    if MapManager().is_ground_at(test_pos.vec2tupint()):
+                        self.stuck = vectorCopy(test_pos)
                 if self.pos.y < 0:
                     self.destroy()
                     return

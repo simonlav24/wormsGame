@@ -162,21 +162,21 @@ class MjolnirFly(PhysObj):
 		angle = atan2(self.vel.y, self.vel.x)
 		r = angle - pi#- pi/2
 		while r < angle + pi:#+ pi/2:
-			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+			test_pos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
+			if test_pos.x >= MapManager().game_map.get_width() or test_pos.y >= MapManager().game_map.get_height() - GameVariables().water_level or test_pos.x < 0:
 				if GameVariables().config.option_closed_map:
-					response += ppos - testPos
+					response += ppos - test_pos
 					r += pi /8
 					continue
 				else:
 					r += pi /8
 					continue
-			if testPos.y < 0:
+			if test_pos.y < 0:
 				r += pi /8
 				continue
 			
-			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-				response += ppos - testPos
+			if MapManager().game_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
+				response += ppos - test_pos
 			
 			r += pi /8
 		

@@ -117,26 +117,26 @@ def fire_portal_gun(*args, **kwargs) -> Portal:
 	second_portal: Portal = kwargs.get('shooted_object')
 	new_portal = None
 	for t in range(5 , steps):
-		testPos = kwargs.get('pos') + kwargs.get('direction') * t
-		GameVariables().add_extra(testPos, (255,255,255), 3)
+		test_pos = kwargs.get('pos') + kwargs.get('direction') * t
+		GameVariables().add_extra(test_pos, (255,255,255), 3)
 		
 		# missed
 		if t == steps - 1:
 			if second_portal is not None:
 				second_portal.remove_from_game()
 
-		if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
+		if test_pos.x >= MapManager().game_map.get_width() or test_pos.y >= MapManager().game_map.get_height() or test_pos.x < 0 or test_pos.y < 0:
 			continue
 
 		# if hits map:
-		if MapManager().game_map.get_at(testPos.vec2tupint()) == GRD:
+		if MapManager().game_map.get_at(test_pos.vec2tupint()) == GRD:
 			
 			response = Vector(0,0)
 			
 			for i in range(12):
 				ti = (i / 12) * 2 * pi
 				
-				check = testPos + Vector(8 * cos(ti), 8 * sin(ti))
+				check = test_pos + Vector(8 * cos(ti), 8 * sin(ti))
 				
 				if check.x >= MapManager().game_map.get_width() or check.y >= MapManager().game_map.get_height() or check.x < 0 or check.y < 0:
 					continue
@@ -146,7 +146,7 @@ def fire_portal_gun(*args, **kwargs) -> Portal:
 			
 			direction = response.normalize()
 			
-			new_portal = Portal(testPos, direction, second_portal is None)
+			new_portal = Portal(test_pos, direction, second_portal is None)
 			if second_portal is not None:
 				new_portal.brother = second_portal
 				second_portal.brother = new_portal

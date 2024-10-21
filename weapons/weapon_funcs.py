@@ -13,7 +13,7 @@ from weapons.grenades import Grenade, StickyBomb, GasGrenade, HolyGrenade, Banan
 from weapons.cluster_grenade import ClusterGrenade
 from weapons.electric import ElectricGrenade, ElectroBoom
 from weapons.raon import Raon
-from weapons.guns import fireShotgun, fireMiniGun, fireLongBow, fireBubbleGun, fireSpear, fireLaser, fireGammaGun, fireFlameThrower, fireIcicle, fireEarthSpike, fireFireBall, fireRazorLeaf
+from weapons.guns import fire_shotgun, fire_minigun, fire_long_bow, fire_bubble_gun, fire_spear, fire_laser, fire_gamma_gun, fire_flame_thrower, fire_icicle, fire_earth_spike, fire_fire_ball, fire_razor_leaf
 from weapons.fire_weapons import PetrolBomb, ChilliPepper
 from weapons.bombs import TNT, Sheep, Bull
 from weapons.mine import Mine, Gemino
@@ -37,6 +37,7 @@ from weapons.artifacts.mjolnir_artifact import MjolnirStrike, MjolnirFly, Mjolni
 from weapons.artifacts.plant_master import PlantControl
 from weapons.artifacts.minecraft_artifact import build, mine
 from weapons.time_travel import TimeTravel
+from weapons.paintball import fire_paint_ball
 
 weapon_funcs: Dict[str, Callable[[Any], Any]] = {}
 
@@ -124,43 +125,43 @@ def fire_raon_launcher(*args, **kwargs) -> EntityPhysical:
 
 def fire_shotgun(*args, **kwargs) -> EntityPhysical:
     """ fire shotgun """
-    return fireShotgun(**kwargs)
+    return fire_shotgun(**kwargs)
 
 
 
 def fire_long_bow(*args, **kwargs) -> EntityPhysical:
     """ fire long bow """
-    return fireLongBow(**kwargs)
+    return fire_long_bow(**kwargs)
 
 
 
 def fire_minigun(*args, **kwargs) -> EntityPhysical:
     """ fire minigun """
-    return fireMiniGun(**kwargs)
+    return fire_minigun(**kwargs)
 
 
 
 def fire_gamma_gun(*args, **kwargs) -> EntityPhysical:
     """ fire gamma gun """
-    return fireGammaGun(**kwargs)
+    return fire_gamma_gun(**kwargs)
 
 
 
 def fire_spear(*args, **kwargs) -> EntityPhysical:
     """ fire spear """
-    return fireSpear(**kwargs)
+    return fire_spear(**kwargs)
 
 
 
 def fire_laser_gun(*args, **kwargs) -> EntityPhysical:
     """ fire laser gun """
-    return fireLaser(**kwargs)
+    return fire_laser(**kwargs)
 
 
 
 def fire_bubble_gun(*args, **kwargs) -> EntityPhysical:
     """ fire bubble gun """
-    return fireBubbleGun(**kwargs)
+    return fire_bubble_gun(**kwargs)
 
 
 
@@ -172,7 +173,7 @@ def fire_petrol_bomb(*args, **kwargs) -> EntityPhysical:
 
 def fire_flame_thrower(*args, **kwargs) -> EntityPhysical:
     """ fire flame thrower """
-    return fireFlameThrower(**kwargs)
+    return fire_flame_thrower(**kwargs)
 
 
 
@@ -487,25 +488,25 @@ def fire_mine_plant(*args, **kwargs) -> EntityPhysical:
 
 def fire_razor_leaf(*args, **kwargs) -> EntityPhysical:
     """ fire razor leaf """
-    return fireRazorLeaf(**kwargs)
+    return fire_razor_leaf(**kwargs)
 
 
 
 def fire_icicle(*args, **kwargs) -> EntityPhysical:
     """ fire icicle """
-    return fireIcicle(**kwargs)
+    return fire_icicle(**kwargs)
 
 
 
 def fire_earth_spike(*args, **kwargs) -> EntityPhysical:
     """ fire earth spike """
-    return fireEarthSpike(**kwargs)
+    return fire_earth_spike(**kwargs)
 
 
 
 def fire_fire_ball(*args, **kwargs) -> EntityPhysical:
     """ fire fire ball """
-    return fireFireBall(**kwargs)
+    return fire_fire_ball(**kwargs)
 
 
 
@@ -603,3 +604,4 @@ weapon_funcs['fire ball'] = fire_fire_ball
 weapon_funcs['air tornado'] = fire_air_tornado
 weapon_funcs['pick axe'] = fire_pick_axe
 weapon_funcs['build'] = fire_build
+weapon_funcs['paintball'] = fire_paint_ball
