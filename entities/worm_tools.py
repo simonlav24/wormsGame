@@ -82,11 +82,11 @@ class Rope(WormUtility):
     def shoot(self, pos: Vector, direction: Vector):
         hit = False
         for t in range(5, 500):
-            testPos = pos + direction * t
-            if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() or testPos.x < 0 or testPos.y < 0:
+            test_pos = pos + direction * t
+            if test_pos.x >= MapManager().game_map.get_width() or test_pos.y >= MapManager().game_map.get_height() or test_pos.x < 0 or test_pos.y < 0:
                 continue
-            if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-                self.rope = [[testPos], dist(self.worm.pos, testPos)]
+            if MapManager().game_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
+                self.rope = [[test_pos], dist(self.worm.pos, test_pos)]
                 self.worm.damp = 0.6
                 self.worm.is_fall_affected = False
                 hit = True
@@ -143,11 +143,11 @@ class Rope(WormUtility):
         for i in range(int(self.rope[1])-2):
             start = self.worm.pos
             direction = (self.rope[0][-1] - self.worm.pos).normalize()
-            testPos = start + direction * i
-            if not MapManager().is_on_map(testPos):
+            test_pos = start + direction * i
+            if not MapManager().is_on_map(test_pos):
                 break
-            if MapManager().game_map.get_at(testPos.vec2tupint()) == GRD:
-                self.rope[0].append(testPos)
+            if MapManager().game_map.get_at(test_pos.vec2tupint()) == GRD:
+                self.rope[0].append(test_pos)
                 self.rope[1] = dist(self.worm.pos, self.rope[0][-1])
                 break
         if len(self.rope[0]) > 1:
@@ -155,10 +155,10 @@ class Rope(WormUtility):
             for i in range(int(dist(self.worm.pos, self.rope[0][-2]))):
                 start = self.worm.pos
                 direction = (self.rope[0][-2] - self.worm.pos).normalize()
-                testPos = start + direction * i
-                if not MapManager().is_on_map(testPos):
+                test_pos = start + direction * i
+                if not MapManager().is_on_map(test_pos):
                     break
-                if MapManager().game_map.get_at(testPos.vec2tupint()) == GRD:
+                if MapManager().game_map.get_at(test_pos.vec2tupint()) == GRD:
                     break
                 if i == count-1:
                     self.rope[1] = dist(self.worm.pos, self.rope[0][-2])

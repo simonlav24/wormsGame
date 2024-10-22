@@ -58,19 +58,19 @@ class PhysObj(Entity):
 		# colission with world:
 		r = angle - pi
 		while r < angle + pi:
-			testPos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
-			if testPos.x >= MapManager().game_map.get_width() or testPos.y >= MapManager().game_map.get_height() - GameVariables().water_level or testPos.x < 0:
+			test_pos = Vector((self.radius) * cos(r) + ppos.x, (self.radius) * sin(r) + ppos.y)
+			if test_pos.x >= MapManager().game_map.get_width() or test_pos.y >= MapManager().game_map.get_height() - GameVariables().water_level or test_pos.x < 0:
 				if GameVariables().config.option_closed_map:
-					response += ppos - testPos
+					response += ppos - test_pos
 					collision = True
 					r += pi /8
 					continue
 				else:
 					r += pi /8
 					continue
-			if testPos.y < 0:
-				if MapManager().is_ground_at((int(testPos.x), 0)):
-					response += ppos - testPos
+			if test_pos.y < 0:
+				if MapManager().is_ground_at((int(test_pos.x), 0)):
+					response += ppos - test_pos
 					collision = True
 					r += pi /8
 					continue
@@ -79,17 +79,17 @@ class PhysObj(Entity):
 				continue
 			
 			# collission with game map:
-			if MapManager().game_map.get_at((int(testPos.x), int(testPos.y))) == GRD:
-				response += ppos - testPos
+			if MapManager().game_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
+				response += ppos - test_pos
 				collision = True
 				r += pi /8; continue
 
 			else:
-				if not self.is_worm_collider and MapManager().worm_col_map.get_at((int(testPos.x), int(testPos.y))) != SKY_COL:
-					response += ppos - testPos
+				if not self.is_worm_collider and MapManager().worm_col_map.get_at((int(test_pos.x), int(test_pos.y))) != SKY_COL:
+					response += ppos - test_pos
 					collision = True
-				elif not self.is_extra_collider and MapManager().objects_col_map.get_at((int(testPos.x), int(testPos.y))) != SKY_COL:
-					response += ppos - testPos
+				elif not self.is_extra_collider and MapManager().objects_col_map.get_at((int(test_pos.x), int(test_pos.y))) != SKY_COL:
+					response += ppos - test_pos
 					collision = True
 			
 			r += pi / 8

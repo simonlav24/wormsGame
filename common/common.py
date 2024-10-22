@@ -104,6 +104,9 @@ class EntityWorm(EntityPhysical):
 
 
 class AutonomousEntity(EntityPhysical):
+	def can_engage(self) -> bool:
+		...
+	
 	def engage(self) -> bool:
 		...
 

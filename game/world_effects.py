@@ -95,6 +95,10 @@ class Earthquake(Entity):
 		if self.timer <= 0:
 			GameVariables().unregister_non_physical(self)
 			Earthquake.earthquake = 0
+	
+	def quake():
+		GameVariables().cam_pos[0] += Earthquake.earthquake * 25 * sin(GameVariables().time_overall)
+		GameVariables().cam_pos[1] += Earthquake.earthquake * 15 * sin(GameVariables().time_overall * 1.8)
 
 
 class Tornado:

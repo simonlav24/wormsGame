@@ -1,3 +1,4 @@
+''' weapon manager, handle weapon related mechanics '''
 
 from typing import List, Dict, Tuple
 from random import randint, choice
@@ -238,10 +239,10 @@ class WeaponManager(metaclass=SingletonMeta):
                     if self.current_weapon in key_weapons:
                         index = key_weapons.index(self.current_weapon)
                         index = (index + 1) % len(key_weapons)
-                        weaponSwitch = key_weapons[index]
+                        weapon_switch = key_weapons[index]
                     else:
-                        weaponSwitch = key_weapons[0]
-                self.switch_weapon(weaponSwitch)
+                        weapon_switch = key_weapons[0]
+                self.switch_weapon(weapon_switch)
                 self.render_weapon_count()
                 return True
         return False
@@ -280,13 +281,13 @@ class WeaponManager(metaclass=SingletonMeta):
         
         elif self.current_weapon.category == WeaponCategory.AIRSTRIKE and can_shoot_state:
             mouse = mouse_pos_in_world()
-            flip = False if GameVariables().airstrike_direction == RIGHT else True
+            flip = GameVariables().airstrike_direction != RIGHT
             win.blit(pygame.transform.flip(sprites.air_strike_indicator, flip, False), point2world(mouse - tup2vec(sprites.air_strike_indicator.get_size())/2))
         
         elif self.current_weapon.name == "earth spike" and can_shoot_state:
-            spikeTarget = calc_earth_spike_pos()
-            if spikeTarget:
-                draw_target(win, spikeTarget)
+            spike_target = calc_earth_spike_pos()
+            if spike_target:
+                draw_target(win, spike_target)
 
     def give_extra_starting_weapons(self) -> None:
         ''' give teams starting legendary weapons, utilities and tools '''

@@ -1,3 +1,4 @@
+''' main menu game room. '''
 
 import os
 import datetime
@@ -58,8 +59,6 @@ class MainMenuRoom(Room):
 
         self.initial_menu_pos = self.main_menu.pos
         self.on_resume()
-        # animator = MenuAnimator(self.main_menu, self.initial_menu_pos + Vector(0, GameGlobals().win_height), self.initial_menu_pos)
-        # self.gui.animators.append(animator)
 
     def on_resume(self, *args, **kwargs):
         super().on_resume(*args, **kwargs)
@@ -67,7 +66,6 @@ class MainMenuRoom(Room):
 
         record = kwargs.get('input', None)
         
-        # todo: win menu
         if record is not None:
             self.win_menu = self.initialize_win_menu(record)
             self.menus_positions['win_menu'] = vectorCopy(self.win_menu.pos)
@@ -114,7 +112,7 @@ class MainMenuRoom(Room):
                     args=[values],
                 )
             )
-            # self.on_play(values)
+
         
         elif event == 'exit':
             self.switch = SwitchRoom(Rooms.EXIT, False, None)
@@ -357,14 +355,15 @@ class MainMenuRoom(Room):
 
         end_menu.insert(Text(text=f'most damage dealt: {record.most_damage} by {record.damager}', custom_size=15))
         
-        max_points = max([team[2] for team in record.points])
-        for team_name, team_color, team_score in record.points:
-            score_stack = StackPanel(orientation=HORIZONTAL, custom_size=15)
-            score_stack.insert(Text(text=team_name, custom_size=50))
-            bar = score_stack.insert(LoadBar(value = 0, color=team_color, max_value=max_points))
-            end_menu.add_element(score_stack)
-            bar_animator = ElementAnimator(bar, 0, team_score, duration = GameGlobals().fps, time_offset=1 * GameGlobals().fps)
-            self.gui.animators.append(bar_animator)
+        if record.game_mode != GameMode.BATTLE.value:
+            max_points = max([team[2] for team in record.points])
+            for team_name, team_color, team_score in record.points:
+                score_stack = StackPanel(orientation=HORIZONTAL, custom_size=15)
+                score_stack.insert(Text(text=team_name, custom_size=50))
+                bar = score_stack.insert(LoadBar(value = 0, color=team_color, max_value=max_points))
+                end_menu.add_element(score_stack)
+                bar_animator = ElementAnimator(bar, 0, team_score, duration = GameGlobals().fps, time_offset=1 * GameGlobals().fps)
+                self.gui.animators.append(bar_animator)
 
         end_menu.insert(Button(key="win_menu_to_main_menu", text="continue"))
 
@@ -391,7 +390,7 @@ def browse_file():
 def test_record() -> GameRecord:
     return GameRecord(
             winning_team='mo',
-            game_mode='journey',
+            game_mode=GameMode.BATTLE.value,
             time=1290,
             most_damage=156,
             damager='ron',

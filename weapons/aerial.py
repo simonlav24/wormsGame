@@ -10,7 +10,7 @@ from common.vector import *
 
 from game.world_effects import boom
 from game.map_manager import MapManager, GRD, SKY
-from entities import Fire
+from entities.fire import Fire
 from weapons.grenades import PhysObj
 from weapons.missiles import SeekerBase, Missile
 from weapons.mine import Mine

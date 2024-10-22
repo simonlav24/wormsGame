@@ -17,6 +17,9 @@ class AutonomousObject(PhysObj):
         self.state = AutonomousState.IDLE
         GameVariables().register_autonomous(self)
 
+    def can_engage(self) -> bool:
+        ...
+
     def engage(self) -> bool:
         self.state = AutonomousState.ENGAGING
         return True
