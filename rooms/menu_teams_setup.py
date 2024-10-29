@@ -16,7 +16,7 @@ from common.vector import Vector, tup2vec, vectorCopy
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
-from common.team_data import TeamData, read_teams, read_teams_play, create_worm_surf
+from common.team_data import TeamData, read_teams, read_teams_play, write_teams_play
 
 
 def sprite_index_to_rect(index):
@@ -39,32 +39,27 @@ class TeamsMenu:
 
         size = Vector(GameGlobals().win_width - 30, GameGlobals().win_height - 30)
         pos = tup2vec(GameGlobals().win.get_size()) // 2 - size // 2
-        menu = StackPanel(orientation=VERTICAL, name="weapons", size=size, pos=pos )
+        menu = StackPanel(orientation=VERTICAL, size=size, pos=pos )
         
-        teams = read_teams()
-        self.teams = {team.team_name: team for team in teams}
+        available_teams = read_teams()
+        self.teams = {team.team_name: team for team in available_teams}
         teams_in_play = read_teams_play()
-        names = [team.team_name for team in teams]
+        names = [team.team_name for team in available_teams]
 
         columns = StackPanel(orientation=HORIZONTAL)
         column_teams_selection = StackPanel(orientation=VERTICAL)
         column_teams_selection.insert(Text('teams in game'))
         
-        teams_in_order = teams_in_play.copy()
+        running_name = 0
         for i in range(8):
             row = StackPanel(orientation=HORIZONTAL)
 
-            is_playing = True
-            team = None
-            team_data = None
-            if len(teams_in_order) == 0:
-                is_playing = False
-            else:
-                team = teams_in_order.pop(0)
-                team_data = self.teams[team]
+            team_name = names[running_name]
+            running_name = (running_name + 1) % len(names)
+            is_playing = team_name in teams_in_play
 
             row.insert(Toggle(text=' ', key=f'toggle_{i}', value=is_playing, custom_size=16))
-            combo = ComboSwitch(items=names, initial_item=team)
+            combo = ComboSwitch(items=names, initial_item=team_name, key=f'combo_{i}')
             self.team_combos.append(combo)
             row.insert(combo)
             row.insert(Button(key=f'edit_{i}', text='edit', custom_size=30))
@@ -125,4 +120,14 @@ class TeamsMenu:
         for i in range(8):
             name = self.current_team_edit.names[i]
             self.name_inputs[i].set_value(name)
-            
+    
+    def finalize(self):
+        ''' rewrite teams play '''
+        teams_list: List[str] = []
+        for i in range(8):
+            toggle_element: Toggle = self.gui.get_element_by_key(f'toggle_{i}')
+            combo_element: ComboSwitch = self.gui.get_element_by_key(f'combo_{i}')
+            if toggle_element.get_value():
+                teams_list.append(combo_element.get_value())
+
+        write_teams_play(teams_list)

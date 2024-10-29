@@ -1,11 +1,11 @@
 
 from typing import List, Dict, Any
-import json
 from random import choice, shuffle
 
 import pygame
 
-from common import desaturate, GameVariables, sprites, SingletonMeta, TeamData, EntityWorm, fonts, PATH_TEAMS_LIST
+from common import desaturate, GameVariables, sprites, SingletonMeta, EntityWorm, fonts, PATH_TEAMS_LIST
+from common.team_data import TeamData, read_teams, read_teams_play
 from game.hud import HealthBar
 
 
@@ -55,13 +55,8 @@ class Team:
 
 class TeamManager(metaclass=SingletonMeta):
     def __init__(self):
-
-        with open(PATH_TEAMS_LIST, 'r') as file:
-            teams = json.load(file)
-        data_list = [TeamData.model_validate(data) for data in teams]
-        self.teams: List[Team] = [Team(data) for data in data_list]
-
-        self.generate_hats()
+        self.teams: List[Team] = []
+        self.load_teams()
 
         num_of_teams = len(self.teams)
         GameVariables().num_of_teams = num_of_teams
@@ -81,6 +76,15 @@ class TeamManager(metaclass=SingletonMeta):
         # score list
         self.score_list: List[Dict[str, Any]] = []
     
+    def load_teams(self) -> None:
+        available_teams = read_teams()
+        teams_in_play = read_teams_play()
+        
+        data_list = [TeamData.model_validate(data) for data in available_teams]
+        self.teams = [Team(data) for data in data_list if data.team_name in teams_in_play]
+
+        self.generate_hats()
+
     def get_info(self) -> List[Dict[str, Any]]:
         info = []
         for team in self.teams:

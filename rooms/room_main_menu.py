@@ -40,18 +40,20 @@ class MainMenuRoom(Room):
         self.gui = Gui()
 
         self.map_paths = grab_maps([PATH_MAPS])
-        self.image_element: ImageDrag = None
+        self.image_element_key = 'map_path'
 
         # self.weapon_sets_list = None
-        self.weapon_set_combo: ComboSwitch = None
-        self.update_weapon_sets()
+        self.weapon_set_combo_key = 'weapon_set'
 
         self.main_menu = self.initialize_main_menu()
+        self.gui.insert(self.main_menu)
+        self.update_weapon_sets()
+        
         self.weapon_menu = WeaponMenu(self.gui)
         self.teams_menu = TeamsMenu(self.gui)
         self.win_menu: StackPanel = None
         
-        self.gui.insert(self.main_menu)
+        
 
         self.menus_positions = {
             'main_menu': vectorCopy(self.main_menu.pos),
@@ -118,7 +120,8 @@ class MainMenuRoom(Room):
             self.switch = SwitchRoom(Rooms.EXIT, False, None)
         
         elif event == 'random_image':
-            self.image_element.set_image(choice(self.map_paths))
+            image_element: ImageDrag = self.gui.get_element_by_key(self.image_element_key)
+            image_element.set_image(choice(self.map_paths))
         
         elif event == "generate":
             width, height = 800, 300
@@ -131,12 +134,14 @@ class MainMenuRoom(Room):
                 f'noise{x.day}{x.month}{x.year % 100}{x.hour}{x.minute}.png'
             )
             pygame.image.save(noise, output_path)
-            self.image_element.set_image(output_path)
+            image_element: ImageDrag = self.gui.get_element_by_key(self.image_element_key)
+            image_element.set_image(output_path)
         
         elif event == 'browse':
             filepath = browse_file()
             if filepath:
-                self.image_element.set_image(filepath)
+                image_element: ImageDrag = self.gui.get_element_by_key(self.image_element_key)
+                image_element.set_image(filepath)
         
         elif event == 'feel_index':
             self.feel_index = values['feel_index']
@@ -155,6 +160,16 @@ class MainMenuRoom(Room):
             self.gui.animators.append(weapon_out)
             self.update_weapon_sets()
 
+        elif event == 'teams_to_main':
+            self.teams_menu.finalize()
+            main_menu_pos = self.menus_positions['main_menu']
+            teams_menu_pos = self.menus_positions['teams_menu']
+
+            main_menu_in = MenuAnimator(self.main_menu, main_menu_pos + Vector(GameGlobals().win_width, 0), main_menu_pos)
+            teams_out = MenuAnimator(self.teams_menu.get_menu(), teams_menu_pos, teams_menu_pos - Vector(GameGlobals().win_width, 0))
+            self.gui.animators.append(main_menu_in)
+            self.gui.animators.append(teams_out)
+
         elif event == 'teams setup':
             self.on_team_setup()
 
@@ -166,7 +181,7 @@ class MainMenuRoom(Room):
 
         elif self.handle_win_events(event, values):
             pass
-            
+
     def on_play(self, values):
         ''' on press play button '''
         config = GameConfig(
@@ -183,11 +198,11 @@ class MainMenuRoom(Room):
             rounds_for_sudden_death=values['rounds_for_sudden_death'],
             sudden_death_style=SuddenDeathMode(values['sudden_death_style']),
             random_mode=RandomMode(values['random_mode']),
-            map_path=values['map_path'],
+            map_path=values[self.image_element_key],
             is_recolor=values['is_recolor'],
             map_ratio=values['map_ratio'],
             feel_index=values['feel_index'],
-            weapon_set=values['weapon_set'],
+            weapon_set=values[self.weapon_set_combo_key],
         )
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
 
@@ -262,8 +277,7 @@ class MainMenuRoom(Room):
 
         # map options vertical sub menu
         map_menu = StackPanel(name="map menu", orientation=VERTICAL)
-        self.image_element = ImageDrag(key="map_path", image=choice(self.map_paths))
-        map_menu.insert(self.image_element)
+        map_menu.insert(ImageDrag(key=self.image_element_key, image=choice(self.map_paths)))
 
         # map buttons
         sub_map = StackPanel(orientation = HORIZONTAL, custom_size=15)
@@ -288,9 +302,7 @@ class MainMenuRoom(Room):
         sub_weapons.insert(Button(key="weapons setup", text="weapons setup"))
 
         sub_weapons.insert(Text("weapons set:"))
-        self.weapon_set_combo = ComboSwitch(name="weapon_combo", key="weapon_set")
-        sub_weapons.insert(self.weapon_set_combo)
-        self.update_weapon_sets()
+        sub_weapons.insert(ComboSwitch(name="weapon_combo", key=self.weapon_set_combo_key))
         main_menu.add_element(sub_weapons)
 
         sub_more = StackPanel(orientation=HORIZONTAL, custom_size=14)
@@ -306,13 +318,14 @@ class MainMenuRoom(Room):
 
     def update_weapon_sets(self) -> None:
         self.weapon_sets_list = read_weapon_sets()
-        if self.weapon_set_combo is None:
+        weapon_set_combo: ComboSwitch = self.gui.get_element_by_key(self.weapon_set_combo_key)
+        if weapon_set_combo is None:
             return
         
         weapon_sets_names = [dictionary['name'] for dictionary in self.weapon_sets_list]
         weapon_sets_names.insert(0, 'default')
 
-        self.weapon_set_combo.update_items(weapon_sets_names)
+        weapon_set_combo.update_items(weapon_sets_names)
 
     def on_weapon_setup(self):
         menu = self.weapon_menu.get_menu()

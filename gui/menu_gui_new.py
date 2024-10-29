@@ -49,6 +49,13 @@ class Gui:
     def show_cursor(self, cursor, element):
         pygame.mouse.set_cursor(cursor)
     
+    def get_element_by_key(self, key: Any) -> 'GuiElement':
+        for menu in self.menus:
+            element = menu.get_element_by_key(key)
+            if element is not None:
+                return element
+        return None
+
     def toast(self, text: str) -> None:
         self.toast_surf = fonts.pixel5_halo.render(text, False, WHITE)
         self.toast_timer = 2 * GameGlobals().fps
@@ -199,6 +206,11 @@ class GuiElement(ABC):
     def notify_event(self, event) -> None:
         self.parent.notify_event(event)
 
+    def get_element_by_key(self, key: Any) -> 'GuiElement':
+        if self.key == key:
+            return self
+        return None
+
 
 class StackPanel(GuiElement):
     def __init__(self, pos=None, size=None, name="", orientation=VERTICAL, margin=1, custom_size=None, *args, **kwargs):
@@ -280,6 +292,13 @@ class StackPanel(GuiElement):
     def insert(self, element: GuiElement):
         self.add_element(element)
         return element
+    
+    def get_element_by_key(self, key: Any) -> 'GuiElement':
+        for element in self.elements:
+            found_element = element.get_element_by_key(key)
+            if found_element is not None:
+                return found_element
+        return None
 
 
 class Text(GuiElement):
@@ -407,6 +426,9 @@ class Toggle(GuiElement):
     def get_values(self):
         return {self.key: self.value}
     
+    def get_value(self) -> bool:
+        return self.value
+
     def step(self):
         super().step()
         self.selection_check()
@@ -438,7 +460,7 @@ class ComboSwitch(GuiElement):
     def get_values(self):
         return {self.key: self.value}
     
-    def get_value(self):
+    def get_value(self) -> str:
         return self.value
     
     def set_items(self, strings, mapping=None):
@@ -671,8 +693,8 @@ class Input(GuiElement):
         value = self.value
         if self.eval_type == 'int':
             if self.value == '':
-                self.value = self.default_value
-            value = int(self.value)
+                value = self.default_value
+            value = int(value)
         return {self.key: value}
     
     def step(self):
@@ -683,7 +705,7 @@ class Input(GuiElement):
                 self.timer = 0
             if self.value != self.old_input_text:
                 render_text = self.value
-                self.surf = fonts.pixel5.render(render_text, True, WHITE)
+                self.surf = fonts.pixel5.render(str(render_text), True, WHITE)
                 self.old_input_text = self.value
         mouse_pos = mouse_in_win()
         button_pos = self.get_super_pos() + self.pos
