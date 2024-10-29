@@ -425,7 +425,10 @@ class ComboSwitch(GuiElement):
         super().__init__(*args, **kwargs)
         self.surf = None
         self.current_index = 0
-        self.items = kwargs.get('items', [])
+        self.items: List[str] = kwargs.get('items', [])
+        current_item = kwargs.get('initial_item', None)
+        if current_item is not None:
+            self.current_index = self.items.index(current_item)
         self.text = kwargs.get('text', 'combo')
         if self.items:
             self.set_items(self.items, kwargs.get('mapping', None))
@@ -434,6 +437,9 @@ class ComboSwitch(GuiElement):
     
     def get_values(self):
         return {self.key: self.value}
+    
+    def get_value(self):
+        return self.value
     
     def set_items(self, strings, mapping=None):
         self.items = []
@@ -593,7 +599,7 @@ class ImageDrag(GuiElement):
 class SurfElement(GuiElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.surf = None
+        self.surf = kwargs.get('surf')
 
     def set_surf(self, surf):
         self.surf = surf
@@ -613,13 +619,12 @@ class Input(GuiElement):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mode = InputMode.IDLE
-        self.input_text = ""
         self.old_input_text = ""
-        self.value = self.input_text
+        if self.value == 'value':
+            self.value = ''
         self.default_value = kwargs.get('default_value', '')
         self.text = kwargs.get('text', '')
-        self.surf = None
-        self.render_surf(self.text)
+        self.surf = fonts.pixel5.render(self.text, True, WHITE)
         self.cursor_speed = GameVariables().fps // 4
         self.show_cursor = False
         self.timer = 0
@@ -632,21 +637,35 @@ class Input(GuiElement):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.selected:
                 self.mode = InputMode.EDIT
+                self.render_input_text()
             else:
                 self.mode = InputMode.IDLE
+                self.render_input_text()
         
         if event.type == pygame.KEYDOWN:
             if self.mode == InputMode.EDIT:
                 self.process_key(event)
 
+    def set_value(self, value: str) -> None:
+        self.value = value
+        self.render_input_text()
+
+    def render_input_text(self) -> None:
+        text = str(self.value)
+        if self.mode == InputMode.EDIT:
+            pass
+        elif text == "":
+            text = self.text
+        self.surf = fonts.pixel5.render(text, True, WHITE)
+
     def process_key(self, event):
-        if event.key == pygame.K_BACKSPACE and len(self.input_text) > 0:
-            self.input_text = self.input_text[:-1]
+        if event.key == pygame.K_BACKSPACE and len(self.value) > 0:
+            self.value = self.value[:-1]
         elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
             self.mode = InputMode.IDLE
-        else:
-            self.input_text += event.unicode
-        self.value = self.input_text
+        elif event.unicode.isprintable():
+            self.value += event.unicode
+        self.value = self.value
     
     def get_values(self):
         value = self.value
@@ -662,12 +681,10 @@ class Input(GuiElement):
             if self.timer >= self.cursor_speed:
                 self.show_cursor = not self.show_cursor
                 self.timer = 0
-            if self.input_text != self.old_input_text:
-                render_text = self.input_text
-                if render_text == '':
-                    render_text = self.text
+            if self.value != self.old_input_text:
+                render_text = self.value
                 self.surf = fonts.pixel5.render(render_text, True, WHITE)
-                self.old_input_text = self.input_text
+                self.old_input_text = self.value
         mouse_pos = mouse_in_win()
         button_pos = self.get_super_pos() + self.pos
         pos_in_button = (mouse_pos[0] - button_pos[0], mouse_pos[1] - button_pos[1])

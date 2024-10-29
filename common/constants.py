@@ -21,6 +21,7 @@ PATH_WEAPON_LIST = r'./assets/weapons.json'
 PATH_WEAPON_SETS = r'./assets/weapon_sets'
 PATH_GAME_RECORD = r'./game_record.json'
 PATH_TEAMS_LIST = r'./assets/teams.json'
+PATH_TEAMS_PLAY = r'./assets/teams_play.json'
 PATH_WEAPON_SET = r'./assets/weapon_sets/__name__.json'
 PATH_FONT = r'./assets/pixelFont.ttf'
 

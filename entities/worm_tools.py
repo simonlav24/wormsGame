@@ -21,6 +21,9 @@ class WormUtility:
 
     def is_movement_blocking(self) -> bool:
         return True
+    
+    def damp_multiplier(self) -> float:
+        return 1.0
 
     def step(self):
         pass
@@ -30,6 +33,7 @@ class WormUtility:
 
     def apply_force(self):
         pass
+
 
 class JetPack(WormUtility):
     def __init__(self, worm: EntityPhysical):
@@ -68,6 +72,7 @@ class JetPack(WormUtility):
         pygame.draw.rect(win, (220,220,220),(point2world(self.worm.pos + Vector(-10, -25)), (20,3)))
         pygame.draw.rect(win, (0,0,220),(point2world(self.worm.pos + Vector(-10, -25)), (int(value),3)))
 
+
 class Rope(WormUtility):
     def __init__(self, worm: EntityPhysical, pos: Vector, direction: Vector):
         super().__init__()
@@ -87,7 +92,6 @@ class Rope(WormUtility):
                 continue
             if MapManager().game_map.get_at((int(test_pos.x), int(test_pos.y))) == GRD:
                 self.rope = [[test_pos], dist(self.worm.pos, test_pos)]
-                self.worm.damp = 0.6
                 self.worm.is_fall_affected = False
                 hit = True
                 break
@@ -96,7 +100,6 @@ class Rope(WormUtility):
     
     def release(self) -> None:
         self.is_done = True
-        self.worm.damp = 0.2
         self.worm.is_fall_affected = True
 
     def apply_force(self):
@@ -163,7 +166,9 @@ class Rope(WormUtility):
                 if i == count-1:
                     self.rope[1] = dist(self.worm.pos, self.rope[0][-2])
                     self.rope[0].pop(-1)
-        self.worm.damp = 0.7
+
+    def damp_multiplier(self):
+        return 5.0
 
     def draw(self, win: pygame.Surface):
         if self.is_done:
@@ -171,6 +176,7 @@ class Rope(WormUtility):
         rope = [point2world(x) for x in self.rope[0]]
         rope.append(point2world(self.worm.pos))
         pygame.draw.lines(win, (250,250,0), False, rope)
+
 
 class Parachute(WormUtility):
     def __init__(self, worm: EntityPhysical):
@@ -191,6 +197,7 @@ class Parachute(WormUtility):
         if self.worm.vel.y < 1:
             self.release()
         self.worm.vel.x = GameVariables().physics.wind * 1.5
+
 
 class WormTool():
     def __init__(self):
@@ -238,4 +245,9 @@ class WormTool():
         if self.tool is None:
             return False
         return self.tool.is_movement_blocking()
+    
+    def damp_multiplier(self) -> float:
+        if self.tool is None:
+            return 1.0
+        return self.tool.damp_multiplier()
 

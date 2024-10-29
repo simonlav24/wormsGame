@@ -16,6 +16,9 @@ from entities.physical_entity import PhysObj
 from game.map_manager import MapManager, GRD_COL
 from entities.worm_tools import WormTool
 
+WORM_DAMP_IDLE = 0.2
+WORM_DAMP_PLAYER = 0.1
+
 class Worm(PhysObj):
     healthMode = 0
     def __init__(self, pos, name, team=None):
@@ -25,7 +28,7 @@ class Worm(PhysObj):
 
         self.color = (255, 206, 167)
         self.radius = 3.5
-        self.damp = 0.2
+        self.damp = WORM_DAMP_IDLE
 
         self.facing = RIGHT if self.pos.x < MapManager().game_map.get_width() / 2 else LEFT
         self._shoot_angle = pi / 2
@@ -226,6 +229,8 @@ class Worm(PhysObj):
     def turn(self, direction: int) -> None:
         if not GameVariables().player_can_move:
             return
+        self.shoot_vel = 0.0
+        self.shoot_acc = 0.0
         self.facing = direction
         GameVariables().cam_track = self
 
@@ -293,9 +298,9 @@ class Worm(PhysObj):
             else:
                 self.shoot_acc = 0
                 self.shoot_vel = 0
-            self.damp = 0.1
+            self.damp = WORM_DAMP_PLAYER * self.worm_tool.damp_multiplier()
         else:
-            self.damp = 0.2
+            self.damp = WORM_DAMP_IDLE
             self.shoot_acc = 0
             self.shoot_vel = 0
 

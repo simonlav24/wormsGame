@@ -21,6 +21,7 @@ wip = '''
 		holding mjolnir
 		refactor bubble
 		team creation screen
+		pressing 0 to cycle legendaries
 	'''
 
 def main():

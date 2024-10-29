@@ -66,7 +66,7 @@ class WeaponManager(metaclass=SingletonMeta):
         ''' add weapon to list of cool downs '''
         if weapon.style in [WeaponStyle.SPECIAL, WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL]:
             return
-        if weapon.name in ['fly', 'flare']:
+        if weapon.name in ['fly', 'flare', 'ender pearl']:
             return
         self.cool_down_list_surfaces.append(fonts.pixel5_halo.render(weapon.name, False, GameVariables().initial_variables.hud_color))
         self.cool_down_list.append(weapon)
@@ -226,7 +226,12 @@ class WeaponManager(metaclass=SingletonMeta):
                 key_weapons = [self.weapon_dict[w] for w in ["minigun"]]
                 is_weapon_switched = True
             elif event.key == pygame.K_0:
-                pass
+                key_weapons = []
+                for weapon_index, amount in enumerate(TeamManager().current_team.weapon_set):
+                    weapon = self.weapons[weapon_index]
+                    if weapon.category in [WeaponCategory.LEGENDARY, WeaponCategory.ARTIFACTS] and (amount > 0 or amount == -1):
+                        key_weapons.append(weapon)
+                is_weapon_switched = True
             elif event.key == pygame.K_MINUS:
                 key_weapons = [self.weapon_dict[w] for w in ["rope"]]
                 is_weapon_switched = True

@@ -161,6 +161,9 @@ class MainMenuRoom(Room):
         elif self.weapon_menu.handle_events(event, values):
             pass
 
+        elif self.teams_menu.handle_events(event, values):
+            pass
+
         elif self.handle_win_events(event, values):
             pass
             
