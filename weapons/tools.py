@@ -12,6 +12,7 @@ from game.team_manager import TeamManager
 from entities import PhysObj
 from game.visual_effects import Blast, EffectManager
 from entities.gun_shell import GunShell
+from game.sfx import Sfx, SfxIndex
 
 TRAMPOLINE_MAX_VEL = 8
 TRAMPOLINE_MIN_VEL = 3
@@ -125,6 +126,7 @@ class Trampoline:
 					obj.vel.x += uniform(-0.5,0.5)
 	
 	def spring(self, amount):
+		Sfx().play(SfxIndex.TRAMPOLINE_BOUNCE)
 		self.offset = -amount
 		self.stable = False
 	
@@ -142,6 +144,7 @@ class Baseball:
 	def __init__(self):	
 		self.direction = GameVariables().player.get_shooting_direction()
 		GameVariables().register_non_physical(self)
+		Sfx().play(SfxIndex.BASEBALL)
 		self.timer = 0
 		hitted = []
 		for t in range(5, 25):
@@ -160,6 +163,8 @@ class Baseball:
 						worm.damage(randint(15,25))
 						worm.vel += self.direction * 8
 						GameVariables().cam_track = worm
+		if len(hitted) > 0:
+			Sfx().play(SfxIndex.PUNCH)
 
 	def step(self):
 		self.timer += 1 * GameVariables().dt

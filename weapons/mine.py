@@ -1,6 +1,6 @@
 
 
-from random import randint
+from random import randint, choice
 
 import pygame
 
@@ -10,6 +10,7 @@ from common.vector import *
 from game.visual_effects import EffectManager
 from game.world_effects import boom
 from entities.physical_entity import PhysObj
+from game.sfx import Sfx, SfxIndex
 
 
 class Mine(PhysObj):
@@ -38,7 +39,7 @@ class Mine(PhysObj):
 				if worm.health <= 0:
 					continue
 				if distus(self.pos, worm.pos) < 625:
-					self.activated = True
+					self.activate()
 		else:
 			self.timer += 1
 			self.stable = False
@@ -48,12 +49,22 @@ class Mine(PhysObj):
 		if self.activated:
 			EffectManager().add_light(vectorCopy(self.pos), 50, (100,0,0,100))
 
+	def activate(self):
+		self.activated = True
+		Sfx().play(SfxIndex.MINE_ACTIVATE)
+		Sfx().loop_increase(SfxIndex.MINE_LOOP)
+
 	def death_response(self):
 		boom(self.pos, 30)
 	
 	def remove_from_game(self) -> None:
 		super().remove_from_game()
 		GameVariables().get_obscuring_objects().remove(self)
+		Sfx().loop_decrease(SfxIndex.MINE_LOOP)
+
+	def on_collision(self, ppos):
+		if self.sound_collision and self.vel.getMag() > 1.5:
+			Sfx().play(choice([SfxIndex.COL1, SfxIndex.COL2, SfxIndex.COL3, SfxIndex.COL4]))
 
 	def draw(self, win: pygame.Surface):
 		if GameVariables().config.option_digging:
@@ -82,6 +93,7 @@ class Gemino(PhysObj):
 		self.damp = 0.6
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		m = Mine(self.pos)
 		m.vel = vectorUnitRandom() 
 	

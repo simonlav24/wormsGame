@@ -26,6 +26,7 @@ class GunShell(PhysObj):
 			self.surf = pygame.Surface((16,16), pygame.SRCALPHA)
 			self.surf.blit(sprites.sprite_atlas, (0,0), (16,112,16,16))
 		self.angle = uniform(0, 2 * pi)
+		self.sound_collision = False
 
 	def apply_force(self):
 		self.acc.y += GameVariables().physics.global_gravity * 2.5

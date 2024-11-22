@@ -66,7 +66,7 @@ class WeaponManager(metaclass=SingletonMeta):
         ''' add weapon to list of cool downs '''
         if weapon.style in [WeaponStyle.SPECIAL, WeaponStyle.UTILITY, WeaponStyle.WORM_TOOL]:
             return
-        if weapon.name in ['fly', 'flare', 'ender pearl']:
+        if weapon.name in ['fly', 'flare', 'ender pearl', 'trampoline']:
             return
         self.cool_down_list_surfaces.append(fonts.pixel5_halo.render(weapon.name, False, GameVariables().initial_variables.hud_color))
         self.cool_down_list.append(weapon)
@@ -189,7 +189,13 @@ class WeaponManager(metaclass=SingletonMeta):
 
         return handled
 
-
+    def _switch_weapons_in_category(self, category: WeaponCategory) -> List[Weapon]:
+        key_weapons = []
+        for weapon_index, amount in enumerate(TeamManager().current_team.weapon_set):
+            weapon = self.weapons[weapon_index]
+            if weapon.category == category and (amount > 0 or amount == -1):
+                key_weapons.append(weapon)
+        return key_weapons
 
     def hot_keys_switch(self, event) -> bool:
         ''' handle pygame events, return true if event handled '''
@@ -197,47 +203,34 @@ class WeaponManager(metaclass=SingletonMeta):
         if GameVariables().game_state == GameState.PLAYER_PLAY:
             if not event.type == pygame.KEYDOWN:
                 return False
-            is_weapon_switched = False
+            is_weapon_switched = True
             if event.key == pygame.K_1:
-                key_weapons = [self.weapon_dict[w] for w in ["missile", "gravity missile", "homing missile"]]
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.MISSILES)
             elif event.key == pygame.K_2:
-                key_weapons = [self.weapon_dict[w] for w in ["grenade", "sticky bomb", "electric grenade"]]
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.GRENADES)
             elif event.key == pygame.K_3:
-                key_weapons = [self.weapon_dict[w] for w in ["cluster grenade", "raon launcher"]]
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.GUNS)
             elif event.key == pygame.K_4:
-                key_weapons = [self.weapon_dict[w] for w in ["petrol bomb", "flame thrower"]]
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.FIREY)
             elif event.key == pygame.K_5:
-                key_weapons = [self.weapon_dict[w] for w in ["TNT", "mine", "sheep"]]
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.BOMBS)
             elif event.key == pygame.K_6:
-                key_weapons = [self.weapon_dict[w] for w in ["shotgun", "long bow", "gamma gun", "laser gun"]]
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.TOOLS)
             elif event.key == pygame.K_7:
-                key_weapons = [self.weapon_dict[w] for w in ["girder", "baseball"]]
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.AIRSTRIKE)
             elif event.key == pygame.K_8:
                 key_weapons = [self.weapon_dict[w] for w in ["drill missile", "laser gun", "minigun"]]
-                is_weapon_switched = True
             elif event.key == pygame.K_9:
                 key_weapons = [self.weapon_dict[w] for w in ["minigun"]]
-                is_weapon_switched = True
             elif event.key == pygame.K_0:
-                key_weapons = []
-                for weapon_index, amount in enumerate(TeamManager().current_team.weapon_set):
-                    weapon = self.weapons[weapon_index]
-                    if weapon.category in [WeaponCategory.LEGENDARY, WeaponCategory.ARTIFACTS] and (amount > 0 or amount == -1):
-                        key_weapons.append(weapon)
-                is_weapon_switched = True
+                key_weapons = self._switch_weapons_in_category(WeaponCategory.LEGENDARY)
+                key_weapons += self._switch_weapons_in_category(WeaponCategory.ARTIFACTS)
             elif event.key == pygame.K_MINUS:
                 key_weapons = [self.weapon_dict[w] for w in ["rope"]]
-                is_weapon_switched = True
             elif event.key == pygame.K_EQUALS:
                 key_weapons = [self.weapon_dict[w] for w in ["parachute"]]
-                is_weapon_switched = True            
+            else:
+                is_weapon_switched = False     
 
             if is_weapon_switched:
                 if len(key_weapons) > 0:
@@ -247,8 +240,9 @@ class WeaponManager(metaclass=SingletonMeta):
                         weapon_switch = key_weapons[index]
                     else:
                         weapon_switch = key_weapons[0]
-                self.switch_weapon(weapon_switch)
-                self.render_weapon_count()
+                
+                    self.switch_weapon(weapon_switch)
+                    self.render_weapon_count()
                 return True
         return False
 

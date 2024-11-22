@@ -3,13 +3,14 @@
 import pygame
 from math import atan2, pi, sin, cos
 from typing import List
+from random import choice
 
 from common import Entity, GameVariables, point2world, CRITICAL_FALL_VELOCITY, sprites, DamageType
 from common.vector import Vector
 
 from game.map_manager import MapManager, GRD, SKY, SKY_COL, GRD_COL
 from game.visual_effects import splash
-
+from game.sfx import SfxIndex, Sfx
 
 class PhysObj(Entity):
 	''' a physical object '''
@@ -37,6 +38,8 @@ class PhysObj(Entity):
 		# colliders, *false* means colliding with
 		self.is_extra_collider = False
 		self.is_worm_collider = False
+
+		self.sound_collision = True
 	
 	def step(self) -> None:
 		self.apply_force()
@@ -97,7 +100,7 @@ class PhysObj(Entity):
 		magVel = self.vel.getMag()
 		
 		if collision:
-			
+
 			self.on_collision(ppos)
 			if magVel > CRITICAL_FALL_VELOCITY and self.is_fall_affected:
 				self.fall_damage()
@@ -147,6 +150,7 @@ class PhysObj(Entity):
 		if self.dead:
 			self.death_response()
 			self.remove_from_game()
+			return
 		
 		self.secondaryStep()
 	
@@ -194,7 +198,8 @@ class PhysObj(Entity):
 		pass
 	
 	def on_collision(self, ppos):
-		pass
+		if self.sound_collision and self.vel.getMag() > 0.8:
+			Sfx().play(choice([SfxIndex.COL1, SfxIndex.COL2, SfxIndex.COL3, SfxIndex.COL4]))
 	
 	def on_out_of_map(self):
 		pass

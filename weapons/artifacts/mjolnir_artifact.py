@@ -32,6 +32,7 @@ class MjolnirArtifact(DeployableArtifact):
 			self.angle = -degrees(self.vel.getAngle()) - 90
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		vel = self.vel.getMag()
 		if vel > 4:
 			boom(self.pos, max(20, 2 * self.vel.getMag()))
@@ -92,17 +93,22 @@ class MjolnirThrow(PhysObj):
 				self.worms.remove(worm)
 		
 		GameVariables().game_distable()
+	
 	def returnToWorm(self):
 		MjolnirReturn(self.pos, self.angle)
+
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		vel = self.vel.getMag()
 		# print(vel, vel * 4)
 		if vel > 4:
 			boom(self.pos, max(20, 4 * self.vel.getMag()))
 		elif vel < 1:
 			self.vel *= 0
+	
 	def on_out_of_map(self):
 		self.returnToWorm()
+	
 	def draw(self, win: pygame.Surface):
 		for worm in self.worms:
 			draw_lightning(win, self.pos, worm.pos)
@@ -118,6 +124,7 @@ class MjolnirReturn:
 		self.angle = angle
 		GameVariables().cam_track = self
 		self.speedLimit = 8
+	
 	def step(self):
 		self.acc = seek(self, GameVariables().player.pos, self.speedLimit, 1)
 		
@@ -129,6 +136,7 @@ class MjolnirReturn:
 		GameVariables().game_distable()
 		if distus(self.pos, GameVariables().player.pos) < GameVariables().player.radius * GameVariables().player.radius * 2:
 			GameVariables().unregister_non_physical(self)
+	
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(sprites.image_mjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size()) / 2))
@@ -145,6 +153,7 @@ class MjolnirFly(PhysObj):
 		self.rotating = True
 		self.angle = 0
 		MjolnirFly.flying = True
+	
 	def step(self):
 		super().step()
 		if self.vel.getMag() > 1:
@@ -156,7 +165,9 @@ class MjolnirFly(PhysObj):
 			
 		GameVariables().player.pos = vectorCopy(self.pos)
 		GameVariables().player.vel = Vector()
+	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		# colission with world:
 		response = Vector(0,0)
 		angle = atan2(self.vel.y, self.vel.x)
@@ -188,6 +199,7 @@ class MjolnirFly(PhysObj):
 	def remove_from_game(self):
 		GameVariables().unregister_physical(self)
 		MjolnirFly.flying = False
+	
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(sprites.image_mjolnir, self.angle)
 		win.blit(surf , point2world(self.pos - tup2vec(surf.get_size())/2))
@@ -203,6 +215,7 @@ class MjolnirStrike:
 		self.facing = GameVariables().player.facing
 		GameVariables().player.is_boom_affected = False
 		self.radius = 0
+	
 	def step(self):
 		self.pos = GameVariables().player.pos
 		self.facing = GameVariables().player.facing
@@ -234,6 +247,7 @@ class MjolnirStrike:
 				GameVariables().player.is_boom_affected = True
 		self.timer += 1
 		GameVariables().game_distable()
+	
 	def draw(self, win: pygame.Surface):
 		surf = pygame.transform.rotate(sprites.image_mjolnir, self.angle)
 		surf = pygame.transform.flip(surf, self.facing == LEFT, False)

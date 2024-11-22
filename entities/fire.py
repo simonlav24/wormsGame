@@ -7,12 +7,14 @@ from common.vector import *
 from entities import PhysObj
 from game.visual_effects import FireBlast, EffectManager
 from game.world_effects import boom
+from game.sfx import Sfx, SfxIndex
 
 
 class Fire(PhysObj):
 	def __init__(self, pos, delay = 0):
 		super().__init__(pos)
 		GameVariables().get_debries().append(self)
+		# GameVariables().register_fire_particle(self)
 		self.pos = Vector(pos[0], pos[1])
 		self.damp = 0
 		self.red = 255
@@ -25,11 +27,16 @@ class Fire(PhysObj):
 		self.delay = delay
 		self.timer = 0
 		self.is_worm_collider = True
+		self.sound_collision = False
+		Sfx().loop_increase(SfxIndex.FIRE_LOOP)
 
 	def remove_from_game(self) -> None:
 		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.FIRE_LOOP, 1000)
+		# GameVariables().unregister_fire_particle(self)
 
-	def on_collision(self, ppos):		
+	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		self.fallen = True
 
 	def step(self):

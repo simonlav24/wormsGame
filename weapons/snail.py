@@ -75,6 +75,7 @@ class SnailShell(PhysObj):
 		self.surf = surf
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		finalPos = vectorCopy(self.pos)
 		finalAnchor = None
 

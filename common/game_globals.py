@@ -27,3 +27,15 @@ class GameGlobals(metaclass=SingletonMeta):
 
     def update_win(self, win: pygame.Surface):
         pass
+
+    def full_screen(self):
+        self.screen_width = 1920
+        self.screen_height = 1080
+        GameGlobals().win_width = int(GameGlobals().screen_width / GameGlobals().scale_factor)
+        GameGlobals().win_height = int(GameGlobals().screen_height / GameGlobals().scale_factor)
+
+        GameGlobals().win = pygame.Surface((GameGlobals().win_width, GameGlobals().win_height))
+        screen = pygame.display.set_mode((GameGlobals().screen_width, GameGlobals().screen_height), pygame.DOUBLEBUF | pygame.FULLSCREEN)
+        GameGlobals().screen = screen
+
+

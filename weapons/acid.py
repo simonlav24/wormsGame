@@ -10,8 +10,9 @@ from common.vector import *
 from game.map_manager import MapManager, SKY
 from game.visual_effects import EffectManager
 from game.world_effects import boom
-from entities import PhysObj, Worm
-from weapons.fire_weapons import PetrolBomb
+from entities import PhysObj
+from game.sfx import Sfx, SfxIndex
+
 
 def square_collision(pos1, pos2, rad1, rad2) -> bool:
 	return True if pos1.x < pos2.x + rad2 * 2 and pos1.x + rad1 * 2 > pos2.x and pos1.y < pos2.y + rad2 * 2 and pos1.y + rad1 * 2 > pos2.y else False
@@ -25,17 +26,20 @@ class Acid(PhysObj):
 		self.radius = 2
 		self.damp = 0
 		self.is_wind_affected = 0.5
-		self.inGround = False
+		self.in_ground = False
 		self.is_worm_collider = True
-		self.color = (200,255,200)
+		self.color = (200, 255, 200)
 		self.damageCooldown = 0
+		Sfx().loop_increase(SfxIndex.ACID_LOOP)
+		self.sound_collision = False
 	
 	def on_collision(self, ppos):
-		self.inGround = True
+		super().on_collision(ppos)
+		self.in_ground = True
 	
 	def step(self):
 		super().step()
-		if self.inGround:
+		if self.in_ground:
 			pygame.draw.circle(MapManager().game_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
 			pygame.draw.circle(MapManager().ground_map, SKY, self.pos + Vector(0, 1), self.radius + 2)
 			self.pos.x += choice([LEFT, RIGHT])
@@ -50,17 +54,19 @@ class Acid(PhysObj):
 		else:
 			for worm in GameVariables().get_worms():
 				if square_collision(self.pos, worm.pos, self.radius, worm.radius):
-					worm.damage(randint(0,1))
+					worm.damage(randint(0, 1))
 					self.damageCooldown = 30
-		self.inGround = False
-		if randint(0,50) < 1:
+		self.in_ground = False
+		if randint(0, 50) < 1:
 			EffectManager().add_smoke(self.pos, color=(200,255,200))
 		GameVariables().game_distable()
 	
 	def draw(self, win: pygame.Surface):
 		pygame.draw.circle(win, self.color, point2world(self.pos + Vector(0,1)), self.radius + 1)
 
-
+	def remove_from_game(self):
+		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.ACID_LOOP, 100)
 
 class AcidBottle(PhysObj):
 	def __init__(self, pos, direction, energy):

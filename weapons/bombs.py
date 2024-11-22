@@ -1,5 +1,5 @@
 
-from random import randint
+from random import randint, choice
 from math import sin, cos, pi
 
 import pygame
@@ -11,6 +11,7 @@ from entities import PhysObj
 from game.world_effects import boom
 from game.visual_effects import Blast
 from game.map_manager import MapManager
+from game.sfx import Sfx, SfxIndex
 
 class TNT(PhysObj):
 	def __init__(self, pos):
@@ -33,9 +34,9 @@ class TNT(PhysObj):
 		
 	def draw(self, win: pygame.Surface):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -2) - int(GameVariables().cam_pos[0]),int(self.pos.y -4) - int(GameVariables().cam_pos[1]) , 3,8))
-		pygame.draw.line(win, (90,90,90), point2world(self.pos + Vector(-1,-4)), point2world(self.pos + Vector(-1, -5*(GameVariables().fps * 4 - self.timer)/(GameVariables().fps * 4) - 4)), 1)
-		if randint(0,10) == 1:
-			Blast(self.pos + Vector(-1, -5*(GameVariables().fps * 4 - self.timer)/(GameVariables().fps * 4) - 4), randint(3,6), 150)
+		pygame.draw.line(win, (90, 90, 90), point2world(self.pos + Vector(-1, -4)), point2world(self.pos + Vector(-1, -5 * (GameVariables().fps * 4 - self.timer)/(GameVariables().fps * 4) - 4)), 1)
+		if randint(0, 10) == 1:
+			Blast(self.pos + Vector(-1, -5 * (GameVariables().fps * 4 - self.timer)/(GameVariables().fps * 4) - 4), randint(3, 6), 150)
 
 
 class Sheep(PhysObj):
@@ -45,7 +46,7 @@ class Sheep(PhysObj):
 		self.pos = Vector(pos[0], pos[1])
 		self.vel = Vector(0,-3)
 		self.radius = 6
-		self.color = (250,240,240)
+		self.color = (250, 240, 240)
 		self.damp = 0.2
 		self.timer = 0
 		self.facing = RIGHT
@@ -63,7 +64,8 @@ class Sheep(PhysObj):
 			if MapManager().is_ground_around(self.pos, self.radius + 1):
 				self.facing *= -1
 		if self.timer % (GameVariables().fps / 2) == 0 and MapManager().is_ground_around(self.pos, self.radius + 1):
-			self.vel.y -= 4.5
+			self.vel.y = -4.5
+			Sfx().play(choice([SfxIndex.SHEEP_BAA1, SfxIndex.SHEEP_BAA2]))
 		if self.trigger and self.timer > 5:
 			self.dead = True
 		if self.timer >= 300:

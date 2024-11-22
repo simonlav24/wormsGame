@@ -1,5 +1,5 @@
 
-
+from random import choice
 
 import pygame
 import pygame.gfxdraw
@@ -79,6 +79,7 @@ def on_key_press_enter():
 	# jump
 	if GameVariables().player.stable and GameVariables().player.health > 0:
 		GameVariables().player.vel += GameVariables().player.get_shooting_direction() * JUMP_VELOCITY
+		Sfx().play(choice([SfxIndex.JUMP1, SfxIndex.JUMP2, SfxIndex.JUMP3]))
 		GameVariables().player.stable = False
 
 

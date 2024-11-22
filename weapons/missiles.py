@@ -12,6 +12,7 @@ from entities import Debrie
 from game.world_effects import boom, sample_colors
 from game.visual_effects import Blast
 from game.map_manager import MapManager, GRD, SKY
+from game.sfx import Sfx, SfxIndex
 
 class Missile (PhysObj):
 	def __init__(self, pos, direction, energy, weapon_name="missile"):
@@ -21,7 +22,7 @@ class Missile (PhysObj):
 		self.color = (255,255,0)
 		self.bounce_before_death = 1
 		self.is_wind_affected = 1
-		self.boomRadius = 28
+		self.boom_radius = 28
 		self.megaBoom = False or GameVariables().mega_weapon_trigger
 		if randint(0,50) == 1:
 			self.megaBoom = True
@@ -30,8 +31,8 @@ class Missile (PhysObj):
 	
 	def death_response(self):
 		if self.megaBoom:
-			self.boomRadius *= 2
-		boom(self.pos, self.boomRadius)
+			self.boom_radius *= 2
+		boom(self.pos, self.boom_radius)
 	
 	def draw(self, win: pygame.Surface):
 		angle = -degrees(self.vel.getAngle()) - 90
@@ -47,7 +48,7 @@ class GravityMissile(Missile):
 		super().__init__(pos, direction, energy, "gravity missile")
 
 	def death_response(self):
-		boom(self.pos, self.boomRadius, True, True)
+		boom(self.pos, self.boom_radius, True, True)
 		
 	def apply_force(self):
 		# gravity:
@@ -69,23 +70,28 @@ class DrillMissile(PhysObj):
 		self.vel = Vector(direction[0], direction[1]) * energy * 10
 		self.radius = 7
 		self.color = (102, 51, 0)
-		self.boomRadius = 30
+		self.boom_radius = 30
 		self.is_boom_affected = False
 		
-		self.drillVel = None
-		self.inGround = False
+		self.drill_vel = None
+		self.in_ground = False
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
 		blit_weapon_sprite(self.surf, (0,0), "drill missile")
 		self.colors = Blast._color
 
+	def on_drill(self):
+		self.in_ground = True
+		Sfx().loop_increase(SfxIndex.DRILL_LOOP)
+
+
 	def step(self):
 		self.apply_force()
 		
 		# velocity
-		if self.inGround:
+		if self.in_ground:
 			if self.mode:
-				self.vel = self.drillVel
+				self.vel = self.drill_vel
 				self.vel.setMag(2)
 			else:
 				self.vel += self.acc * GameVariables().dt
@@ -106,14 +112,14 @@ class DrillMissile(PhysObj):
 		checkPos = (self.pos + direction * self.radius).vec2tupint()
 		if not(checkPos[0] >= MapManager().game_map.get_width() or checkPos[0] < 0 or checkPos[1] >= MapManager().game_map.get_height() or checkPos[1] < 0):
 			if MapManager().game_map.get_at(checkPos) == GRD:
-				self.inGround = True
-				self.drillVel = vectorCopy(self.vel)
-		if self.inGround:
+				self.on_drill()
+				self.drill_vel = vectorCopy(self.vel)
+		if self.in_ground:
 			self.timer += 1 * GameVariables().dt
 					
 		checkPos = (self.pos + direction*(self.radius + 2)).vec2tupint()
 		if not(checkPos[0] >= MapManager().game_map.get_width() or checkPos[0] < 0 or checkPos[1] >= MapManager().game_map.get_height() or checkPos[1] < 0):
-			if not MapManager().game_map.get_at(checkPos) == GRD and self.inGround:
+			if not MapManager().game_map.get_at(checkPos) == GRD and self.in_ground:
 				self.dead = True
 				
 		if self.timer >= GameVariables().fps * 2:
@@ -122,7 +128,7 @@ class DrillMissile(PhysObj):
 		self.lastPos.x, self.lastPos.y = self.pos.x, self.pos.y
 		self.pos = ppos
 		
-		if self.inGround:
+		if self.in_ground:
 			colors = sample_colors(self.pos, self.radius, default_if_none=False)
 			if len(colors) > 0:
 				self.colors = colors
@@ -132,25 +138,27 @@ class DrillMissile(PhysObj):
 				debrie = Debrie(self.pos - normalize(self.vel) * self.radius + normalize(self.vel).getNormal() * self.radius * uniform(-1, 1), 1.0, colors=self.colors, firey=False)
 				debrie.vel = vectorCopy(self.vel * -1) + vectorUnitRandom()
 				
-		self.lineOut((self.lastPos.vec2tupint(), self.pos.vec2tupint()))
+		self.line_out((self.lastPos.vec2tupint(), self.pos.vec2tupint()))
 		
 		# flew out MapManager().game_map but not worms !
 		if self.pos.y > MapManager().game_map.get_height():
 			self.remove_from_game()
 			return
-		if self.inGround and self.pos.y <= 0:
+		if self.in_ground and self.pos.y <= 0:
 			self.dead = True
 
 		if self.vel.getMag() < 0.1:
 			self.stable = True
 		
-		self.secondaryStep()
-		
 		if self.dead:
 			self.remove_from_game()
 			self.death_response()
 
-	def lineOut(self,line):
+	def remove_from_game(self):
+		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.DRILL_LOOP, fade_out_ms=50, force_stop=True)
+
+	def line_out(self,line):
 		pygame.draw.line(MapManager().game_map, SKY, line[0], line[1], self.radius * 2)
 		pygame.draw.line(MapManager().ground_map, SKY, line[0], line[1], self.radius * 2)
 
@@ -173,7 +181,7 @@ class HomingMissile(PhysObj):
 		self.color = (0, 51, 204)
 		self.bounce_before_death = 1
 		self.is_wind_affected = 1
-		self.boomRadius = 30
+		self.boom_radius = 30
 		self.activated = False
 		self.timer = 0
 		self.surf = pygame.Surface((16, 16), pygame.SRCALPHA)
@@ -189,19 +197,33 @@ class HomingMissile(PhysObj):
 		else:
 			self.acc.y += GameVariables().physics.global_gravity
 	
-	def secondaryStep(self):
+	def activate(self, is_activated: bool):
+		self.activated = is_activated
+		if self.activated:
+			Sfx().play(SfxIndex.MINE_ACTIVATE)
+			Sfx().loop_increase(SfxIndex.THRUST_LOOP)
+		else:
+			Sfx().loop_decrease(SfxIndex.THRUST_LOOP, 100)
+
+	def step(self):
+		super().step()
 		Blast(self.pos + vectorUnitRandom() * 2 - 10 * normalize(self.vel), 5)
 		self.timer += 1
 		if self.timer == 20:
-			self.activated = True
+			self.activate(True)
 		if self.timer == 20 + GameVariables().fps * 5:
-			self.activated = False
+			self.activate(False)
 	
+	def remove_from_game(self):
+		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.THRUST_LOOP, 100)
+
 	def limit_vel(self):
 		self.vel.limit(15)
 	
 	def on_collision(self, ppos):
-		boom(ppos, self.boomRadius)
+		super().on_collision(ppos)
+		boom(ppos, self.boom_radius)
 	
 	def draw(self, win: pygame.Surface):
 		angle = -degrees(self.vel.getAngle()) - 90
@@ -245,11 +267,11 @@ class SeekerBase:
 						self.avoid.append(test_pos)
 		else:
 			if MapManager().is_ground_at(self.pos):
-				self.hitResponse()
+				self.hit_response()
 				return
 			
 		if distance < 8:
-			self.hitResponse()
+			self.hit_response()
 			return
 			
 		for i in self.avoid:
@@ -270,7 +292,7 @@ class SeekerBase:
 		
 		self.pos = ppos
 	
-	def hitResponse(self):
+	def hit_response(self):
 		self.death_response()
 	
 	def death_response(self):

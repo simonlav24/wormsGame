@@ -15,6 +15,7 @@ from game.visual_effects import FloatingText, splash
 from entities.physical_entity import PhysObj
 from game.map_manager import MapManager, GRD_COL
 from entities.worm_tools import WormTool
+from game.sfx import Sfx, SfxIndex
 
 WORM_DAMP_IDLE = 0.2
 WORM_DAMP_PLAYER = 0.1
@@ -105,6 +106,7 @@ class Worm(PhysObj):
             dmg = self.health
         
         if damage_type == DamageType.HURT and dmg != 0:
+            Sfx().play(choice([SfxIndex.HURT1, SfxIndex.HURT2, SfxIndex.HURT3]))
             FloatingText(self.pos.vec2tup(), str(dmg))
         
         self.health -= dmg
@@ -319,6 +321,7 @@ class Worm(PhysObj):
         self.damage(100, DamageType.DROWN, kill=True)
 
     def on_collision(self, ppos):
+        super().on_collision(ppos)
         if self.vel.getMag() > CRITICAL_FALL_VELOCITY and not self.worm_tool.in_use():
             MapManager().stain(self.pos, sprites.blood, sprites.blood.get_size(), False)
         

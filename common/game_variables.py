@@ -11,6 +11,7 @@ from common import SingletonMeta, GameGlobals, ColorType, Entity, EntityPhysical
 from common.constants import WHITE, GameState, RIGHT, feels
 
 from common.vector import Vector
+from game.sfx import Sfx, SfxIndex
 
 class WorldPhysics:
     ''' holds physics related data '''
@@ -49,6 +50,7 @@ class DataBase:
         self.light_sources: List[EntityLightSource] = []
         self.pygame_event_listeners: List[InterfaceEventHandler] = []
         self.elecrocuted: List[EntityElectrocuted] = []
+        self.fire_particles: List[EntityPhysical] = []
 
 
 class GameVariables(metaclass=SingletonMeta):
@@ -317,9 +319,17 @@ class GameVariables(metaclass=SingletonMeta):
             result |= observer.on_fire(**kwargs)
         return result
     
-    def update_state(self, state: GameState = None):
+    def update_state(self, state: GameState = None) -> None:
         self.state_machine.update(state)
 
+    def register_fire_particle(self, particle: EntityPhysical) -> None:
+        self.database.fire_particles.append(particle)
+        Sfx().loop(SfxIndex.FIRE_LOOP)
+
+    def unregister_fire_particle(self, particle: EntityPhysical) -> None:
+        self.database.fire_particles.remove(particle)
+        if not self.database.fire_particles:
+            Sfx().stop(SfxIndex.FIRE_LOOP, 1000)
 
 def point2world(point) -> Tuple[int, int]:
 	''' point in vector space to point in world map space '''

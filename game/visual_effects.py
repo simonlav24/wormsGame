@@ -10,6 +10,7 @@ from common import DARK_COLOR, LIGHT_RADIUS, ColorType, fonts, Entity, Singleton
 from common.vector import *
 
 from game.map_manager import MapManager
+from game.sfx import Sfx, SfxIndex
 
 # particle: pos, vel, color, life
 ParticleType = Tuple[Vector, Vector, ColorType, int]
@@ -318,6 +319,7 @@ def splash(pos: Vector, vel: Vector) -> None:
 				y = y * uniform(0, 0.9)
 			velocity = Vector(x, y) * 0.7
 			DropLet(Vector(pos.x, pos.y), velocity)
+	Sfx().play(choice([SfxIndex.SPLASH1, SfxIndex.SPLASH2, SfxIndex.SPLASH3]))
 	
 
 class DropLet(Effect):

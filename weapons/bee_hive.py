@@ -10,6 +10,8 @@ from common.vector import *
 
 from game.map_manager import MapManager, GRD
 from entities import PhysObj, Worm
+from game.sfx import Sfx, SfxIndex
+
 
 class Bee:
 	def __init__(self, pos, angle):
@@ -25,9 +27,11 @@ class Bee:
 		self.unreachable = []
 		self.vel = Vector()
 		self.surf = None
+		Sfx().loop_increase(SfxIndex.BEES_LOOP)
 	
 	def remove_from_game(self):
 		GameVariables().unregister_physical(self)
+		Sfx().loop_decrease(SfxIndex.BEES_LOOP, 1000)
 	
 	def step(self):
 		self.lifespan -= 1
@@ -107,6 +111,7 @@ class BeeHive(PhysObj):
 			self.dead = True
 		
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		out = randint(1,3)
 		for _ in range(out):
 			b = Bee(self.pos, uniform(0, 2 * pi))

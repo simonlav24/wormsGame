@@ -36,6 +36,7 @@ class PlantMasterLeaf(DeployableArtifact):
 		self.acc += force
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		self.turbulance *= 0.9
 
 

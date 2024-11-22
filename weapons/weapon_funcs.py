@@ -531,3 +531,4 @@ weapon_funcs['fire ball'] = fire_fire_ball
 weapon_funcs['air tornado'] = fire_air_tornado
 weapon_funcs['pick axe'] = fire_pick_axe
 weapon_funcs['build'] = fire_build
+

@@ -7,6 +7,7 @@ from common.vector import *
 
 from game.visual_effects import Blast
 from game.map_manager import MapManager, GRD
+from game.sfx import Sfx, SfxIndex
 
 
 class WormUtility:
@@ -45,16 +46,29 @@ class JetPack(WormUtility):
         if self.fuel <= 0:
             self.is_done = True
             return
+        pressed = False
         if pygame.key.get_pressed()[pygame.K_UP]:
+            pressed = True
             self.worm.acc.y -= GameVariables().physics.global_gravity + 0.5
             self.fuel -= 0.5
         if pygame.key.get_pressed()[pygame.K_LEFT]:
+            pressed = True
             self.worm.acc.x -= 0.5
             self.fuel -= 0.5
         if pygame.key.get_pressed()[pygame.K_RIGHT]:
+            pressed = True
             self.worm.acc.x += 0.5
             self.fuel -= 0.5
+        
+        if pressed:
+            Sfx().loop_ensure(SfxIndex.THRUST_LOOP)
+        else:
+            Sfx().loop_decrease(SfxIndex.THRUST_LOOP, 500, True)
     
+    def release(self):
+        super().release()
+        Sfx().loop_decrease(SfxIndex.THRUST_LOOP, 500, True)
+
     def step(self):
         self.worm.vel.limit(5)
         if pygame.key.get_pressed()[pygame.K_UP]:
@@ -182,6 +196,7 @@ class Parachute(WormUtility):
     def __init__(self, worm: EntityPhysical):
         super().__init__()
         self.worm = worm
+        Sfx().play(SfxIndex.PARACHUTE)
 
     def is_movement_blocking(self) -> bool:
         return False

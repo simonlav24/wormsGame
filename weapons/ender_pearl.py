@@ -19,6 +19,7 @@ class EndPearl(PhysObj):
 		self.color = (0,0,150)
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		# colission with world:
 		response = Vector(0,0)
 		angle = atan2(self.vel.y, self.vel.x)

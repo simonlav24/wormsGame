@@ -11,6 +11,8 @@ from game.map_manager import MapManager, SKY, GRD
 from game.visual_effects import Blast, Explossion
 from entities import Debrie
 
+from game.sfx import Sfx, SfxIndex
+
 def sample_colors(pos: Vector, radius: float, default_if_none=True) -> List[ColorType]:
 	colors = []
 	for _ in range(10):
@@ -24,6 +26,7 @@ def sample_colors(pos: Vector, radius: float, default_if_none=True) -> List[Colo
 	return colors
 
 def boom(pos, radius, debries = True, gravity = False, fire = False):
+	
 	if not fire: radius *= GameVariables().boom_radius_mult
 	boomPos = Vector(pos[0], pos[1])
 	# sample ground colors:
@@ -71,6 +74,15 @@ def boom(pos, radius, debries = True, gravity = False, fire = False):
 		for _ in range(int(radius)):
 			d = Debrie(pos, radius / 5, colors, 2, radius > 25)
 			d.radius = choice([2, 1])
+	
+	if fire:
+		return
+	if radius < 25:
+		Sfx().play(SfxIndex.BOOM1)
+	elif 25 < radius < 35:
+		Sfx().play(SfxIndex.BOOM2)
+	else:
+		Sfx().play(SfxIndex.BOOM3)
 
 class Earthquake(Entity):
 	earthquake = 0
@@ -81,6 +93,8 @@ class Earthquake(Entity):
 		self.is_boom_affected = False
 		Earthquake.earthquake = strength
 		self.decorative = decorative
+		if not self.decorative:
+			Sfx().loop_increase(SfxIndex.EARTHQUAKE_LOOP)
 
 	def step(self):
 		if not self.decorative:
@@ -93,6 +107,8 @@ class Earthquake(Entity):
 			
 		self.timer -= 1 * GameVariables().dt
 		if self.timer <= 0:
+			if not self.decorative:
+				Sfx().loop_decrease(SfxIndex.EARTHQUAKE_LOOP, 1000)
 			GameVariables().unregister_non_physical(self)
 			Earthquake.earthquake = 0
 	
@@ -119,6 +135,7 @@ class Tornado:
 		self.timer = 0
 		self.speed = 2
 		self.radius = 0
+		Sfx().loop_increase(SfxIndex.TORNADO_LOOP)
 	
 	def step(self):
 		GameVariables().game_distable()
@@ -139,6 +156,7 @@ class Tornado:
 			self.swirles.pop(-1)
 			if len(self.swirles) == 0:
 				GameVariables().unregister_non_physical(self)
+				Sfx().loop_decrease(SfxIndex.TORNADO_LOOP, 500)
 		self.timer += 1
 	
 	def draw(self, win: pygame.Surface):

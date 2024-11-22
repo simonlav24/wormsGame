@@ -8,6 +8,7 @@ from common.vector import *
 
 from game.map_manager import MapManager, SKY
 from game.visual_effects import DropLet
+from game.sfx import SfxIndex, Sfx
 
 class Bubble:
 	cought = []
@@ -62,6 +63,7 @@ class Bubble:
 				self.burst()
 	
 	def burst(self):
+		Sfx().play(SfxIndex.BUBBLE_BURST)
 		if self.catch:
 			self.catch.vel = self.vel * 0.6
 			if self == GameVariables().cam_track:

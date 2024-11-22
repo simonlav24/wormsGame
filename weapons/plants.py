@@ -1,6 +1,5 @@
 
 
-from enum import Enum
 from random import randint, choice, uniform
 from math import pi, sin, sqrt, degrees, copysign
 
@@ -12,10 +11,11 @@ from common.vector import *
 from game.map_manager import MapManager, GRD
 from game.visual_effects import EffectManager
 from game.world_effects import boom
-from entities import PhysObj, Debrie, Worm
+from entities import PhysObj
 from weapons.mine import Mine
 from entities.gun_shell import GunShell
 from entities.worm import DamageType
+from game.sfx import Sfx, SfxIndex
 
 def generate_leaf(pos, direction, color) -> None:
 	''' draw procedural leaf on the map '''
@@ -133,6 +133,7 @@ class Venus:
 
 				if distus(entity.pos, pos) <= 625:
 					self.mode = Venus.catch
+					Sfx().play(SfxIndex.PLANT_BITE)
 					if entity in GameVariables().get_worms():
 						worm: EntityWorm = entity
 
@@ -164,6 +165,7 @@ class Venus:
 			GameVariables().game_distable()
 			if self.timer == 1 * GameVariables().fps:
 				self.mode = Venus.release
+				Sfx().play(SfxIndex.PLANT_OPEN)
 				if self.explossive:
 					self.explossive = False
 					for _ in range(randint(6, 14)):
@@ -242,6 +244,7 @@ class GrowingPlant:
 		self.time_counter = 0
 		self.green = 135
 		self.mode = mode
+		Sfx().loop_increase(SfxIndex.PLANT_LOOP)
 
 	def step(self):
 		self.pos += vector_from_angle(self.angle + uniform(-1,1))
@@ -261,6 +264,7 @@ class GrowingPlant:
 			generate_leaf(self.pos, self.angle + 90, (55,self.green,40))
 		if self.radius == 0:
 			GameVariables().unregister_non_physical(self)
+			Sfx().loop_decrease(SfxIndex.PLANT_LOOP, 100)
 			if self.mode == PlantMode.VENUS:
 				pygame.draw.circle(MapManager().game_map, GRD, (int(self.pos[0]), int(self.pos[1])), 3)
 				pygame.draw.circle(MapManager().ground_map, (55,self.green,40), (int(self.pos[0]), int(self.pos[1])), 3)
@@ -288,6 +292,7 @@ class MagicBeanGrow:
 		self.green3 = 135
 		self.face = 0
 		GameVariables().player_can_move = False
+		Sfx().loop_increase(SfxIndex.PLANT_LOOP)
 	
 	def regreen(self, value):
 		value += randint(-5,5)
@@ -333,6 +338,7 @@ class MagicBeanGrow:
 
 		if self.timer >= 5 * GameVariables().fps:
 			GameVariables().unregister_non_physical(self)
+			Sfx().loop_decrease(SfxIndex.PLANT_LOOP, 100)
 			GameVariables().player_can_move = True
 	
 	def draw(self, win: pygame.Surface):
@@ -359,6 +365,7 @@ class PlantSeed(PhysObj):
 		self.angle -= self.vel.x * 4
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		response = MapManager().get_normal(ppos, self.vel, self.radius, False, True)
 		self.remove_from_game()
 		
@@ -420,6 +427,7 @@ class RazorLeaf(PhysObj):
 		self.acc = vectorCopy(self.direction) * 0.8
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		boom(ppos, 7)
 		self.remove_from_game()
 	

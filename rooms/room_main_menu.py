@@ -173,6 +173,10 @@ class MainMenuRoom(Room):
         elif event == 'teams setup':
             self.on_team_setup()
 
+        elif event == 'full screen':
+            GameGlobals().full_screen()
+
+
         elif self.weapon_menu.handle_events(event, values):
             pass
 
@@ -206,7 +210,7 @@ class MainMenuRoom(Room):
         )
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
 
-    def initialize_main_menu(self) -> StackPanel:
+    def  initialize_main_menu(self) -> StackPanel:
         ''' create menu layout '''
         main_menu = StackPanel(name="menu", pos=[40, (GameGlobals().win_height - 196) // 2], size=[GameGlobals().win_width - 80, 196] )
         main_menu.insert(Button(key="play", text="play", custom_size=16))
@@ -307,6 +311,7 @@ class MainMenuRoom(Room):
 
         sub_more = StackPanel(orientation=HORIZONTAL, custom_size=14)
         sub_more.insert(Button(key="teams setup", text="teams setup"))
+        sub_more.insert(Button(key="full screen", text="full screen"))
         sub_more.insert(UpDown(text="background color", key="feel_index", value=self.feel_index, values=[i for i in range(len(feels))], show_value=False, generate_event=True))
         main_menu.add_element(sub_more)
         

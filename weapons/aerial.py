@@ -14,7 +14,7 @@ from entities.fire import Fire
 from weapons.grenades import PhysObj
 from weapons.missiles import SeekerBase, Missile
 from weapons.mine import Mine
-
+from game.sfx import Sfx, SfxIndex
 
 
 def fire_airstrike(**kwargs):
@@ -26,7 +26,7 @@ def fire_airstrike(**kwargs):
 		f.megaBoom = False
 		f.is_boom_affected = False
 		f.radius = 1
-		f.boomRadius = 19
+		f.boom_radius = 19
 		if i == 2:
 			GameVariables().cam_track = f
 
@@ -66,6 +66,7 @@ class Seagull(SeekerBase):
 		self.timer = 15 * GameVariables().fps
 		self.target = Vector()
 		self.chum = None
+		Sfx().loop_increase(SfxIndex.BAT_LOOP)
 	
 	def death_response(self):
 		boom(self.pos, 30)
@@ -73,6 +74,7 @@ class Seagull(SeekerBase):
 	
 	def remove_from_game(self):
 		GameVariables().unregister_non_physical(self)
+		Sfx().loop_decrease(SfxIndex.BAT_LOOP, 100)
 		self.chum.dead = True
 	
 	def step(self):
@@ -85,7 +87,7 @@ class Seagull(SeekerBase):
 		height = 13
 		frame = GameVariables().time_overall // 2 % 3
 		surf = pygame.Surface((16,16), pygame.SRCALPHA)
-		surf.blit(sprites.sprite_atlas, (0,0), (frame * 16,80, 16, 16))
+		surf.blit(sprites.sprite_atlas, (0,0), (frame * 16, 80, 16, 16))
 		win.blit(pygame.transform.flip(surf, flip_x, False), point2world(self.pos - Vector(width//2, height//2)))
 		
 
@@ -105,8 +107,11 @@ class Chum(PhysObj):
 		self.summoned = False
 		self.is_boom_affected = False
 		self.timer = 0
+		self.sound_collision = False
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
+
 		if not self.summoned:
 				self.ticking = True
 				self.summoned = True

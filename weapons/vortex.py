@@ -8,6 +8,7 @@ from common import GameVariables, point2world, GameGlobals
 from common.vector import *
 
 from weapons.grenades import Grenade
+from game.sfx import Sfx, SfxIndex
 
 
 class Vortex():
@@ -18,6 +19,7 @@ class Vortex():
         self.rot = 0
         self.inhale = True
         self.is_boom_affected = False
+        Sfx().play(SfxIndex.VORTEX_IN)
 
     def step(self):
         GameVariables().game_distable()
@@ -26,6 +28,7 @@ class Vortex():
             if self.rot > 0.1:
                 self.rot = 0.1
                 self.inhale = False
+                Sfx().play(SfxIndex.VORTEX_OUT)
         else:
             self.rot -= 0.001
         

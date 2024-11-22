@@ -6,6 +6,7 @@ from common import GameVariables, point2world, sprites, Sickness
 from common.vector import *
 
 from weapons.missiles import SeekerBase
+from game.sfx import Sfx, SfxIndex
 
 
 class Covid19(SeekerBase):
@@ -13,13 +14,13 @@ class Covid19(SeekerBase):
 		super().__init__(pos, Vector(), 5)
 		self.timer = 12 * GameVariables().fps
 		self.target = Vector()
-		self.wormTarget = None
-		self.chum = None
+		self.worm_target = None
 		self.unreachable = []
 		self.bitten = []
 		for worm in GameVariables().get_worms():
 			if worm.get_team_data().team_name == immune_team_name:
 				self.bitten.append(worm)
+		Sfx().loop_increase(SfxIndex.BAT_LOOP)
 	
 	def step(self):
 		super().step()
@@ -32,24 +33,28 @@ class Covid19(SeekerBase):
 			if distance < closest:
 				closest = distance
 				self.target = worm.pos
-				self.wormTarget = worm
+				self.worm_target = worm
 	
-	def hitResponse(self):
-		self.bitten.append(self.wormTarget)
+	def death_response(self):
+		super().death_response()
+		Sfx().loop_decrease(SfxIndex.BAT_LOOP, 150, True)
+
+	def hit_response(self):
+		self.bitten.append(self.worm_target)
 		self.target = Vector()
 		# sting
-		if not self.wormTarget:
+		if not self.worm_target:
 			return
-		self.wormTarget.vel.y -= 2
-		if self.wormTarget.vel.y < -3:
-			self.wormTarget.vel.y = 3
-		if self.pos.x > self.wormTarget.pos.x:
-			self.wormTarget.vel.x -= 2
+		self.worm_target.vel.y -= 2
+		if self.worm_target.vel.y < -3:
+			self.worm_target.vel.y = 3
+		if self.pos.x > self.worm_target.pos.x:
+			self.worm_target.vel.x -= 2
 		else:
-			self.wormTarget.vel.x += 2
-		self.wormTarget.damage(10)
-		self.wormTarget.sicken(Sickness.VIRUS)
-		self.wormTarget = None
+			self.worm_target.vel.x += 2
+		self.worm_target.damage(10)
+		self.worm_target.sicken(Sickness.VIRUS)
+		self.worm_target = None
 	
 	def draw(self, win: pygame.Surface):
 		frame = GameVariables().time_overall // 2 % 5

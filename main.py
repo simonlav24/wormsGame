@@ -21,6 +21,7 @@ wip = '''
 		holding mjolnir
 		refactor bubble
 		team creation screen
+		trampoline remove from cool down
 	'''
 
 def main():

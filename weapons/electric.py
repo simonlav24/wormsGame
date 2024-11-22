@@ -11,6 +11,7 @@ from common.drawing_utilities import draw_lightning
 from game.world_effects import boom
 from entities import PhysObj
 from entities.gun_shell import GunShell
+from game.sfx import Sfx, SfxIndex
 
 
 class ElectricGrenade(PhysObj):
@@ -33,6 +34,10 @@ class ElectricGrenade(PhysObj):
 	
 	def death_response(self):
 		boom(self.pos, 20)
+	
+	def remove_from_game(self):
+		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.ELECTRICITY_LOOP, force_stop=True)
 	
 	def step(self):
 		super().step()
@@ -61,6 +66,11 @@ class ElectricGrenade(PhysObj):
 		for electrocuted in self.electrocuted:
 			if randint(1, 100) < 5:
 				electrocuted.electrocute(self.pos)
+
+		if len(self.electrocuted) == 0 or self.dead:
+			Sfx().loop_decrease(SfxIndex.ELECTRICITY_LOOP, force_stop=True)
+		else:
+			Sfx().loop_ensure(SfxIndex.ELECTRICITY_LOOP)
 	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)
@@ -90,8 +100,9 @@ class ElectroBoom(PhysObj):
 		self.angle = 0
 		self.immune_team_name = immune_team_name
 	
-	def secondaryStep(self):
-		self.angle -= self.vel.x*4
+	def step(self):
+		super().step()
+		self.angle -= self.vel.x * 4
 		self.stable = False
 		self.timer += 1
 		if self.timer == GameVariables().fuse_time:
@@ -100,26 +111,32 @@ class ElectroBoom(PhysObj):
 		if self.timer == GameVariables().fuse_time + GameVariables().fps * 2:
 			for net in self.network:
 				for worm in net[1]:
-					boom(worm.pos + vectorUnitRandom() * uniform(1,5), randint(10,16) )
-				boom(net[0].pos + vectorUnitRandom() * uniform(1,5), randint(10,16) )
-			boom(self.pos + vectorUnitRandom() * uniform(1,5), randint(10,16))
+					boom(worm.pos + vectorUnitRandom() * uniform(1, 5), randint(10, 16))
+				boom(net[0].pos + vectorUnitRandom() * uniform(1, 5), randint(10, 16))
+			boom(self.pos + vectorUnitRandom() * uniform(1, 5), randint(10, 16))
 			self.dead = True
 	
+	def remove_from_game(self):
+		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.ELECTRICITY_LOOP, force_stop=True)
+
 	def calculate(self):
 		for worm in GameVariables().get_worms():
 			if worm.get_team_data().team_name == self.immune_team_name:
 				continue
 			if dist(self.pos, worm.pos) < 150:
 				self.worms.append(worm)
-		for selfWorm in self.worms:
+		for self_worm in self.worms:
 			net = []
 			for worm in GameVariables().get_worms():
-				if worm == selfWorm or worm in self.used or worm in self.worms or worm in GameVariables().player.team.worms:
+				if worm == self_worm or worm in self.used or worm in self.worms or worm in GameVariables().player.team.worms:
 					continue
-				if dist(selfWorm.pos, worm.pos) < 150 and not worm in self.worms:
+				if dist(self_worm.pos, worm.pos) < 150 and not worm in self.worms:
 					net.append(worm)
 					self.used.append(worm)
-			self.network.append((selfWorm, net))
+			self.network.append((self_worm, net))
+		if len(self.worms) > 0:
+			Sfx().loop_increase(SfxIndex.ELECTRICITY_LOOP)
 	
 	def draw(self, win: pygame.Surface):
 		angle = 45 * round(self.angle / 45)

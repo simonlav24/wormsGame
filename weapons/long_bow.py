@@ -11,7 +11,7 @@ from game.map_manager import MapManager, GRD
 from game.visual_effects import splash, Frost, DropLet, Blast
 from game.world_effects import boom
 from entities.fire import Fire
-from entities.shooting_target import ShootingTarget
+from game.sfx import Sfx, SfxIndex
 
 class LongBow:
     _sleep = False
@@ -32,6 +32,7 @@ class LongBow:
     
     def destroy(self):
         GameVariables().unregister_non_physical(self)
+        Sfx().play(SfxIndex.ARROW_HIT)
     
     def step(self):
         self.timer += 1

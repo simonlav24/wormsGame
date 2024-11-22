@@ -28,7 +28,7 @@ class ClusterGrenade (Grenade):
 					k.vel.y += self.vel.y * 0.5
 					k.is_wind_affected = 0
 					k.is_boom_affected = False
-					k.boomRadius = 20
+					k.boom_radius = 20
 					k.color = (0,50,0)
 					k.radius = 1.5
 					k.surf.fill((0,0,0,0))

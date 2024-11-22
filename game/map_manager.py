@@ -315,6 +315,7 @@ class MapManager(metaclass=SingletonMeta):
             surfMap,
             (int(pos[0] - surfMap.get_width() / 2), int(pos[1] - surfMap.get_height() / 2))
         )
+        
 
     def get_good_place(self, *, div = -1, girder_place = True) -> Vector:
         ''' return unobscured, unoccupied place on ground '''

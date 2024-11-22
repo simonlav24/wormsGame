@@ -27,7 +27,7 @@ class Armageddon:
                 x = randint(-100, MapManager().game_map.get_width() + 100)
                 m = Missile((x, -10), Vector(randint(-10,10), 5).normalize(), 1)
                 m.is_wind_affected = 0
-                m.boomRadius = 40
+                m.boom_radius = 40
     
     def draw(self, win: pygame.Surface):
         pass

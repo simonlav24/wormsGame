@@ -1,6 +1,7 @@
 ''' weapon directors and actors. handle weapon shooting and events handling '''
 
 from typing import List
+from random import choice
 
 import pygame
 
@@ -10,6 +11,9 @@ from common.vector import vectorCopy, Vector, tup2vec
 from game.team_manager import Team
 from game.time_manager import TimeManager
 from weapons.weapon import Weapon, WeaponStyle
+
+from game.sfx import Sfx
+from weapons.weapon_sfx import weapon_creation_sfx
 
 weapons_no_track = ['fireworks']
 
@@ -143,6 +147,7 @@ class WeaponActorBase:
             self.abort()
             return None
         self.shooted_object = self.weapon_func(**args_dict)
+        Sfx().play(choice(weapon_creation_sfx[self.weapon.name]))
         if self.weapon.can_fail:
             if not self.shooted_object:
                 # failed shot
@@ -213,6 +218,9 @@ class ActorChargeable(WeaponActorBase):
 
 
 class ActorGun(WeaponActorBase):
+    def __init__(self, weapon, weapon_func, team):
+        super().__init__(weapon, weapon_func, team)
+
     def handle_event(self, event) -> None:
         super().handle_event(event)
         if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:

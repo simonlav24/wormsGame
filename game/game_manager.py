@@ -299,6 +299,8 @@ class Game:
             GameVariables().physics.wind = uniform(-1, 1)
         elif code == "goodbyecruelworld":
             boom(GameVariables().player.pos, 100)
+        elif code == "boomhere":
+            boom(mouse_pos, 20)
         elif code == "armageddon":
             Armageddon()
         elif code[0:5] == "gunme" and len(code) == 6:

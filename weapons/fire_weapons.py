@@ -70,6 +70,7 @@ class ChilliPepper(PhysObj):
 		self.stable = False
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		boom(ppos, 25)
 		for i in range(40):
 			s = Fire(self.pos, 5)

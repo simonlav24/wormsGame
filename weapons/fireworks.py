@@ -8,6 +8,7 @@ from common.vector import *
 
 from game.world_effects import boom
 from game.visual_effects import Blast, FireWork
+from game.sfx import Sfx, SfxIndex
 
 
 class FireWorkRockets:
@@ -35,6 +36,7 @@ class FireWorkRockets:
 	
 	def done(self):
 		GameVariables().unregister_non_physical(self)
+		Sfx().loop_decrease(SfxIndex.THRUST_LOOP, 100)
 	
 	def fire(self):
 		"""return true if fired"""
@@ -53,6 +55,7 @@ class FireWorkRockets:
 			if self.picked >= 3:
 				self.state = "ready"
 		elif self.state == "ready":
+			Sfx().loop_increase(SfxIndex.THRUST_LOOP)
 			self.state = "thrusting"
 			for obj in self.objects:
 				obj.vel += Vector(randint(-3,3), -2)

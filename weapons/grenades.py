@@ -10,7 +10,7 @@ from entities.physical_entity import PhysObj
 from entities.gun_shell import GunShell
 from game.visual_effects import EffectManager
 from game.world_effects import boom
-
+from game.sfx import Sfx, SfxIndex
 
 
 class Grenade (PhysObj):
@@ -55,6 +55,7 @@ class StickyBomb (Grenade):
 		self.stick = None
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		if not self.sticked:
 			self.sticked = True
 			self.stick = vectorCopy((self.pos + ppos)/2)
@@ -98,6 +99,7 @@ class Banana(Grenade):
 		self.used = used
 
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		if self.used:
 			self.dead = True
 
@@ -134,6 +136,10 @@ class GasGrenade(PhysObj):
 		self.damp = 0.5
 		self.state = "throw"
 
+	def remove_from_game(self):
+		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.GAS_LOOP, 1500)
+
 	def death_response(self):
 		boom(self.pos, 20)
 		for i in range(40):
@@ -148,6 +154,7 @@ class GasGrenade(PhysObj):
 		if self.state == "throw":
 			if self.timer >= GameVariables().fuse_time:
 				self.state = "release"
+				Sfx().loop_increase(SfxIndex.GAS_LOOP)
 		if self.state == "release":
 			if self.timer % 3 == 0:
 				EffectManager().add_gas(self.pos, vectorUnitRandom())

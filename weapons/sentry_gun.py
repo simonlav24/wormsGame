@@ -12,6 +12,7 @@ from common.vector import *
 from game.world_effects import boom
 from weapons.guns import fire_minigun
 from weapons.autonomous_object import AutonomousObject
+from game.sfx import Sfx, SfxIndex
 
 
 class SentryState(Enum):
@@ -77,6 +78,7 @@ class SentryGun(AutonomousObject):
 
 		if self.inner_state == SentryState.SEARCHING:
 			if self.check_for_target():
+				Sfx().play(SfxIndex.TURRET_ACTIVATE)
 				self.inner_state = SentryState.FIRING
 
 		elif self.inner_state == SentryState.FIRING:

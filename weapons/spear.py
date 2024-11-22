@@ -8,7 +8,7 @@ from common.vector import *
 
 from game.map_manager import MapManager, GRD
 from entities import PhysObj
-
+from game.sfx import Sfx, SfxIndex
 
 class Spear(PhysObj):
 	def __init__(self, pos, direction, energy, worm_ignore: EntityWorm):
@@ -47,6 +47,7 @@ class Spear(PhysObj):
 	def death_response(self):
 		self.pos += self.vel
 		point = self.pos - normalize(self.vel) * 30
+		Sfx().play(SfxIndex.ARROW_HIT)
 		pygame.draw.line(MapManager().game_map, GRD, self.pos, point, self.radius)
 		pygame.draw.polygon(MapManager().game_map, GRD, [self.pos + rotateVector(i, self.vel.getAngle()) for i in self.triangle])
 		

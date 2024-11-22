@@ -33,6 +33,7 @@ class Debrie (PhysObj):
 		self.angle = 0
 		
 		self.firey = randint(0, 5) == 0 and firey
+		self.sound_collision = False
 	
 	def apply_force(self):
 		factor = 1.5
@@ -46,6 +47,7 @@ class Debrie (PhysObj):
 			# Blast(self.pos + vectorUnitRandom() * randint(0,4) + vector_from_angle(-radians(self.angle)-pi/2) * 8, randint(3,6), 150)
 	
 	def on_collision(self, ppos):
+		super().on_collision(ppos)
 		self.firey = False
 	
 	def draw(self, win: pygame.Surface):
