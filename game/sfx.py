@@ -66,7 +66,6 @@ class SfxIndex(Enum):
     BEES_LOOP = auto()
     VORTEX_IN = auto()
     VORTEX_OUT = auto()
-
     BULL = auto()
     EARTH_SPIKE = auto()
     ICICLE = auto()
@@ -77,21 +76,30 @@ class SfxIndex(Enum):
 
 
 class EmptySound:
-    def play(self, index: SfxIndex):
-        return
+    def play(self, index: SfxIndex=SfxIndex.NONE) -> None:
+        pass
+
+    def fadeout(self, fade_out_ms: int) -> None:
+        pass
 
 
 class Sfx(metaclass=SingletonMeta):
     def __init__(self):
         self.sound_dict: Dict[SfxIndex, pygame.mixer.Sound] = {}
+
+        self._debug = False
+
         for element in SfxIndex:
             if element is SfxIndex.NONE:
                 self.sound_dict[element] = EmptySound()
                 continue
 
             path = rf'assets/sfx/{element.name.lower()}.mp3'
+           
             if not Path(path).exists():
-                print(f'no sound {element.name}')
+                if self._debug:
+                    print(f'no sound {element.name}')
+                self.sound_dict[element] = EmptySound()
                 continue
             self.sound_dict[element] = pygame.mixer.Sound(path)
 
@@ -122,5 +130,3 @@ class Sfx(metaclass=SingletonMeta):
             self.in_loop[index] = 0
         if self.in_loop[index] == 0:
             self.sound_dict[index].fadeout(fade_out_ms)
-            
-
