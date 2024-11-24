@@ -50,6 +50,8 @@ class Mine(PhysObj):
 			EffectManager().add_light(vectorCopy(self.pos), 50, (100,0,0,100))
 
 	def activate(self):
+		if self.activated:
+			return
 		self.activated = True
 		Sfx().play(SfxIndex.MINE_ACTIVATE)
 		Sfx().loop_increase(SfxIndex.MINE_LOOP)
