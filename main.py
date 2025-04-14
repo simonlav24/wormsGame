@@ -23,7 +23,6 @@ wip = '''
 		team creation screen
         do not cool down weapons in time travel
         pokeball sound error
-        fire can jump on trampoline XD
 		bug: when killing an enemy with gamma gun, the enemy dead but remains sick
 	'''
 

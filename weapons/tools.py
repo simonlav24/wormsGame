@@ -109,6 +109,10 @@ class Trampoline:
 			gs.surf = Trampoline._sprite
 		
 		for obj in GameVariables().get_physicals():
+
+			if obj in GameVariables().get_debries():
+				continue
+
 			# trampoline
 			if obj.vel.y > 0 and self.collide(obj.pos):
 				self.spring(obj.vel.y)

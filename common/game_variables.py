@@ -322,15 +322,6 @@ class GameVariables(metaclass=SingletonMeta):
     def update_state(self, state: GameState = None) -> None:
         self.state_machine.update(state)
 
-    def register_fire_particle(self, particle: EntityPhysical) -> None:
-        self.database.fire_particles.append(particle)
-        Sfx().loop(SfxIndex.FIRE_LOOP)
-
-    def unregister_fire_particle(self, particle: EntityPhysical) -> None:
-        self.database.fire_particles.remove(particle)
-        if not self.database.fire_particles:
-            Sfx().stop(SfxIndex.FIRE_LOOP, 1000)
-
 def point2world(point) -> Tuple[int, int]:
 	''' point in vector space to point in world map space '''
 	return (int(point[0]) - int(GameVariables().cam_pos[0]), int(point[1]) - int(GameVariables().cam_pos[1]))
