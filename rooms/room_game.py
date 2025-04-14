@@ -24,7 +24,7 @@ from weapons.missiles import DrillMissile
 from weapons.long_bow import LongBow
 
 from game.game_manager import Game
-
+from game.state_save import save_game, load_game
 
 def on_key_press_right():
 	GameVariables().player.turn(RIGHT)
@@ -174,6 +174,12 @@ class GameRoom(Room):
 				if event.key == pygame.K_EQUALS:
 					self.game_manager.cheat_activate(self.game_manager.cheat_code)
 					self.game_manager.cheat_code = ""
+				
+				if event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
+					save_game('test_save.json')
+				
+				if event.key == pygame.K_l and pygame.key.get_mods() & pygame.KMOD_CTRL:
+					load_game('test_save.json')
 
 	def step(self):
 		''' game step '''

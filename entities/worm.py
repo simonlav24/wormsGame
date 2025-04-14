@@ -338,3 +338,28 @@ class Worm(PhysObj):
         self.damage(randint(1, 8))
         a = lambda x : 1 if x >= 0 else -1
         self.vel -= Vector(a(origin[0] - self.pos.x) * uniform(1.2, 2.2), uniform(1.2, 3.2))
+
+    def serialize(self) -> dict:
+        serialized = super().serialize()
+        serialized |= {
+            "pos": (self.pos[0], self.pos[1]),
+            "health": self.health,
+            "alive": self.alive,
+            "name": self.name_str,
+            "team": self.team.name,
+            "sick": self.sick.value,
+            "shoot_angle": self._shoot_angle,
+            "facing": self.facing,
+        }
+        return serialized
+    
+    def deserialize(self, data) -> None:
+        super().deserialize(data)
+        self.pos = Vector(data["pos"][0], data["pos"][1])
+        self.health = data["health"]
+        self.alive = data["alive"]
+        self.name_str = data["name"]
+        self.team = TeamManager()[data["team"]]
+        self.sick = Sickness(data["sick"])
+        self._shoot_angle = data["shoot_angle"]
+        self.facing = data["facing"]

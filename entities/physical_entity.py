@@ -209,3 +209,8 @@ class PhysObj(Entity):
 	
 	def draw(self, win: pygame.Surface) -> None:
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
+
+	def serialize(self):
+		serialized = super().serialize()
+		serialized["pos"] = (self.pos[0], self.pos[1])
+		return serialized
