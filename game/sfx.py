@@ -73,6 +73,13 @@ class SfxIndex(Enum):
     TORNADO_LOOP = auto()
     PICKAXE = auto()
     BUILD = auto()
+    MACHINE_GUN_LOOP = auto()
+
+    COLLECT = auto()
+    # pokeball electricity
+    # teleport
+    # collect crate
+    # thrust for himong missiles
 
 
 class EmptySound:
@@ -114,6 +121,7 @@ class Sfx(metaclass=SingletonMeta):
         play = self.in_loop[index] == 0
         self.in_loop[index] += 1
         if play:
+            # print(f'play {self.in_loop[index]}')
             self.sound_dict[index].play(-1)
     
     def loop_ensure(self, index: SfxIndex) -> None:
@@ -123,6 +131,7 @@ class Sfx(metaclass=SingletonMeta):
         self.loop_increase(index)
     
     def loop_decrease(self, index: SfxIndex, fade_out_ms=0, force_stop=False) -> None:
+        # print(f'decrease {index}')
         if not index in self.in_loop.keys():
             return
         self.in_loop[index] -= 1
@@ -130,3 +139,8 @@ class Sfx(metaclass=SingletonMeta):
             self.in_loop[index] = 0
         if self.in_loop[index] == 0:
             self.sound_dict[index].fadeout(fade_out_ms)
+
+    def play_duration(self, index: SfxIndex, time_ms) -> None:
+        if index == SfxIndex.NONE:
+            return
+        self.sound_dict[index].play(maxtime=time_ms)

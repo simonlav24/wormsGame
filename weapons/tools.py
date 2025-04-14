@@ -122,10 +122,10 @@ class Trampoline:
 					obj.vel.y = -TRAMPOLINE_MIN_VEL
 
 				# prevent stucking on trampoline
-				if GameVariables().game_state == GameState.WAIT_STABLE:
-					obj.vel.x += uniform(-0.5,0.5)
+				if GameVariables().game_state in [GameState.WAIT_STABLE, GameState.DEPLOYEMENT, GameState.AUTONOMOUS_PLAY, GameState.SUDDEN_DEATH_PLAY]:
+					obj.vel.x += uniform(-0.5, 0.5)
 	
-	def spring(self, amount):
+	def spring(self, amount: float) -> None:
 		Sfx().play(SfxIndex.TRAMPOLINE_BOUNCE)
 		self.offset = -amount
 		self.stable = False

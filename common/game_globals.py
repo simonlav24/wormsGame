@@ -10,8 +10,8 @@ class GameGlobals(metaclass=SingletonMeta):
         self.win_width = 0
         self.win_height = 0
 
-        self.screen_width = 1280
-        self.screen_height = 720
+        self.screen_width = 1920
+        self.screen_height = 1080
 
         self.scale_factor = 3
         self.scale_range = (1, 3)

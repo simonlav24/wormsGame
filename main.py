@@ -14,14 +14,17 @@ from rooms.room_main_menu import MainMenuRoom
 from rooms.room_pause import PauseRoom
 from rooms.splash_screen import SplashScreenRoom
 from rooms.room_game import GameRoom
-
+from rooms.discord import update_presence
 
 wip = '''
 	still in progress:
 		holding mjolnir
 		refactor bubble
 		team creation screen
-		trampoline remove from cool down
+        do not cool down weapons in time travel
+        pokeball sound error
+        fire can jump on trampoline XD
+		bug: when killing an enemy with gamma gun, the enemy dead but remains sick
 	'''
 
 def main():
@@ -38,6 +41,11 @@ def main():
 	GameGlobals().screen = screen
 
 	common.constants.initialize()
+
+	try:
+		update_presence()
+	except Exception:
+		pass
 
 	# room enum to room class converter
 	rooms_creation_dict = {

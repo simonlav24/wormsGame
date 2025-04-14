@@ -5,7 +5,7 @@ from math import sin, cos, pi
 import pygame
 
 from common.vector import Vector, dist
-from common import GameVariables, point2world, RIGHT, LEFT
+from common import GameVariables, point2world, RIGHT
 
 from entities import PhysObj
 from game.world_effects import boom
@@ -22,6 +22,7 @@ class TNT(PhysObj):
 		self.bounce_before_death = -1
 		self.damp = 0.2
 		self.timer = 0
+		Sfx().loop_increase(SfxIndex.GAS_LOOP)
 
 	def secondaryStep(self):
 		self.timer += 1
@@ -31,6 +32,10 @@ class TNT(PhysObj):
 
 	def death_response(self):
 		boom(self.pos, 40)
+	
+	def remove_from_game(self):
+		super().remove_from_game()
+		Sfx().loop_decrease(SfxIndex.GAS_LOOP, 200)
 		
 	def draw(self, win: pygame.Surface):
 		pygame.draw.rect(win, self.color, (int(self.pos.x -2) - int(GameVariables().cam_pos[0]),int(self.pos.y -4) - int(GameVariables().cam_pos[1]) , 3,8))

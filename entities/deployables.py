@@ -87,15 +87,15 @@ class WeaponPack(Deployable):
 def deploy_pack(pack):
 	x = 0
 	ymin = 20
-	goodPlace = False #1 has MapManager().ground_map under. #2 not in MapManager().ground_map. #3 not above worm 
-	while not goodPlace:
+	good_place = False #1 has MapManager().ground_map under. #2 not in MapManager().ground_map. #3 not above worm 
+	while not good_place:
 		x = randint(10, MapManager().game_map.get_width() - 10)
 		y = randint(10, ymin)
 		
-		goodPlace = True
+		good_place = True
 		# test1
 		if MapManager().is_ground_around(Vector(x,y), 10):
-			goodPlace = False
+			good_place = False
 			ymin += 10
 			if ymin > 500:
 				ymin = 20
@@ -105,15 +105,15 @@ def deploy_pack(pack):
 		for i in range(MapManager().game_map.get_height()):
 			if y + i >= MapManager().game_map.get_height() - GameVariables().water_level:
 				# no MapManager().ground_map bellow
-				goodPlace = False
+				good_place = False
 				continue
 			if MapManager().game_map.get_at((x, y + i)) == GRD:
-				goodPlace = True
+				good_place = True
 				break
 		# test3 (hopefully always possible)
 		for worm in GameVariables().get_worms():
 			if x > worm.pos.x - 15 and x < worm.pos.x + 15:
-				goodPlace = False
+				good_place = False
 				continue
 	
 	p = pack(Vector(x, y))

@@ -18,6 +18,7 @@ from weapons.long_bow import LongBow, Icicle, FireBall
 from weapons.plants import RazorLeaf
 from weapons.spear import Spear
 from weapons.earth_spike import EarthSpike, calc_earth_spike_pos
+from game.sfx import Sfx, SfxIndex
 
 
 def fire_gun_generic(**kwargs) -> Tuple[Vector, Vector, int]:
