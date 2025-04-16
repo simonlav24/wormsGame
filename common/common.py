@@ -25,7 +25,7 @@ class SingletonMeta(type):
             cls._instances.pop(cls)
 
 
-class ICreateGame(Protocol):
+class ICreateGame:
     def create_new_game(self) -> None:
         ...
 

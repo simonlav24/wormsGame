@@ -1,7 +1,24 @@
 
+import io
 import json
+import base64
+
+import pygame
 
 from common import GameVariables, GameState
+
+from game.map_manager import MapManager
+
+
+def surface_to_base64(surface):
+    byte_io = io.BytesIO()
+    pygame.image.save(surface, byte_io, "PNG")
+    return base64.b64encode(byte_io.getvalue()).decode('utf-8')
+
+def base64_to_surface(b64_str):
+    byte_io = io.BytesIO(base64.b64decode(b64_str))
+    byte_io.seek(0)
+    return pygame.image.load(byte_io).convert_alpha()
 
 
 def save_game(path: str) -> None:
@@ -32,6 +49,8 @@ def save_game(path: str) -> None:
 
 
     # save map
+    save_game_state['game_map'] = surface_to_base64(MapManager().game_map)
+    save_game_state['ground_map'] = surface_to_base64(MapManager().ground_map)
 
     # save to file
     with open(path, 'w') as file:
@@ -49,16 +68,17 @@ def load_game(path: str) -> None:
 
 
     # load physicals
-    for obj_data in save_game_state['objects']:
-        class_name = obj_data.pop('class_name')
-        class_ = globals()[class_name]
-        obj = class_(**obj_data)
-        obj.deserialize(obj_data)
-        GameVariables().get_physicals().append(obj)
+    # for obj_data in save_game_state['objects']:
+    #     class_name = obj_data.pop('class_name')
+    #     class_ = globals()[class_name]
+    #     obj = class_(**obj_data)
+    #     obj.deserialize(obj_data)
+    #     GameVariables().get_physicals().append(obj)
 
     # load non physicals
 
 
     # load map
-
+    MapManager().game_map = base64_to_surface(save_game_state['game_map'])
+    MapManager().ground_map = base64_to_surface(save_game_state['ground_map'])
 

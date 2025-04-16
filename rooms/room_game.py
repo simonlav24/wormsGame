@@ -23,6 +23,7 @@ from weapons.weapon import WeaponCategory, WeaponStyle
 from weapons.missiles import DrillMissile
 from weapons.long_bow import LongBow
 
+from game.game_creator import GameCreatorNewGame, GameCreatorLoadGame
 from game.game_manager import Game
 from game.state_save import save_game, load_game
 
@@ -87,8 +88,16 @@ class GameRoom(Room):
 	def __init__(self, *args, **kwargs) -> None:
 		super().__init__(*args, **kwargs)
 
-		config = kwargs.get('input')
-		self.game_manager = Game(config)
+
+		config: GameConfig = kwargs.get('input')
+		if config.game_load_state_path is None:
+			game_creator = GameCreatorNewGame()
+			game_creator.set_config(config)
+		else:
+			game_creator = GameCreatorLoadGame()
+			game_creator.set_config(config)
+
+		self.game_manager = Game(game_creator)
 
 		# refactor these
 		damage_this_turn = GameVariables().stats.get_stats()['damage_this_turn']

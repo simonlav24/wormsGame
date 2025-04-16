@@ -5,7 +5,7 @@ from random import randint, uniform, choice
 import pygame
 import pygame.gfxdraw
 
-from common import GameVariables, GameGlobals, GameConfig, feels, fonts, WHITE, BLACK, PlantMode, mouse_pos_in_world
+from common import GameVariables, GameGlobals, GameConfig, feels, fonts, WHITE, BLACK, PlantMode, mouse_pos_in_world, ICreateGame
 from common.vector import Vector, dist
 from common.game_config import GameMode, RandomMode
 
@@ -33,6 +33,7 @@ from game.world_effects import boom
 
 from game.hud import Commentator, Hud
 from gui.radial_menu import RadialMenu, RadialButton
+from game.game_creator import GameCreator
 
 from entities.props import PetrolCan
 from entities.deployables import HealthPack, WeaponPack, UtilityPack
@@ -47,16 +48,16 @@ from weapons.misc.springs import MasterOfPuppets
 from weapons.misc.armageddon import Armageddon
 
 
-class Game:
+class Game(ICreateGame):
     ''' game manager class.  '''
-    def __init__(self, game_config: GameConfig=None):
+    def __init__(self, game_creator: GameCreator=None):
         self.reset()
-        GameVariables().set_config(game_config)
+        GameVariables().set_config(game_creator.game_config)
         GameVariables().commentator = Commentator()
         GameVariables().hud = Hud()
-        GameVariables().state_machine = StateMachine(self)
+        GameVariables().state_machine = StateMachine(game_creator)
 
-        self.evaluate_config(game_config)
+        self.evaluate_config(game_creator.game_config)
         
         WeaponManager()
 
@@ -80,7 +81,7 @@ class Game:
         EffectManager.reset()
         WeaponManager.reset()
 
-    def create_new_game(self) -> None:
+    def __create_new_game(self) -> None:
         ''' initialize new game '''
 
         # create map
@@ -144,7 +145,7 @@ class Game:
         # handle game mode
         self.init_handle_game_mode()
 
-    def place_worms_random(self) -> None:
+    def __place_worms_random(self) -> None:
         ''' create worms and place them randomly '''
         for i in range(self.game_config.worms_per_team * len(TeamManager().teams)):
             if self.game_config.option_forts:
@@ -161,7 +162,7 @@ class Game:
             TeamManager().team_choser = (TeamManager().team_choser + 1) % GameVariables().num_of_teams
             self.loading_step()
 
-    def init_handle_game_mode(self) -> None:
+    def __init_handle_game_mode(self) -> None:
         ''' on init, handle game mode parameter and variables '''
         # digging match
         if GameVariables().config.option_digging:
@@ -177,7 +178,7 @@ class Game:
 
         GameVariables().game_mode.on_game_init()
     
-    def create_map(self) -> None:
+    def __create_map(self) -> None:
         ''' create game map '''
         custom_height = 512
         if self.game_config.map_ratio != -1:
@@ -235,7 +236,7 @@ class Game:
     def step(self):
         pass
     
-    def loading_step(self):
+    def __loading_step(self):
         self.load_step_incremental += 1
         loading_surf = fonts.pixel10_halo.render("Simon's Worms Loading", False, WHITE)
         pos = (GameGlobals().win_width / 2 - loading_surf.get_width() / 2, GameGlobals().win_height / 2 - loading_surf.get_height() / 2)

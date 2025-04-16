@@ -207,6 +207,7 @@ class MainMenuRoom(Room):
             map_ratio=values['map_ratio'],
             feel_index=values['feel_index'],
             weapon_set=values[self.weapon_set_combo_key],
+            # game_load_state_path='test_save.json'
         )
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
 

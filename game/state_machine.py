@@ -6,6 +6,7 @@ import pygame
 
 from common import GameVariables, GameGlobals, GameState, fonts, Sickness, DamageType, RandomMode, ICreateGame, GameRecord, PATH_GAME_RECORD
 
+from game.game_creator import GameCreator
 from game.game_play_mode import SuddenDeathGamePlay
 from game.team_manager import Team, TeamManager
 from game.time_manager import TimeManager
@@ -212,7 +213,7 @@ def cycle_worms() -> GameState:
 
 
 class StateMachine:
-    def __init__(self, game_creator: ICreateGame):
+    def __init__(self, game_creator: GameCreator):
         self.game_creator = game_creator
         self.is_stable_check = False
         self.stable_count = 0
@@ -245,7 +246,7 @@ class StateMachine:
         if state == GameState.RESET:
             GameVariables().game_stable = False
             
-            self.game_creator.create_new_game()
+            self.game_creator.create_game()
             self.update(GameState.PLAYER_PLAY)
         
         elif state == GameState.PLAYER_PLAY:

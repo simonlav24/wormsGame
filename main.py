@@ -1,10 +1,10 @@
 ''' main entry point '''
 
+import sys
 import traceback
 from typing import Dict
 
 import pygame
-import pygame.gfxdraw
 
 from common import GameGlobals
 import common.constants
@@ -27,6 +27,7 @@ wip = '''
 	'''
 
 def main():
+
 	print(wip)
 	pygame.init()
 	fps_clock = pygame.time.Clock()
@@ -41,10 +42,8 @@ def main():
 
 	common.constants.initialize()
 
-	try:
+	if '-debug' not in sys.argv:
 		update_presence()
-	except Exception:
-		pass
 
 	# room enum to room class converter
 	rooms_creation_dict = {
@@ -90,6 +89,9 @@ def main():
 					current_room = existing_room
 					current_room.on_resume(input=switch.room_input)
 				
+		except NotImplementedError as e:
+			print(f"NotImplementedError: {e}")
+			done = True
 		except Exception:
 			print(traceback.format_exc())
 
