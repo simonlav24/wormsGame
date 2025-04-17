@@ -49,36 +49,23 @@ def save_game(path: str) -> None:
 
 
     # save map
-    save_game_state['game_map'] = surface_to_base64(MapManager().game_map)
+    # save_game_state['game_map'] = surface_to_base64(MapManager().game_map)
     save_game_state['ground_map'] = surface_to_base64(MapManager().ground_map)
 
     # save to file
     with open(path, 'w') as file:
         json.dump(save_game_state, file, indent=4)
 
-def load_game(path: str) -> None:
+def load_game(path: str) -> dict:
     '''load game state from a file'''
 
     with open(path, 'r') as file:
         save_game_state = json.load(file)
 
-    # load game variables
+    save_game_state['ground_map'] = base64_to_surface(save_game_state['ground_map'])
 
-    # load teams
-
-
-    # load physicals
-    # for obj_data in save_game_state['objects']:
-    #     class_name = obj_data.pop('class_name')
-    #     class_ = globals()[class_name]
-    #     obj = class_(**obj_data)
-    #     obj.deserialize(obj_data)
-    #     GameVariables().get_physicals().append(obj)
-
-    # load non physicals
+    return save_game_state
 
 
-    # load map
-    MapManager().game_map = base64_to_surface(save_game_state['game_map'])
-    MapManager().ground_map = base64_to_surface(save_game_state['ground_map'])
+
 

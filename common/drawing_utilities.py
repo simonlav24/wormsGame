@@ -98,3 +98,4 @@ def draw_dir_indicator(win: pygame.Surface, pos: Vector):
 		point.rotate(angle)
 	
 	pygame.draw.polygon(win, (255,0,0), [intersection + i + normalize(direction) * 4 * sin(GameVariables().time_overall / 5) for i in points])
+

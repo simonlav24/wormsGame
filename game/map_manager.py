@@ -52,11 +52,8 @@ class MapManager(metaclass=SingletonMeta):
     def get_map_size(self) -> Vector:
         return Vector(self.game_map.get_width(), self.game_map.get_height())
 
-    def create_map_image(self, image_path: str, map_height: int, recolor: bool=False) -> None:
-        ''' craete a map by an image '''
-        
-        feel_color =  feels[GameVariables().config.feel_index]
-
+    def create_map_by_image_path(self, image_path: str, map_height: int, recolor: bool=False) -> None:
+        ''' craete a map by image path '''
         # load map
         if not os.path.exists(image_path):
             raise FileNotFoundError(f'image path: {image_path} not found')
@@ -74,6 +71,15 @@ class MapManager(metaclass=SingletonMeta):
         ratio = map_image.get_width() / map_image.get_height()
         map_image = pygame.transform.scale(map_image, (int(map_height * ratio), map_height))
 
+        self.create_map_by_surf(map_image)
+
+        if recolor:
+            self.recolor_ground()
+
+
+    def create_map_by_surf(self, map_image: pygame.Surface) -> None:
+        ''' craete a map by surface '''
+        feel_color =  feels[GameVariables().config.feel_index]
         self.create_map_surfaces((map_image.get_width(), map_image.get_height() + GameVariables().initial_variables.water_level))
 
         # fill gameMap
@@ -97,8 +103,13 @@ class MapManager(metaclass=SingletonMeta):
         self.ground_secondary.blit(map_image, (0,0))
         self.ground_secondary.set_colorkey(feel_color[0])
 
-        if recolor:
-            self.recolor_ground()
+    def create_ground_secondary(self, map_image: pygame.Surface) -> None:
+        feel_color =  feels[GameVariables().config.feel_index]
+
+        self.ground_secondary.fill(feel_color[0])
+        map_image.set_alpha(64)
+        self.ground_secondary.blit(map_image, (0,0))
+        self.ground_secondary.set_colorkey(feel_color[0])
 
     def create_map_digging(self, ratio: int) -> None:
         ''' craete a digging match map '''

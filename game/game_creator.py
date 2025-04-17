@@ -6,11 +6,11 @@ import pygame
 from common import GameVariables, GameGlobals, GameConfig, fonts, WHITE, BLACK, PlantMode
 from common.game_config import RandomMode
 
+from game.state_save import save_game, load_game
 
 from game.time_manager import TimeManager
 from game.map_manager import MapManager, SKY
 from game.team_manager import TeamManager
-
 
 from entities.props import PetrolCan
 from entities.worm import Worm
@@ -37,9 +37,6 @@ class GameCreator:
 
     def create_map(self) -> None:
         raise NotImplementedError("create_map() must be implemented in subclasses")
-
-    def init_handle_game_mode(self) -> None:
-        raise NotImplementedError("init_handle_game_mode() must be implemented in subclasses")
 
     def loading_step(self):
         self.load_step_incremental += 1
@@ -78,7 +75,6 @@ class GameCreatorNewGame(GameCreator):
 
         # select current team
         TeamManager().current_team = TeamManager().teams[0]
-        TeamManager().team_choser = TeamManager().teams.index(TeamManager().current_team)
 
         # place worms
         self.place_worms_random()
@@ -86,17 +82,19 @@ class GameCreatorNewGame(GameCreator):
         # give random legendary starting weapons:
         WeaponManager().give_extra_starting_weapons()
 
-        # place objects
+        # place mines
         if not self.game_config.option_digging:
             amount = randint(2,4)
             for _ in range(amount):
                 mine = MapManager().place_object(Mine, None, True)
                 mine.damp = 0.1
 
+        # place petrol cans
         amount = randint(2,4)
         for _ in range(amount):
             MapManager().place_object(PetrolCan, None, False)
 
+        # place plants
         if not self.game_config.option_digging:
             amount = randint(0, 2)
             for _ in range(amount):
@@ -131,13 +129,14 @@ class GameCreatorNewGame(GameCreator):
         if self.game_config.option_digging:
             MapManager().create_map_digging(custom_height)
         elif 'noise' in self.game_config.map_path:
-            MapManager().create_map_image(self.game_config.map_path, custom_height, True)
+            MapManager().create_map_by_image_path(self.game_config.map_path, custom_height, True)
         else:
-            MapManager().create_map_image(self.game_config.map_path, custom_height, self.game_config.is_recolor)
+            MapManager().create_map_by_image_path(self.game_config.map_path, custom_height, self.game_config.is_recolor)
         
 
     def place_worms_random(self) -> None:
         ''' create worms and place them randomly '''
+        team_choser = TeamManager().teams.index(TeamManager().current_team)
         for i in range(self.game_config.worms_per_team * len(TeamManager().teams)):
             if self.game_config.option_forts:
                 place = MapManager().get_good_place(div=i)
@@ -147,10 +146,10 @@ class GameCreatorNewGame(GameCreator):
                 pygame.draw.circle(MapManager().game_map, SKY, place, 35)
                 pygame.draw.circle(MapManager().ground_map, SKY, place, 35)
                 pygame.draw.circle(MapManager().ground_secondary, SKY, place, 30)
-            current_team = TeamManager().teams[TeamManager().team_choser]
+            current_team = TeamManager().teams[team_choser]
             new_worm_name = current_team.get_new_worm_name()
             current_team.worms.append(Worm(place, new_worm_name, current_team))
-            TeamManager().team_choser = (TeamManager().team_choser + 1) % GameVariables().num_of_teams
+            team_choser = (team_choser + 1) % GameVariables().num_of_teams
             self.loading_step()
 
     def init_handle_game_mode(self) -> None:
@@ -171,12 +170,42 @@ class GameCreatorNewGame(GameCreator):
 
 
 class GameCreatorLoadGame(GameCreator):
+    def __init__(self):
+        super().__init__()
+        self.game_data: dict = None
+
     def create_game(self):
-        
+        path = self.game_config.game_load_state_path
+        self.game_data = load_game(path)
+
         self.create_map()
 
-    def create_map(self):
+        # place objects
+        # todo:
+
+        # choose starting worm
+        starting_worm = TeamManager().current_team.worms.pop(0)
+        TeamManager().current_team.worms.append(starting_worm)
+
+        if self.game_config.random_mode != RandomMode.NONE:
+            starting_worm = choice(TeamManager().current_team.worms)
         
-        raise NotImplementedError()
+        GameVariables().player = starting_worm
+        GameVariables().cam_track = starting_worm
+
+        # reset time
+        TimeManager().time_reset()
+        WeaponManager().switch_weapon(WeaponManager().current_weapon)
+
+        # randomize wind
+        GameVariables().physics.wind = uniform(-1, 1)
+
+        # todo: game mode on load
+
+
+    def create_map(self):
+        map_surf = self.game_data['ground_map']
+        MapManager().create_map_by_surf(map_surf)        
+
 
 

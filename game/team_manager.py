@@ -62,7 +62,7 @@ class TeamManager(metaclass=SingletonMeta):
         GameVariables().num_of_teams = num_of_teams
         GameVariables().turns_in_round = GameVariables().num_of_teams
         self.current_team: Team = None
-        self.team_choser = 0
+
         shuffle(self.teams)
 
         # todo: calculate for david vs goliath
