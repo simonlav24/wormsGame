@@ -6,11 +6,13 @@ import pygame
 
 from rooms.room import Room, Rooms, SwitchRoom
 from gui.menu_gui_new import (
-    Gui, StackPanel, Text, Button, HORIZONTAL, LoadBar
+    Gui, StackPanel, Text, Button, HORIZONTAL, LoadBar, UpDown
 )
 
 from common import GameGlobals
 from common.vector import Vector
+
+from game.sfx import Sfx
 
 @dataclass
 class PauseRoomInfo:
@@ -22,6 +24,7 @@ class PauseRoom(Room):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.gui = Gui()
+        self.gui.name = 'pause menu gui'
 
         self.info: PauseRoomInfo = kwargs.get('input', None)
         pause_menu = self.initialize_pause_menu()
@@ -55,6 +58,10 @@ class PauseRoom(Room):
             self.on_continue()
         if event == 'to_main_menu':
             self.switch = SwitchRoom(Rooms.MAIN_MENU, False, None)
+        if event == 'volume_change':
+            value = values['volume_change']
+            Sfx().set_volume(value / 10)
+
 
     def on_continue(self):
         self.switch = SwitchRoom(Rooms.GAME_ROOM, False, None)
@@ -81,6 +88,10 @@ class PauseRoom(Room):
         # 		pauseMenu.insert(MENU_TEXT, text=mission)
 
         pauseMenu.insert(Button(key="resume", text="resume"))
+        volume_form = StackPanel(orientation=HORIZONTAL)
+        volume_form.insert(Text(text="volume"))
+        volume_form.insert(UpDown(key="volume_change", value=Sfx().get_volume(), lim_min=0, lim_max=10, step=1, generate_event=True))
+        pauseMenu.insert(volume_form)
         pauseMenu.insert(Button(key="to_main_menu", text="back to main menu"))
         pauseMenu.pos = Vector(GameGlobals().win_width//2 - pauseMenu.size[0]//2, GameGlobals().win_height//2 - pauseMenu.size[1]//2)
 

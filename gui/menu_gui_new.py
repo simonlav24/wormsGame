@@ -45,6 +45,7 @@ class Gui:
         self.toast_timer = 0
         self.toast_state = ToastState.NONE
         self.toast_pos = Vector()
+        self.name = 'gui'
     
     def show_cursor(self, cursor, element):
         pygame.mouse.set_cursor(cursor)
@@ -228,7 +229,6 @@ class StackPanel(GuiElement):
         self.margin = margin # distance between elements
         self.custom_size = custom_size
         self.offset = None
-        self.gui: Gui = None
     
     def handle_pygame_event(self, event):
         for element in self.elements:

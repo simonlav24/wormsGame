@@ -4,7 +4,6 @@ import traceback
 from typing import Dict
 
 import pygame
-import pygame.gfxdraw
 
 from common import GameGlobals
 import common.constants

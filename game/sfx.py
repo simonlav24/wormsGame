@@ -96,6 +96,8 @@ class Sfx(metaclass=SingletonMeta):
 
         self._debug = False
 
+        self.master_volume = 1.0
+
         for element in SfxIndex:
             if element is SfxIndex.NONE:
                 self.sound_dict[element] = EmptySound()
@@ -115,6 +117,7 @@ class Sfx(metaclass=SingletonMeta):
     def play(self, index: SfxIndex) -> None:
         if index == SfxIndex.NONE:
             return
+        self.sound_dict[index].set_volume(self.master_volume)
         self.sound_dict[index].play()
 
     def loop_increase(self, index: SfxIndex) -> None:
@@ -122,6 +125,7 @@ class Sfx(metaclass=SingletonMeta):
         self.in_loop[index] += 1
         if play:
             # print(f'play {self.in_loop[index]}')
+            self.sound_dict[index].set_volume(self.master_volume)
             self.sound_dict[index].play(-1)
     
     def loop_ensure(self, index: SfxIndex) -> None:
@@ -143,4 +147,11 @@ class Sfx(metaclass=SingletonMeta):
     def play_duration(self, index: SfxIndex, time_ms) -> None:
         if index == SfxIndex.NONE:
             return
+        self.sound_dict[index].set_volume(self.master_volume)
         self.sound_dict[index].play(maxtime=time_ms)
+
+    def get_volume(self) -> float:
+        return int(self.master_volume * 10)
+
+    def set_volume(self, value: float) -> None:
+        self.master_volume = value
