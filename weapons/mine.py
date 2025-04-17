@@ -82,7 +82,7 @@ class Mine(PhysObj):
 		else:
 			if self.timer % 2 == 0:
 				pygame.draw.circle(win, (222,63,49), point2world(self.pos), 1)
-
+	
 
 class Gemino(PhysObj):
 	def __init__(self, pos, direction, energy):

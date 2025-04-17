@@ -5,14 +5,14 @@ from math import atan2, pi, sin, cos
 from typing import List
 from random import choice
 
-from common import Entity, GameVariables, point2world, CRITICAL_FALL_VELOCITY, sprites, DamageType
+from common import EntityPhysical, GameVariables, point2world, CRITICAL_FALL_VELOCITY, sprites, DamageType
 from common.vector import Vector
 
 from game.map_manager import MapManager, GRD, SKY, SKY_COL, GRD_COL
 from game.visual_effects import splash
 from game.sfx import SfxIndex, Sfx
 
-class PhysObj(Entity):
+class PhysObj(EntityPhysical):
 	''' a physical object '''
 
 	def __init__(self, pos=(0,0), **kwargs) -> None:

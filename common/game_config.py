@@ -32,7 +32,7 @@ class GameConfig(BaseModel):
     game_mode: GameMode = GameMode.BATTLE
     random_mode: RandomMode = RandomMode.NONE
 
-    game_load_state_path: str = None
+    game_load_state_path: str | None = None
 
     option_cool_down: bool = True
     option_artifacts: bool = True

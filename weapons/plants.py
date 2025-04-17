@@ -228,6 +228,12 @@ class Venus:
 		win.blit(rotated_image, point2world(tup2vec(rect) + self.direction*-25*(1-self.scale)))
 		MapManager().objects_col_map.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 
+	def serialize(self) -> dict:
+		data = {}
+		data['pos'] = (self.pos.x, self.pos.y)
+		data['angle'] = self.angle
+		return data
+
 
 class GrowingPlant:
 	''' growing plant that sprouts from the ground '''

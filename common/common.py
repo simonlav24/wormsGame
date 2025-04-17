@@ -42,8 +42,7 @@ class Entity(Protocol):
     def serialize(self) -> dict:
         return {}
     
-    @classmethod
-    def deserialize(cls, data: dict) -> 'Entity':
+    def deserialize(self, data: dict) -> 'Entity':
         ...
 
 
@@ -63,6 +62,12 @@ class EntityPhysical(Entity):
 
     def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
         ...
+
+    def deserialize(self, data: dict) -> 'EntityPhysical':
+        super().deserialize(data)
+        pos = data.get('pos', None)
+        if pos is not None:
+            self.pos = Vector(pos[0], pos[1])
 
 
 class EntityWormTool(Entity):

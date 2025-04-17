@@ -120,6 +120,17 @@ class MainMenuRoom(Room):
         elif event == 'exit':
             self.switch = SwitchRoom(Rooms.EXIT, False, None)
         
+        elif event == 'load':
+            self.gui.animators.append(
+                MenuAnimator(
+                    self.main_menu,
+                    self.main_menu.pos,
+                    self.main_menu.pos - Vector(0, GameGlobals().win_height),
+                    trigger=self.on_play,
+                    args=[values | {'load_game_path': 'test_save.json'}],
+                )
+            )
+
         elif event == 'random_image':
             image_element: ImageDrag = self.gui.get_element_by_key(self.image_element_key)
             image_element.set_image(choice(self.map_paths))
@@ -187,7 +198,7 @@ class MainMenuRoom(Room):
         elif self.handle_win_events(event, values):
             pass
 
-    def on_play(self, values):
+    def on_play(self, values: dict):
         ''' on press play button '''
         config = GameConfig(
             option_artifacts=values['option_artifacts'],
@@ -209,7 +220,7 @@ class MainMenuRoom(Room):
             feel_index=values['feel_index'],
             weapon_set=values[self.weapon_set_combo_key],
             teams = read_teams(),
-            game_load_state_path='test_save.json'
+            game_load_state_path=values.get('load_game_path', None)
         )
 
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
@@ -320,6 +331,7 @@ class MainMenuRoom(Room):
         main_menu.add_element(sub_more)
         
         sub_more = StackPanel(orientation=HORIZONTAL, custom_size=14)
+        sub_more.insert(Button(key="load", text="load game"))
         sub_more.insert(Button(key="exit", text="exit"))
         main_menu.add_element(sub_more)
 

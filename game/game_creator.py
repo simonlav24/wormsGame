@@ -5,8 +5,9 @@ import pygame
 
 from common import GameVariables, GameGlobals, GameConfig, fonts, WHITE, BLACK, PlantMode
 from common.game_config import RandomMode
+from common.vector import *
 
-from game.state_save import save_game, load_game
+from game.state_save import load_game
 
 from game.time_manager import TimeManager
 from game.map_manager import MapManager, SKY
@@ -17,7 +18,7 @@ from entities.worm import Worm
 
 from weapons.weapon_manager import WeaponManager
 from weapons.weapon import WeaponCategory
-from weapons.plants import PlantSeed
+from weapons.plants import PlantSeed, Venus
 from weapons.mine import Mine
 
 
@@ -88,19 +89,19 @@ class GameCreatorNewGame(GameCreator):
         if not self.game_config.option_digging:
             amount = randint(2,4)
             for _ in range(amount):
-                mine = MapManager().place_object(Mine, None, True)
+                mine = Mine(MapManager().get_good_place())
                 mine.damp = 0.1
 
         # place petrol cans
         amount = randint(2,4)
         for _ in range(amount):
-            MapManager().place_object(PetrolCan, None, False)
+            PetrolCan(MapManager().get_good_place())
 
         # place plants
         if not self.game_config.option_digging:
             amount = randint(0, 2)
             for _ in range(amount):
-                MapManager().place_object(PlantSeed, ((0,0), (0,0), 0, PlantMode.VENUS), False)
+                PlantSeed(MapManager().get_good_place(girder_place=False), (0,0), 0, PlantMode.VENUS,)
 
         # choose starting worm
         starting_worm = TeamManager().current_team.worms.pop(0)
@@ -159,7 +160,7 @@ class GameCreatorNewGame(GameCreator):
         # digging match
         if GameVariables().config.option_digging:
             for _ in range(80):
-                mine = MapManager().place_object(Mine, None)
+                mine = Mine(MapManager().get_good_place(girder_place=False))
                 mine.damp = 0.1
             # more digging
             for team in TeamManager().teams:
@@ -191,8 +192,8 @@ class GameCreatorLoadGame(GameCreator):
         self.place_objects()
 
         # choose starting worm
-        starting_worm = TeamManager().current_team.worms.pop(0)
-        TeamManager().current_team.worms.append(starting_worm)
+        TeamManager().current_team = TeamManager().get_by_name(self.game_data['current_turn_team'])
+        starting_worm = next((x for x in TeamManager().current_team.worms if x.name_str == self.game_data['current_turn_worm']), None)
 
         if self.game_config.random_mode != RandomMode.NONE:
             starting_worm = choice(TeamManager().current_team.worms)
@@ -222,12 +223,14 @@ class GameCreatorLoadGame(GameCreator):
                 team.worms.append(new_worm)
             elif class_name == 'PetrolCan':
                 # create petrol can
-                petrol_can = PetrolCan(object['pos'])
+                petrol_can = PetrolCan()
                 petrol_can.deserialize(object)
             elif class_name == 'Mine':
                 # create mine
-                mine = MapManager().place_object(Mine, None, True)
+                mine = Mine()
                 mine.deserialize(object)
+            elif class_name == 'Venus':
+                venus = Venus(Vector(object['pos'][0], object['pos'][1]), object['angle'])
 
     def create_map(self):
         map_surf = self.game_data['ground_map']

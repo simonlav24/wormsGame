@@ -8,6 +8,7 @@ import pygame
 from common import GameVariables, GameState
 
 from game.map_manager import MapManager
+from game.team_manager import TeamManager
 
 
 def surface_to_base64(surface):
@@ -30,14 +31,15 @@ def save_game(path: str) -> None:
 
     save_game_state = {}
 
-    # save game variables
-
     # save teams
 
+    # save game variables
+    save_game_state['current_turn_team'] = TeamManager().current_team.name
+    save_game_state['current_turn_worm'] = GameVariables().player.name_str
 
-    # save physicals
+    # save objects
     objects = []
-    for obj in GameVariables().get_physicals():
+    for obj in GameVariables().get_physicals() + GameVariables().database.non_physicals:
         class_name = obj.__class__.__name__
         obj_data = {'class_name': class_name}
         obj_data |= obj.serialize()
@@ -45,12 +47,10 @@ def save_game(path: str) -> None:
 
     save_game_state['objects'] = objects
 
-    # save non physicals
-
-
     # save map
-    # save_game_state['game_map'] = surface_to_base64(MapManager().game_map)
-    save_game_state['ground_map'] = surface_to_base64(MapManager().ground_map)
+    surf = pygame.Surface((MapManager().ground_map.get_width(), MapManager().ground_map.get_height() - GameVariables().water_level), pygame.SRCALPHA)
+    surf.blit(MapManager().ground_map, (0, 0))
+    save_game_state['ground_map'] = surface_to_base64(surf)
 
     # save to file
     with open(path, 'w') as file:

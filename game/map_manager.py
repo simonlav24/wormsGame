@@ -419,15 +419,3 @@ class MapManager(metaclass=SingletonMeta):
                 pygame.draw.circle(self.ground_map, SKY, place.vec2tup(), 5)
         return place
     
-    def place_object(self, cls: Any, args, girder_place: bool=False) -> EntityPhysical:
-        ''' create an instance of cls, return the last created'''
-        place = self.get_good_place(girder_place=girder_place)
-        if place:
-            if args is None:
-                instance = cls()
-            else:
-                instance = cls(*args)
-            instance.pos = Vector(place.x, place.y - 2)
-        else:
-            return None
-        return instance
