@@ -73,8 +73,10 @@ class GameCreatorNewGame(GameCreator):
                     if WeaponManager().weapons[i].category == WeaponCategory.AIRSTRIKE:
                         team.weapon_set[i] = 0
 
-        # select current team
-        TeamManager().current_team = TeamManager().teams[0]
+        # initialize managers
+        WeaponManager().initialize()
+        weapon_set = WeaponManager().weapon_set
+        TeamManager().initialize(weapon_set)
 
         # place worms
         self.place_worms_random()
@@ -180,8 +182,13 @@ class GameCreatorLoadGame(GameCreator):
 
         self.create_map()
 
+        # initialize managers
+        WeaponManager().initialize()
+        weapon_set = WeaponManager().weapon_set
+        TeamManager().initialize(weapon_set)
+
         # place objects
-        # todo:
+        self.place_objects()
 
         # choose starting worm
         starting_worm = TeamManager().current_team.worms.pop(0)
@@ -201,7 +208,26 @@ class GameCreatorLoadGame(GameCreator):
         GameVariables().physics.wind = uniform(-1, 1)
 
         # todo: game mode on load
+        GameVariables().game_mode.on_game_init(self.game_data)
 
+    def place_objects(self):
+        objects = self.game_data['objects']
+        for object in objects:
+            class_name = object['class_name']
+            if class_name == 'Worm':
+                # create worm
+                team = TeamManager().get_by_name(object['team'])
+                new_worm = Worm(object['pos'], object['name'], team)
+                new_worm.deserialize(object)
+                team.worms.append(new_worm)
+            elif class_name == 'PetrolCan':
+                # create petrol can
+                petrol_can = PetrolCan(object['pos'])
+                petrol_can.deserialize(object)
+            elif class_name == 'Mine':
+                # create mine
+                mine = MapManager().place_object(Mine, None, True)
+                mine.deserialize(object)
 
     def create_map(self):
         map_surf = self.game_data['ground_map']

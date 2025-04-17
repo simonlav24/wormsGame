@@ -37,8 +37,8 @@ class MissionsGamePlay(GamePlayMode):
         self.stats = stats
         self._log = ''
     
-    def on_game_init(self):
-        super().on_game_init()
+    def on_game_init(self, game_data: dict=None):
+        super().on_game_init(game_data)
         TimeManager().turnTime += 10
         self.cycle()
 

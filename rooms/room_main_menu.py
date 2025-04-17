@@ -23,6 +23,7 @@ from common import PATH_MAPS, PATH_GENERATED_MAPS, GameGlobals, GameRecord
 from common.vector import Vector, vectorCopy
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
+from common.team_data import read_teams
 
 from game.background import BackGround
 from game.map_manager import grab_maps
@@ -207,8 +208,10 @@ class MainMenuRoom(Room):
             map_ratio=values['map_ratio'],
             feel_index=values['feel_index'],
             weapon_set=values[self.weapon_set_combo_key],
+            teams = read_teams(),
             game_load_state_path='test_save.json'
         )
+
         self.switch = SwitchRoom(Rooms.GAME_ROOM, True, config)
 
     def  initialize_main_menu(self) -> StackPanel:

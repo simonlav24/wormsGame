@@ -17,8 +17,8 @@ class TargetsGamePlay(GamePlayMode):
         self.number_of_targets = 10
         self.targets: List[ShootingTarget] = []
     
-    def on_game_init(self):
-        super().on_game_init()
+    def on_game_init(self, game_data: dict=None):
+        super().on_game_init(game_data)
         self.targets = [ShootingTarget() for _ in range(self.number_of_targets)]
 
     def step(self):

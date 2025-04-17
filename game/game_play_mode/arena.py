@@ -19,7 +19,7 @@ class ArenaGamePlay(GamePlayMode):
         self.size = Vector()
         self.pos = Vector()
 
-    def on_game_init(self) -> None:
+    def on_game_init(self, game_data: dict=None) -> None:
         self.size = Vector(10 * 16, 10)
         self.pos = Vector(
             randint(50, MapManager().game_map.get_width() - 50),

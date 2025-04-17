@@ -29,8 +29,8 @@ class GameGlobals(metaclass=SingletonMeta):
         pass
 
     def full_screen(self):
-        self.screen_width = 1920
-        self.screen_height = 1080
+        self.screen_width = 1280
+        self.screen_height = 720
         GameGlobals().win_width = int(GameGlobals().screen_width / GameGlobals().scale_factor)
         GameGlobals().win_height = int(GameGlobals().screen_height / GameGlobals().scale_factor)
 

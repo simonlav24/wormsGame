@@ -22,7 +22,7 @@ WORM_DAMP_PLAYER = 0.1
 
 class Worm(PhysObj):
     healthMode = 0
-    def __init__(self, pos, name, team=None):
+    def __init__(self, pos, name: str, team: Team=None):
         super().__init__(pos)
         GameVariables().get_worms().append(self)
         GameVariables().get_electrocuted().append(self)
@@ -359,7 +359,6 @@ class Worm(PhysObj):
         self.health = data["health"]
         self.alive = data["alive"]
         self.name_str = data["name"]
-        self.team = TeamManager()[data["team"]]
         self.sick = Sickness(data["sick"])
         self._shoot_angle = data["shoot_angle"]
         self.facing = data["facing"]

@@ -7,8 +7,8 @@ from game.game_play_mode.game_play_mode import GamePlayMode
 
 
 class DVGGamePlay(GamePlayMode):
-    def on_game_init(self):
-        super().on_game_init()
+    def on_game_init(self, game_data: dict=None):
+        super().on_game_init(game_data)
         
         # gather teams
         teams: Dict[str, List[EntityWorm]] = {}

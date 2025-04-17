@@ -1,10 +1,10 @@
 
-from typing import Any
-from pydantic import BaseModel
+from typing import Any, Dict, List
 from enum import Enum
 
-from typing import Any, Dict
+from pydantic import BaseModel
 
+from common.team_data import TeamData
 
 class GameMode(Enum):
     BATTLE = 'battle'
@@ -41,6 +41,7 @@ class GameConfig(BaseModel):
     option_digging: bool = False
     option_darkness: bool = False
 
+    teams: List[TeamData] = []
     worms_per_team: int = 8
     worm_initial_health: int = 100
     deployed_packs: int = 1

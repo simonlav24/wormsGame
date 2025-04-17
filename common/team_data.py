@@ -22,17 +22,6 @@ def read_teams() -> List[TeamData]:
     return data_list
 
 
-def read_teams_play() -> List[str]:
-    with open(PATH_TEAMS_PLAY, 'r') as file:
-        names = json.load(file)
-    return names
-
-
-def write_teams_play(teams_list: List[str]) -> None:
-    with open(PATH_TEAMS_PLAY, 'w+') as file:
-        json.dump(teams_list, file, indent=4)
-
-
 def create_worm_surf(data: TeamData) -> pygame.Surface:
     surf = pygame.Surface((16, 16), pygame.SRCALPHA)
     pygame.draw.circle(surf, (255, 206, 167), (8, 8), 4.5)

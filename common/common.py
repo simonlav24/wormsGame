@@ -129,7 +129,7 @@ class GamePlayMode:
     def add_mode(self, mode: 'GamePlayMode'):
         ...
 
-    def on_game_init(self):
+    def on_game_init(self, game_data: dict = None):
         ...
 
     def on_turn_begin(self):

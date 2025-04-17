@@ -16,7 +16,7 @@ class CTFGamePlay(GamePlayMode):
         self.flag: Flag = None
         self.current_holder: EntityWorm = None
 
-    def on_game_init(self):
+    def on_game_init(self, game_data: dict=None):
         self.flag = deploy_pack(Flag)
         GameVariables().cam_track = self.flag
 

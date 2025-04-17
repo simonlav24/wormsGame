@@ -66,8 +66,8 @@ class ArtifactsGamePlay(GamePlayMode):
         self.triger_artifact = False
         self.deployed_artifacts: List[DeployableArtifact] = []
     
-    def on_game_init(self):
-        super().on_game_init()
+    def on_game_init(self, game_data: dict=None):
+        super().on_game_init(game_data)
         for team in TeamManager().teams:
             self.team_artifact_dict[team] = ArtifactType.NONE
 

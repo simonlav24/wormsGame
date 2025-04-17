@@ -16,7 +16,7 @@ from common.vector import Vector, tup2vec, vectorCopy
 from common.constants import feels
 from common.game_config import GameMode, RandomMode, SuddenDeathMode, GameConfig
 
-from common.team_data import TeamData, read_teams, read_teams_play, write_teams_play
+from common.team_data import TeamData, read_teams
 
 
 def sprite_index_to_rect(index):
@@ -43,7 +43,6 @@ class TeamsMenu:
         
         available_teams = read_teams()
         self.teams = {team.team_name: team for team in available_teams}
-        teams_in_play = read_teams_play()
         names = [team.team_name for team in available_teams]
 
         columns = StackPanel(orientation=HORIZONTAL)
@@ -56,7 +55,7 @@ class TeamsMenu:
 
             team_name = names[running_name]
             running_name = (running_name + 1) % len(names)
-            is_playing = team_name in teams_in_play
+            is_playing = True
 
             row.insert(Toggle(text=' ', key=f'toggle_{i}', value=is_playing, custom_size=16))
             combo = ComboSwitch(items=names, initial_item=team_name, key=f'combo_{i}')
@@ -129,5 +128,3 @@ class TeamsMenu:
             combo_element: ComboSwitch = self.gui.get_element_by_key(f'combo_{i}')
             if toggle_element.get_value():
                 teams_list.append(combo_element.get_value())
-
-        write_teams_play(teams_list)

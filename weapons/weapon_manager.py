@@ -35,14 +35,14 @@ class WeaponManager(metaclass=SingletonMeta):
         self.weapon_dict: Dict[str, Weapon] = {key: value for key, value in zip(list(mapped), self.weapons)}
         common.drawing_utilities.weapon_name_to_index = {key: value.index for key, value in self.weapon_dict.items()}
 
-        self.prepare_weapons_for_teams()
-
         self.current_weapon: Weapon = self.weapons[0]
         self.weapon_director: WeaponDirector = WeaponDirector(weapon_funcs)
 
-    def prepare_weapons_for_teams(self) -> None:
+        self.weapon_set: List[int] = []
+
+    def initialize(self) -> None:
         # default set
-        current_set: List[int] = [weapon.initial_amount if weapon.artifact == ArtifactType.NONE else 0 for weapon in self.weapons]
+        self.weapon_set: List[int] = [weapon.initial_amount if weapon.artifact == ArtifactType.NONE else 0 for weapon in self.weapons]
         weapon_set_name = GameVariables().config.weapon_set
 
         weapon_set = read_weapon_set(weapon_set_name)
@@ -50,10 +50,10 @@ class WeaponManager(metaclass=SingletonMeta):
             for weapon_index, amount in weapon_set.items():
                 if weapon_index == 'name':
                     continue
-                current_set[int(weapon_index)] = amount
+                self.weapon_set[int(weapon_index)] = amount
 
-        for team in TeamManager().teams:
-            team.weapon_set = current_set.copy()
+    def get_weapons(self) -> List[Weapon]:
+        return self.weapons
 
     def __getitem__(self, item: str) -> int:
         ''' return index of weapon by string '''

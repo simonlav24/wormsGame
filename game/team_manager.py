@@ -5,7 +5,7 @@ from random import choice, shuffle
 import pygame
 
 from common import desaturate, GameVariables, sprites, SingletonMeta, EntityWorm, fonts, PATH_TEAMS_LIST
-from common.team_data import TeamData, read_teams, read_teams_play
+from common.team_data import TeamData, read_teams
 from game.hud import HealthBar
 
 
@@ -22,7 +22,7 @@ class Team:
         self.artifacts = []
         self.hat_options = data.hats
         self.hat_surf = None
-    
+
     def make_hat(self, index) -> None:
         self.hat_surf = pygame.Surface((16, 16), pygame.SRCALPHA)
         self.hat_surf.blit(sprites.sprite_atlas, (0,0), (16 * (index % 8),16 * (index // 8),16,16))
@@ -56,12 +56,19 @@ class Team:
 class TeamManager(metaclass=SingletonMeta):
     def __init__(self):
         self.teams: List[Team] = []
-        self.load_teams()
+        self.current_team: Team = None
+        # score list
+        self.score_list: List[Dict[str, Any]] = []
+        self.health_bar_hud: HealthBar = None
+    
+    def initialize(self, weapon_set: List[int]) -> None:
+        ''' read team data from the game config '''
+        data_list = GameVariables().config.teams      
+        self.teams = [Team(data) for data in data_list]
 
         num_of_teams = len(self.teams)
         GameVariables().num_of_teams = num_of_teams
         GameVariables().turns_in_round = GameVariables().num_of_teams
-        self.current_team: Team = None
 
         shuffle(self.teams)
 
@@ -73,15 +80,10 @@ class TeamManager(metaclass=SingletonMeta):
             [team.color for team in self.teams]
         )
 
-        # score list
-        self.score_list: List[Dict[str, Any]] = []
-    
-    def load_teams(self) -> None:
-        available_teams = read_teams()
-        teams_in_play = read_teams_play()
-        
-        data_list = [TeamData.model_validate(data) for data in available_teams]
-        self.teams = [Team(data) for data in data_list if data.team_name in teams_in_play]
+        TeamManager().current_team = TeamManager().teams[0]
+
+        for team in TeamManager().teams:
+            team.weapon_set = weapon_set.copy()
 
         self.generate_hats()
 

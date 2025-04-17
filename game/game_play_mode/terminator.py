@@ -46,7 +46,7 @@ class TerminatorGamePlay(GamePlayMode):
         draw_target(win, self.current_target.pos)
         draw_dir_indicator(win, self.current_target.pos)
 
-    def on_game_init(self):
+    def on_game_init(self, game_data: dict=None):
         self.pick_target()
 
     def on_turn_begin(self):

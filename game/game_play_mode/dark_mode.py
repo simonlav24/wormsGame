@@ -14,8 +14,8 @@ from weapons.weapon_manager import WeaponManager
 
 class DarknessGamePlay(GamePlayMode):
 
-    def on_game_init(self):
-        super().on_game_init()
+    def on_game_init(self, game_data: dict=None):
+        super().on_game_init(game_data)
         
         # add initial flares
         for team in TeamManager().teams:

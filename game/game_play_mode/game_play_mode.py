@@ -16,9 +16,9 @@ class GamePlayCompound(GamePlayMode):
             return
         self.modes.append(mode)
 
-    def on_game_init(self):
+    def on_game_init(self, game_data: dict=None):
         for mode in self.modes:
-            mode.on_game_init()
+            mode.on_game_init(game_data)
 
     def on_turn_begin(self):
         ''' on cycle update '''
