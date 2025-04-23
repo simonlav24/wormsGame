@@ -15,6 +15,7 @@ from game.visual_effects import FloatingText, splash
 from entities.physical_entity import PhysObj
 from game.map_manager import MapManager, GRD_COL
 from entities.worm_tools import WormTool
+from game.models import WormModel
 from game.sfx import Sfx, SfxIndex
 
 WORM_DAMP_IDLE = 0.2
@@ -340,25 +341,25 @@ class Worm(PhysObj):
         self.vel -= Vector(a(origin[0] - self.pos.x) * uniform(1.2, 2.2), uniform(1.2, 3.2))
 
     def serialize(self) -> dict:
-        serialized = super().serialize()
-        serialized |= {
-            "pos": (self.pos[0], self.pos[1]),
-            "health": self.health,
-            "alive": self.alive,
-            "name": self.name_str,
-            "team": self.team.name,
-            "sick": self.sick.value,
-            "shoot_angle": self._shoot_angle,
-            "facing": self.facing,
-        }
-        return serialized
+        super_data = super().serialize().model_dump()
+        data = WormModel(**super_data, 
+                         health= self.health,
+                         alive= self.alive,
+                         name_str= self.name_str,
+                         team_name= self.team.name,
+                         sick= self.sick.value,
+                         shoot_angle= self._shoot_angle,
+                         facing= self.facing,
+                         )
+        return data
     
-    def deserialize(self, data) -> None:
+    def deserialize(self, data: WormModel) -> None:
         super().deserialize(data)
-        self.pos = Vector(data["pos"][0], data["pos"][1])
-        self.health = data["health"]
-        self.alive = data["alive"]
-        self.name_str = data["name"]
-        self.sick = Sickness(data["sick"])
-        self._shoot_angle = data["shoot_angle"]
-        self.facing = data["facing"]
+        self.health = data.health
+        self.alive = data.alive
+        self.name_str = data.name_str
+        self.team = TeamManager().get_by_name(data.team_name)
+        self.sick = Sickness(data.sick)
+        self._shoot_angle = data.shoot_angle
+        self.facing = data.facing
+        

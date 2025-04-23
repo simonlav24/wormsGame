@@ -10,6 +10,7 @@ from common.constants import ColorType, Sickness, DamageType, GameState
 from common.game_config import GameMode
 from common.team_data import TeamData
 
+from game.models import GameModelBase
 
 class SingletonMeta(type):
     ''' singleton metaclass '''
@@ -29,7 +30,6 @@ class ICreateGame:
     def create_new_game(self) -> None:
         ...
 
-
 class Entity(Protocol):
     ''' an object that has step and draw '''
     
@@ -39,14 +39,17 @@ class Entity(Protocol):
     def draw(self, win: pygame.Surface) -> None:
         ...
 
-    def serialize(self) -> dict:
-        return {}
+
+
+class Serializable(Entity):
+    def serialize(self) -> GameModelBase:
+        ...
     
-    def deserialize(self, data: dict) -> 'Entity':
+    def deserialize(self, data: GameModelBase) -> None:
         ...
 
 
-class EntityPhysical(Entity):
+class EntityPhysical(Serializable):
     ''' a physical entity '''
     pos: Vector
     vel: Vector
@@ -63,11 +66,9 @@ class EntityPhysical(Entity):
     def damage(self, value: int, damage_type: DamageType=DamageType.HURT, kill: bool=False) -> None:
         ...
 
-    def deserialize(self, data: dict) -> 'EntityPhysical':
+    def deserialize(self, data: GameModelBase):
         super().deserialize(data)
-        pos = data.get('pos', None)
-        if pos is not None:
-            self.pos = Vector(pos[0], pos[1])
+        self.pos = Vector(data.pos[0], data.pos[1])
 
 
 class EntityWormTool(Entity):

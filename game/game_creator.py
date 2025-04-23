@@ -7,7 +7,8 @@ from common import GameVariables, GameGlobals, GameConfig, fonts, WHITE, BLACK, 
 from common.game_config import RandomMode
 from common.vector import *
 
-from game.state_save import load_game
+from game.state_save import load_game, base64_to_surface
+from game.models import GameSaveStateModel
 
 from game.time_manager import TimeManager
 from game.map_manager import MapManager, SKY
@@ -101,7 +102,9 @@ class GameCreatorNewGame(GameCreator):
         if not self.game_config.option_digging:
             amount = randint(0, 2)
             for _ in range(amount):
-                PlantSeed(MapManager().get_good_place(girder_place=False), (0,0), 0, PlantMode.VENUS,)
+                place = MapManager().get_good_place(girder_place=False)
+                if place is not None:
+                    PlantSeed(place, (0,0), 0, PlantMode.VENUS)
 
         # choose starting worm
         starting_worm = TeamManager().current_team.worms.pop(0)
@@ -175,11 +178,11 @@ class GameCreatorNewGame(GameCreator):
 class GameCreatorLoadGame(GameCreator):
     def __init__(self):
         super().__init__()
-        self.game_data: dict = None
+        self.game_model: GameSaveStateModel = None
 
     def create_game(self):
         path = self.game_config.game_load_state_path
-        self.game_data = load_game(path)
+        self.game_model = load_game(path)
 
         self.create_map()
 
@@ -192,8 +195,8 @@ class GameCreatorLoadGame(GameCreator):
         self.place_objects()
 
         # choose starting worm
-        TeamManager().current_team = TeamManager().get_by_name(self.game_data['current_turn_team'])
-        starting_worm = next((x for x in TeamManager().current_team.worms if x.name_str == self.game_data['current_turn_worm']), None)
+        TeamManager().current_team = TeamManager().get_by_name(self.game_model.current_team_name)
+        starting_worm = next((x for x in TeamManager().current_team.worms if x.name_str == self.game_model.current_turn_worm), None)
 
         if self.game_config.random_mode != RandomMode.NONE:
             starting_worm = choice(TeamManager().current_team.worms)
@@ -209,16 +212,16 @@ class GameCreatorLoadGame(GameCreator):
         GameVariables().physics.wind = uniform(-1, 1)
 
         # todo: game mode on load
-        GameVariables().game_mode.on_game_init(self.game_data)
+        GameVariables().game_mode.on_game_init(self.game_model)
 
     def place_objects(self):
-        objects = self.game_data['objects']
+        objects = self.game_model.objects
         for object in objects:
-            class_name = object['class_name']
+            class_name = object.class_name
             if class_name == 'Worm':
                 # create worm
-                team = TeamManager().get_by_name(object['team'])
-                new_worm = Worm(object['pos'], object['name'], team)
+                team = TeamManager().get_by_name(object.team_name)
+                new_worm = Worm(object.pos, object.name_str, team)
                 new_worm.deserialize(object)
                 team.worms.append(new_worm)
             elif class_name == 'PetrolCan':
@@ -230,10 +233,11 @@ class GameCreatorLoadGame(GameCreator):
                 mine = Mine()
                 mine.deserialize(object)
             elif class_name == 'Venus':
-                venus = Venus(Vector(object['pos'][0], object['pos'][1]), object['angle'])
+                venus = Venus(Vector(object.pos[0], object.pos[1]), object.angle)
 
     def create_map(self):
-        map_surf = self.game_data['ground_map']
+        map_surf_base64 = self.game_model.ground_map
+        map_surf = base64_to_surface(map_surf_base64)
         MapManager().create_map_by_surf(map_surf)        
 
 

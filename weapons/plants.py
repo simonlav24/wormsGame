@@ -5,7 +5,7 @@ from math import pi, sin, sqrt, degrees, copysign
 
 import pygame
 
-from common import GameVariables, point2world, sprites, GameState, blit_weapon_sprite, RIGHT, LEFT, EntityWorm, PlantMode
+from common import GameVariables, point2world, sprites, GameState, blit_weapon_sprite, RIGHT, LEFT, EntityWorm, PlantMode, Serializable
 from common.vector import *
 
 from game.map_manager import MapManager, GRD
@@ -15,6 +15,7 @@ from entities import PhysObj
 from weapons.mine import Mine
 from entities.gun_shell import GunShell
 from entities.worm import DamageType
+from game.models import PlantModel
 from game.sfx import Sfx, SfxIndex
 
 def generate_leaf(pos, direction, color) -> None:
@@ -37,16 +38,16 @@ def generate_leaf(pos, direction, color) -> None:
 	pygame.draw.polygon(MapManager().game_map, GRD, points)
 	pygame.draw.polygon(MapManager().ground_map, color, points)
 
-class Venus:
+class Venus(Serializable):
 	grow = -1
 	catch = 0
 	idle = 1
 	hold = 2
 	release = 3
-	def __init__(self, pos, angle = -1):
+	def __init__(self, pos: Vector, angle = -1):
 		GameVariables().register_non_physical(self)
 		GameVariables().get_plants().append(self)
-		self.pos = pos
+		self.pos: Vector = pos
 		self.offset = Vector(25, 0)
 		
 		if angle == -1:
@@ -229,10 +230,19 @@ class Venus:
 		MapManager().objects_col_map.blit(rotated_image, tup2vec(rect) + self.direction*-25*(1-self.scale))
 
 	def serialize(self) -> dict:
-		data = {}
-		data['pos'] = (self.pos.x, self.pos.y)
-		data['angle'] = self.angle
+		data = PlantModel(pos=self.pos.vec2tupint(),
+						  angle= self.angle,
+						  )
 		return data
+
+	def deserialize(self, data: PlantModel) -> None:
+		super().deserialize(data)
+		self.angle = data.angle
+		self.direction = vector_from_angle(self.angle)
+		self.d1 = self.direction.normal()
+		self.d2 = self.d1 * -1
+		self.p1 = self.pos + self.d1 * self.gap
+		self.p2 = self.pos + self.d2 * self.gap
 
 
 class GrowingPlant:

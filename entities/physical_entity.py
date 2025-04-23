@@ -9,6 +9,7 @@ from common import EntityPhysical, GameVariables, point2world, CRITICAL_FALL_VEL
 from common.vector import Vector
 
 from game.map_manager import MapManager, GRD, SKY, SKY_COL, GRD_COL
+from game.models import GameModelBase
 from game.visual_effects import splash
 from game.sfx import SfxIndex, Sfx
 
@@ -211,6 +212,5 @@ class PhysObj(EntityPhysical):
 		pygame.draw.circle(win, self.color, point2world(self.pos), int(self.radius)+1)
 
 	def serialize(self):
-		serialized = super().serialize()
-		serialized["pos"] = (self.pos[0], self.pos[1])
-		return serialized
+		return GameModelBase(pos=(self.pos[0], self.pos[1]))
+		
