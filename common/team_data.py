@@ -13,6 +13,7 @@ class TeamData(BaseModel):
     color: ColorType
     names: List[str]
     hats: str
+    weapon_set: List[int] | None = None
 
 
 def read_teams() -> List[TeamData]:

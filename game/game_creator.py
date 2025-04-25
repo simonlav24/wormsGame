@@ -78,7 +78,12 @@ class GameCreatorNewGame(GameCreator):
         # initialize managers
         WeaponManager().initialize()
         weapon_set = WeaponManager().weapon_set
-        TeamManager().initialize(weapon_set)
+
+        weapon_set_per_team = []
+        for team in self.game_config.teams:
+            weapon_set_per_team.append((team.team_name, weapon_set.copy()))
+
+        TeamManager().initialize(self.game_config, weapon_set_per_team)
 
         # place worms
         self.place_worms_random()
@@ -183,13 +188,18 @@ class GameCreatorLoadGame(GameCreator):
     def create_game(self):
         path = self.game_config.game_load_state_path
         self.game_model = load_game(path)
+        self.game_config = self.game_model.game_config
 
         self.create_map()
 
         # initialize managers
         WeaponManager().initialize()
-        weapon_set = WeaponManager().weapon_set
-        TeamManager().initialize(weapon_set)
+
+        weapon_set_per_team = []
+        for team in self.game_config.teams:
+            weapon_set_per_team.append((team.team_name, team.weapon_set.copy()))
+
+        TeamManager().initialize(self.game_config, weapon_set_per_team, shuffle_teams=False)
 
         # place objects
         self.place_objects()
@@ -197,12 +207,13 @@ class GameCreatorLoadGame(GameCreator):
         # choose starting worm
         TeamManager().current_team = TeamManager().get_by_name(self.game_model.current_team_name)
         starting_worm = next((x for x in TeamManager().current_team.worms if x.name_str == self.game_model.current_turn_worm), None)
-
-        if self.game_config.random_mode != RandomMode.NONE:
-            starting_worm = choice(TeamManager().current_team.worms)
         
         GameVariables().player = starting_worm
         GameVariables().cam_track = starting_worm
+
+        GameVariables().time_overall = self.game_model.time_overall
+        GameVariables().game_turn_count = self.game_model.game_turn_count
+        GameVariables().game_round_count = self.game_model.game_round_count
 
         # reset time
         TimeManager().time_reset()

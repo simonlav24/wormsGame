@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Union
 
 from common.constants import Sickness
+from common.game_config import GameConfig
 
 class GameModelBase(BaseModel):
     class_name: str | None = None
@@ -23,6 +24,7 @@ class PlantModel(GameModelBase):
 
 
 class GameSaveStateModel(BaseModel):
+    game_config: GameConfig
 
     current_team_name: str
     current_turn_worm: str
@@ -30,3 +32,7 @@ class GameSaveStateModel(BaseModel):
     ground_map: str
 
     objects: List[Union[PlantModel, WormModel, GameModelBase]]
+
+    time_overall : int
+    game_turn_count: int
+    game_round_count: int

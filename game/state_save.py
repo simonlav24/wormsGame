@@ -35,11 +35,23 @@ def save_game(path: str) -> None:
     surf.blit(MapManager().ground_map, (0, 0))
     ground_map_str = surface_to_base64(surf)
 
+    
+    # rewrite config
+    game_config=GameVariables().config
+    for team in game_config.teams:
+        team_instance = TeamManager().get_by_name(team.team_name)
+        team.weapon_set = team_instance.weapon_set.copy()
+
     save_game_state = GameSaveStateModel(
+        game_config=GameVariables().config,
         current_team_name=TeamManager().current_team.name,
         current_turn_worm=GameVariables().player.name_str,
         objects=[],
         ground_map=ground_map_str,
+
+        time_overall=GameVariables().time_overall,
+        game_turn_count=GameVariables().game_turn_count,
+        game_round_count=GameVariables().game_round_count,
     )
 
     # save objects

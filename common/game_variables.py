@@ -69,6 +69,9 @@ class GameVariables(metaclass=SingletonMeta):
         self.damp_mult = 1.5
 
         self.time_overall = 0
+        self.game_turn_count = 0
+        self.game_round_count = 0
+        
         self.dt = 1.0
 
         self.cam_pos: Vector = Vector(0,0)
@@ -85,8 +88,7 @@ class GameVariables(metaclass=SingletonMeta):
         self.stats: IStats = None
 
         self.game_stable = False
-        self.game_turn_count = 0
-        self.game_round_count = 0
+        
         self.turns_in_round = 0
         self.num_of_teams = 0
 
@@ -99,7 +101,6 @@ class GameVariables(metaclass=SingletonMeta):
         self.commentator: IComment = None
         self.hud: IHud = None
 
-        self.continuous_fire = False
         self.weapon_hold: pygame.Surface = pygame.Surface((16, 16), pygame.SRCALPHA)
         self.point_target: Vector = Vector(-100, -100)
         self.girder_size: int = 50

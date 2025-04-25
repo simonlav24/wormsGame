@@ -1,10 +1,10 @@
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from random import choice, shuffle
 
 import pygame
 
-from common import desaturate, GameVariables, sprites, SingletonMeta, EntityWorm, fonts, PATH_TEAMS_LIST
+from common import desaturate, GameVariables, sprites, SingletonMeta, EntityWorm, fonts, PATH_TEAMS_LIST, GameConfig
 from common.team_data import TeamData, read_teams
 from game.hud import HealthBar
 
@@ -61,29 +61,30 @@ class TeamManager(metaclass=SingletonMeta):
         self.score_list: List[Dict[str, Any]] = []
         self.health_bar_hud: HealthBar = None
     
-    def initialize(self, weapon_set: List[int]) -> None:
+    def initialize(self, game_config: GameConfig, weapon_set: List[Tuple[str, List[int]]], shuffle_teams: bool=True) -> None:
         ''' read team data from the game config '''
-        data_list = GameVariables().config.teams      
+        data_list = game_config.teams      
         self.teams = [Team(data) for data in data_list]
 
         num_of_teams = len(self.teams)
         GameVariables().num_of_teams = num_of_teams
         GameVariables().turns_in_round = GameVariables().num_of_teams
 
-        shuffle(self.teams)
+        if shuffle_teams:
+            shuffle(self.teams)
 
         # todo: calculate for david vs goliath
         self.health_bar_hud = HealthBar(
             num_of_teams,
-            GameVariables().config.worm_initial_health,
-            GameVariables().config.worms_per_team,
+            game_config.worm_initial_health,
+            game_config.worms_per_team,
             [team.color for team in self.teams]
         )
 
         TeamManager().current_team = TeamManager().teams[0]
 
-        for team in TeamManager().teams:
-            team.weapon_set = weapon_set.copy()
+        for weapon_set_team in weapon_set:
+            TeamManager().get_by_name(weapon_set_team[0]).weapon_set = weapon_set_team[1].copy()
 
         self.generate_hats()
 
