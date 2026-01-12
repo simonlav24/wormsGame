@@ -1,9 +1,10 @@
-from pypresence import Presence
+
 import time
 
 CLIENT_ID = 1340765041544400989
 
 def update_presence():
+    from pypresence import Presence
     rpc = Presence(CLIENT_ID)
     rpc.connect()
 
