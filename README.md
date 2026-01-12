@@ -2,11 +2,12 @@
 
 ![Alt text](wormsShoot.png?raw=true "Worms")
 Game development practice in python for educational purposes and fun.
+What started as a One Lone Coder (OLC) code along became a five year obssesion.
 
 ### Requirements
 
 ```
-pygame
+pygame-ce
 pydantic
 ```
 

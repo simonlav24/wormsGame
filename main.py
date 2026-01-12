@@ -23,6 +23,8 @@ wip = '''
         do not cool down weapons in time travel
         pokeball sound error
 		bug: when killing an enemy with gamma gun, the enemy dead but remains sick
+        when killing last emeny team member, he does not throw the artifact
+        falling deployables when round won
 	'''
 
 def main():

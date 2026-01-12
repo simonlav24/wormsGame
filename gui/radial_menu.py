@@ -162,7 +162,7 @@ class RadialButton(GuiBase):
 
 		angle = self.start_angle + (self.end_angle - self.start_angle) / 2
 		radius = self.inner_radius + (self.outer_radius - self.inner_radius) / 2
-		pos = Vector2(self.center + Vector2.from_polar((radius , degrees(angle))))
+		pos = Vector2(self.center + Vector2(radius * cos(angle) , radius * sin(angle)))
 
 		if not self.is_enabled:
 			pass
